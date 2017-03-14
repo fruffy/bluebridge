@@ -65,11 +65,12 @@ unsigned char *gen_rdm_bytestream(size_t num_bytes) {
 
 int main(int argc, char *argv[]) {
 	int sockfd, numbytes;
-	char buf[BLOCK_SIZE];
+	char receiveBuffer[BLOCK_SIZE];
+	char sendBuffer[BLOCK_SIZE];
+	long long int mem_pointer;
 	struct addrinfo hints, *servinfo, *p;
 	int rv, n;
 	char s[INET6_ADDRSTRLEN];
-	char buffer[4096];
 
 	if (argc < 2) {
 		printf("Defaulting to standard values...\n");
@@ -117,46 +118,75 @@ int main(int argc, char *argv[]) {
 	char input[len];
 
 	while (active) {
+		memset(input, 0, len);
 		int response =
-				getLine(
-						"Please specify if you would like to (S)end or (R)eceive data.\nPress Q to quit the program.\n",
+				getLine("Please specify if you would like to (S)end or (R)eceive data.\nPress Q to quit the program.\n",
 						input, sizeof(input));
 		if (strcmp("S", input) == 0) {
 			srand((unsigned int) time(NULL));
-			memcpy(buffer, gen_rdm_bytestream(4096), 4096);
-
+			memcpy(sendBuffer, gen_rdm_bytestream(BLOCK_SIZE), BLOCK_SIZE);
 			//Sockets Layer Call: send()
-			n = send(sockfd, buffer, strlen(buffer) + 1, 0);
+			memcpy(sendBuffer, "WRITE REQUEST", BLOCK_SIZE);
+
+			n = send(sockfd, sendBuffer, strlen(sendBuffer) + 1, 0);
 			if (n < 0)
 				perror("ERROR writing to socket");
 
-			memset(buffer, 0, 4096);
+			memset(sendBuffer, 0, BLOCK_SIZE);
+			memset(receiveBuffer, 0, BLOCK_SIZE);
 
 			//Sockets Layer Call: recv()
-			if ((numbytes = recv(sockfd, buf, BLOCK_SIZE - 1, 0)) == -1) {
+			if ((numbytes = recv(sockfd, receiveBuffer, BLOCK_SIZE - 1, 0)) == -1) {
 				perror("ERROR reading from socket");
 				exit(1);
 			}
-			printf("Message from server: %s\n", buffer);
+			printf("Pointer from server: ");
+			printf("%s\n", receiveBuffer);
+
+			if (strcmp(receiveBuffer,"ACK") == 0) {
+				memcpy(sendBuffer, "WRITE COMMAND", BLOCK_SIZE);
+				n = send(sockfd, sendBuffer, strlen(sendBuffer) + 1, 0);
+					if (n < 0)
+						perror("ERROR writing to socket");
+			} else {
+				memcpy(sendBuffer, "What's up?", BLOCK_SIZE);
+				n = send(sockfd, sendBuffer, strlen(sendBuffer) + 1, 0);
+				if (n < 0)
+					perror("ERROR writing to socket");
+			}
+			memset(sendBuffer, 0, BLOCK_SIZE);
+			memset(receiveBuffer, 0, BLOCK_SIZE);
+			//Sockets Layer Call: recv()
+			if ((numbytes = recv(sockfd, receiveBuffer, BLOCK_SIZE - 1, 0)) == -1) {
+				perror("ERROR reading from socket");
+				exit(1);
+			}
+			int i = 0;
+			for (i =numbytes; i >= 0; i--) {
+				printf("%02X", (unsigned char) receiveBuffer[i]);
+			}
+			printf("Message from server: %i bytes\n",numbytes);
+			printf("Interpret as:'%02X'\n", (unsigned) receiveBuffer);
+
 		} else if (strcmp("R", input) == 0) {
-			memcpy(buffer, "Please send me something with this address!", 4096);
+			memcpy(sendBuffer, "READ REQUEST", BLOCK_SIZE);
 			//Sockets Layer Call: send()
-			n = send(sockfd, buffer, strlen(buffer) + 1, 0);
+			n = send(sockfd, sendBuffer, strlen(sendBuffer) + 1, 0);
 			if (n < 0)
 				perror("ERROR writing to socket");
-			if ((numbytes = recv(sockfd, buf, BLOCK_SIZE - 1, 0)) == -1) {
+			if ((numbytes = recv(sockfd, receiveBuffer, BLOCK_SIZE - 1, 0)) == -1) {
 				perror("recv");
 				exit(1);
 			}
-			buf[numbytes] = '\0';
-			printf("client: received '%s'\n", buf);
+			printf("client: received '%02X'\n", (unsigned) *receiveBuffer);
 		} else if (strcmp("Q", input) == 0) {
 			active = 0;
 			printf("Ende Gelaende\n");
 		} else {
-			active = 0;
-			printf("Was da los\n");
+			printf("Try again.\n");
 		}
+		memset(sendBuffer, 0, BLOCK_SIZE);
+		memset(receiveBuffer, 0, BLOCK_SIZE);
 		fflush(stdin);
 	}
 	freeaddrinfo(servinfo); // all done with this structure

@@ -38,24 +38,56 @@ void *get_in_addr(struct sockaddr *sa) {
 }
 
 void handleClientRequests(int new_fd) {
-	char buffer[BLOCK_SIZE];
+	char receiveBuffer[BLOCK_SIZE];
+	char sendBuffer[BLOCK_SIZE];
+
 	while (1) {
+		memset(sendBuffer, 0, BLOCK_SIZE);
+		memset(receiveBuffer, 0, BLOCK_SIZE);
+		printf("Waiting for client message...\n");
 		//Sockets Layer Call: recv()
-		if (recv(new_fd, buffer, BLOCK_SIZE, 0) == -1) {
+		if (recv(new_fd, receiveBuffer,  BLOCK_SIZE - 1, 0) == -1) {
 			perror("ERROR reading from socket");
-				exit(1);
+			exit(1);
 		}
 		printf("Message from client:\n");
-		printf("%s", buffer);
-		printf("\n");
-		if (send(new_fd, "Hello, world!", 13, 0) == -1) {
-			perror("ERROR writing to socket");
-			exit(1);
+		printf("%s\n", receiveBuffer);
+		if (strcmp(receiveBuffer, "WRITE REQUEST") == 0) {
+			char * allocated = calloc(4096,1);
+			printf("%p\n", allocated);
+			printf("Pointer at %p.\n", (void*)&*allocated);
+			printf("Interpret as:'%02X'\n", (unsigned) *&allocated);
+			printf("%c", *&allocated);
+			char * p = &allocated;
+			if (send(new_fd, "ACK",  BLOCK_SIZE - 1, 0) == -1) {
+				perror("ERROR writing to socket");
+				exit(1);
+			}
+			memset(sendBuffer, 0, BLOCK_SIZE);
+			memset(receiveBuffer, 0, BLOCK_SIZE);
+			//Sockets Layer Call: recv()
+			if (recv(new_fd, receiveBuffer,  BLOCK_SIZE, 0) == -1) {
+				perror("ERROR reading from socket");
+				exit(1);
+			}
+			printf("Second message from client:\n");
+			printf("%s\n", receiveBuffer);
+			if (send(new_fd, &allocated, sizeof(&allocated), 0) == -1) {
+					perror("ERROR writing to socket");
+					exit(1);
+			}
+
+		} else {
+			if (send(new_fd, "Hello, world!", 13, 0) == -1) {
+				perror("ERROR writing to socket");
+				exit(1);
+			}
 		}
 	}
 }
 
-struct addrinfo* bindSocket(struct addrinfo* p, struct addrinfo* servinfo, int* sockfd) {
+struct addrinfo* bindSocket(struct addrinfo* p, struct addrinfo* servinfo,
+		int* sockfd) {
 	int yes = 1;
 
 	// loop through all the results and bind to the first we can
@@ -141,8 +173,8 @@ int main(int argc, char *argv[]) {
 	while (1) {
 		new_fd = acceptConnections(sockfd);
 		if (new_fd == -1) {
-				perror("accept");
-				exit(1);
+			perror("accept");
+			exit(1);
 		}
 		if (!fork()) {
 			// this is the child process
