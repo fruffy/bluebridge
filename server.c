@@ -40,7 +40,7 @@ void *get_in_addr(struct sockaddr *sa) {
 void handleClientRequests(int new_fd) {
 	char receiveBuffer[BLOCK_SIZE];
 	char sendBuffer[BLOCK_SIZE];
-
+	int numbytes;
 	while (1) {
 		memset(sendBuffer, 0, BLOCK_SIZE);
 		memset(receiveBuffer, 0, BLOCK_SIZE);
@@ -57,8 +57,6 @@ void handleClientRequests(int new_fd) {
 			printf("%p\n", allocated);
 			printf("Pointer at %p.\n", (void*)&*allocated);
 			printf("Interpret as:'%02X'\n", (unsigned) *&allocated);
-			printf("%c", *&allocated);
-			char * p = &allocated;
 			if (send(new_fd, "ACK",  BLOCK_SIZE - 1, 0) == -1) {
 				perror("ERROR writing to socket");
 				exit(1);
@@ -66,7 +64,7 @@ void handleClientRequests(int new_fd) {
 			memset(sendBuffer, 0, BLOCK_SIZE);
 			memset(receiveBuffer, 0, BLOCK_SIZE);
 			//Sockets Layer Call: recv()
-			if (recv(new_fd, receiveBuffer,  BLOCK_SIZE, 0) == -1) {
+			if ((numbytes = recv(new_fd, receiveBuffer,  BLOCK_SIZE, 0) == -1)) {
 				perror("ERROR reading from socket");
 				exit(1);
 			}
@@ -76,6 +74,21 @@ void handleClientRequests(int new_fd) {
 					perror("ERROR writing to socket");
 					exit(1);
 			}
+			memset(sendBuffer, 0, BLOCK_SIZE);
+			memset(receiveBuffer, 0, BLOCK_SIZE);
+
+			//Sockets Layer Call: recv()
+			if ((numbytes = recv(new_fd, receiveBuffer,  BLOCK_SIZE, 0)) == -1) {
+				perror("ERROR reading from socket");
+				exit(1);
+			}
+			printf("Third message from client:\n");
+			receiveBuffer[numbytes] = '\0';
+			int i = 0;
+			for (i = numbytes; i >= 0; i--) {
+				printf("%02X", (unsigned char) receiveBuffer[i]);
+			}
+			printf("\n");
 
 		} else {
 			if (send(new_fd, "Hello, world!", 13, 0) == -1) {
