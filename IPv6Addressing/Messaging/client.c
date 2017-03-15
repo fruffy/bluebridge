@@ -86,12 +86,18 @@ int main(int argc, char *argv[]) {
 			numbytes = receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
 			splitResponse = strtok(receiveBuffer, ":");
 			printf("Server Response: ");
-			printf("%s\n", receiveBuffer);
+			printf("First Split: %s\n", splitResponse);
+			splitResponse = strtok(NULL, ":");
+			printf("Second Split: %s\n", splitResponse);
 
 			if (strcmp(receiveBuffer,"ACK") == 0) {
-				memcpy(sendBuffer,"WRITE COMMAND", sizeof("WRITE COMMAND"));
+/*				memcpy(sendBuffer,"WRITE COMMAND", sizeof("WRITE COMMAND"));
 				sendMsg(sockfd, sendBuffer, sizeof("WRITE COMMAND"));
-				printBytes(numbytes, splitResponse);
+				printBytes(numbytes, splitResponse);*/
+				numbytes = sprintf(sendBuffer, "DATASET:%s", splitResponse); // puts string into buffer
+				printf("Sending Data: %i bytes ",numbytes);
+				printf("as %s\n",sendBuffer);
+				sendMsg(sockfd, sendBuffer, numbytes);
 
 			} else {
 				memcpy(sendBuffer, "What's up?", sizeof("What's up?"));
@@ -99,11 +105,12 @@ int main(int argc, char *argv[]) {
 			}
 
 			numbytes = receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
-			receiveBuffer[numbytes] = '\0';
+			//receiveBuffer[numbytes] = '\0';
 
 			char * availableSpace = receiveBuffer;
 			printf("Message from server: %i bytes\n",numbytes);
 			printBytes(numbytes,receiveBuffer);
+
 			memcpy(sendBuffer, receiveBuffer, sizeof(receiveBuffer));
 			sendMsg(sockfd, sendBuffer, numbytes);
 

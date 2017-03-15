@@ -23,6 +23,8 @@
 void handleClientRequests(int new_fd) {
 	char receiveBuffer[BLOCK_SIZE];
 	char sendBuffer[BLOCK_SIZE];
+	char * splitResponse;
+
 	while (1) {
 		int numbytes;
 		printf("Waiting for client message...\n");
@@ -32,7 +34,7 @@ void handleClientRequests(int new_fd) {
 		printf("Message from client:\n");
 		printf("%s\n", receiveBuffer);
 		if (strcmp(receiveBuffer, "WRITE REQUEST") == 0) {
-			
+			uint32_t my_destination_memory[4096];
 			char * allocated = (char*) malloc(4096);
 			printf("%p\n", allocated);
 			//printf("Pointer at %p.\n", (void*)&*allocated);
@@ -41,6 +43,7 @@ void handleClientRequests(int new_fd) {
 			numbytes = sprintf(sendBuffer, "ACK:%p", *&allocated); // puts string into buffer
 			//memcpy(sendBuffer, numbytes= sprintf(sendBuffer, "ACK:%s", *&allocated), 20);
 			printBytes(numbytes, sendBuffer);
+			printf("Interpretation of Server %s \n", sendBuffer);
 
 			sendMsg(new_fd, sendBuffer,  numbytes);
 
@@ -49,14 +52,31 @@ void handleClientRequests(int new_fd) {
 			printf("Second message from client:\n");
 			printf("%s\n", receiveBuffer);
 
+			printBytes(numbytes, receiveBuffer);
+			splitResponse = strtok(receiveBuffer, ":");
+			printf("Client Command: ");
+			printf("First Split: %s\n", splitResponse);
+			char * dataToWrite = splitResponse;
+			splitResponse = strtok(NULL, ":");
+			unsigned int *  target = (unsigned int *) splitResponse;
+
+			printf("\nAllocated Pointer: %p -> %s\n",allocated, allocated);
+			printf("SplitReponse Pointer: %p -> %s\n",splitResponse, splitResponse);
+			printf("Target Pointer: %p -> %s\n",&target, target);
+
+			memcpy(target, dataToWrite, numbytes);
+
+
+			printf("Content %s is stored at %p!\n", allocated, (void*)target);
+
+
 			memcpy(sendBuffer, &allocated, sizeof(&allocated));
 			sendMsg(new_fd, sendBuffer, sizeof(&allocated));
 
 			numbytes = receiveMsg(new_fd, receiveBuffer, BLOCK_SIZE);
-
-			printf("Third message from client:\n");
-			receiveBuffer[numbytes] = '\0';
-			printBytes(numbytes, receiveBuffer);
+			//printf("Third message from client:\n");
+			//receiveBuffer[numbytes] = '\0';
+			//printBytes(numbytes, receiveBuffer);
 		} else {
 			if (send(new_fd, "Hello, world!", 13, 0) == -1) {
 				perror("ERROR writing to socket");

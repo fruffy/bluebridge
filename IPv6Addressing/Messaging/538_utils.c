@@ -71,7 +71,7 @@ void sigchld_handler(int s) {
 }
 
 void sendMsg(int sockfd, char * sendBuffer, int msgBlockSize) {
-	if (send(sockfd, sendBuffer, msgBlockSize -1, 0) < 0)
+	if (send(sockfd, sendBuffer, msgBlockSize, 0) < 0)
 		perror("ERROR writing to socket");
 	memset(sendBuffer, 0, msgBlockSize);
 }
@@ -80,7 +80,7 @@ int receiveMsg(int sockfd, char * receiveBuffer, int msgBlockSize) {
 	//Sockets Layer Call: recv()
 	int numbytes = 0;
 	memset(receiveBuffer, 0, msgBlockSize);
-	if ((numbytes = recv(sockfd, receiveBuffer, msgBlockSize - 1, 0)) == -1) {
+	if ((numbytes = recv(sockfd, receiveBuffer, msgBlockSize, 0)) == -1) {
 		perror("ERROR reading from socket");
 		exit(1);
 	}
@@ -89,8 +89,8 @@ int receiveMsg(int sockfd, char * receiveBuffer, int msgBlockSize) {
 
 int printBytes(int numbytes, char * receiveBuffer) {
 	int i = 0;
-	for (i = numbytes; i >= 0; i--) {
-		printf("%02X", (unsigned char) receiveBuffer[i]);
+	for (i = numbytes -1; i >= 0; i--) {
+		printf("%02x", (unsigned char) receiveBuffer[i]);
 	}
 	printf("\n");
 	return i;
