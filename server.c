@@ -15,73 +15,43 @@
 #include <sys/wait.h>
 #include <signal.h>
 
+#include "538_utils.h"
+
 #define BACKLOG 10     // how many pending connections queue will hold
 #define BLOCK_SIZE 100 // max number of bytes we can get at once
 
-void sigchld_handler(int s) {
-	// waitpid() might overwrite errno, so we save and restore it:
-	int saved_errno = errno;
-
-	while (waitpid(-1, NULL, WNOHANG) > 0)
-		;
-
-	errno = saved_errno;
-}
-
-// get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa) {
-	if (sa->sa_family == AF_INET) {
-		return &(((struct sockaddr_in*) sa)->sin_addr);
-	}
-
-	return &(((struct sockaddr_in6*) sa)->sin6_addr);
-}
 
 void handleClientRequests(int new_fd) {
 	char receiveBuffer[BLOCK_SIZE];
 	char sendBuffer[BLOCK_SIZE];
-	int numbytes;
 	while (1) {
-		memset(sendBuffer, 0, BLOCK_SIZE);
-		memset(receiveBuffer, 0, BLOCK_SIZE);
+		int numbytes;
 		printf("Waiting for client message...\n");
-		//Sockets Layer Call: recv()
-		if (recv(new_fd, receiveBuffer,  BLOCK_SIZE - 1, 0) == -1) {
-			perror("ERROR reading from socket");
-			exit(1);
-		}
+
+		numbytes = receiveMsg(new_fd, receiveBuffer, BLOCK_SIZE);
+
 		printf("Message from client:\n");
 		printf("%s\n", receiveBuffer);
 		if (strcmp(receiveBuffer, "WRITE REQUEST") == 0) {
-			char * allocated = calloc(4096,1);
+			
+			char * allocated = (char*) malloc(4096);
 			printf("%p\n", allocated);
-			printf("Pointer at %p.\n", (void*)&*allocated);
-			printf("Interpret as:'%02X'\n", (unsigned) *&allocated);
-			if (send(new_fd, "ACK",  BLOCK_SIZE - 1, 0) == -1) {
-				perror("ERROR writing to socket");
-				exit(1);
-			}
-			memset(sendBuffer, 0, BLOCK_SIZE);
-			memset(receiveBuffer, 0, BLOCK_SIZE);
-			//Sockets Layer Call: recv()
-			if ((numbytes = recv(new_fd, receiveBuffer,  BLOCK_SIZE, 0) == -1)) {
-				perror("ERROR reading from socket");
-				exit(1);
-			}
+			//printf("Pointer at %p.\n", (void*)&*allocated);
+			//printf("Interpret as:'%02X'\n", (unsigned) *&allocated);
+			
+			memcpy(sendBuffer, "ACK", sizeof("ACK"));
+			sendMsg(new_fd, sendBuffer, sizeof("ACK"));
+
+			receiveMsg(new_fd, receiveBuffer, BLOCK_SIZE);
+
 			printf("Second message from client:\n");
 			printf("%s\n", receiveBuffer);
-			if (send(new_fd, &allocated, sizeof(&allocated), 0) == -1) {
-					perror("ERROR writing to socket");
-					exit(1);
-			}
-			memset(sendBuffer, 0, BLOCK_SIZE);
-			memset(receiveBuffer, 0, BLOCK_SIZE);
 
-			//Sockets Layer Call: recv()
-			if ((numbytes = recv(new_fd, receiveBuffer,  BLOCK_SIZE, 0)) == -1) {
-				perror("ERROR reading from socket");
-				exit(1);
-			}
+			memcpy(sendBuffer, &allocated, sizeof(&allocated));
+			sendMsg(new_fd, sendBuffer, sizeof(&allocated));
+
+			numbytes = receiveMsg(new_fd, receiveBuffer, BLOCK_SIZE);
+
 			printf("Third message from client:\n");
 			receiveBuffer[numbytes] = '\0';
 			int i = 0;

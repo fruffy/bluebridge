@@ -1,7 +1,13 @@
 all:
-	gcc server.c -g3 -o server.out
-	gcc client.c -g3 -o client.out
+	gcc -g3 -o client.o client.c 538_utils.c
+	gcc -g3 -o server.o server.c 538_utils.c
+
+client:
+	gcc -g3 -o client.o client.c 538_utils.c
+
+server:
+	gcc -g3 -o server.o server.c 538_utils.c
 
 clean:
-	rm server.out
-	rm client.out
+	rm server.o
+	rm client.o

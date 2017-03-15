@@ -12,62 +12,16 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <time.h>
-
 #include <arpa/inet.h>
 
+#include "538_utils.h"
 
 #define BLOCK_SIZE 100 // max number of bytes we can get at once
-
-// get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa) {
-	if (sa->sa_family == AF_INET) {
-		return &(((struct sockaddr_in*) sa)->sin_addr);
-	}
-
-	return &(((struct sockaddr_in6*) sa)->sin6_addr);
-}
-//http://stackoverflow.com/questions/4023895/how-to-read-string-entered-by-user-in-c
-static int getLine(char *prmpt, char *buff, size_t sz) {
-	int ch, extra;
-
-	// Get line with buffer overrun protection.
-	if (prmpt != NULL) {
-		printf("%s", prmpt);
-		fflush(stdout);
-	}
-	if (fgets(buff, sz, stdin) == NULL)
-		return 0;
-
-	// If it was too long, there'll be no newline. In that case, we flush
-	// to end of line so that excess doesn't affect the next call.
-	if (buff[strlen(buff) - 1] != '\n') {
-		extra = 0;
-		while (((ch = getchar()) != '\n') && (ch != EOF))
-			extra = 1;
-		return (extra == 1) ? 0 : 1;
-	}
-
-	// Otherwise remove newline and give string back to caller.
-	buff[strlen(buff) - 1] = '\0';
-	return 1;
-}
-
-unsigned char *gen_rdm_bytestream(size_t num_bytes) {
-	unsigned char *stream = malloc(num_bytes);
-	size_t i;
-
-	for (i = 0; i < num_bytes; i++) {
-		stream[i] = rand();
-	}
-
-	return stream;
-}
 
 int main(int argc, char *argv[]) {
 	int sockfd, numbytes;
 	char receiveBuffer[BLOCK_SIZE];
 	char sendBuffer[BLOCK_SIZE];
-	long long int mem_pointer;
 	struct addrinfo hints, *servinfo, *p;
 	int rv, n;
 	char s[INET6_ADDRSTRLEN];
@@ -119,72 +73,44 @@ int main(int argc, char *argv[]) {
 
 	while (active) {
 		memset(input, 0, len);
-		int response =
-				getLine("Please specify if you would like to (S)end or (R)eceive data.\nPress Q to quit the program.\n",
-						input, sizeof(input));
+		int response =	getLine("Please specify if you would like to (S)end or (R)eceive data.\nPress Q to quit the program.\n", input, sizeof(input));
 		if (strcmp("S", input) == 0) {
-			srand((unsigned int) time(NULL));
-			memcpy(sendBuffer, gen_rdm_bytestream(BLOCK_SIZE), BLOCK_SIZE);
-			//Sockets Layer Call: send()
-			memcpy(sendBuffer, "WRITE REQUEST", BLOCK_SIZE);
-
-			n = send(sockfd, sendBuffer, strlen(sendBuffer) + 1, 0);
-			if (n < 0)
-				perror("ERROR writing to socket");
-			memset(sendBuffer, 0, BLOCK_SIZE);
-			memset(receiveBuffer, 0, BLOCK_SIZE);
+			
+			//srand((unsigned int) time(NULL));
+			//memcpy(sendBuffer, gen_rdm_bytestream(BLOCK_SIZE), BLOCK_SIZE);
+			memcpy(sendBuffer, "WRITE REQUEST", sizeof("WRITE REQUEST"));
+			sendMsg(sockfd, sendBuffer, sizeof("WRITE REQUEST"));
 
 
-			//Sockets Layer Call: recv()
-			if ((numbytes = recv(sockfd, receiveBuffer, BLOCK_SIZE - 1, 0)) == -1) {
-				perror("ERROR reading from socket");
-				exit(1);
-			}
-			printf("Pointer from server: ");
+
+			numbytes = receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
+
+			printf("Server Response: ");
 			printf("%s\n", receiveBuffer);
 
 			if (strcmp(receiveBuffer,"ACK") == 0) {
-				memcpy(sendBuffer, "WRITE COMMAND", BLOCK_SIZE);
-				n = send(sockfd, sendBuffer, strlen(sendBuffer) + 1, 0);
-					if (n < 0)
-						perror("ERROR writing to socket");
+				memcpy(sendBuffer,"WRITE COMMAND", sizeof("WRITE COMMAND"));
+				sendMsg(sockfd, sendBuffer, sizeof("WRITE COMMAND"));
 			} else {
-				memcpy(sendBuffer, "What's up?", BLOCK_SIZE);
-				n = send(sockfd, sendBuffer, strlen(sendBuffer) + 1, 0);
-				if (n < 0)
-					perror("ERROR writing to socket");
+				memcpy(sendBuffer, "What's up?", sizeof("What's up?"));
+				sendMsg(sockfd, sendBuffer, sizeof("What's up?"));
 			}
-			memset(sendBuffer, 0, BLOCK_SIZE);
-			memset(receiveBuffer, 0, BLOCK_SIZE);
 
-
-			//Sockets Layer Call: recv()
-			if ((numbytes = recv(sockfd, receiveBuffer, BLOCK_SIZE-1, 0)) == -1) {
-				perror("ERROR reading from socket");
-				exit(1);
-			}
+			numbytes = receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
 			receiveBuffer[numbytes] = '\0';
+
+			char * availableSpace = receiveBuffer;
+			printf("Message from server: %i bytes\n",numbytes);
 			int i = 0;
 			for (i = numbytes; i >= 0; i--) {
 				printf("%02X", (unsigned char) receiveBuffer[i]);
 			}
 			printf("\n");
-			char * availableSpace = receiveBuffer;
-			printf("Message from server: %i bytes\n",numbytes);
-			printf("1 Interpret as:'%c'\n", availableSpace);
-			printf("2 Interpret as:'%02X'\n", (unsigned) receiveBuffer);
-			memset(sendBuffer, 0, BLOCK_SIZE);
-
-
-			memcpy(sendBuffer, receiveBuffer, BLOCK_SIZE);
-			n = send(sockfd, sendBuffer, numbytes, 0);
-					if (n < 0)
-						perror("ERROR writing to socket");
-
-
+			memcpy(sendBuffer, receiveBuffer, sizeof(receiveBuffer));
+			sendMsg(sockfd, sendBuffer, numbytes);
 
 		} else if (strcmp("R", input) == 0) {
-			memcpy(sendBuffer, "READ REQUEST", BLOCK_SIZE);
+			memcpy(sendBuffer, "READ REQUEST", sizeof("READ_REQUEST"));
 			//Sockets Layer Call: send()
 			n = send(sockfd, sendBuffer, strlen(sendBuffer) + 1, 0);
 			if (n < 0)
@@ -202,7 +128,6 @@ int main(int argc, char *argv[]) {
 		}
 		memset(sendBuffer, 0, BLOCK_SIZE);
 		memset(receiveBuffer, 0, BLOCK_SIZE);
-		fflush(stdin);
 	}
 	freeaddrinfo(servinfo); // all done with this structure
 	close(sockfd);
