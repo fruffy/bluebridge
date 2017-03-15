@@ -86,3 +86,12 @@ int receiveMsg(int sockfd, char * receiveBuffer, int msgBlockSize) {
 	}
 	return numbytes;
 }
+
+int printBytes(int numbytes, char * receiveBuffer) {
+	int i = 0;
+	for (i = numbytes; i >= 0; i--) {
+		printf("%02X", (unsigned char) receiveBuffer[i]);
+	}
+	printf("\n");
+	return i;
+}

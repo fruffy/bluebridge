@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
 	int active = 1;
 	long unsigned int len = 200;
 	char input[len];
-
+	char * splitResponse;
 	while (active) {
 		memset(input, 0, len);
 		int response =	getLine("Please specify if you would like to (S)end or (R)eceive data.\nPress Q to quit the program.\n", input, sizeof(input));
@@ -84,13 +84,15 @@ int main(int argc, char *argv[]) {
 
 
 			numbytes = receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
-
+			splitResponse = strtok(receiveBuffer, ":");
 			printf("Server Response: ");
 			printf("%s\n", receiveBuffer);
 
 			if (strcmp(receiveBuffer,"ACK") == 0) {
 				memcpy(sendBuffer,"WRITE COMMAND", sizeof("WRITE COMMAND"));
 				sendMsg(sockfd, sendBuffer, sizeof("WRITE COMMAND"));
+				printBytes(numbytes, splitResponse);
+
 			} else {
 				memcpy(sendBuffer, "What's up?", sizeof("What's up?"));
 				sendMsg(sockfd, sendBuffer, sizeof("What's up?"));
@@ -101,11 +103,7 @@ int main(int argc, char *argv[]) {
 
 			char * availableSpace = receiveBuffer;
 			printf("Message from server: %i bytes\n",numbytes);
-			int i = 0;
-			for (i = numbytes; i >= 0; i--) {
-				printf("%02X", (unsigned char) receiveBuffer[i]);
-			}
-			printf("\n");
+			printBytes(numbytes,receiveBuffer);
 			memcpy(sendBuffer, receiveBuffer, sizeof(receiveBuffer));
 			sendMsg(sockfd, sendBuffer, numbytes);
 

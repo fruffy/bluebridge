@@ -20,7 +20,6 @@
 #define BACKLOG 10     // how many pending connections queue will hold
 #define BLOCK_SIZE 100 // max number of bytes we can get at once
 
-
 void handleClientRequests(int new_fd) {
 	char receiveBuffer[BLOCK_SIZE];
 	char sendBuffer[BLOCK_SIZE];
@@ -38,9 +37,12 @@ void handleClientRequests(int new_fd) {
 			printf("%p\n", allocated);
 			//printf("Pointer at %p.\n", (void*)&*allocated);
 			//printf("Interpret as:'%02X'\n", (unsigned) *&allocated);
-			
-			memcpy(sendBuffer, "ACK", sizeof("ACK"));
-			sendMsg(new_fd, sendBuffer, sizeof("ACK"));
+
+			numbytes = sprintf(sendBuffer, "ACK:%p", *&allocated); // puts string into buffer
+			//memcpy(sendBuffer, numbytes= sprintf(sendBuffer, "ACK:%s", *&allocated), 20);
+			printBytes(numbytes, sendBuffer);
+
+			sendMsg(new_fd, sendBuffer,  numbytes);
 
 			receiveMsg(new_fd, receiveBuffer, BLOCK_SIZE);
 
@@ -54,12 +56,7 @@ void handleClientRequests(int new_fd) {
 
 			printf("Third message from client:\n");
 			receiveBuffer[numbytes] = '\0';
-			int i = 0;
-			for (i = numbytes; i >= 0; i--) {
-				printf("%02X", (unsigned char) receiveBuffer[i]);
-			}
-			printf("\n");
-
+			printBytes(numbytes, receiveBuffer);
 		} else {
 			if (send(new_fd, "Hello, world!", 13, 0) == -1) {
 				perror("ERROR writing to socket");
@@ -109,10 +106,9 @@ int acceptConnections(int sockfd) {
 }
 
 int main(int argc, char *argv[]) {
-	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
+	int sockfd;  // listen on sock_fd, new connection on new_fd
 	struct addrinfo hints, *servinfo, *p;
 	struct sigaction sa;
-	char s[INET6_ADDRSTRLEN];
 	int rv;
 
 	memset(&hints, 0, sizeof hints);
@@ -154,7 +150,7 @@ int main(int argc, char *argv[]) {
 
 	printf("server: waiting for connections...\n");
 	while (1) {
-		new_fd = acceptConnections(sockfd);
+		int new_fd = acceptConnections(sockfd);
 		if (new_fd == -1) {
 			perror("accept");
 			exit(1);

@@ -11,4 +11,7 @@ void sigchld_handler(int s);
 void sendMsg(int sockfd, char * sendBuffer, int msgBlockSize);
 
 int receiveMsg(int sockfd, char * receiveBuffer, int msgBlockSize);
+
+int printBytes(int numbytes, char * receiveBuffer);
+
 #endif
