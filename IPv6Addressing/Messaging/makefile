@@ -2,6 +2,9 @@ all:
 	gcc -g3 -o client.o client.c 538_utils.c
 	gcc -g3 -o server.o server.c 538_utils.c
 
+test:
+	gcc -g3 -o test.o test.c 538_utils.c
+
 client:
 	gcc -g3 -o client.o client.c 538_utils.c
 

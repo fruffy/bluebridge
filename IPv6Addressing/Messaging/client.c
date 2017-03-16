@@ -94,11 +94,12 @@ int main(int argc, char *argv[]) {
 /*				memcpy(sendBuffer,"WRITE COMMAND", sizeof("WRITE COMMAND"));
 				sendMsg(sockfd, sendBuffer, sizeof("WRITE COMMAND"));
 				printBytes(numbytes, splitResponse);*/
-				numbytes = sprintf(sendBuffer, "DATASET:%s", splitResponse); // puts string into buffer
+				memcpy(sendBuffer,"DATASET:",8);
+				memcpy(sendBuffer+8,(char*) splitResponse,8);
+				//numbytes = sprintf(sendBuffer, "DATASET:%s", splitResponse); // puts string into buffer
 				printf("Sending Data: %i bytes ",numbytes);
 				printf("as %s\n",sendBuffer);
 				sendMsg(sockfd, sendBuffer, numbytes);
-
 			} else {
 				memcpy(sendBuffer, "What's up?", sizeof("What's up?"));
 				sendMsg(sockfd, sendBuffer, sizeof("What's up?"));

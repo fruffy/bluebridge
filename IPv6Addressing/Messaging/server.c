@@ -34,14 +34,15 @@ void handleClientRequests(int new_fd) {
 		printf("Message from client:\n");
 		printf("%s\n", receiveBuffer);
 		if (strcmp(receiveBuffer, "WRITE REQUEST") == 0) {
-			uint32_t my_destination_memory[4096];
-			char * allocated = (char*) malloc(4096);
+			uint64_t my_destination_memory[4096];
+			char * allocated = (char*) malloc(4096*1000);
 			printf("%p\n", allocated);
 			//printf("Pointer at %p.\n", (void*)&*allocated);
 			//printf("Interpret as:'%02X'\n", (unsigned) *&allocated);
 
-			numbytes = sprintf(sendBuffer, "ACK:%p", *&allocated); // puts string into buffer
-			//memcpy(sendBuffer, numbytes= sprintf(sendBuffer, "ACK:%s", *&allocated), 20);
+			memcpy(sendBuffer,"ACK:",4);
+			memcpy(sendBuffer+4,(char*) &allocated,8);
+
 			printBytes(numbytes, sendBuffer);
 			printf("Interpretation of Server %s \n", sendBuffer);
 
@@ -53,21 +54,22 @@ void handleClientRequests(int new_fd) {
 			printf("%s\n", receiveBuffer);
 
 			printBytes(numbytes, receiveBuffer);
-			splitResponse = strtok(receiveBuffer, ":");
+			char * dataToWrite = strtok(receiveBuffer, ":");
 			printf("Client Command: ");
-			printf("First Split: %s\n", splitResponse);
-			char * dataToWrite = splitResponse;
+			printf("First Split: %s\n", dataToWrite);
+			char * target;
 			splitResponse = strtok(NULL, ":");
-			unsigned int *  target = (unsigned int *) splitResponse;
+			memcpy(&target, splitResponse, 8);
 
 			printf("\nAllocated Pointer: %p -> %s\n",allocated, allocated);
 			printf("SplitReponse Pointer: %p -> %s\n",splitResponse, splitResponse);
-			printf("Target Pointer: %p -> %s\n",&target, target);
+			printf("Target Pointer: %p -> %s\n",target, target);
 
 			memcpy(target, dataToWrite, numbytes);
 
 
-			printf("Content %s is stored at %p!\n", allocated, (void*)target);
+			printf("Content %s is stored at %p!\n", allocated, (void*)allocated);
+			printf("Content 2 %s is stored at %p!\n", target, (void*)target);
 
 
 			memcpy(sendBuffer, &allocated, sizeof(&allocated));
