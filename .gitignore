@@ -37,3 +37,11 @@
 \.cproject
 
 \.settings/
+
+*.sublime-project
+
+*.sublime-workspace
+
+IPv6Addressing/Messaging/src/test\.c
+
+IPv6Addressing/Messaging/makefile_old

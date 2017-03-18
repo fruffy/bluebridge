@@ -15,70 +15,112 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-#include "538_utils.h"
+#include "./lib/538_utils.h"
 
 #define BACKLOG 10     // how many pending connections queue will hold
 #define BLOCK_SIZE 100 // max number of bytes we can get at once
 
-void handleClientRequests(int new_fd) {
-	char receiveBuffer[BLOCK_SIZE];
+int providePointer (int new_fd, char * receiveBuffer) {
+	char * allocated = (char*) malloc(4096*1000);
+	char sendBuffer[BLOCK_SIZE];
+	printf("%p\n", allocated);
+
+	memcpy(sendBuffer,"ACK:",4);
+	memcpy(sendBuffer+4,(char*) &allocated,8);
+
+	printBytes(sendBuffer);
+	printf("Interpretation of Server %s \n", sendBuffer);
+
+	sendMsg(new_fd, sendBuffer,sizeof(sendBuffer));
+	writeMem(new_fd, receiveBuffer);
+	printf("\nAllocated Pointer: %p -> %s\n",allocated, allocated);
+	printf("Content %s is stored at %p!\n", allocated, (void*)allocated);
+}
+
+int writeMem (int new_fd, char * receiveBuffer) {
+	int numbytes;
 	char sendBuffer[BLOCK_SIZE];
 	char * splitResponse;
+	char * target;
 
+	numbytes = receiveMsg(new_fd, receiveBuffer, BLOCK_SIZE);
+
+	printf("Second message from client:\n");
+
+	printBytes(receiveBuffer);
+	char * dataToWrite = strtok(receiveBuffer, ":");
+	printf("Client Command: ");
+	printf("First Split: %s\n", dataToWrite);
+	splitResponse = strtok(NULL, ":");
+	memcpy(&target, splitResponse, 8);
+
+	printf("SplitReponse Pointer: %p -> %s\n",splitResponse, splitResponse);
+	printf("Target Pointer: %p -> %s\n",target, target);
+
+	memcpy(target, dataToWrite, BLOCK_SIZE);
+
+
+	printf("Content 2 %s is stored at %p!\n", target, (void*)target);
+
+	//numbytes = receiveMsg(new_fd, receiveBuffer, BLOCK_SIZE);
+	//receiveBuffer[numbytes] = '\0';
+	printBytes(receiveBuffer);
+}
+int freeMem (int new_fd, char * receiveBuffer) {
+	int numbytes;
+	char sendBuffer[BLOCK_SIZE];
+	char * splitResponse;
+	char * target;
+
+	numbytes = receiveMsg(new_fd, receiveBuffer, BLOCK_SIZE);
+
+	printf("Second message from client:\n");
+	printf("%s\n", receiveBuffer);
+
+	printBytes(receiveBuffer);
+	char * dataToWrite = strtok(receiveBuffer, ":");
+	printf("Client Command: ");
+	printf("First Split: %s\n", dataToWrite);
+	splitResponse = strtok(NULL, ":");
+	memcpy(&target, splitResponse, 8);
+
+	printf("Content stored at %p has been freed!\n", (void*)target);
+	free(target);
+}
+
+int provideData (int new_fd, char * receiveBuffer) {
+	int numbytes;
+	char sendBuffer[BLOCK_SIZE];
+	char * splitResponse;
+	numbytes = receiveMsg(new_fd, receiveBuffer, BLOCK_SIZE);
+
+	printf("Second message from client:\n");
+	printf("%s\n", receiveBuffer);
+
+	printBytes(receiveBuffer);
+	char * dataToWrite = strtok(receiveBuffer, ":");
+	printf("Client Command: ");
+	printf("First Split: %s\n", dataToWrite);
+	char * target;
+	splitResponse = strtok(NULL, ":");
+	memcpy(&target, splitResponse, 8);
+
+	printf("Content stored at %p has been freed!\n", (void*)target);
+	free(target);
+}
+
+
+void handleClientRequests(int new_fd) {
+	char receiveBuffer[BLOCK_SIZE];
 	while (1) {
-		int numbytes;
 		printf("Waiting for client message...\n");
 
-		numbytes = receiveMsg(new_fd, receiveBuffer, BLOCK_SIZE);
+		receiveMsg(new_fd, receiveBuffer, BLOCK_SIZE);
 
 		printf("Message from client:\n");
 		printf("%s\n", receiveBuffer);
-		if (strcmp(receiveBuffer, "WRITE REQUEST") == 0) {
-			uint64_t my_destination_memory[4096];
-			char * allocated = (char*) malloc(4096*1000);
-			printf("%p\n", allocated);
-			//printf("Pointer at %p.\n", (void*)&*allocated);
-			//printf("Interpret as:'%02X'\n", (unsigned) *&allocated);
-
-			memcpy(sendBuffer,"ACK:",4);
-			memcpy(sendBuffer+4,(char*) &allocated,8);
-
-			printBytes(numbytes, sendBuffer);
-			printf("Interpretation of Server %s \n", sendBuffer);
-
-			sendMsg(new_fd, sendBuffer,  numbytes);
-
-			receiveMsg(new_fd, receiveBuffer, BLOCK_SIZE);
-
-			printf("Second message from client:\n");
-			printf("%s\n", receiveBuffer);
-
-			printBytes(numbytes, receiveBuffer);
-			char * dataToWrite = strtok(receiveBuffer, ":");
-			printf("Client Command: ");
-			printf("First Split: %s\n", dataToWrite);
-			char * target;
-			splitResponse = strtok(NULL, ":");
-			memcpy(&target, splitResponse, 8);
-
-			printf("\nAllocated Pointer: %p -> %s\n",allocated, allocated);
-			printf("SplitReponse Pointer: %p -> %s\n",splitResponse, splitResponse);
-			printf("Target Pointer: %p -> %s\n",target, target);
-
-			memcpy(target, dataToWrite, numbytes);
-
-
-			printf("Content %s is stored at %p!\n", allocated, (void*)allocated);
-			printf("Content 2 %s is stored at %p!\n", target, (void*)target);
-
-
-			memcpy(sendBuffer, &allocated, sizeof(&allocated));
-			sendMsg(new_fd, sendBuffer, sizeof(&allocated));
-
-			numbytes = receiveMsg(new_fd, receiveBuffer, BLOCK_SIZE);
-			//printf("Third message from client:\n");
-			//receiveBuffer[numbytes] = '\0';
-			//printBytes(numbytes, receiveBuffer);
+		if (strcmp(receiveBuffer, "ALLOCATE") == 0) {
+			providePointer(new_fd, receiveBuffer);
 		} else {
 			if (send(new_fd, "Hello, world!", 13, 0) == -1) {
 				perror("ERROR writing to socket");
@@ -177,12 +219,12 @@ int main(int argc, char *argv[]) {
 			perror("accept");
 			exit(1);
 		}
-		if (!fork()) {
+		//if (!fork()) {
 			// this is the child process
 			close(sockfd); // child doesn't need the listener
 			// this is the child process
 			handleClientRequests(new_fd);
-		}
+		//}
 		close(new_fd); // parent doesn't need this
 	}
 
