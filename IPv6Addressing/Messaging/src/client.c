@@ -18,12 +18,10 @@
 
 #define BLOCK_SIZE 100 // max number of bytes we can get at once
 
-char * allocateMem(int sockfd) {
+uint64_t allocateMem(int sockfd) {
 	char sendBuffer[BLOCK_SIZE];
 	char receiveBuffer[BLOCK_SIZE];
-	int numbytes;
 	char * splitResponse;
-	int remotePointer;
 	//srand((unsigned int) time(NULL));
 	//memcpy(sendBuffer, gen_rdm_bytestream(BLOCK_SIZE), BLOCK_SIZE);
 	memcpy(sendBuffer, "ALLOCATE", sizeof("ALLOCATE"));
@@ -31,38 +29,74 @@ char * allocateMem(int sockfd) {
 
 
 
-	numbytes = receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
+	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
 	splitResponse = strtok(receiveBuffer, ":");
 
+	printf("%s\n", splitResponse);
 	if (strcmp(receiveBuffer,"ACK") == 0) {
-		splitResponse = strtok(NULL, ":");
-		memcpy(sendBuffer,"DATASET:",8);
-		memcpy(sendBuffer+8,(char*) splitResponse,8);
-		printf("Sending Data: %i bytes as ",numbytes);
-		printBytes(receiveBuffer);
-		sendMsg(sockfd, sendBuffer, numbytes);
+		uint64_t remotePointer =  0;
+		//(uint64_t *) strtok(NULL, ":");
+		memcpy(&remotePointer, strtok(NULL, ":"),8);
+		printf("After Pasting\n");
+		//memcpy(sendBuffer,"DATASET:",8);
+		//memcpy(&zremotePointer,strtok(NULL, ":"),8);
+		return remotePointer;
 	} else {
 		memcpy(sendBuffer, "What's up?", sizeof("What's up?"));
 		sendMsg(sockfd, sendBuffer, sizeof("What's up?"));
+		return 0;
 	}
-
-	numbytes = receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
-	receiveBuffer[numbytes] = '\0';
-
-	printf("Message from server: %i bytes: ",numbytes);
-	printBytes(receiveBuffer);
-
-	memcpy(sendBuffer, receiveBuffer, sizeof(receiveBuffer));
-	sendMsg(sockfd, sendBuffer, numbytes);
-	memset(sendBuffer, 0, BLOCK_SIZE);
-	memset(receiveBuffer, 0, BLOCK_SIZE);
 }
 
+int writeToMemory(int sockfd, uint64_t * remotePointer) {
+	char sendBuffer[BLOCK_SIZE];
+	char receiveBuffer[BLOCK_SIZE];
+
+	srand((unsigned int) time(NULL));
+	//memcpy(sendBuffer, gen_rdm_bytestream(BLOCK_SIZE), BLOCK_SIZE);
+	memcpy(sendBuffer, "WRITE:", sizeof("WRITE:"));
+	memcpy(sendBuffer+6,remotePointer,8);
+	memcpy(sendBuffer+14,":MY DATASET", sizeof(":MY DATASET"));
+
+	printf("Sending Data: %lu bytes as ",sizeof(sendBuffer));
+	printBytes((char*) remotePointer);
+	sendMsg(sockfd, sendBuffer, 25);
+	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
+	printf("%s\n",receiveBuffer);
+}
+int releaseMemory(int sockfd, uint64_t * remotePointer) {
+	char sendBuffer[BLOCK_SIZE];
+	char receiveBuffer[BLOCK_SIZE];
+
+	memcpy(sendBuffer, "FREE:", sizeof("FREE:"));
+	memcpy(sendBuffer+5,remotePointer,8);
+
+	printf("Releasing Data with pointer: ");
+	printBytes((char*)remotePointer);
+
+	sendMsg(sockfd, sendBuffer, 13);
+	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
+	printf("Server Response: %s\n",receiveBuffer);
+}
+char * getMemory(int sockfd, uint64_t * remotePointer) {
+	char sendBuffer[BLOCK_SIZE];
+	char * receiveBuffer = malloc(4096*1000);
+
+	memcpy(sendBuffer, "GET:", sizeof("GET:"));
+	memcpy(sendBuffer+4,remotePointer,8);
+
+	printf("Retrieving Data with pointer: ");
+	printBytes((char*)remotePointer);
+
+	sendMsg(sockfd, sendBuffer, 12);
+	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
+	return receiveBuffer;
+}
 
 int main(int argc, char *argv[]) {
 	int sockfd;
 	struct addrinfo hints, *servinfo, *p;
-	int rv, n;
+	int rv;
 	char s[INET6_ADDRSTRLEN];
 
 	if (argc < 2) {
@@ -109,11 +143,16 @@ int main(int argc, char *argv[]) {
 	int active = 1;
 	long unsigned int len = 200;
 	char input[len];
+	char * localData ;
 	while (active) {
 		memset(input, 0, len);
-		int response =	getLine("Please specify if you would like to (A)llocate, (W)rite, or (R)equest data.\nPress Q to quit the program.\n", input, sizeof(input));
+		getLine("Please specify if you would like to (A)llocate, (W)rite, or (R)equest data.\nPress Q to quit the program.\n", input, sizeof(input));
 		if (strcmp("A", input) == 0) {
-			allocateMem(sockfd);
+			uint64_t remoteMemory = allocateMem(sockfd);
+			writeToMemory(sockfd, &remoteMemory);
+			localData = getMemory(sockfd, &remoteMemory);
+			printf("Retrieve Data: %s\n",localData);
+			releaseMemory(sockfd, &remoteMemory);
 		} else if (strcmp("R", input) == 0) {
 
 		} else if (strcmp("Q", input) == 0) {
