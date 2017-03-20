@@ -45,3 +45,19 @@
 IPv6Addressing/Messaging/src/test\.c
 
 IPv6Addressing/Messaging/makefile_old
+
+# For Python
+TestApps/PageRank/bin
+TestApps/PageRank/build
+TestApps/PageRank/include
+TestApps/PageRank/lib
+TestApps/PageRank/local
+TestApps/PageRank/share
+
+
+
+
+
+
+
+
