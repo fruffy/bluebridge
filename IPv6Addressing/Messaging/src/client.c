@@ -18,22 +18,28 @@
 
 #define BLOCK_SIZE 100 // max number of bytes we can get at once
 
+/*
+ * Sends message to allocate memory
+ */
 uint64_t allocateMem(int sockfd) {
 	char sendBuffer[BLOCK_SIZE];
 	char receiveBuffer[BLOCK_SIZE];
 	char * splitResponse;
 	//srand((unsigned int) time(NULL));
 	//memcpy(sendBuffer, gen_rdm_bytestream(BLOCK_SIZE), BLOCK_SIZE);
+
+	// Send message to server to allocate memory
 	memcpy(sendBuffer, "ALLOCATE", sizeof("ALLOCATE"));
 	sendMsg(sockfd, sendBuffer, sizeof("ALLOCATE"));
 
-
-
+	// Wait to receive a message from the server
 	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
+	// Parse the response
 	splitResponse = strtok(receiveBuffer, ":");
 
 	printf("%s\n", splitResponse);
 	if (strcmp(receiveBuffer,"ACK") == 0) {
+		// If the message is ACK --> successful
 		uint64_t remotePointer =  0;
 		//(uint64_t *) strtok(NULL, ":");
 		memcpy(&remotePointer, strtok(NULL, ":"),8);
@@ -42,57 +48,87 @@ uint64_t allocateMem(int sockfd) {
 		//memcpy(&zremotePointer,strtok(NULL, ":"),8);
 		return remotePointer;
 	} else {
+		// Not successful so we send another message?
 		memcpy(sendBuffer, "What's up?", sizeof("What's up?"));
 		sendMsg(sockfd, sendBuffer, sizeof("What's up?"));
+		// TODO: why do we return 0? Isn't there a better number 
+		// (i.e. -1)
 		return 0;
 	}
 }
 
+/*
+ * Sends a write command to the sockfd for pointer remotePointer
+ */
 int writeToMemory(int sockfd, uint64_t * remotePointer) {
 	char sendBuffer[BLOCK_SIZE];
 	char receiveBuffer[BLOCK_SIZE];
 
 	srand((unsigned int) time(NULL));
+
+	// Create the data
 	//memcpy(sendBuffer, gen_rdm_bytestream(BLOCK_SIZE), BLOCK_SIZE);
 	memcpy(sendBuffer, "WRITE:", sizeof("WRITE:"));
 	memcpy(sendBuffer+6,remotePointer,8);
 	memcpy(sendBuffer+14,":MY DATASET", sizeof(":MY DATASET"));
 
+	// Send the data
 	printf("Sending Data: %lu bytes as ",sizeof(sendBuffer));
 	printBytes((char*) remotePointer);
 	sendMsg(sockfd, sendBuffer, 25);
+
+	// Wait for the response
 	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
 	printf("%s\n",receiveBuffer);
 }
+
+/*
+ * Releases the remote memory
+ */
 int releaseMemory(int sockfd, uint64_t * remotePointer) {
 	char sendBuffer[BLOCK_SIZE];
 	char receiveBuffer[BLOCK_SIZE];
 
+	// Create message
 	memcpy(sendBuffer, "FREE:", sizeof("FREE:"));
 	memcpy(sendBuffer+5,remotePointer,8);
 
 	printf("Releasing Data with pointer: ");
 	printBytes((char*)remotePointer);
 
+	// Send message
 	sendMsg(sockfd, sendBuffer, 13);
+
+	// Receive response
 	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
 	printf("Server Response: %s\n",receiveBuffer);
 }
+
+/*
+ * Reads the remote memory
+ */
 char * getMemory(int sockfd, uint64_t * remotePointer) {
 	char sendBuffer[BLOCK_SIZE];
 	char * receiveBuffer = malloc(4096*1000);
 
+	// Prep message
 	memcpy(sendBuffer, "GET:", sizeof("GET:"));
 	memcpy(sendBuffer+4,remotePointer,8);
 
 	printf("Retrieving Data with pointer: ");
 	printBytes((char*)remotePointer);
 
+	// Send message
 	sendMsg(sockfd, sendBuffer, 12);
+	// Receive response
 	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
 	return receiveBuffer;
 }
 
+/*
+ * Main workhorse method. Parses arguments, setups connections
+ * Allows user to issue commands on the command line.
+ */
 int main(int argc, char *argv[]) {
 	int sockfd;
 	struct addrinfo hints, *servinfo, *p;
@@ -105,6 +141,8 @@ int main(int argc, char *argv[]) {
 		argv[2] = "5000";
 	}
 
+	// Tells the getaddrinfo to only return sockets
+	// which fit these params.
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET6;
 	hints.ai_socktype = SOCK_STREAM;
@@ -114,6 +152,9 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
+	// TODO: isn't this a separate method in server.c? Can it be moved
+	// to the helper?
+	
 	// loop through all the results and connect to the first we can
 	for (p = servinfo; p != NULL; p = p->ai_next) {
 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol))

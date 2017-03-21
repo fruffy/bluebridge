@@ -14,16 +14,23 @@
 
 #include "538_utils.h"
 
-// get sockaddr, IPv4 or IPv6:
+/* 
+ * get sockaddr, IPv4 or IPv6:
+ */
 void *get_in_addr(struct sockaddr *sa) {
+	// socket family is IPv4
 	if (sa->sa_family == AF_INET) {
 		return &(((struct sockaddr_in*) sa)->sin_addr);
 	}
 
+	// socket family is IPv6
 	return &(((struct sockaddr_in6*) sa)->sin6_addr);
 }
 
-//http://stackoverflow.com/questions/4023895/how-to-read-string-entered-by-user-in-c
+/*
+ * Gets the line from the command prompt
+ * http://stackoverflow.com/questions/4023895/how-to-read-string-entered-by-user-in-c
+ */
 int getLine(char *prmpt, char *buff, size_t sz) {
 	int ch, extra;
 
@@ -49,6 +56,9 @@ int getLine(char *prmpt, char *buff, size_t sz) {
 	return 1;
 }
 
+/*
+ * Gets random byte array with size num_bytes
+ */
 unsigned char *gen_rdm_bytestream(size_t num_bytes) {
 	unsigned char *stream = malloc(num_bytes);
 	size_t i;
@@ -60,6 +70,10 @@ unsigned char *gen_rdm_bytestream(size_t num_bytes) {
 	return stream;
 }
 
+/*
+ * TODO: explain.
+ * Also use s to get rid of the warning.
+ */
 void sigchld_handler(int s) {
 	// waitpid() might overwrite errno, so we save and restore it:
 	int saved_errno = errno;
@@ -70,12 +84,18 @@ void sigchld_handler(int s) {
 	errno = saved_errno;
 }
 
+/*
+ * Sends message to specified socket
+ */
 void sendMsg(int sockfd, char * sendBuffer, int msgBlockSize) {
 	if (send(sockfd, sendBuffer, msgBlockSize, 0) < 0)
 		perror("ERROR writing to socket");
 	memset(sendBuffer, 0, msgBlockSize);
 }
 
+/*
+ * Receives message from socket
+ */
 int receiveMsg(int sockfd, char * receiveBuffer, int msgBlockSize) {
 	//Sockets Layer Call: recv()
 	int numbytes = 0;
@@ -87,6 +107,9 @@ int receiveMsg(int sockfd, char * receiveBuffer, int msgBlockSize) {
 	return numbytes;
 }
 
+/*
+ * Prints byte buffer
+ */
 int printBytes(char * receiveBuffer) {
 	int i = 0;
 

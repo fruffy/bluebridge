@@ -24,8 +24,9 @@ char *varadr_char[1000];
 int countchar = 0;
 
 
-
-
+/*
+ * Frees global memory
+ */
 int cleanMemory() {
 	int i;
 	for (i = 0; i <= countchar; i++) {
@@ -35,6 +36,9 @@ int cleanMemory() {
 	return EXIT_SUCCESS;
 }
 
+/*
+ * Adds a character to the global memory
+ */
 int addchar(char* charadr) {
 	if (charadr == NULL ) {
 		perror("\nError when trying to allocate a pointer! \n");
@@ -47,7 +51,10 @@ int addchar(char* charadr) {
 	return EXIT_SUCCESS;
 }
 
-
+/*
+ * TODO: explain.
+ * Creates a new pointer to a new part of memory then sends it?
+ */
 int providePointer (int new_fd, char * receiveBuffer) {
 	char * allocated = (char*) malloc(4096*1000);
 	char sendBuffer[BLOCK_SIZE];
@@ -63,12 +70,18 @@ int providePointer (int new_fd, char * receiveBuffer) {
 	printf("Content %s is stored at %p!\n", allocated, (void*)allocated);
 }
 
+/*
+ * TODO: explain.
+ * Writes a piece of memory?
+ */
 int writeMem (int new_fd, char * receiveBuffer) {
 	char sendBuffer[BLOCK_SIZE];
 	char * target;
 
+	// TODO: why is this +9?
 	char * dataToWrite = receiveBuffer +9;
 	printf("Third Split: %s\n", dataToWrite);
+	// Copy the first eight bytes of receive buffer into the target
 	memcpy(&target, receiveBuffer, 8);
 
 	printf("Target Pointer: %p -> %s\n",target, target);
@@ -78,49 +91,74 @@ int writeMem (int new_fd, char * receiveBuffer) {
 
 	printf("Content %s is stored at %p!\n", target, (void*)target);
 	memcpy(sendBuffer, "ACK", sizeof("ACK"));
+	// Send the sendBuffer to the new fd (socket), only send 3 bytes.
+	// TODO: shouldn't this be sizeof("ACK")?
 	sendMsg(new_fd,sendBuffer,3);
 
 }
+
+/*
+ * TODO: explain.
+ * This is freeing target memory?
+ */
 int freeMem (int new_fd, char * receiveBuffer) {
 	char sendBuffer[BLOCK_SIZE];
 	char * target;
 
+	// Why copy when you're freeing the memory?
 	memcpy(&target, receiveBuffer, 8);
 
 	printf("Content stored at %p has been freed!\n", (void*)target);
 	free(target);
 	memcpy(sendBuffer, "ACK", sizeof("ACK"));
+	// Send the sendBuffer to the new fd (socket), only send 3 bytes.
+	// TODO: shouldn't this be sizeof("ACK")?
 	sendMsg(new_fd,sendBuffer,3);
 
 }
 
+/*
+ * Gets memory and sends it
+ */
 int getMem (int new_fd, char * receiveBuffer) {
 	char sendBuffer[BLOCK_SIZE];
 	char * target;
 
+	// Copy eight bytes of the receiveBuffer into the target
 	memcpy(&target, receiveBuffer, 8);
 
 	printf("Content %s is currently stored at %p!\n", target, (void*)target);
 
 
 	printf("Content %s will be delivered to client!\n", target);
+	// Copy the target into the send buffer (entire BLOCK_SIZE)
+	// TODO: why do this if target only has 8 bytes?
 	memcpy(sendBuffer, target, BLOCK_SIZE);
+
+	// Send the sendBuffer (entire BLOCK_SIZE) to new_fd
 	sendMsg(new_fd,sendBuffer,BLOCK_SIZE);
 }
 
-
+/*
+ * Request handler for socket new_fd
+ * TODO: get message format
+ */
 void handleClientRequests(int new_fd) {
 	char receiveBuffer[BLOCK_SIZE];
 	int numbytes;
 	while (1) {
 		printf("Waiting for client message...\n");
 
+		// Get the message
 		numbytes = receiveMsg(new_fd, receiveBuffer, BLOCK_SIZE);
+
+		// Parse the message (delimited by :)
 		printf("Message from client: %i bytes\n", numbytes);
 		char * dataToWrite = strtok(receiveBuffer, ":");
 		printf("Client Command: %s\n", dataToWrite);
 		char * splitResponse = strtok(NULL, ":");
 
+		// Switch on the client command
 		if (strcmp(dataToWrite, "ALLOCATE") == 0) {
 			providePointer(new_fd, splitResponse);
 		} else if (strcmp(dataToWrite, "WRITE") == 0) {
@@ -136,6 +174,7 @@ void handleClientRequests(int new_fd) {
 				printBytes(splitResponse);
 				getMem(new_fd, splitResponse);
 		} else {
+			// TODO: what is this doing?
 			if (send(new_fd, "Hello, world!", 13, 0) == -1) {
 				perror("ERROR writing to socket");
 				exit(1);
@@ -144,6 +183,10 @@ void handleClientRequests(int new_fd) {
 	}
 }
 
+/*
+ * TODO: explain
+ * Binds to the next available address?
+ */
 struct addrinfo* bindSocket(struct addrinfo* p, struct addrinfo* servinfo,
 		int* sockfd) {
 	int yes = 1;
@@ -170,8 +213,12 @@ struct addrinfo* bindSocket(struct addrinfo* p, struct addrinfo* servinfo,
 	return p;
 }
 
+/*
+ * Accept a connection on sockfd
+ */
 int acceptConnections(int sockfd) {
-	struct sockaddr_storage their_addr; // connector's address information
+	// connector's address information
+	struct sockaddr_storage their_addr; 
 	char s[INET6_ADDRSTRLEN];
 	socklen_t sin_size = sizeof their_addr;
 	//wait for incoming connection
@@ -183,13 +230,19 @@ int acceptConnections(int sockfd) {
 	return temp_fd;
 }
 
+/*
+ * Main workhorse method. Parses command args and does setup.
+ * Blocks waiting for connections.
+ */
 int main(int argc, char *argv[]) {
 	int sockfd;  // listen on sock_fd, new connection on new_fd
 	struct addrinfo hints, *servinfo, *p;
 	struct sigaction sa;
 	int rv;
 
-	memset(&hints, 0, sizeof hints);
+	// hints = specifies criteria for selecting the socket address
+	// structures
+	memset(&hints, 0, sizeof(hints));
 	if (argc < 2) {
 		printf("Defaulting to standard values...\n");
 		argv[1] = "5000";
@@ -206,18 +259,23 @@ int main(int argc, char *argv[]) {
 	// loop through all the results and bind to the first we can
 	p = bindSocket(p, servinfo, &sockfd);
 
-	freeaddrinfo(servinfo); // all done with this structure
+	// Frees the memory allocated for servinfo (list of possible sockets)
+	freeaddrinfo(servinfo);
+	// TODO: should free hints as well?
 
+	// Check to make sure the server was able to bind
 	if (p == NULL) {
 		fprintf(stderr, "server: failed to bind\n");
 		exit(1);
 	}
 
+	// Listen on the socket with a queue size of BACKLOG
 	if (listen(sockfd, BACKLOG) == -1) {
 		perror("listen");
 		exit(1);
 	}
 
+	// TODO: explain. 
 	sa.sa_handler = sigchld_handler; // reap all dead processes
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_RESTART;
@@ -226,6 +284,7 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
+	// Start waiting for connections
 	printf("server: waiting for connections...\n");
 	while (1) {
 		int new_fd = acceptConnections(sockfd);
