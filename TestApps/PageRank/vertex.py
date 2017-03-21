@@ -100,13 +100,19 @@ def build_all_vertices(graph):
 if __name__ == '__main__':
 
 	# Need to read and write to disk
-	#reader = csv.reader(open('./twitter/twitter_rv.net', 'r'), delimiter='\t');
+	reader = csv.reader(open('./twitter/twitter_rv.net', 'r'), delimiter='\t');
 
-	reader = csv.reader(open('./simple_routes.txt', 'r'), delimiter=' ')
-	data = [row for row in reader];
+	#reader = csv.reader(open('./simple_routes.txt', 'r'), delimiter=' ')
+	edges = []
+	nodes = []
+
+	for row in reader:
+		print row
+		nodes.append(row[0])
+		nodes.append(row[1])
+		edges.append((row[0], row[1]))
 	
-	nodes = set([row[0] for row in data]).union(set([row[1] for row in data]));
-	edges = [(row[0], row[1]) for row in data];
+	nodes = set(nodes);
 
 	print "Parsing complete."
 
