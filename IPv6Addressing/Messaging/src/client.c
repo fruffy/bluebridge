@@ -87,7 +87,7 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
 	memcpy(sendBuffer+6,remotePointer,8);
 	size += 8;
 	memcpy(sendBuffer+14,payload, strlen(payload));
-	size += 13;
+	size += strlen(payload);
 	// printf("Size of payload %lu, length %d\n", sizeof(payload), (int) strlen(payload));
 	// printf("Size: %d\n", size);
 
@@ -228,13 +228,30 @@ int main(int argc, char *argv[]) {
 		memset(input, 0, len);
 		getLine("Please specify if you would like to (L)ist pointers, (A)llocate, (F)ree, (W)rite, or (R)equest data.\nPress Q to quit the program.\n", input, sizeof(input));
 		if (strcmp("A", input) == 0) {
-			uint64_t remoteMemory = allocateMem(sockfd);
-			char addrString[100] = {};
-			sprintf(addrString, "%" PRIx64, remoteMemory);
-			strcpy(remotePointers[count].AddrString, addrString);
-			memcpy(remotePointers[count++].Pointer, &remoteMemory, sizeof(remoteMemory));
-			printf("Allocated pointer 0x%s\n", addrString);
-			printf("Allocated pointer address %p\n", &remoteMemory);
+			memset(input, 0, len);
+			getLine("Specify a number of address or press enter for one.\n", input, sizeof(input));
+
+			if (strcmp("", input) == 0) {
+				uint64_t remoteMemory = allocateMem(sockfd);
+				char addrString[100] = {};
+				sprintf(addrString, "%" PRIx64, remoteMemory);
+				strcpy(remotePointers[count].AddrString, addrString);
+				memcpy(remotePointers[count++].Pointer, &remoteMemory, sizeof(remoteMemory));
+				printf("Allocated pointer 0x%s\n", addrString);
+				printf("Allocated pointer address %p\n", &remoteMemory);
+			} else {
+				int num = atoi(input);
+				int j; 
+				for (j = 0; j < num; j++) {
+					uint64_t remoteMemory = allocateMem(sockfd);
+					char addrString[100] = {};
+					sprintf(addrString, "%" PRIx64, remoteMemory);
+					strcpy(remotePointers[count].AddrString, addrString);
+					memcpy(remotePointers[count++].Pointer, &remoteMemory, sizeof(remoteMemory));
+					printf("Allocated pointer 0x%s\n", addrString);
+					printf("Allocated pointer address %p\n", &remoteMemory);
+				}
+			}
 		} else if (strcmp("L", input) == 0){
 			printf("Address\t\tPointer\n");
 			for (i = 0; i < 100; i++){
