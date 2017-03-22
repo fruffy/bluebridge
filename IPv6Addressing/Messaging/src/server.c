@@ -162,17 +162,17 @@ void handleClientRequests(int new_fd) {
 		if (strcmp(dataToWrite, "ALLOCATE") == 0) {
 			providePointer(new_fd, splitResponse);
 		} else if (strcmp(dataToWrite, "WRITE") == 0) {
-				printf("Writing to pointer: ");
-				printBytes(splitResponse);
-				writeMem(new_fd, splitResponse);
+			printf("Writing to pointer: ");
+			printBytes(splitResponse);
+			writeMem(new_fd, splitResponse);
 		} else if (strcmp(dataToWrite, "FREE") == 0) {
-				printf("Deleting pointer: ");
-				printBytes(splitResponse);
-				freeMem(new_fd, splitResponse);
+			printf("Deleting pointer: ");
+			printBytes(splitResponse);
+			freeMem(new_fd, splitResponse);
 		} else if (strcmp(dataToWrite, "GET") == 0) {
-				printf("Retrieving data: ");
-				printBytes(splitResponse);
-				getMem(new_fd, splitResponse);
+			printf("Retrieving data: ");
+			printBytes(splitResponse);
+			getMem(new_fd, splitResponse);
 		} else {
 			// TODO: what is this doing?
 			if (send(new_fd, "Hello, world!", 13, 0) == -1) {

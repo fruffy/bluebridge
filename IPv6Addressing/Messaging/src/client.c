@@ -13,6 +13,7 @@
 #include <sys/socket.h>
 #include <time.h>
 #include <arpa/inet.h>
+#include <inttypes.h>
 
 #include "./lib/538_utils.h"
 
@@ -154,7 +155,7 @@ int main(int argc, char *argv[]) {
 
 	// TODO: isn't this a separate method in server.c? Can it be moved
 	// to the helper?
-	
+
 	// loop through all the results and connect to the first we can
 	for (p = servinfo; p != NULL; p = p->ai_next) {
 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol))
@@ -184,18 +185,61 @@ int main(int argc, char *argv[]) {
 	int active = 1;
 	long unsigned int len = 200;
 	char input[len];
-	char * localData ;
+	char * localData;
+	int count = 0;
+	int i;
+	uint64_t* remotePointers[100];
+	// Initialize remotePointers array
+	for (i = 0; i < 100; i++) {
+		remotePointers[i] = 0;
+	}
+
 	while (active) {
 		memset(input, 0, len);
-		getLine("Please specify if you would like to (A)llocate, (W)rite, or (R)equest data.\nPress Q to quit the program.\n", input, sizeof(input));
+		getLine("Please specify if you would like to (L)ist pointers, (A)llocate, (F)ree, (W)rite, or (R)equest data.\nPress Q to quit the program.\n", input, sizeof(input));
 		if (strcmp("A", input) == 0) {
 			uint64_t remoteMemory = allocateMem(sockfd);
-			writeToMemory(sockfd, &remoteMemory);
-			localData = getMemory(sockfd, &remoteMemory);
-			printf("Retrieve Data: %s\n",localData);
-			releaseMemory(sockfd, &remoteMemory);
+			remotePointers[count++] = (void *)remoteMemory;
+			printf("Allocated pointer: %p\n", (void *)remoteMemory);
+		} else if (strcmp("L", input) == 0){
+			for (i = 0; i < 100; i++){
+				if (remotePointers[i] != 0) {
+					printf("%p\n", remotePointers[i]);
+				}
+			}
 		} else if (strcmp("R", input) == 0) {
-
+			memset(input, 0, len);
+			getLine("Please specify the memory address.\n", input, sizeof(input));
+			uint64_t address;
+			sscanf(input, "%" SCNx64, &address);
+			printf("Received address: %" PRIx64 "\n", address);
+			uint64_t pointer = (uint64_t *)address;
+			printf("Created pointer: %p\n", &pointer);
+			localData = getMemory(sockfd, &pointer);
+			printf("Retrieved Data: %s\n",localData);
+		} else if (strcmp("W", input) == 0) {
+			memset(input, 0, len);
+			getLine("Please specify the memory address.\n", input, sizeof(input));
+			uint64_t address;
+			sscanf(input, "%" SCNx64, &address);
+			printf("Received address: %" PRIx64 "\n", address);
+			uint64_t pointer = (uint64_t *)address;
+			printf("Created pointer: %p\n", &pointer);
+			writeToMemory(sockfd, &pointer);
+		} else if (strcmp("F", input) == 0) {
+			memset(input, 0, len);
+			getLine("Please specify the memory address.\n", input, sizeof(input));
+			uint64_t address;
+			sscanf(input, "%" SCNx64, &address);
+			printf("Received address: %" PRIx64 "\n", address);
+			uint64_t pointer = (uint64_t *)address;
+			printf("Created pointer: %p\n", &pointer);
+			releaseMemory(sockfd, &pointer);
+			for (i = 0; i < 100; i++) {
+				if (remotePointers[i] == (void *)pointer) {
+					remotePointers[i] = 0;
+				}
+			}
 		} else if (strcmp("Q", input) == 0) {
 			active = 0;
 			printf("Ende Gelaende\n");
