@@ -19,6 +19,11 @@
 
 #define BLOCK_SIZE 100 // max number of bytes we can get at once
 
+struct PointerMap {
+	char* AddrString;
+	uint64_t* Pointer;
+};
+
 /*
  * Sends message to allocate memory
  */
@@ -61,22 +66,36 @@ uint64_t allocateMem(int sockfd) {
 /*
  * Sends a write command to the sockfd for pointer remotePointer
  */
-int writeToMemory(int sockfd, uint64_t * remotePointer) {
+int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
 	char sendBuffer[BLOCK_SIZE];
 	char receiveBuffer[BLOCK_SIZE];
 
+	char* payload = malloc(20 * sizeof(char));
+	sprintf(payload,":MY DATASET %d", index);
+
+	// printf("Payload: %s\n", payload);
+
 	srand((unsigned int) time(NULL));
+
+	int size = 0;
 
 	// Create the data
 	//memcpy(sendBuffer, gen_rdm_bytestream(BLOCK_SIZE), BLOCK_SIZE);
 	memcpy(sendBuffer, "WRITE:", sizeof("WRITE:"));
+	// printf("%lu\n", sizeof("WRITE:"));
+	size += 6;
 	memcpy(sendBuffer+6,remotePointer,8);
-	memcpy(sendBuffer+14,":MY DATASET", sizeof(":MY DATASET"));
+	size += 8;
+	memcpy(sendBuffer+14,payload, strlen(payload));
+	size += 13;
+	// printf("Size of payload %lu, length %d\n", sizeof(payload), (int) strlen(payload));
+	// printf("Size: %d\n", size);
 
 	// Send the data
-	// printf("Sending Data: %lu bytes as ",sizeof(sendBuffer));
-	// printBytes((char*) remotePointer);
-	sendMsg(sockfd, sendBuffer, 25);
+	printf("Sending Data: %lu bytes as ",sizeof(sendBuffer));
+	printBytes((char*) remotePointer);
+	// printf("Send buffer: %s", sendBuffer);
+	sendMsg(sockfd, sendBuffer, size);
 
 	// Wait for the response
 	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
@@ -94,8 +113,8 @@ int releaseMemory(int sockfd, uint64_t * remotePointer) {
 	memcpy(sendBuffer, "FREE:", sizeof("FREE:"));
 	memcpy(sendBuffer+5,remotePointer,8);
 
-	// printf("Releasing Data with pointer: ");
-	// printBytes((char*)remotePointer);
+	printf("Releasing Data with pointer: ");
+	printBytes((char*)remotePointer);
 
 	// Send message
 	sendMsg(sockfd, sendBuffer, 13);
@@ -116,8 +135,8 @@ char * getMemory(int sockfd, uint64_t * remotePointer) {
 	memcpy(sendBuffer, "GET:", sizeof("GET:"));
 	memcpy(sendBuffer+4,remotePointer,8);
 
-	// printf("Retrieving Data with pointer: ");
-	// printBytes((char*)remotePointer);
+	printf("Retrieving Data with pointer: ");
+	printBytes((char*)remotePointer);
 
 	// Send message
 	sendMsg(sockfd, sendBuffer, 12);
@@ -143,6 +162,8 @@ int main(int argc, char *argv[]) {
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	char s[INET6_ADDRSTRLEN];
+
+	srand(time(NULL));
 
 	if (argc < 2) {
 		printf("Defaulting to standard values...\n");
@@ -196,10 +217,11 @@ int main(int argc, char *argv[]) {
 	char * localData;
 	int count = 0;
 	int i;
-	uint64_t* remotePointers[100];
+	struct PointerMap remotePointers[100];
 	// Initialize remotePointers array
 	for (i = 0; i < 100; i++) {
-		remotePointers[i] = 0;
+		remotePointers[i].AddrString = (char *) malloc(100);
+		remotePointers[i].Pointer = malloc(sizeof(uint64_t));
 	}
 
 	while (active) {
@@ -207,36 +229,77 @@ int main(int argc, char *argv[]) {
 		getLine("Please specify if you would like to (L)ist pointers, (A)llocate, (F)ree, (W)rite, or (R)equest data.\nPress Q to quit the program.\n", input, sizeof(input));
 		if (strcmp("A", input) == 0) {
 			uint64_t remoteMemory = allocateMem(sockfd);
-			remotePointers[count++] = (void *)remoteMemory;
-			printf("Allocated pointer %p\n", (void *)remoteMemory);
+			char addrString[100] = {};
+			sprintf(addrString, "%" PRIx64, remoteMemory);
+			strcpy(remotePointers[count].AddrString, addrString);
+			memcpy(remotePointers[count++].Pointer, &remoteMemory, sizeof(remoteMemory));
+			printf("Allocated pointer 0x%s\n", addrString);
+			printf("Allocated pointer address %p\n", &remoteMemory);
 		} else if (strcmp("L", input) == 0){
+			printf("Address\t\tPointer\n");
 			for (i = 0; i < 100; i++){
-				if (remotePointers[i] != 0) {
-					printf("%p\n", remotePointers[i]);
+				if (strcmp(remotePointers[i].AddrString, "") != 0) {
+					printf("0x%s\t%p\n", remotePointers[i].AddrString, remotePointers[i].Pointer);
 				}
 			}
 		} else if (strcmp("R", input) == 0) {
 			memset(input, 0, len);
 			getLine("Please specify the memory address.\n", input, sizeof(input));
-			uint64_t pointer = getPointerFromString(input);
-			printf("Retrieving data from pointer %p\n", &pointer);
-			localData = getMemory(sockfd, &pointer);
-			printf("Retrieved Data: %s\n",localData);
+
+			if (strcmp("A", input) == 0) {
+				for (i = 0; i < 100; i++) {
+					if (strcmp(remotePointers[i].AddrString, "") != 0) {
+						printf("Retrieving data from pointer 0x%s\n", remotePointers[i].AddrString);
+						localData = getMemory(sockfd, remotePointers[i].Pointer);
+						printf("Retrieved Data: %s\n",localData);
+					}
+				}
+			} else {
+				uint64_t pointer = getPointerFromString(input);
+				printf("Retrieving data from pointer %p\n", (void *) pointer);
+				localData = getMemory(sockfd, &pointer);
+				printf("Retrieved Data: %s\n",localData);
+			}
 		} else if (strcmp("W", input) == 0) {
 			memset(input, 0, len);
 			getLine("Please specify the memory address.\n", input, sizeof(input));
-			uint64_t pointer = getPointerFromString(input);
-			printf("Writing data to pointer %p\n", &pointer);
-			writeToMemory(sockfd, &pointer);
+
+			if (strcmp("A", input) == 0) {
+				for (i = 0; i < 100; i++) {
+					if (strcmp(remotePointers[i].AddrString, "") != 0) {
+						printf("Writing data to pointer 0x%s\n", remotePointers[i].AddrString);
+						// TODO change to write different string
+						writeToMemory(sockfd, remotePointers[i].Pointer, i);
+					}
+				}
+			} else {
+				uint64_t pointer = getPointerFromString(input);
+				printf("Writing data to pointer %p\n", (void *) pointer);
+				writeToMemory(sockfd, &pointer, rand());
+			}
 		} else if (strcmp("F", input) == 0) {
 			memset(input, 0, len);
 			getLine("Please specify the memory address.\n", input, sizeof(input));
-			uint64_t pointer = getPointerFromString(input);
-			printf("Freeing pointer %p\n", &pointer);
-			releaseMemory(sockfd, &pointer);
-			for (i = 0; i < 100; i++) {
-				if (remotePointers[i] == (void *)pointer) {
-					remotePointers[i] = 0;
+			
+			if (strcmp("A", input) == 0) {
+				for (i = 0; i < 100; i++) {
+					if (strcmp(remotePointers[i].AddrString, "") != 0) {
+						printf("Freeing pointer 0x%s\n", remotePointers[i].AddrString);
+						releaseMemory(sockfd, remotePointers[i].Pointer);
+						remotePointers[i].AddrString = "";
+						remotePointers[i].Pointer = 0;
+					}
+				}
+			} else {
+				uint64_t pointer = getPointerFromString(input);
+				printf("Freeing pointer %p\n", (void *) pointer);
+				releaseMemory(sockfd, &pointer);
+				for (i = 0; i < 100; i++) {
+					if (strcmp(remotePointers[i].AddrString, input+2) == 0){
+						// printf("Match!\n");
+						remotePointers[i].AddrString = "";
+						remotePointers[i].Pointer = 0;
+					}
 				}
 			}
 		} else if (strcmp("Q", input) == 0) {

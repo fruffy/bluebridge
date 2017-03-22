@@ -78,6 +78,8 @@ int writeMem (int new_fd, char * receiveBuffer) {
 	char sendBuffer[BLOCK_SIZE];
 	char * target;
 
+
+	printf("Receive buffer: %s\n", receiveBuffer);
 	// TODO: why is this +9?
 	char * dataToWrite = receiveBuffer +9;
 	printf("Third Split: %s\n", dataToWrite);
