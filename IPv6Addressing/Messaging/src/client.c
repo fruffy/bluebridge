@@ -38,13 +38,13 @@ uint64_t allocateMem(int sockfd) {
 	// Parse the response
 	splitResponse = strtok(receiveBuffer, ":");
 
-	printf("%s\n", splitResponse);
+	// printf("%s\n", splitResponse);
 	if (strcmp(receiveBuffer,"ACK") == 0) {
 		// If the message is ACK --> successful
 		uint64_t remotePointer =  0;
 		//(uint64_t *) strtok(NULL, ":");
 		memcpy(&remotePointer, strtok(NULL, ":"),8);
-		printf("After Pasting\n");
+		// printf("After Pasting\n");
 		//memcpy(sendBuffer,"DATASET:",8);
 		//memcpy(&zremotePointer,strtok(NULL, ":"),8);
 		return remotePointer;
@@ -74,13 +74,13 @@ int writeToMemory(int sockfd, uint64_t * remotePointer) {
 	memcpy(sendBuffer+14,":MY DATASET", sizeof(":MY DATASET"));
 
 	// Send the data
-	printf("Sending Data: %lu bytes as ",sizeof(sendBuffer));
-	printBytes((char*) remotePointer);
+	// printf("Sending Data: %lu bytes as ",sizeof(sendBuffer));
+	// printBytes((char*) remotePointer);
 	sendMsg(sockfd, sendBuffer, 25);
 
 	// Wait for the response
 	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
-	printf("%s\n",receiveBuffer);
+	// printf("%s\n",receiveBuffer);
 }
 
 /*
@@ -94,15 +94,15 @@ int releaseMemory(int sockfd, uint64_t * remotePointer) {
 	memcpy(sendBuffer, "FREE:", sizeof("FREE:"));
 	memcpy(sendBuffer+5,remotePointer,8);
 
-	printf("Releasing Data with pointer: ");
-	printBytes((char*)remotePointer);
+	// printf("Releasing Data with pointer: ");
+	// printBytes((char*)remotePointer);
 
 	// Send message
 	sendMsg(sockfd, sendBuffer, 13);
 
 	// Receive response
 	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
-	printf("Server Response: %s\n",receiveBuffer);
+	// printf("Server Response: %s\n",receiveBuffer);
 }
 
 /*
@@ -116,14 +116,22 @@ char * getMemory(int sockfd, uint64_t * remotePointer) {
 	memcpy(sendBuffer, "GET:", sizeof("GET:"));
 	memcpy(sendBuffer+4,remotePointer,8);
 
-	printf("Retrieving Data with pointer: ");
-	printBytes((char*)remotePointer);
+	// printf("Retrieving Data with pointer: ");
+	// printBytes((char*)remotePointer);
 
 	// Send message
 	sendMsg(sockfd, sendBuffer, 12);
 	// Receive response
 	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
 	return receiveBuffer;
+}
+
+uint64_t getPointerFromString(char* input) {
+	uint64_t address;
+	sscanf(input, "%" SCNx64, &address);
+	// printf("Received address: %" PRIx64 "\n", address);
+	uint64_t pointer = (uint64_t *)address;
+	return pointer;
 }
 
 /*
@@ -200,7 +208,7 @@ int main(int argc, char *argv[]) {
 		if (strcmp("A", input) == 0) {
 			uint64_t remoteMemory = allocateMem(sockfd);
 			remotePointers[count++] = (void *)remoteMemory;
-			printf("Allocated pointer: %p\n", (void *)remoteMemory);
+			printf("Allocated pointer %p\n", (void *)remoteMemory);
 		} else if (strcmp("L", input) == 0){
 			for (i = 0; i < 100; i++){
 				if (remotePointers[i] != 0) {
@@ -210,30 +218,21 @@ int main(int argc, char *argv[]) {
 		} else if (strcmp("R", input) == 0) {
 			memset(input, 0, len);
 			getLine("Please specify the memory address.\n", input, sizeof(input));
-			uint64_t address;
-			sscanf(input, "%" SCNx64, &address);
-			printf("Received address: %" PRIx64 "\n", address);
-			uint64_t pointer = (uint64_t *)address;
-			printf("Created pointer: %p\n", &pointer);
+			uint64_t pointer = getPointerFromString(input);
+			printf("Retrieving data from pointer %p\n", &pointer);
 			localData = getMemory(sockfd, &pointer);
 			printf("Retrieved Data: %s\n",localData);
 		} else if (strcmp("W", input) == 0) {
 			memset(input, 0, len);
 			getLine("Please specify the memory address.\n", input, sizeof(input));
-			uint64_t address;
-			sscanf(input, "%" SCNx64, &address);
-			printf("Received address: %" PRIx64 "\n", address);
-			uint64_t pointer = (uint64_t *)address;
-			printf("Created pointer: %p\n", &pointer);
+			uint64_t pointer = getPointerFromString(input);
+			printf("Writing data to pointer %p\n", &pointer);
 			writeToMemory(sockfd, &pointer);
 		} else if (strcmp("F", input) == 0) {
 			memset(input, 0, len);
 			getLine("Please specify the memory address.\n", input, sizeof(input));
-			uint64_t address;
-			sscanf(input, "%" SCNx64, &address);
-			printf("Received address: %" PRIx64 "\n", address);
-			uint64_t pointer = (uint64_t *)address;
-			printf("Created pointer: %p\n", &pointer);
+			uint64_t pointer = getPointerFromString(input);
+			printf("Freeing pointer %p\n", &pointer);
 			releaseMemory(sockfd, &pointer);
 			for (i = 0; i < 100; i++) {
 				if (remotePointers[i] == (void *)pointer) {
@@ -248,6 +247,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	freeaddrinfo(servinfo); // all done with this structure
+
+	// TODO: send close message so the server exits
 	close(sockfd);
 
 	return 0;
