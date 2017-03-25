@@ -113,14 +113,15 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
 	//memcpy(sendBuffer, gen_rdm_bytestream(BLOCK_SIZE), BLOCK_SIZE);
 	memcpy(sendBuffer, "WRITE:", sizeof("WRITE:"));
 	printf("%lu\n", sizeof("WRITE:"));
-	size += 6;
-	memcpy(sendBuffer+6,remotePointer,8);
+	size += sizeof("WRITE:");
+	memcpy(sendBuffer+size,remotePointer,sizeof(remotePointer));
 	printf("%lu\n", sizeof(remotePointer));
-	size += 8;
-	memcpy(sendBuffer+14,payload, strlen(payload));
+	size += sizeof(remotePointer);
+	printf("%d\n", size);
+	memcpy(sendBuffer+size,payload, strlen(payload));
 	size += strlen(payload);
 	// printf("Size of payload %lu, length %d\n", sizeof(payload), (int) strlen(payload));
-	// printf("Size: %d\n", size);
+	printf("Size: %d\n", size);
 
 	// Send the data
 	printf("Sending Data: %lu bytes as ",sizeof(sendBuffer));
