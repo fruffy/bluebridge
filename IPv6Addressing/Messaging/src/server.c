@@ -55,21 +55,32 @@ int addchar(char* charadr) {
  * Creates a new pointer to a new part of memory then sends it?
  */
 int providePointer (int new_fd, char * receiveBuffer) {
+	print_debug("Creating allocated and sendBuffer with malloc");
 	char * allocated = (char*) malloc(4096*1000);
-	char* sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
+	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
+	int size = 0;
 
-	memcpy(sendBuffer,"ACK:",4);
-	memcpy(sendBuffer+4,&allocated,8);
+	print_debug("Constructing message in sendBuffer");
+	memcpy(sendBuffer+size, "ACK:", sizeof("ACK:"));
+	size += sizeof("ACK:") - 1;
+	memcpy(sendBuffer+size, &allocated, sizeof(allocated));
+	size += sizeof(allocated);
 
-	printBytes(sendBuffer);
-	printf("Interpretation of Server %s \n", sendBuffer);
+	char message[100] = {};
+	sprintf(message, "End sendBuffer size: %d", size);
+	print_debug(message);
 
-	sendMsg(new_fd, sendBuffer,12);
+	//printBytes(sendBuffer);
+	//printf("Interpretation of Server %s \n", sendBuffer);
+	print_debug("Sending message");
+	sendMsg(new_fd, sendBuffer, size);
 	printf("\nAllocated Pointer: %p -> %s\n",allocated, allocated);
-	printf("Content %s is stored at %p!\n", allocated, (void*)allocated);
+	printf("Content %s is stored at %p!\n\n", allocated, (void*)allocated);
 
+	print_debug("Freeing sendBuffer");
 	free(sendBuffer);
 
+	print_debug("Returning dummy value");
 	// TODO change to be meaningful, i.e., error message
 	return 0;
 }
@@ -94,10 +105,10 @@ int writeMem (int new_fd, char * receiveBuffer) {
 	memcpy(&target, receiveBuffer, 8);
 
 	char message3[100] = {};
-	sprintf(message3, "Target pointer: %p", target);
+	sprintf(message3, "Target pointer: %p", (void*) target);
 	print_debug(message3);
 
-	printf("Target Pointer: %p -> %s\n",target, target);
+	//printf("Target Pointer: %p -> %s\n",target, target);
 
 	memcpy(target, dataToWrite, BLOCK_SIZE);
 

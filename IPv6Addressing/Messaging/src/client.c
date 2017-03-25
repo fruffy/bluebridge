@@ -48,7 +48,7 @@ uint64_t allocateMem(int sockfd) {
 	// Parse the response
 	splitResponse = strtok(receiveBuffer, ":");
 
-	int retVal = 0;
+	uint64_t retVal = 0;
 
 	// printf("%s\n", splitResponse);
 	if (strcmp(receiveBuffer,"ACK") == 0) {
@@ -58,10 +58,14 @@ uint64_t allocateMem(int sockfd) {
 		//(uint64_t *) strtok(NULL, ":");
 
 		print_debug("Memcopying the pointer");
-		memcpy(&remotePointer, strtok(NULL, ":"),8);
+		memcpy(&remotePointer, strtok(NULL, ":"), 8);
 		// printf("After Pasting\n");
 		//memcpy(sendBuffer,"DATASET:",8);
 		//memcpy(&zremotePointer,strtok(NULL, ":"),8);
+
+		char formatted_string[100] = {};
+		sprintf(formatted_string, "Got %" PRIx64 " from server", remotePointer);
+		print_debug(formatted_string);
 
 		print_debug("Setting remotePointer to be return value");
 		retVal = remotePointer;
