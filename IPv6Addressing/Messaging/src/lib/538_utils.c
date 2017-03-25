@@ -86,6 +86,7 @@ char * get_rdm_string(size_t num_bytes, int index) {
 	for (; i < num_bytes; i++) {
 		stream[i] = string[rand()%strlen(string)];
 	}
+	return stream;
 }
 
 /*
