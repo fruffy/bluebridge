@@ -82,13 +82,20 @@ int writeMem (int new_fd, char * receiveBuffer) {
 	char* sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * target;
 
-
-	printf("Receive buffer: %s\n", receiveBuffer);
+	char message1[100] = {};
+	sprintf(message1, "Receive buffer: %s\n", receiveBuffer);
+	print_debug(message1);
 	// TODO: why is this +9?
 	char * dataToWrite = receiveBuffer +9;
-	printf("Third Split: %s\n", dataToWrite);
+	char message2[100] = {};
+	sprintf(message2, "Data received: %s\n", dataToWrite);
+	print_debug(message2);
 	// Copy the first eight bytes of receive buffer into the target
 	memcpy(&target, receiveBuffer, 8);
+
+	char message3[100] = {};
+	sprintf(message3, "Target pointer: %p", target);
+	print_debug(message3);
 
 	printf("Target Pointer: %p -> %s\n",target, target);
 
