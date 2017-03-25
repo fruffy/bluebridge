@@ -253,7 +253,7 @@ int main(int argc, char *argv[]) {
 				}
 			}
 		} else if (strcmp("L", input) == 0){
-			printf("Address\t\tPointer\n");
+			printf("Remote Address\tPointer\n");
 			for (i = 0; i < 100; i++){
 				if (strcmp(remotePointers[i].AddrString, "") != 0) {
 					printf("0x%s\t%p\n", remotePointers[i].AddrString, remotePointers[i].Pointer);
