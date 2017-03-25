@@ -94,9 +94,13 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
 	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * receiveBuffer = malloc(BLOCK_SIZE*sizeof(char));
 
+	int header_size = 14;
+
 	print_debug("Creating payload");
-	char* payload = malloc(20 * sizeof(char));
-	sprintf(payload,":MY DATASET %d", index);
+	// char* payload = malloc((BLOCK_SIZE-header_size) * sizeof(char));
+	// sprintf(payload,":MY DATASET %d", index);
+
+	char * payload = gen_rdm_bytestream(BLOCK_SIZE-header_size);
 
 	int size = 0;
 
