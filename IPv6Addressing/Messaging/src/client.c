@@ -112,19 +112,20 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
 	// Create the data
 	//memcpy(sendBuffer, gen_rdm_bytestream(BLOCK_SIZE), BLOCK_SIZE);
 	memcpy(sendBuffer, "WRITE:", sizeof("WRITE:"));
-	printf("%lu\n", sizeof("WRITE:"));
-	size += sizeof("WRITE:");
+	//printf("%lu\n", sizeof("WRITE:"));
+	size += sizeof("WRITE:") - 1; // Want it to rewrite null terminator
 	memcpy(sendBuffer+size,remotePointer,sizeof(remotePointer));
-	printf("%lu\n", sizeof(remotePointer));
+	//printf("%lu\n", sizeof(remotePointer));
 	size += sizeof(remotePointer);
-	printf("%d\n", size);
+	//printf("%d\n", size);
 	memcpy(sendBuffer+size,payload, strlen(payload));
 	size += strlen(payload);
 	// printf("Size of payload %lu, length %d\n", sizeof(payload), (int) strlen(payload));
-	printf("Size: %d\n", size);
+	//printf("Size: %d\n", size);
+	//printf("Buffer: %s\n", sendBuffer);
 
 	// Send the data
-	printf("Sending Data: %lu bytes as ",sizeof(sendBuffer));
+	printf("Sending Data: %lu bytes to ", size);
 	printBytes((char*) remotePointer);
 	// printf("Send buffer: %s", sendBuffer);
 	print_debug("Sending message");
@@ -371,7 +372,7 @@ int main(int argc, char *argv[]) {
 			} else {
 				uint64_t pointer = getPointerFromString(input);
 				printf("Writing data to pointer %p\n", (void *) pointer);
-				writeToMemory(sockfd, &pointer, rand());
+				writeToMemory(sockfd, &pointer, rand()%100);
 			}
 		} else if (strcmp("F", input) == 0) {
 			memset(input, 0, len);
