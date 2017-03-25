@@ -12,7 +12,7 @@ int getLine(char *prmpt, char *buff, size_t sz);
 
 unsigned char *gen_rdm_bytestream(size_t num_bytes);
 
-char *gen_rdm_string(size_t num_bytes, int index);
+char *get_rdm_string(size_t num_bytes, int index);
 
 void sigchld_handler(int s);
 
