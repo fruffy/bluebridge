@@ -76,6 +76,18 @@ unsigned char *gen_rdm_bytestream(size_t num_bytes) {
 	return stream;
 }
 
+char * get_rdm_string(size_t num_bytes, int index) {
+	char* stream = malloc(num_bytes);
+	char *string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.-#'?!";
+
+	sprintf(stream, "%d:", index);
+
+	int i = strlen(stream);
+	for (; i < num_bytes; i++) {
+		stream[i] = string[rand()%strlen(string)];
+	}
+}
+
 /*
  * TODO: explain.
  * Also use s to get rid of the warning.

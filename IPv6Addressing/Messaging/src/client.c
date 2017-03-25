@@ -219,6 +219,8 @@ int main(int argc, char *argv[]) {
 		argv[2] = "5000";
 	}
 
+	printf("%s\n", get_rdm_string(BLOCK_SIZE, 10));
+
 	// Tells the getaddrinfo to only return sockets
 	// which fit these params.
 	memset(&hints, 0, sizeof hints);
