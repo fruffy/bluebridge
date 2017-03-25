@@ -1,5 +1,8 @@
 #ifndef PROJECT_UTILS
 #define PROJECT_UTILS
+
+#define DEBUG 1
+
 void *get_in_addr(struct sockaddr *sa);
 
 int getLine(char *prmpt, char *buff, size_t sz);

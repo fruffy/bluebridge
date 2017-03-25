@@ -18,11 +18,10 @@
 #include "./lib/538_utils.h"
 
 #define BACKLOG 10     // how many pending connections queue will hold
-#define BLOCK_SIZE 100 // max number of bytes we can get at once
+#define BLOCK_SIZE 4000 // max number of bytes we can get at once
 
 char *varadr_char[1000];
 int countchar = 0;
-
 
 /*
  * Frees global memory
@@ -57,7 +56,7 @@ int addchar(char* charadr) {
  */
 int providePointer (int new_fd, char * receiveBuffer) {
 	char * allocated = (char*) malloc(4096*1000);
-	char sendBuffer[BLOCK_SIZE];
+	char* sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
 
 	memcpy(sendBuffer,"ACK:",4);
 	memcpy(sendBuffer+4,&allocated,8);
@@ -68,6 +67,11 @@ int providePointer (int new_fd, char * receiveBuffer) {
 	sendMsg(new_fd, sendBuffer,12);
 	printf("\nAllocated Pointer: %p -> %s\n",allocated, allocated);
 	printf("Content %s is stored at %p!\n", allocated, (void*)allocated);
+
+	free(sendBuffer);
+
+	// TODO change to be meaningful, i.e., error message
+	return 0;
 }
 
 /*
@@ -75,7 +79,7 @@ int providePointer (int new_fd, char * receiveBuffer) {
  * Writes a piece of memory?
  */
 int writeMem (int new_fd, char * receiveBuffer) {
-	char sendBuffer[BLOCK_SIZE];
+	char* sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * target;
 
 
@@ -97,6 +101,10 @@ int writeMem (int new_fd, char * receiveBuffer) {
 	// TODO: shouldn't this be sizeof("ACK")?
 	sendMsg(new_fd,sendBuffer,3);
 
+	free(sendBuffer);
+
+	// TODO change to be meaningful, i.e., error message
+	return 0;
 }
 
 /*
@@ -104,7 +112,7 @@ int writeMem (int new_fd, char * receiveBuffer) {
  * This is freeing target memory?
  */
 int freeMem (int new_fd, char * receiveBuffer) {
-	char sendBuffer[BLOCK_SIZE];
+	char* sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * target;
 
 	// Why copy when you're freeing the memory?
@@ -117,13 +125,17 @@ int freeMem (int new_fd, char * receiveBuffer) {
 	// TODO: shouldn't this be sizeof("ACK")?
 	sendMsg(new_fd,sendBuffer,3);
 
+	free(sendBuffer);
+
+	// TODO change to be meaningful, i.e., error message
+	return 0;
 }
 
 /*
  * Gets memory and sends it
  */
 int getMem (int new_fd, char * receiveBuffer) {
-	char sendBuffer[BLOCK_SIZE];
+	char* sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * target;
 
 	// Copy eight bytes of the receiveBuffer into the target
@@ -139,6 +151,11 @@ int getMem (int new_fd, char * receiveBuffer) {
 
 	// Send the sendBuffer (entire BLOCK_SIZE) to new_fd
 	sendMsg(new_fd,sendBuffer,BLOCK_SIZE);
+
+	free(sendBuffer);
+
+	// TODO change to be meaningful, i.e., error message
+	return 0;
 }
 
 /*
