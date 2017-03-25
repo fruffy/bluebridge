@@ -18,7 +18,6 @@
 #include "./lib/538_utils.h"
 
 #define BACKLOG 10     // how many pending connections queue will hold
-#define BLOCK_SIZE 4000 // max number of bytes we can get at once
 
 char *varadr_char[1000];
 int countchar = 0;
@@ -96,11 +95,14 @@ int writeMem (int new_fd, char * receiveBuffer) {
 	char message1[100] = {};
 	sprintf(message1, "Receive buffer: %s\n", receiveBuffer);
 	print_debug(message1);
+
 	// TODO: why is this +9?
 	char * dataToWrite = receiveBuffer +9;
+	
 	char message2[100] = {};
 	sprintf(message2, "Data received: %s\n", dataToWrite);
 	print_debug(message2);
+	
 	// Copy the first eight bytes of receive buffer into the target
 	memcpy(&target, receiveBuffer, 8);
 

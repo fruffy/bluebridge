@@ -17,8 +17,6 @@
 
 #include "./lib/538_utils.h"
 
-#define BLOCK_SIZE 4000 // max number of bytes we can get at once
-
 struct PointerMap {
 	char* AddrString;
 	uint64_t* Pointer;
@@ -113,7 +111,7 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
 	size += strlen(payload);
 
 	// Send the data
-	printf("Sending Data: %lu bytes to ", size);
+	printf("Sending Data: %d bytes to ", size);
 	printBytes((char*) remotePointer);
 
 	print_debug("Sending message");
