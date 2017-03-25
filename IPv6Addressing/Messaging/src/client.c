@@ -34,7 +34,7 @@ void print_debug(char* message) {
  * Sends message to allocate memory
  */
 uint64_t allocateMem(int sockfd) {
-	print_debug("Mallocing send and receive buffers.");
+	print_debug("Mallocing send and receive buffers");
 	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * receiveBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * splitResponse;
@@ -46,7 +46,7 @@ uint64_t allocateMem(int sockfd) {
 	memcpy(sendBuffer, "ALLOCATE", sizeof("ALLOCATE"));
 	sendMsg(sockfd, sendBuffer, sizeof("ALLOCATE"));
 
-	print_debug("Waiting to receive replyin receive buffer.");
+	print_debug("Waiting to receive replyin receive buffer");
 	// Wait to receive a message from the server
 	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
 
@@ -68,6 +68,8 @@ uint64_t allocateMem(int sockfd) {
 		// printf("After Pasting\n");
 		//memcpy(sendBuffer,"DATASET:",8);
 		//memcpy(&zremotePointer,strtok(NULL, ":"),8);
+
+		print_debug("Setting remotePointer to be return value");
 		retVal = remotePointer;
 	} else {
 		print_debug("Response was not successful");
@@ -76,12 +78,15 @@ uint64_t allocateMem(int sockfd) {
 		sendMsg(sockfd, sendBuffer, sizeof("What's up?"));
 		// TODO: why do we return 0? Isn't there a better number 
 		// (i.e. -1)
+
+		print_debug("Keeping return value as 0");
 	}
 
-	print_debug("Freeing memory");
+	print_debug("Freeing sendBuffer and receiveBuffer memory");
 	free(sendBuffer);
 	free(receiveBuffer);
 
+	print_debug("Returning value");
 	return retVal;
 }
 
@@ -89,24 +94,28 @@ uint64_t allocateMem(int sockfd) {
  * Sends a write command to the sockfd for pointer remotePointer
  */
 int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
+	print_debug("Mallocing sendBuffer and receiveBuffer");
 	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * receiveBuffer = malloc(BLOCK_SIZE*sizeof(char));
 
+	print_debug("Creating payload");
 	char* payload = malloc(20 * sizeof(char));
 	sprintf(payload,":MY DATASET %d", index);
 
 	// printf("Payload: %s\n", payload);
 
-	srand((unsigned int) time(NULL));
+	// srand((unsigned int) time(NULL));
 
 	int size = 0;
 
+	print_debug("Copying the data to the send buffer");
 	// Create the data
 	//memcpy(sendBuffer, gen_rdm_bytestream(BLOCK_SIZE), BLOCK_SIZE);
 	memcpy(sendBuffer, "WRITE:", sizeof("WRITE:"));
-	// printf("%lu\n", sizeof("WRITE:"));
+	printf("%lu\n", sizeof("WRITE:"));
 	size += 6;
 	memcpy(sendBuffer+6,remotePointer,8);
+	printf("%lu\n", sizeof(remotePointer))
 	size += 8;
 	memcpy(sendBuffer+14,payload, strlen(payload));
 	size += strlen(payload);
@@ -117,15 +126,19 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
 	printf("Sending Data: %lu bytes as ",sizeof(sendBuffer));
 	printBytes((char*) remotePointer);
 	// printf("Send buffer: %s", sendBuffer);
+	print_debug("Sending message");
 	sendMsg(sockfd, sendBuffer, size);
 
+	print_debug("Waiting for response");
 	// Wait for the response
 	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
 	// printf("%s\n",receiveBuffer);
 
+	print_debug("Freeing sendBuffer and receiveBuffer");
 	free(sendBuffer);
 	free(receiveBuffer);
 
+	print_debug("Returning");
 	// TODO change to be meaningful, i.e., error message
 	return 0;
 }
@@ -278,6 +291,7 @@ int main(int argc, char *argv[]) {
 				print_debug(formatted_string);
 
 				print_debug("Creating pointer to remote memory address");
+
 				char addrString[100] = {};
 				sprintf(addrString, "%" PRIx64, remoteMemory);
 				strcpy(remotePointers[count].AddrString, addrString);
@@ -286,9 +300,24 @@ int main(int argc, char *argv[]) {
 				printf("Allocated pointer address %p\n", &remoteMemory);
 			} else {
 				int num = atoi(input);
+
+				char message[100] = {};
+				sprintf(message, "Received %d as input", num);
+
+				print_debug(message);
+
 				int j; 
 				for (j = 0; j < num; j++) {
+					print_debug("Calling allocateMem");
+
 					uint64_t remoteMemory = allocateMem(sockfd);
+					
+					char formatted_string[100] = {};
+					sprintf(formatted_string, "Got %" PRIx64 " from call", remoteMemory);
+					print_debug(formatted_string);
+
+					print_debug("Creating pointer to remote memory address");
+
 					char addrString[100] = {};
 					sprintf(addrString, "%" PRIx64, remoteMemory);
 					strcpy(remotePointers[count].AddrString, addrString);
@@ -311,14 +340,18 @@ int main(int argc, char *argv[]) {
 			if (strcmp("A", input) == 0) {
 				for (i = 0; i < 100; i++) {
 					if (strcmp(remotePointers[i].AddrString, "") != 0) {
-						printf("Retrieving data from pointer 0x%s\n", remotePointers[i].AddrString);
+						char message[100] = {};
+						sprintf(message, "Retrieving data from pointer 0x%s\n", remotePointers[i].AddrString);
+						print_debug(message);
 						localData = getMemory(sockfd, remotePointers[i].Pointer);
 						printf("Retrieved Data: %s\n",localData);
 					}
 				}
 			} else {
 				uint64_t pointer = getPointerFromString(input);
-				printf("Retrieving data from pointer %p\n", (void *) pointer);
+				char message[100] = {};
+				sprintf(message, "Retrieving data from pointer 0x%s\n", (void *) pointer);
+				print_debug(message);
 				localData = getMemory(sockfd, &pointer);
 				printf("Retrieved Data: %s\n",localData);
 			}
