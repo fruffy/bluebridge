@@ -100,39 +100,28 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
 	char* payload = malloc(20 * sizeof(char));
 	sprintf(payload,":MY DATASET %d", index);
 
-	// printf("Payload: %s\n", payload);
-
-	// srand((unsigned int) time(NULL));
-
 	int size = 0;
 
 	print_debug("Copying the data to the send buffer");
+
 	// Create the data
-	//memcpy(sendBuffer, gen_rdm_bytestream(BLOCK_SIZE), BLOCK_SIZE);
 	memcpy(sendBuffer, "WRITE:", sizeof("WRITE:"));
-	//printf("%lu\n", sizeof("WRITE:"));
 	size += sizeof("WRITE:") - 1; // Want it to rewrite null terminator
 	memcpy(sendBuffer+size,remotePointer,sizeof(remotePointer));
-	//printf("%lu\n", sizeof(remotePointer));
 	size += sizeof(remotePointer);
-	//printf("%d\n", size);
 	memcpy(sendBuffer+size,payload, strlen(payload));
 	size += strlen(payload);
-	// printf("Size of payload %lu, length %d\n", sizeof(payload), (int) strlen(payload));
-	//printf("Size: %d\n", size);
-	//printf("Buffer: %s\n", sendBuffer);
 
 	// Send the data
 	printf("Sending Data: %lu bytes to ", size);
 	printBytes((char*) remotePointer);
-	// printf("Send buffer: %s", sendBuffer);
+
 	print_debug("Sending message");
 	sendMsg(sockfd, sendBuffer, size);
 
 	print_debug("Waiting for response");
 	// Wait for the response
 	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
-	// printf("%s\n",receiveBuffer);
 
 	print_debug("Freeing sendBuffer and receiveBuffer");
 	free(sendBuffer);
@@ -150,19 +139,22 @@ int releaseMemory(int sockfd, uint64_t * remotePointer) {
 	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * receiveBuffer = malloc(BLOCK_SIZE*sizeof(char));
 
+	int size = 0;
+
 	// Create message
-	memcpy(sendBuffer, "FREE:", sizeof("FREE:"));
-	memcpy(sendBuffer+5,remotePointer,8);
+	memcpy(sendBuffer+size, "FREE:", sizeof("FREE:"));
+	size += sizeof("FREE:") - 1; // Should be 5
+	memcpy(sendBuffer+size, remotePointer, sizeof(remotePointer));
+	size += sizeof(remotePointer); // Should be 8, total of 13
 
 	printf("Releasing Data with pointer: ");
 	printBytes((char*)remotePointer);
 
 	// Send message
-	sendMsg(sockfd, sendBuffer, 13);
+	sendMsg(sockfd, sendBuffer, size);
 
 	// Receive response
 	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
-	// printf("Server Response: %s\n",receiveBuffer);
 
 	free(sendBuffer);
 	free(receiveBuffer);
@@ -178,15 +170,19 @@ char * getMemory(int sockfd, uint64_t * remotePointer) {
 	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * receiveBuffer = malloc(4096*1000);
 
+	int size = 0;
+
 	// Prep message
 	memcpy(sendBuffer, "GET:", sizeof("GET:"));
-	memcpy(sendBuffer+4,remotePointer,8);
+	size += sizeof("GET:") - 1; // Should be 4
+	memcpy(sendBuffer+size, remotePointer, sizeof(remotePointer));
+	size += sizeof(remotePointer); // Should be 8, total 12
 
 	printf("Retrieving Data with pointer: ");
 	printBytes((char*)remotePointer);
 
 	// Send message
-	sendMsg(sockfd, sendBuffer, 12);
+	sendMsg(sockfd, sendBuffer, size);
 	// Receive response
 	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
 
