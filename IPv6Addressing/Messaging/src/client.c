@@ -115,7 +115,7 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
 	printf("%lu\n", sizeof("WRITE:"));
 	size += 6;
 	memcpy(sendBuffer+6,remotePointer,8);
-	printf("%lu\n", sizeof(remotePointer))
+	printf("%lu\n", sizeof(remotePointer));
 	size += 8;
 	memcpy(sendBuffer+14,payload, strlen(payload));
 	size += strlen(payload);
@@ -350,7 +350,7 @@ int main(int argc, char *argv[]) {
 			} else {
 				uint64_t pointer = getPointerFromString(input);
 				char message[100] = {};
-				sprintf(message, "Retrieving data from pointer 0x%s\n", (void *) pointer);
+				sprintf(message, "Retrieving data from pointer 0x%p\n", (void *) pointer);
 				print_debug(message);
 				localData = getMemory(sockfd, &pointer);
 				printf("Retrieved Data: %s\n",localData);
