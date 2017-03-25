@@ -3,6 +3,8 @@
 
 #define DEBUG 1
 
+void print_debug(char* message);
+
 void *get_in_addr(struct sockaddr *sa);
 
 int getLine(char *prmpt, char *buff, size_t sz);

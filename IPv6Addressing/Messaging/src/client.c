@@ -24,12 +24,6 @@ struct PointerMap {
 	uint64_t* Pointer;
 };
 
-void print_debug(char* message) {
-	if (DEBUG) {
-		printf("[DEBUG]: %s\n", message);
-	}
-}
-
 /*
  * Sends message to allocate memory
  */

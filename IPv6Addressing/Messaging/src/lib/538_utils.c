@@ -14,6 +14,12 @@
 
 #include "538_utils.h"
 
+void print_debug(char* message) {
+	if (DEBUG) {
+		printf("[DEBUG]: %s\n", message);
+	}
+}
+
 /* 
  * get sockaddr, IPv4 or IPv6:
  */
