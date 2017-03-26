@@ -92,18 +92,12 @@ int writeMem (int new_fd, char * receiveBuffer) {
 	char* sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * target;
 
-	char message1[100] = {};
-	sprintf(message1, "Receive buffer: %s\n", receiveBuffer);
-	print_debug(message1);
-
-	printBytes(receiveBuffer);
-
 	// TODO: why is this +9?
 	char * dataToWrite = receiveBuffer + 9;
 	
 	char * message2 = malloc(BLOCK_SIZE *sizeof(char));
-	sprintf(message2, "Data received: %s\n", dataToWrite);
-	//print_debug(message2);
+	sprintf(message2, "Data received (first 80 bytes): %.*s\n", 80, dataToWrite);
+	print_debug(message2);
 	
 	// Copy the first eight bytes of receive buffer into the target
 	memcpy(&target, receiveBuffer, 8);
@@ -114,12 +108,10 @@ int writeMem (int new_fd, char * receiveBuffer) {
 
 	//printf("Target Pointer: %p -> %s\n",target, target);
 
-	printf("Length: %lu\n", strlen(dataToWrite));
-
 	memcpy(target, dataToWrite, strlen(dataToWrite));
 
-
-	printf("Content %s is stored at %p!\n", target, (void*)target);
+	printf("Content length %lu is stored at %p!\n", strlen(target), (void*)target);
+	printf("First 80 bytes of content: %.*s\n\n", 80, target);
 	memcpy(sendBuffer, "ACK", sizeof("ACK"));
 	// Send the sendBuffer to the new fd (socket), only send 3 bytes.
 	// TODO: shouldn't this be sizeof("ACK")?
@@ -165,10 +157,10 @@ int getMem (int new_fd, char * receiveBuffer) {
 	// Copy eight bytes of the receiveBuffer into the target
 	memcpy(&target, receiveBuffer, 8);
 
-	printf("Content %s is currently stored at %p!\n", target, (void*)target);
+	printf("Content length %lu is currently stored at %p!\n", strlen(target), (void*)target);
 
-
-	printf("Content %s will be delivered to client!\n", target);
+	printf("Content preview (80 bytes): %.*s\n", 80, target);
+	printf("Content length %lu will be delivered to client!\n", strlen(target));
 	// Copy the target into the send buffer (entire BLOCK_SIZE)
 	// TODO: why do this if target only has 8 bytes?
 	memcpy(sendBuffer, target, BLOCK_SIZE);

@@ -82,7 +82,7 @@ char * get_rdm_string(size_t num_bytes, int index) {
 
 	sprintf(stream, "%d:", index);
 
-	int i = strlen(stream);
+	size_t i = strlen(stream);
 	for (; i < num_bytes; i++) {
 		stream[i] = string[rand()%strlen(string)];
 	}

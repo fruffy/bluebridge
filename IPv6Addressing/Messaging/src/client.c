@@ -94,8 +94,6 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
 	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * receiveBuffer = malloc(BLOCK_SIZE*sizeof(char));
 
-	printf("Index: %d\n", index);
-
 	// char* payload = malloc((BLOCK_SIZE-header_size) * sizeof(char));
 	// sprintf(payload,":MY DATASET %d", index);
 
@@ -342,7 +340,7 @@ int main(int argc, char *argv[]) {
 						sprintf(message, "Retrieving data from pointer 0x%s\n", remotePointers[i].AddrString);
 						print_debug(message);
 						localData = getMemory(sockfd, remotePointers[i].Pointer);
-						printf("Retrieved Data: %s\n",localData);
+						printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
 					}
 				}
 			} else {
@@ -351,7 +349,7 @@ int main(int argc, char *argv[]) {
 				sprintf(message, "Retrieving data from pointer 0x%p\n", (void *) pointer);
 				print_debug(message);
 				localData = getMemory(sockfd, &pointer);
-				printf("Retrieved Data: %s\n",localData);
+				printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
 			}
 		} else if (strcmp("W", input) == 0) {
 			memset(input, 0, len);

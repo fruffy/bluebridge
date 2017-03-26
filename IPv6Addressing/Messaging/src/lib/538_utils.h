@@ -1,7 +1,7 @@
 #ifndef PROJECT_UTILS
 #define PROJECT_UTILS
 
-#define DEBUG 1
+#define DEBUG 0
 #define BLOCK_SIZE 4000 // max number of bytes we can get at once
 
 void print_debug(char* message);
