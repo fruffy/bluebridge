@@ -94,13 +94,10 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
 	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * receiveBuffer = malloc(BLOCK_SIZE*sizeof(char));
 
-	int header_size = 14;
+	printf("Index: %d\n", index);
 
-	print_debug("Creating payload");
 	// char* payload = malloc((BLOCK_SIZE-header_size) * sizeof(char));
 	// sprintf(payload,":MY DATASET %d", index);
-
-	char * payload = gen_rdm_bytestream(BLOCK_SIZE-header_size);
 
 	int size = 0;
 
@@ -111,7 +108,10 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
 	size += sizeof("WRITE:") - 1; // Want it to rewrite null terminator
 	memcpy(sendBuffer+size,remotePointer,sizeof(remotePointer));
 	size += sizeof(remotePointer);
-	memcpy(sendBuffer+size,payload, strlen(payload));
+
+	print_debug("Creating payload");
+	char * payload = get_rdm_string((BLOCK_SIZE-size), index);
+	memcpy(sendBuffer+size+1,payload, strlen(payload));
 	size += strlen(payload);
 
 	// Send the data
@@ -218,8 +218,6 @@ int main(int argc, char *argv[]) {
 		argv[1] = "::1";
 		argv[2] = "5000";
 	}
-
-	printf("%s\n", get_rdm_string(BLOCK_SIZE, 10));
 
 	// Tells the getaddrinfo to only return sockets
 	// which fit these params.

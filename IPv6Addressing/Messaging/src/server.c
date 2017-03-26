@@ -96,12 +96,14 @@ int writeMem (int new_fd, char * receiveBuffer) {
 	sprintf(message1, "Receive buffer: %s\n", receiveBuffer);
 	print_debug(message1);
 
+	printBytes(receiveBuffer);
+
 	// TODO: why is this +9?
-	char * dataToWrite = receiveBuffer +9;
+	char * dataToWrite = receiveBuffer + 9;
 	
-	char message2[100] = {};
+	char * message2 = malloc(BLOCK_SIZE *sizeof(char));
 	sprintf(message2, "Data received: %s\n", dataToWrite);
-	print_debug(message2);
+	//print_debug(message2);
 	
 	// Copy the first eight bytes of receive buffer into the target
 	memcpy(&target, receiveBuffer, 8);
@@ -112,7 +114,9 @@ int writeMem (int new_fd, char * receiveBuffer) {
 
 	//printf("Target Pointer: %p -> %s\n",target, target);
 
-	memcpy(target, dataToWrite, BLOCK_SIZE);
+	printf("Length: %lu\n", strlen(dataToWrite));
+
+	memcpy(target, dataToWrite, strlen(dataToWrite));
 
 
 	printf("Content %s is stored at %p!\n", target, (void*)target);
