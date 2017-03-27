@@ -17,6 +17,12 @@
 
 #include "./lib/538_utils.h"
 
+
+/////////////////////////////////// TO DOs ////////////////////////////////////
+// 1. Write debug wrapper for printf --> see
+//		http://stackoverflow.com/questions/1516370/wrapper-printf-function-that-filters-according-to-user-preferences
+///////////////////////////////////////////////////////////////////////////////
+
 struct PointerMap {
 	char* AddrString;
 	uint64_t* Pointer;
@@ -30,8 +36,6 @@ uint64_t allocateMem(int sockfd) {
 	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * receiveBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * splitResponse;
-	//srand((unsigned int) time(NULL));
-	//memcpy(sendBuffer, gen_rdm_bytestream(BLOCK_SIZE), BLOCK_SIZE);
 
 	print_debug("Memcopying ALLOCATE message into send buffer");
 	// Send message to server to allocate memory
@@ -48,22 +52,17 @@ uint64_t allocateMem(int sockfd) {
 
 	uint64_t retVal = 0;
 
-	// printf("%s\n", splitResponse);
 	if (strcmp(receiveBuffer,"ACK") == 0) {
 		print_debug("Response was ACK");
 		// If the message is ACK --> successful
 		uint64_t remotePointer =  0;
-		//(uint64_t *) strtok(NULL, ":");
 
 		print_debug("Memcopying the pointer");
 		memcpy(&remotePointer, strtok(NULL, ":"), 8);
-		// printf("After Pasting\n");
-		//memcpy(sendBuffer,"DATASET:",8);
-		//memcpy(&zremotePointer,strtok(NULL, ":"),8);
 
-		char formatted_string[100] = {};
-		sprintf(formatted_string, "Got %" PRIx64 " from server", remotePointer);
-		print_debug(formatted_string);
+		// char formatted_string[100] = {};
+		// sprintf(formatted_string, "Got %" PRIx64 " from server", remotePointer);
+		print_debug("Got %" PRIx64 " from server", remotePointer);
 
 		print_debug("Setting remotePointer to be return value");
 		retVal = remotePointer;
@@ -93,9 +92,6 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
 	print_debug("Mallocing sendBuffer and receiveBuffer");
 	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
 	char * receiveBuffer = malloc(BLOCK_SIZE*sizeof(char));
-
-	// char* payload = malloc((BLOCK_SIZE-header_size) * sizeof(char));
-	// sprintf(payload,":MY DATASET %d", index);
 
 	int size = 0;
 
@@ -194,7 +190,11 @@ char * getMemory(int sockfd, uint64_t * remotePointer) {
 uint64_t getPointerFromString(char* input) {
 	uint64_t address;
 	sscanf(input, "%" SCNx64, &address);
-	// printf("Received address: %" PRIx64 "\n", address);
+	
+	// char message[100]={};
+	// sprintf(message, "Received address: %" PRIx64 "\n", address);
+	print_debug("Received address: %" PRIx64 ".", address);
+
 	uint64_t pointer = (uint64_t *)address;
 	return pointer;
 }
@@ -227,9 +227,6 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 		return 1;
 	}
-
-	// TODO: isn't this a separate method in server.c? Can it be moved
-	// to the helper?
 
 	// loop through all the results and connect to the first we can
 	for (p = servinfo; p != NULL; p = p->ai_next) {
@@ -282,9 +279,9 @@ int main(int argc, char *argv[]) {
 				
 				uint64_t remoteMemory = allocateMem(sockfd);
 				
-				char formatted_string[100] = {};
-				sprintf(formatted_string, "Got %" PRIx64 " from call", remoteMemory);
-				print_debug(formatted_string);
+				// char formatted_string[100] = {};
+				// sprintf(formatted_string, "Got %" PRIx64 " from call", remoteMemory);
+				print_debug("Got %" PRIx64 " from call", remoteMemory);
 
 				print_debug("Creating pointer to remote memory address");
 
@@ -297,10 +294,9 @@ int main(int argc, char *argv[]) {
 			} else {
 				int num = atoi(input);
 
-				char message[100] = {};
-				sprintf(message, "Received %d as input", num);
-
-				print_debug(message);
+				// char message[100] = {};
+				// sprintf(message, "Received %d as input", num);
+				print_debug("Received %d as input", num);
 
 				int j; 
 				for (j = 0; j < num; j++) {
@@ -308,9 +304,9 @@ int main(int argc, char *argv[]) {
 
 					uint64_t remoteMemory = allocateMem(sockfd);
 					
-					char formatted_string[100] = {};
-					sprintf(formatted_string, "Got %" PRIx64 " from call", remoteMemory);
-					print_debug(formatted_string);
+					// char formatted_string[100] = {};
+					// sprintf(formatted_string, "Got %" PRIx64 " from call", remoteMemory);
+					print_debug("Got %" PRIx64 " from call", remoteMemory);
 
 					print_debug("Creating pointer to remote memory address");
 
@@ -336,18 +332,18 @@ int main(int argc, char *argv[]) {
 			if (strcmp("A", input) == 0) {
 				for (i = 0; i < 100; i++) {
 					if (strcmp(remotePointers[i].AddrString, "") != 0) {
-						char message[100] = {};
-						sprintf(message, "Retrieving data from pointer 0x%s\n", remotePointers[i].AddrString);
-						print_debug(message);
+						// char message[100] = {};
+						// sprintf(message, "Retrieving data from pointer 0x%s\n", remotePointers[i].AddrString);
+						print_debug("Retriving data from pointer 0x%s", remotePointers[i].AddrString);
 						localData = getMemory(sockfd, remotePointers[i].Pointer);
 						printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
 					}
 				}
 			} else {
 				uint64_t pointer = getPointerFromString(input);
-				char message[100] = {};
-				sprintf(message, "Retrieving data from pointer 0x%p\n", (void *) pointer);
-				print_debug(message);
+				// char message[100] = {};
+				// sprintf(message, "Retrieving data from pointer 0x%p\n", (void *) pointer);
+				print_debug("Retriving data from pointer 0x%p", (void *) pointer);
 				localData = getMemory(sockfd, &pointer);
 				printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
 			}
@@ -359,7 +355,6 @@ int main(int argc, char *argv[]) {
 				for (i = 0; i < 100; i++) {
 					if (strcmp(remotePointers[i].AddrString, "") != 0) {
 						printf("Writing data to pointer 0x%s\n", remotePointers[i].AddrString);
-						// TODO change to write different string
 						writeToMemory(sockfd, remotePointers[i].Pointer, i);
 					}
 				}
@@ -387,7 +382,6 @@ int main(int argc, char *argv[]) {
 				releaseMemory(sockfd, &pointer);
 				for (i = 0; i < 100; i++) {
 					if (strcmp(remotePointers[i].AddrString, input+2) == 0){
-						// printf("Match!\n");
 						remotePointers[i].AddrString = "";
 						remotePointers[i].Pointer = 0;
 					}

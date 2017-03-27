@@ -65,9 +65,9 @@ int providePointer (int new_fd, char * receiveBuffer) {
 	memcpy(sendBuffer+size, &allocated, sizeof(allocated));
 	size += sizeof(allocated);
 
-	char message[100] = {};
-	sprintf(message, "End sendBuffer size: %d", size);
-	print_debug(message);
+	// char message[100] = {};
+	// sprintf(message, "End sendBuffer size: %d", size);
+	print_debug("End sendBuffer size: %d", size);
 
 	//printBytes(sendBuffer);
 	//printf("Interpretation of Server %s \n", sendBuffer);
@@ -95,16 +95,16 @@ int writeMem (int new_fd, char * receiveBuffer) {
 	// TODO: why is this +9?
 	char * dataToWrite = receiveBuffer + 9;
 	
-	char * message2 = malloc(BLOCK_SIZE *sizeof(char));
-	sprintf(message2, "Data received (first 80 bytes): %.*s\n", 80, dataToWrite);
-	print_debug(message2);
+	// char * message2 = malloc(BLOCK_SIZE *sizeof(char));
+	// sprintf(message2, "Data received (first 80 bytes): %.*s\n", 80, dataToWrite);
+	print_debug("Data received (first 80 bytes): %.*s", 80, dataToWrite);
 	
 	// Copy the first eight bytes of receive buffer into the target
 	memcpy(&target, receiveBuffer, 8);
 
-	char message3[100] = {};
-	sprintf(message3, "Target pointer: %p", (void*) target);
-	print_debug(message3);
+	// char message3[100] = {};
+	// sprintf(message3, "Target pointer: %p", (void*) target);
+	print_debug("Target pointer: %p", (void *) target);
 
 	//printf("Target Pointer: %p -> %s\n",target, target);
 

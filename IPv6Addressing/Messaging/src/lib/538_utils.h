@@ -4,7 +4,14 @@
 #define DEBUG 0
 #define BLOCK_SIZE 4000 // max number of bytes we can get at once
 
-void print_debug(char* message);
+#define print_debug(format, args...)		\
+			if (DEBUG) {					\
+				printf("[DEBUG]: ");		\
+				printf(format, ## args);	\
+				printf("\n");				\
+			}								\
+
+//void print_debug(char* message);
 
 void *get_in_addr(struct sockaddr *sa);
 
