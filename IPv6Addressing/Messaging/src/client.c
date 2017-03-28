@@ -2,7 +2,7 @@
  ** client.c -- a stream socket client demo
  */
 
-#include <stdio.h>
+/*#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
@@ -14,13 +14,13 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <inttypes.h>
-
+*/
 #include "./lib/538_utils.h"
 
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
-// 1. Write debug wrapper for printf --> see
-//		http://stackoverflow.com/questions/1516370/wrapper-printf-function-that-filters-according-to-user-preferences
+//	1. IPv6 conversion method
+//			| global routing prefix (48) | subnet ID (16) | pointer (64)|
 ///////////////////////////////////////////////////////////////////////////////
 
 struct PointerMap {
@@ -185,18 +185,6 @@ char * getMemory(int sockfd, uint64_t * remotePointer) {
 	free(sendBuffer);
 
 	return receiveBuffer;
-}
-
-uint64_t getPointerFromString(char* input) {
-	uint64_t address;
-	sscanf(input, "%" SCNx64, &address);
-	
-	// char message[100]={};
-	// sprintf(message, "Received address: %" PRIx64 "\n", address);
-	print_debug("Received address: %" PRIx64 ".", address);
-
-	uint64_t pointer = (uint64_t *)address;
-	return pointer;
 }
 
 /*
@@ -387,6 +375,20 @@ int main(int argc, char *argv[]) {
 					}
 				}
 			}
+		} else if (strcmp("T", input) == 0) {
+			memset(input, 0, len);
+			getLine("Please specify the memory address.\n", input, sizeof(input));
+			uint64_t pointer = getPointerFromString(input);
+			printf("Input pointer: %p\n", (void *) pointer);
+
+			struct in6_addr temp = getIPv6FromPointer(pointer);
+
+			printf("Received struct...\n");
+
+			uint64_t newpointer = getPointerFromIPv6(temp);
+
+			printf("New pointer: %" PRIx64 ", Old pointer: %" PRIx64 "\n", newpointer, pointer);
+
 		} else if (strcmp("Q", input) == 0) {
 			active = 0;
 			printf("Ende Gelaende\n");

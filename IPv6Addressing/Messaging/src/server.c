@@ -2,7 +2,7 @@
  ** server.c -- a stream socket server demo
  */
 
-#include <stdio.h>
+/*#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
@@ -15,6 +15,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <errno.h>
+*/
 #include "./lib/538_utils.h"
 
 #define BACKLOG 10     // how many pending connections queue will hold
