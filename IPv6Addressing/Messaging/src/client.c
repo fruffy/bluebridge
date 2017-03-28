@@ -196,77 +196,16 @@ uint64_t getPointerFromString(char* input) {
 	print_debug("Received address: %" PRIx64 ".", address);
 
 	uint64_t pointer = (uint64_t *)address;
-	return pointer;
+		return pointer;
 }
-
-/*
- * Main workhorse method. Parses arguments, setups connections
- * Allows user to issue commands on the command line.
- */
-int main(int argc, char *argv[]) {
-	int sockfd;
-	struct addrinfo hints, *servinfo, *p;
-	int rv;
-	char s[INET6_ADDRSTRLEN];
-
-	srand(time(NULL));
-
-	if (argc < 2) {
-		printf("Defaulting to standard values...\n");
-		argv[1] = "::1";
-		argv[2] = "5000";
-	}
-
-	// Tells the getaddrinfo to only return sockets
-	// which fit these params.
-	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_INET6;
-	hints.ai_socktype = SOCK_STREAM;
-
-	if ((rv = getaddrinfo(argv[1], argv[2], &hints, &servinfo)) != 0) {
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-		return 1;
-	}
-
-	// loop through all the results and connect to the first we can
-	for (p = servinfo; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol))
-				== -1) {
-			perror("client: socket");
-			continue;
-		}
-
-		if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-			close(sockfd);
-			perror("client: connect");
-			continue;
-		}
-
-		break;
-	}
-
-	if (p == NULL) {
-		fprintf(stderr, "client: failed to connect\n");
-		return 2;
-	}
-
-	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *) p->ai_addr), s,
-			sizeof s);
-	printf("client: connecting to %s\n", s);
-
-	int active = 1;
+int interactiveMode( int sockfd, struct PointerMap * remotePointers ) {
 	long unsigned int len = 200;
 	char input[len];
 	char * localData;
 	int count = 0;
 	int i;
-	struct PointerMap remotePointers[100];
-	// Initialize remotePointers array
-	for (i = 0; i < 100; i++) {
-		remotePointers[i].AddrString = (char *) malloc(100);
-		remotePointers[i].Pointer = malloc(sizeof(uint64_t));
-	}
 
+	int active = 1;
 	while (active) {
 		memset(input, 0, len);
 		getLine("Please specify if you would like to (L)ist pointers, (A)llocate, (F)ree, (W)rite, or (R)equest data.\nPress Q to quit the program.\n", input, sizeof(input));
@@ -334,7 +273,7 @@ int main(int argc, char *argv[]) {
 					if (strcmp(remotePointers[i].AddrString, "") != 0) {
 						// char message[100] = {};
 						// sprintf(message, "Retrieving data from pointer 0x%s\n", remotePointers[i].AddrString);
-						print_debug("Retriving data from pointer 0x%s", remotePointers[i].AddrString);
+						print_debug("Retrieving data from pointer 0x%s", remotePointers[i].AddrString);
 						localData = getMemory(sockfd, remotePointers[i].Pointer);
 						printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
 					}
@@ -343,7 +282,7 @@ int main(int argc, char *argv[]) {
 				uint64_t pointer = getPointerFromString(input);
 				// char message[100] = {};
 				// sprintf(message, "Retrieving data from pointer 0x%p\n", (void *) pointer);
-				print_debug("Retriving data from pointer 0x%p", (void *) pointer);
+				print_debug("Retrieving data from pointer 0x%p", (void *) pointer);
 				localData = getMemory(sockfd, &pointer);
 				printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
 			}
@@ -394,6 +333,95 @@ int main(int argc, char *argv[]) {
 			printf("Try again.\n");
 		}
 	}
+}
+
+
+int basicOperations( int sockfd, struct PointerMap * remotePointers ) {
+	int i;
+	for (i=0; i<10;i++) {
+		uint64_t remoteMemory = allocateMem(sockfd);
+		writeToMemory(sockfd, &remoteMemory, rand()%100);
+		char * test = getMemory(sockfd, &remoteMemory);
+		printf("Results of memory store: %10x\n", test);
+		releaseMemory(sockfd, &remoteMemory);
+		free(test);
+	}
+}
+
+
+/*
+ * Main workhorse method. Parses arguments, setups connections
+ * Allows user to issue commands on the command line.
+ */
+int main(int argc, char *argv[]) {
+	int sockfd;
+	struct addrinfo hints, *servinfo, *p;
+	int rv;
+	char s[INET6_ADDRSTRLEN];
+
+	int clientMode = 1;
+
+	srand(time(NULL));
+
+	if (argc < 2) {
+		printf("Defaulting to standard values...\n");
+		argv[1] = "::1";
+		argv[2] = "5000";
+	}
+
+	// Tells the getaddrinfo to only return sockets
+	// which fit these params.
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_INET6;
+	hints.ai_socktype = SOCK_STREAM;
+
+	if ((rv = getaddrinfo(argv[1], argv[2], &hints, &servinfo)) != 0) {
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+		return 1;
+	}
+
+	// loop through all the results and connect to the first we can
+	for (p = servinfo; p != NULL; p = p->ai_next) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol))
+				== -1) {
+			perror("client: socket");
+			continue;
+		}
+
+		if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+			close(sockfd);
+			perror("client: connect");
+			continue;
+		}
+
+		break;
+	}
+
+	if (p == NULL) {
+		fprintf(stderr, "client: failed to connect\n");
+		return 2;
+	}
+
+	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *) p->ai_addr), s,
+			sizeof s);
+	printf("client: connecting to %s\n", s);
+
+
+	int i;
+	struct PointerMap remotePointers[100];
+	// Initialize remotePointers array
+	for (i = 0; i < 100; i++) {
+		remotePointers[i].AddrString = (char *) malloc(100);
+		remotePointers[i].Pointer = malloc(sizeof(uint64_t));
+	}
+	if(clientMode) {
+		basicOperations(sockfd,remotePointers);
+	} else {
+		interactiveMode(sockfd,remotePointers);
+	}
+
+
+
 	freeaddrinfo(servinfo); // all done with this structure
 
 	// TODO: send close message so the server exits
