@@ -90,32 +90,21 @@ char * get_rdm_string(size_t num_bytes, int index) {
 }
 
 /*
- * TODO: explain.
- * Also use s to get rid of the warning.
- */
-void sigchld_handler(int s) {
-	// waitpid() might overwrite errno, so we save and restore it:
-	int saved_errno = errno;
-
-	while (waitpid(-1, NULL, WNOHANG) > 0)
-		;
-
-	errno = saved_errno;
-}
-
-/*
  * Sends message to specified socket
  */
-void sendMsg(int sockfd, char * sendBuffer, int msgBlockSize) {
-	if (send(sockfd, sendBuffer, msgBlockSize, 0) < 0)
+int sendTCP(int sockfd, char * sendBuffer, int msgBlockSize) {
+	if (send(sockfd, sendBuffer, msgBlockSize, 0) < 0) {
 		perror("ERROR writing to socket");
+		return EXIT_FAILURE;
+	}
 	memset(sendBuffer, 0, msgBlockSize);
+	return EXIT_SUCCESS;
 }
 
 /*
  * Receives message from socket
  */
-int receiveMsg(int sockfd, char * receiveBuffer, int msgBlockSize) {
+int receiveTCP(int sockfd, char * receiveBuffer, int msgBlockSize) {
 	//Sockets Layer Call: recv()
 	int numbytes = 0;
 	memset(receiveBuffer, 0, msgBlockSize);
@@ -125,6 +114,34 @@ int receiveMsg(int sockfd, char * receiveBuffer, int msgBlockSize) {
 	}
 	return numbytes;
 }
+/*
+ * Sends message to specified socket
+ */
+int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize,struct addrinfo * p) {
+	if (sendto(sockfd,sendBuffer,msgBlockSize,0, p->ai_addr, p->ai_addrlen) < 0) {
+		perror("ERROR writing to socket");
+		return EXIT_FAILURE;
+	}
+	memset(sendBuffer, 0, msgBlockSize);
+	return EXIT_SUCCESS;
+}
+
+/*
+ * Receives message from socket
+ */
+int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p) {
+	//Sockets Layer Call: recv()
+	int numbytes = 0;
+
+	memset(receiveBuffer, 0, msgBlockSize);
+	if ((numbytes = recvfrom(sockfd,receiveBuffer,msgBlockSize,0,p->ai_addr,p->ai_addrlen)) == -1) {
+		perror("ERROR reading from socket");
+		exit(1);
+	}
+	return numbytes;
+}
+
+
 
 /*
  * Prints byte buffer
