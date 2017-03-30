@@ -2,7 +2,7 @@
 #define PROJECT_UTILS
 
 #define DEBUG 0
-#define BLOCK_SIZE 1500 // max number of bytes we can get at once
+#define BLOCK_SIZE 4096 // max number of bytes we can get at once
 
 #define print_debug(format, args...)		\
 			if (DEBUG) {					\

@@ -33,8 +33,8 @@ struct PointerMap {
  */
 uint64_t allocateMem(int sockfd, struct addrinfo * p) {
 	print_debug("Mallocing send and receive buffers");
-	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
-	char * receiveBuffer = malloc(BLOCK_SIZE*sizeof(char));
+	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * splitResponse;
 
 	print_debug("Memcopying ALLOCATE message into send buffer");
@@ -42,7 +42,7 @@ uint64_t allocateMem(int sockfd, struct addrinfo * p) {
 	memcpy(sendBuffer, "ALLOCATE", sizeof("ALLOCATE"));
 	//sendMsg(sockfd, sendBuffer,8);
 
-	sendUDP(sockfd, sendBuffer,8, p);
+	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
 
 	print_debug("Waiting to receive replyin receive buffer");
 	// Wait to receive a message from the server
@@ -75,7 +75,7 @@ uint64_t allocateMem(int sockfd, struct addrinfo * p) {
 		// Not successful so we send another message?
 		memcpy(sendBuffer, "What's up?", sizeof("What's up?"));
 		//sendMsg(sockfd, sendBuffer, sizeof("What's up?"));
-		sendUDP(sockfd, sendBuffer,9, p);
+		sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
 
 
 		// TODO: why do we return 0? Isn't there a better number 
@@ -97,8 +97,8 @@ uint64_t allocateMem(int sockfd, struct addrinfo * p) {
  */
 int writeToMemory(int sockfd, uint64_t * remotePointer, int index,struct addrinfo * p) {
 	print_debug("Mallocing sendBuffer and receiveBuffer");
-	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
-	char * receiveBuffer = malloc(BLOCK_SIZE*sizeof(char));
+	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
 
 	int size = 0;
 
@@ -121,7 +121,7 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index,struct addrinf
 
 	print_debug("Sending message");
 	//sendMsg(sockfd, sendBuffer, size);
-	sendUDP(sockfd, sendBuffer,size, p);
+	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
 
 
 	print_debug("Waiting for response");
@@ -143,8 +143,8 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index,struct addrinf
  * Releases the remote memory
  */
 int releaseMemory(int sockfd, uint64_t * remotePointer, struct addrinfo * p) {
-	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
-	char * receiveBuffer = malloc(BLOCK_SIZE*sizeof(char));
+	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
 
 	int size = 0;
 
@@ -159,7 +159,7 @@ int releaseMemory(int sockfd, uint64_t * remotePointer, struct addrinfo * p) {
 
 	// Send message
 	//sendMsg(sockfd, sendBuffer, size);
-	sendUDP(sockfd, sendBuffer,size, p);
+	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
 
 	// Receive response
 	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
@@ -176,8 +176,8 @@ int releaseMemory(int sockfd, uint64_t * remotePointer, struct addrinfo * p) {
  * Reads the remote memory
  */
 char * getMemory(int sockfd, uint64_t * remotePointer,struct addrinfo * p) {
-	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
-	char * receiveBuffer = malloc(4096*1000);
+	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
 
 	int size = 0;
 
@@ -192,7 +192,7 @@ char * getMemory(int sockfd, uint64_t * remotePointer,struct addrinfo * p) {
 
 	// Send message
 	//sendMsg(sockfd, sendBuffer, size);
-	sendUDP(sockfd, sendBuffer,size, p);
+	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
 	// Receive response
 	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
 	receiveUDPLegacy(sockfd, receiveBuffer,BLOCK_SIZE, p);
@@ -355,11 +355,11 @@ uint64_t getPointerFromString(char* input) {
 int basicOperations( int sockfd, struct PointerMap * remotePointers, struct addrinfo * p) {
 	int i;
 	for (i=0; i<10;i++) {
-
 		uint64_t remoteMemory = allocateMem(sockfd, p);
 		writeToMemory(sockfd, &remoteMemory, rand()%100, p);
 		char * test = getMemory(sockfd, &remoteMemory, p);
-		printf("Results of memory store: %10s\n", test);
+		printf("Results of memory store: %.50s\n", test);
+
 		releaseMemory(sockfd, &remoteMemory, p);
 		free(test);
 	}

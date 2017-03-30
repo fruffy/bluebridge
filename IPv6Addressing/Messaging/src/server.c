@@ -55,8 +55,8 @@ int addchar(char* charadr) {
  */
 int providePointer (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	print_debug("Creating allocated and sendBuffer with malloc");
-	char * allocated = (char*) malloc(4096*1000);
-	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
+	char * allocated = calloc(BLOCK_SIZE,sizeof(char));
+	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	int size = 0;
 
 	print_debug("Constructing message in sendBuffer");
@@ -91,8 +91,9 @@ int providePointer (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
  * Writes a piece of memory?
  */
 int writeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
-	char* sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
+	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * target;
+	printf("\nAllocated Pointer: %p -> %s\n",sendBuffer, sendBuffer);
 
 	// TODO: why is this +9?
 	char * dataToWrite = receiveBuffer + 9;
@@ -120,7 +121,7 @@ int writeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	//sendMsg(sock_fd,sendBuffer,3);
 	sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
 
-	free(sendBuffer);
+	//free(sendBuffer);
 
 	// TODO change to be meaningful, i.e., error message
 	return 0;
@@ -131,9 +132,8 @@ int writeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
  * This is freeing target memory?
  */
 int freeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
-	char* sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
+	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * target;
-
 	// Why copy when you're freeing the memory?
 	memcpy(&target, receiveBuffer, 8);
 
@@ -144,7 +144,6 @@ int freeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	// TODO: shouldn't this be sizeof("ACK")?
 	//sendMsg(sock_fd,sendBuffer,3);
 	sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
-	free(sendBuffer);
 
 	// TODO change to be meaningful, i.e., error message
 	return 0;
@@ -154,9 +153,9 @@ int freeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
  * Gets memory and sends it
  */
 int getMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
-	char* sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
+	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * target;
-
+	printBytes(receiveBuffer);
 	// Copy eight bytes of the receiveBuffer into the target
 	memcpy(&target, receiveBuffer, 8);
 
@@ -182,7 +181,7 @@ int getMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
  * TODO: get message format
  */
 void handleClientRequests(int sock_fd,	struct addrinfo * p) {
-	char * receiveBuffer = calloc(BLOCK_SIZE,8);
+	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	int numbytes;
 	while (1) {
 		printf("Waiting for client message...\n");
