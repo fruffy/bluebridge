@@ -2,7 +2,7 @@
 #define PROJECT_UTILS
 
 #define DEBUG 0
-#define BLOCK_SIZE 4000 // max number of bytes we can get at once
+#define BLOCK_SIZE 1500 // max number of bytes we can get at once
 
 #define print_debug(format, args...)		\
 			if (DEBUG) {					\
@@ -27,7 +27,9 @@ int receiveTCP(int sockfd, char * receiveBuffer, int msgBlockSize);
 
 int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p);
 
+int receiveUDPLegacy (int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p);
 int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p);
+
 
 int printBytes(char * receiveBuffer);
 

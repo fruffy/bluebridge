@@ -47,7 +47,7 @@ uint64_t allocateMem(int sockfd, struct addrinfo * p) {
 	print_debug("Waiting to receive replyin receive buffer");
 	// Wait to receive a message from the server
 //	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
-	receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
+	receiveUDPLegacy(sockfd, receiveBuffer, BLOCK_SIZE, p);
 
 
 	print_debug("Parsing response");
@@ -127,7 +127,7 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index,struct addrinf
 	print_debug("Waiting for response");
 	// Wait for the response
 	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
-	receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
+	receiveUDPLegacy(sockfd, receiveBuffer, BLOCK_SIZE, p);
 
 
 	print_debug("Freeing sendBuffer and receiveBuffer");
@@ -163,7 +163,7 @@ int releaseMemory(int sockfd, uint64_t * remotePointer, struct addrinfo * p) {
 
 	// Receive response
 	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
-	receiveUDP(sockfd, receiveBuffer,BLOCK_SIZE, p);
+	receiveUDPLegacy(sockfd, receiveBuffer,BLOCK_SIZE, p);
 
 	free(sendBuffer);
 	free(receiveBuffer);
@@ -195,7 +195,7 @@ char * getMemory(int sockfd, uint64_t * remotePointer,struct addrinfo * p) {
 	sendUDP(sockfd, sendBuffer,size, p);
 	// Receive response
 	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
-	receiveUDP(sockfd, receiveBuffer,BLOCK_SIZE, p);
+	receiveUDPLegacy(sockfd, receiveBuffer,BLOCK_SIZE, p);
 
 
 	free(sendBuffer);
@@ -211,7 +211,7 @@ uint64_t getPointerFromString(char* input) {
 	// sprintf(message, "Received address: %" PRIx64 "\n", address);
 	print_debug("Received address: %" PRIx64 ".", address);
 
-	uint64_t pointer = (uint64_t *)address;
+	uint64_t pointer = (uint64_t)address;
 		return pointer;
 }
 /*int interactiveMode( int sockfd, struct PointerMap * remotePointers ) {
@@ -359,7 +359,7 @@ int basicOperations( int sockfd, struct PointerMap * remotePointers, struct addr
 		uint64_t remoteMemory = allocateMem(sockfd, p);
 		writeToMemory(sockfd, &remoteMemory, rand()%100, p);
 		char * test = getMemory(sockfd, &remoteMemory, p);
-		printf("Results of memory store: %10x\n", (unsigned int) test);
+		printf("Results of memory store: %10s\n", test);
 		releaseMemory(sockfd, &remoteMemory, p);
 		free(test);
 	}
