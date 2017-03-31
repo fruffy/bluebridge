@@ -1,5 +1,5 @@
-import networkx as nx
 import csv
+import time
 import operator
 
 class SharedMemorySystem():
@@ -72,10 +72,10 @@ def pagerank(sdsm):
 	# This needs to change to shared mem
 	for t in range(20):
 
-		for label, vertex in sdsm.get_vertices().iteritems():
+		for (_, vertex) in (sdsm.get_vertices().iteritems()):
 			vertex.sendMessages(sdsm, t)
-
-		for label, vertex in sdsm.get_vertices().iteritems():
+		
+		for (_, vertex) in (sdsm.get_vertices().iteritems()):
 			vertex.process()
 
 	total_final = 0;
@@ -88,12 +88,12 @@ def pagerank(sdsm):
 	return sorted(ranks.items(), key=operator.itemgetter(1), reverse=True)
 
 def build_all_vertices(graph):
-	all_vertices = {}
 	
-	numNodes = len(graph.nodes(data=True))
+	all_vertices = {}
+	numNodes = len(graph)
 
-	for label, rank in graph.nodes(data=True):
-		all_vertices[label] = Vertex(label, graph.out_edges(label), 1/float(numNodes), numNodes)
+	for label, edgelist in graph.iteritems():
+		all_vertices[label] = Vertex(label, edgelist, 1/float(numNodes), numNodes)
 
 	return all_vertices
 
@@ -103,37 +103,29 @@ if __name__ == '__main__':
 	#reader = csv.reader(open('./twitter/twitter_rv.net', 'r'), delimiter='\t');
 
 	reader = csv.reader(open('./simple_routes.txt', 'r'), delimiter=' ')
-	edges = []
-	nodes = []
+	myGraph = dict()
 
+	start_time = time.time()
 	for row in reader:
 		
-		if not (row[0]) in nodes:
-			nodes.append(row[0])
+		if not (row[0]) in myGraph:
+			myGraph[row[0]] = []
 		
-		if not (row[1]) in nodes:
-			nodes.append(row[1])
+		if not (row[1]) in myGraph:
+			myGraph[row[1]] = []
 		
-		edges.append((row[0], row[1]))
-	
-	#nodes = set(nodes);
+		myGraph[row[0]].append((row[0], row[1]))
 
-	print "Parsing complete."
+	print "Parsing complete. Took", time.time() - start_time, "s."
 
-	numNodes = len(nodes);
+	numNodes = len(myGraph);
 	print numNodes
 
-	G = nx.DiGraph()
-	for (e1, e2) in edges:
-		G.add_path([e1, e2])
-
-	print len(G.nodes(data=True))
-
-	#G.add_nodes_from(nodes)
-	#G.add_edges_from(edges)
-
-	sdsm = SharedMemorySystem(build_all_vertices(G))
+	sdsm = SharedMemorySystem(build_all_vertices(myGraph))
+	
+	start_time = time.time()
 	sorted_ranks = pagerank(sdsm);
+	print "PageRank complete. Took", (time.time() - start_time), "s."
 
 	print "--------------------"
 	print "Top 30 Airports..."

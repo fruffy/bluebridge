@@ -1,4 +1,8 @@
-/*#include <stdio.h>
+#define _GNU_SOURCE
+
+/*
+#include <stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
@@ -90,32 +94,21 @@ char * get_rdm_string(size_t num_bytes, int index) {
 }
 
 /*
- * TODO: explain.
- * Also use s to get rid of the warning.
- */
-void sigchld_handler(int s) {
-	// waitpid() might overwrite errno, so we save and restore it:
-	int saved_errno = errno;
-
-	while (waitpid(-1, NULL, WNOHANG) > 0)
-		;
-
-	errno = saved_errno;
-}
-
-/*
  * Sends message to specified socket
  */
-void sendMsg(int sockfd, char * sendBuffer, int msgBlockSize) {
-	if (send(sockfd, sendBuffer, msgBlockSize, 0) < 0)
+int sendTCP(int sockfd, char * sendBuffer, int msgBlockSize) {
+	if (send(sockfd, sendBuffer, msgBlockSize, 0) < 0) {
 		perror("ERROR writing to socket");
+		return EXIT_FAILURE;
+	}
 	memset(sendBuffer, 0, msgBlockSize);
+	return EXIT_SUCCESS;
 }
 
 /*
  * Receives message from socket
  */
-int receiveMsg(int sockfd, char * receiveBuffer, int msgBlockSize) {
+int receiveTCP(int sockfd, char * receiveBuffer, int msgBlockSize) {
 	//Sockets Layer Call: recv()
 	int numbytes = 0;
 	memset(receiveBuffer, 0, msgBlockSize);
@@ -125,6 +118,90 @@ int receiveMsg(int sockfd, char * receiveBuffer, int msgBlockSize) {
 	}
 	return numbytes;
 }
+/*
+ * Sends message to specified socket
+ */
+int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p) {
+	char s[INET6_ADDRSTRLEN];
+	//wait for incoming connection
+	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
+	socklen_t slen = sizeof(struct sockaddr_in6);
+	printf("Sending to %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
+	if (sendto(sockfd,sendBuffer,msgBlockSize,0, p->ai_addr, slen) < 0) {
+		perror("ERROR writing to socket");
+		return EXIT_FAILURE;
+	}
+	memset(sendBuffer, 0, msgBlockSize);
+	return EXIT_SUCCESS;
+}
+
+/*
+ * Receives message from socket
+ */
+//http://stackoverflow.com/questions/3062205/setting-the-source-ip-for-a-udp-socket
+int receiveUDPLegacy(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p) {
+	//Sockets Layer Call: recv()
+	int numbytes = 0;
+	char s[INET6_ADDRSTRLEN];
+	socklen_t slen = sizeof(struct sockaddr_in6);
+
+	memset(receiveBuffer, 0, msgBlockSize);
+	if ((numbytes = recvfrom(sockfd,receiveBuffer, msgBlockSize, 0, p->ai_addr,&slen)) == -1) {
+		perror("ERROR reading from socket");
+		exit(1);
+	}
+	//wait for incoming connection
+	inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
+	printf("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
+	return numbytes;
+}
+int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p) {
+
+	struct sockaddr_in6 from;
+	struct iovec iovec[1];
+	struct msghdr msg;
+	char msg_control[1024];
+	char udp_packet[msgBlockSize];
+	int numbytes = 0;
+
+	iovec[0].iov_base = udp_packet;
+	iovec[0].iov_len = sizeof(udp_packet);
+	msg.msg_name = &from;
+	msg.msg_namelen = sizeof(from);
+	msg.msg_iov = iovec;
+	msg.msg_iovlen = sizeof(iovec) / sizeof(*iovec);
+	msg.msg_control = msg_control;
+	msg.msg_controllen = sizeof(msg_control);
+	msg.msg_flags = 0;
+	numbytes = recvmsg(sockfd, &msg, 0);
+	//struct in_pktinfo in_pktinfo;
+	struct in6_pktinfo * in6_pktinfo;
+	//int have_in_pktinfo = 0;
+	//int have_in6_pktinfo = 0;
+	struct cmsghdr* cmsg;
+
+	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != 0; cmsg = CMSG_NXTHDR(&msg, cmsg))
+	{
+/*	  if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO) {
+	    in_pktinfo = *(struct in_pktinfo*)CMSG_DATA(cmsg);
+	   // have_in_pktinfo = 1;
+	  }*/
+
+	  if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO)
+	  {
+	    in6_pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
+	    //have_in6_pktinfo = 1;
+	    char s[INET6_ADDRSTRLEN];
+	    inet_ntop(p->ai_family,&in6_pktinfo->ipi6_addr, s, sizeof s);
+		printf("Message was sent to %s:%d \n",s, ntohs(((struct sockaddr_in6 *)&in6_pktinfo->ipi6_addr)->sin6_port));
+		memcpy(receiveBuffer,iovec[0].iov_base,iovec[0].iov_len);
+		p->ai_addr = (struct sockaddr *) &from;
+	  }
+	}
+	return numbytes;
+}
+
+
 
 /*
  * Prints byte buffer
@@ -140,6 +217,17 @@ int printBytes(char * receiveBuffer) {
 	return i;
 }
 
+// uint64_t getPointerFromString(char* input) {
+// 	uint64_t address;
+// 	sscanf(input, "%" SCNx64, &address);
+	
+// 	// char message[100]={};
+// 	// sprintf(message, "Received address: %" PRIx64 "\n", address);
+// 	print_debug("Received address: %" PRIx64 ".", address);
+
+// 	uint64_t pointer = (uint64_t *)address;
+// 	return pointer;
+// }
 uint64_t getPointerFromString(char* input) {
 	uint64_t address;
 	sscanf(input, "%" SCNx64, &address);
@@ -148,7 +236,7 @@ uint64_t getPointerFromString(char* input) {
 	// sprintf(message, "Received address: %" PRIx64 "\n", address);
 	print_debug("Received address: %" PRIx64 ".", address);
 
-	uint64_t pointer = (uint64_t *)address;
+	uint64_t pointer = (uint64_t)address;
 	return pointer;
 }
 

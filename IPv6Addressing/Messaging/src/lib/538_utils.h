@@ -19,9 +19,13 @@
 
 
 #define DEBUG 0
-#define BLOCK_SIZE 4000 // max number of bytes we can get at once
+// <<<<<<< HEAD
+// #define BLOCK_SIZE 4000 // max number of bytes we can get at once
 #define GLOBAL_ID "EA75:DB1A:68D8" // 48 bits for global id
 #define SUBNET_ID "C75F" // 16 bits for subnet id
+// =======
+#define BLOCK_SIZE 4096 // max number of bytes we can get at once
+// >>>>>>> acd1836cd31c2145c1ed685eaa8afef3599bcb70
 
 #define print_debug(format, args...)		\
 			if (DEBUG) {					\
@@ -40,11 +44,15 @@ unsigned char *gen_rdm_bytestream(size_t num_bytes);
 
 char *get_rdm_string(size_t num_bytes, int index);
 
-void sigchld_handler(int s);
+int sendTCP(int sockfd, char * sendBuffer, int msgBlockSize);
 
-void sendMsg(int sockfd, char * sendBuffer, int msgBlockSize);
+int receiveTCP(int sockfd, char * receiveBuffer, int msgBlockSize);
 
-int receiveMsg(int sockfd, char * receiveBuffer, int msgBlockSize);
+int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p);
+
+int receiveUDPLegacy (int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p);
+int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p);
+
 
 int printBytes(char * receiveBuffer);
 

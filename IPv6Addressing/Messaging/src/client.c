@@ -31,20 +31,24 @@ struct PointerMap {
 /*
  * Sends message to allocate memory
  */
-uint64_t allocateMem(int sockfd) {
+uint64_t allocateMem(int sockfd, struct addrinfo * p) {
 	print_debug("Mallocing send and receive buffers");
-	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
-	char * receiveBuffer = malloc(BLOCK_SIZE*sizeof(char));
+	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * splitResponse;
 
 	print_debug("Memcopying ALLOCATE message into send buffer");
 	// Send message to server to allocate memory
 	memcpy(sendBuffer, "ALLOCATE", sizeof("ALLOCATE"));
-	sendMsg(sockfd, sendBuffer, sizeof("ALLOCATE"));
+	//sendMsg(sockfd, sendBuffer,8);
+
+	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
 
 	print_debug("Waiting to receive replyin receive buffer");
 	// Wait to receive a message from the server
-	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
+//	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
+	receiveUDPLegacy(sockfd, receiveBuffer, BLOCK_SIZE, p);
+
 
 	print_debug("Parsing response");
 	// Parse the response
@@ -70,7 +74,10 @@ uint64_t allocateMem(int sockfd) {
 		print_debug("Response was not successful");
 		// Not successful so we send another message?
 		memcpy(sendBuffer, "What's up?", sizeof("What's up?"));
-		sendMsg(sockfd, sendBuffer, sizeof("What's up?"));
+		//sendMsg(sockfd, sendBuffer, sizeof("What's up?"));
+		sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
+
+
 		// TODO: why do we return 0? Isn't there a better number 
 		// (i.e. -1)
 
@@ -88,10 +95,10 @@ uint64_t allocateMem(int sockfd) {
 /*
  * Sends a write command to the sockfd for pointer remotePointer
  */
-int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
+int writeToMemory(int sockfd, uint64_t * remotePointer, int index,struct addrinfo * p) {
 	print_debug("Mallocing sendBuffer and receiveBuffer");
-	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
-	char * receiveBuffer = malloc(BLOCK_SIZE*sizeof(char));
+	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
 
 	int size = 0;
 
@@ -113,11 +120,15 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
 	printBytes((char*) remotePointer);
 
 	print_debug("Sending message");
-	sendMsg(sockfd, sendBuffer, size);
+	//sendMsg(sockfd, sendBuffer, size);
+	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
+
 
 	print_debug("Waiting for response");
 	// Wait for the response
-	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
+	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
+	receiveUDPLegacy(sockfd, receiveBuffer, BLOCK_SIZE, p);
+
 
 	print_debug("Freeing sendBuffer and receiveBuffer");
 	free(sendBuffer);
@@ -131,9 +142,9 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index) {
 /*
  * Releases the remote memory
  */
-int releaseMemory(int sockfd, uint64_t * remotePointer) {
-	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
-	char * receiveBuffer = malloc(BLOCK_SIZE*sizeof(char));
+int releaseMemory(int sockfd, uint64_t * remotePointer, struct addrinfo * p) {
+	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
 
 	int size = 0;
 
@@ -147,10 +158,12 @@ int releaseMemory(int sockfd, uint64_t * remotePointer) {
 	printBytes((char*)remotePointer);
 
 	// Send message
-	sendMsg(sockfd, sendBuffer, size);
+	//sendMsg(sockfd, sendBuffer, size);
+	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
 
 	// Receive response
-	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
+	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
+	receiveUDPLegacy(sockfd, receiveBuffer,BLOCK_SIZE, p);
 
 	free(sendBuffer);
 	free(receiveBuffer);
@@ -162,9 +175,9 @@ int releaseMemory(int sockfd, uint64_t * remotePointer) {
 /*
  * Reads the remote memory
  */
-char * getMemory(int sockfd, uint64_t * remotePointer) {
-	char * sendBuffer = malloc(BLOCK_SIZE*sizeof(char));
-	char * receiveBuffer = malloc(4096*1000);
+char * getMemory(int sockfd, uint64_t * remotePointer,struct addrinfo * p) {
+	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
 
 	int size = 0;
 
@@ -178,83 +191,95 @@ char * getMemory(int sockfd, uint64_t * remotePointer) {
 	printBytes((char*)remotePointer);
 
 	// Send message
-	sendMsg(sockfd, sendBuffer, size);
+	//sendMsg(sockfd, sendBuffer, size);
+	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
 	// Receive response
-	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
+	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
+	receiveUDPLegacy(sockfd, receiveBuffer,BLOCK_SIZE, p);
+
 
 	free(sendBuffer);
 
 	return receiveBuffer;
 }
 
-/*
- * Main workhorse method. Parses arguments, setups connections
- * Allows user to issue commands on the command line.
- */
-int main(int argc, char *argv[]) {
-	int sockfd;
-	struct addrinfo hints, *servinfo, *p;
-	int rv;
-	char s[INET6_ADDRSTRLEN];
+// <<<<<<< HEAD
+// /*
+//  * Main workhorse method. Parses arguments, setups connections
+//  * Allows user to issue commands on the command line.
+//  */
+// int main(int argc, char *argv[]) {
+// 	int sockfd;
+// 	struct addrinfo hints, *servinfo, *p;
+// 	int rv;
+// 	char s[INET6_ADDRSTRLEN];
 
-	srand(time(NULL));
+// 	srand(time(NULL));
 
-	if (argc < 2) {
-		printf("Defaulting to standard values...\n");
-		argv[1] = "::1";
-		argv[2] = "5000";
-	}
+// 	if (argc < 2) {
+// 		printf("Defaulting to standard values...\n");
+// 		argv[1] = "::1";
+// 		argv[2] = "5000";
+// 	}
 
-	// Tells the getaddrinfo to only return sockets
-	// which fit these params.
-	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_INET6;
-	hints.ai_socktype = SOCK_STREAM;
+// 	// Tells the getaddrinfo to only return sockets
+// 	// which fit these params.
+// 	memset(&hints, 0, sizeof hints);
+// 	hints.ai_family = AF_INET6;
+// 	hints.ai_socktype = SOCK_STREAM;
 
-	if ((rv = getaddrinfo(argv[1], argv[2], &hints, &servinfo)) != 0) {
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-		return 1;
-	}
+// 	if ((rv = getaddrinfo(argv[1], argv[2], &hints, &servinfo)) != 0) {
+// 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+// 		return 1;
+// 	}
 
-	// loop through all the results and connect to the first we can
-	for (p = servinfo; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol))
-				== -1) {
-			perror("client: socket");
-			continue;
-		}
+// 	// loop through all the results and connect to the first we can
+// 	for (p = servinfo; p != NULL; p = p->ai_next) {
+// 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol))
+// 				== -1) {
+// 			perror("client: socket");
+// 			continue;
+// 		}
 
-		if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-			close(sockfd);
-			perror("client: connect");
-			continue;
-		}
+// 		if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+// 			close(sockfd);
+// 			perror("client: connect");
+// 			continue;
+// 		}
 
-		break;
-	}
+// 		break;
+// 	}
 
-	if (p == NULL) {
-		fprintf(stderr, "client: failed to connect\n");
-		return 2;
-	}
+// 	if (p == NULL) {
+// 		fprintf(stderr, "client: failed to connect\n");
+// 		return 2;
+// 	}
 
-	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *) p->ai_addr), s,
-			sizeof s);
-	printf("client: connecting to %s\n", s);
+// 	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *) p->ai_addr), s,
+// 			sizeof s);
+// 	printf("client: connecting to %s\n", s);
 
-	int active = 1;
+// 	int active = 1;
+// =======
+// uint64_t getPointerFromString(char* input) {
+// 	uint64_t address;
+// 	sscanf(input, "%" SCNx64, &address);
+	
+// 	// char message[100]={};
+// 	// sprintf(message, "Received address: %" PRIx64 "\n", address);
+// 	print_debug("Received address: %" PRIx64 ".", address);
+
+// 	uint64_t pointer = (uint64_t)address;
+// 		return pointer;
+// }
+/*int interactiveMode( int sockfd, struct PointerMap * remotePointers ) {
 	long unsigned int len = 200;
 	char input[len];
 	char * localData;
 	int count = 0;
 	int i;
-	struct PointerMap remotePointers[100];
-	// Initialize remotePointers array
-	for (i = 0; i < 100; i++) {
-		remotePointers[i].AddrString = (char *) malloc(100);
-		remotePointers[i].Pointer = malloc(sizeof(uint64_t));
-	}
 
+	int active = 1;
 	while (active) {
 		memset(input, 0, len);
 		getLine("Please specify if you would like to (L)ist pointers, (A)llocate, (F)ree, (W)rite, or (R)equest data.\nPress Q to quit the program.\n", input, sizeof(input));
@@ -322,7 +347,7 @@ int main(int argc, char *argv[]) {
 					if (strcmp(remotePointers[i].AddrString, "") != 0) {
 						// char message[100] = {};
 						// sprintf(message, "Retrieving data from pointer 0x%s\n", remotePointers[i].AddrString);
-						print_debug("Retriving data from pointer 0x%s", remotePointers[i].AddrString);
+						print_debug("Retrieving data from pointer 0x%s", remotePointers[i].AddrString);
 						localData = getMemory(sockfd, remotePointers[i].Pointer);
 						printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
 					}
@@ -331,7 +356,7 @@ int main(int argc, char *argv[]) {
 				uint64_t pointer = getPointerFromString(input);
 				// char message[100] = {};
 				// sprintf(message, "Retrieving data from pointer 0x%p\n", (void *) pointer);
-				print_debug("Retriving data from pointer 0x%p", (void *) pointer);
+				print_debug("Retrieving data from pointer 0x%p", (void *) pointer);
 				localData = getMemory(sockfd, &pointer);
 				printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
 			}
@@ -396,6 +421,96 @@ int main(int argc, char *argv[]) {
 			printf("Try again.\n");
 		}
 	}
+}*/
+
+
+int basicOperations( int sockfd, struct PointerMap * remotePointers, struct addrinfo * p) {
+	int i;
+	for (i=0; i<10;i++) {
+		uint64_t remoteMemory = allocateMem(sockfd, p);
+		writeToMemory(sockfd, &remoteMemory, rand()%100, p);
+		char * test = getMemory(sockfd, &remoteMemory, p);
+		printf("Results of memory store: %.50s\n", test);
+
+		releaseMemory(sockfd, &remoteMemory, p);
+		free(test);
+	}
+}
+
+
+/*
+ * Main workhorse method. Parses arguments, setups connections
+ * Allows user to issue commands on the command line.
+ */
+int main(int argc, char *argv[]) {
+	int sockfd;
+	struct addrinfo hints, *servinfo, *p;
+	int rv;
+	char s[INET6_ADDRSTRLEN];
+
+	int clientMode = 1;
+
+	srand(time(NULL));
+
+	if (argc < 2) {
+		printf("Defaulting to standard values...\n");
+		argv[1] = "::1";
+		argv[2] = "5000";
+	}
+
+	// Tells the getaddrinfo to only return sockets
+	// which fit these params.
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_INET6;
+	hints.ai_socktype = SOCK_DGRAM;
+
+	if ((rv = getaddrinfo(argv[1], argv[2], &hints, &servinfo)) != 0) {
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+		return 1;
+	}
+
+	// loop through all the results and connect to the first we can
+	for (p = servinfo; p != NULL; p = p->ai_next) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol))
+				== -1) {
+			perror("client: socket");
+			continue;
+		}
+
+/*		if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+			close(sockfd);
+			perror("client: connect");
+			continue;
+		}
+*/
+		break;
+	}
+/*	
+	if (p == NULL) {
+		fprintf(stderr, "client: failed to connect\n");
+		return 2;
+	}*/
+
+/*	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *) p->ai_addr), s,
+			sizeof s);*/
+/*	printf("client: connecting to %s\n", s);
+*/
+
+	int i;
+	struct PointerMap remotePointers[100];
+	// Initialize remotePointers array
+	for (i = 0; i < 100; i++) {
+		remotePointers[i].AddrString = (char *) malloc(100);
+		remotePointers[i].Pointer = malloc(sizeof(uint64_t));
+	}
+	if(clientMode) {
+		basicOperations(sockfd,remotePointers, p);
+	} else {
+		//interactiveMode(sockfd,remotePointers);
+	}
+
+
+
 	freeaddrinfo(servinfo); // all done with this structure
 
 	// TODO: send close message so the server exits
