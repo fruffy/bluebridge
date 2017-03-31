@@ -1,7 +1,6 @@
 import csv
 import time
 import operator
-import pp
 import itertools
 
 from multiprocessing import Pool, Manager, Lock
@@ -156,9 +155,15 @@ def build_all_vertices(sdsm, graph):
 if __name__ == '__main__':
 
 	# Need to read and write to disk
+
+	# Huge twitter graph
 	#reader = csv.reader(open('./twitter/twitter_rv.net', 'r'), delimiter='\t');
 
-	reader = csv.reader(open('./simple_routes.txt', 'r'), delimiter=' ')
+	# Medium size google graph
+	reader = csv.reader(open('./web-Google.txt', 'r'), delimiter='\t');
+
+	# super small airport graph
+	#reader = csv.reader(open('./simple_routes.txt', 'r'), delimiter=' ')
 	myGraph = dict()
 
 	start_time = time.time()

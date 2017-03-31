@@ -102,7 +102,9 @@ if __name__ == '__main__':
 	# Need to read and write to disk
 	#reader = csv.reader(open('./twitter/twitter_rv.net', 'r'), delimiter='\t');
 
-	reader = csv.reader(open('./simple_routes.txt', 'r'), delimiter=' ')
+	reader = csv.reader(open('./web-Google.txt', 'r'), delimiter='\t');
+
+	#reader = csv.reader(open('./simple_routes.txt', 'r'), delimiter=' ')
 	myGraph = dict()
 
 	start_time = time.time()
