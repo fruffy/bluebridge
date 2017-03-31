@@ -1,5 +1,7 @@
 #define _GNU_SOURCE
 
+/*
+#include <stdio.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -7,12 +9,13 @@
 #include <string.h>
 #include <netdb.h>
 #include <sys/types.h>
-#include <netinet/in.h>
 #include <sys/socket.h>
 #include <time.h>
 #include <arpa/inet.h>
-#include <sys/types.h>
 #include <sys/wait.h>
+#include <netinet/in.h>
+*/
+
 #include "538_utils.h"
 
 /*void print_debug(char* message) {
@@ -212,4 +215,101 @@ int printBytes(char * receiveBuffer) {
 	}
 	printf("\n");
 	return i;
+}
+
+// uint64_t getPointerFromString(char* input) {
+// 	uint64_t address;
+// 	sscanf(input, "%" SCNx64, &address);
+	
+// 	// char message[100]={};
+// 	// sprintf(message, "Received address: %" PRIx64 "\n", address);
+// 	print_debug("Received address: %" PRIx64 ".", address);
+
+// 	uint64_t pointer = (uint64_t *)address;
+// 	return pointer;
+// }
+uint64_t getPointerFromString(char* input) {
+	uint64_t address;
+	sscanf(input, "%" SCNx64, &address);
+	
+	// char message[100]={};
+	// sprintf(message, "Received address: %" PRIx64 "\n", address);
+	print_debug("Received address: %" PRIx64 ".", address);
+
+	uint64_t pointer = (uint64_t)address;
+	return pointer;
+}
+
+uint64_t getPointerFromIPv6(struct in6_addr addr) {
+	char* pointer = malloc(12 * sizeof(unsigned char));
+	char str[INET6_ADDRSTRLEN];
+
+	unsigned int i;
+
+	inet_ntop(AF_INET6, addr.s6_addr, str, INET6_ADDRSTRLEN);
+
+	printf("String address: %s\n", str);
+
+	int j = 0;
+	for (i = strlen(str) - 14; i < strlen(str); i++) { // 14 b/c :
+		if (str[i] != ':') {
+			pointer[j] = str[i];
+			j++;
+		}
+	}
+
+	printf("Pointer: %s\n", pointer);
+
+	return getPointerFromString(pointer);
+}
+
+struct in6_addr getIPv6FromPointer(uint64_t pointer) {
+	char* string_addr = calloc(16, sizeof(char));
+
+	// Create the beginning of the address
+	strcat(string_addr, GLOBAL_ID);
+	strcat(string_addr, ":");
+	strcat(string_addr, SUBNET_ID);
+	strcat(string_addr, ":");// Pads the pointer
+
+	// Add the pointer
+	char* pointer_string = malloc(8 * sizeof(char));
+	
+	sprintf(pointer_string, "%" PRIx64, pointer);
+
+	printf("Pointer: %s\n", pointer_string);
+	printf("Address so far: %s\n", string_addr);
+	
+	print_debug("Pointer length: %lu\n", strlen(pointer_string));
+	print_debug("Address length: %lu\n", strlen(string_addr));
+
+	unsigned int i;
+
+	for (i = 0; i < strlen(pointer_string); i+=4) {
+		char* substr = malloc(4 * sizeof(char));
+		strcat(string_addr, ":");
+		print_debug("Creating copy\n");
+		strncpy(substr, pointer_string+i, 4);
+		print_debug("Copy: %s\n", substr);
+		print_debug("Performing concatenation\n");
+		strcat(string_addr, substr);
+		//strcat(string_addr, pointer_string[i]);
+		//strcat(string_addr, pointer_string[i+1]);
+		//strcat(string_addr, pointer_string[i+2]);
+		//strcat(string_addr, pointer_string[i+3]);
+	}
+
+	print_debug("New address: %s\n", string_addr);
+
+	struct in6_addr newAddr;
+
+	if (inet_pton(AF_INET6, string_addr, &newAddr) == 1) {
+		printf("SUCCESS: %s\n", string_addr);
+	    //successfully parsed string into "result"
+	} else {
+		printf("ERROR: not a valid address [%s]\n", string_addr);
+		//failed, perhaps not a valid representation of IPv6?
+	}
+
+	return newAddr;
 }
