@@ -2,32 +2,25 @@
  ** client.c -- a stream socket client demo
  */
 
-/*#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
-#include <netdb.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <time.h>
-#include <arpa/inet.h>
-#include <inttypes.h>
-*/
 #include "./lib/538_utils.h"
+#include "./lib/debug.h"
 
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //	1. IPv6 conversion method
 //			| global routing prefix (48) | subnet ID (16) | pointer (64)|
+//	2. Check correctness of pointer on server side, it should never segfault.
 ///////////////////////////////////////////////////////////////////////////////
+
+struct LinkedPointer {
+	uint64_t AddrString;
+	struct LinkedPointer * Pointer;
+};
 
 struct PointerMap {
 	char* AddrString;
 	uint64_t* Pointer;
 };
-
 /*
  * Sends message to allocate memory
  */
@@ -35,7 +28,7 @@ uint64_t allocateMem(int sockfd, struct addrinfo * p) {
 	print_debug("Mallocing send and receive buffers");
 	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
-	char * splitResponse;
+	char * splitResponse = calloc(BLOCK_SIZE,sizeof(char));
 
 	print_debug("Memcopying ALLOCATE message into send buffer");
 	// Send message to server to allocate memory
@@ -47,26 +40,30 @@ uint64_t allocateMem(int sockfd, struct addrinfo * p) {
 	print_debug("Waiting to receive replyin receive buffer");
 	// Wait to receive a message from the server
 //	receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
-	receiveUDPLegacy(sockfd, receiveBuffer, BLOCK_SIZE, p);
+	int numbytes = receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
 
-
+	print_debug("%d\n", numbytes);
 	print_debug("Parsing response");
 	// Parse the response
-	splitResponse = strtok(receiveBuffer, ":");
+	//splitResponse = strtok(receiveBuffer, ":");
+	memcpy(splitResponse, receiveBuffer, 3);
 
 	uint64_t retVal = 0;
 
-	if (strcmp(receiveBuffer,"ACK") == 0) {
+	if (strcmp(splitResponse,"ACK") == 0) {
 		print_debug("Response was ACK");
 		// If the message is ACK --> successful
 		uint64_t remotePointer =  0;
 
 		print_debug("Memcopying the pointer");
-		memcpy(&remotePointer, strtok(NULL, ":"), 8);
-
-		// char formatted_string[100] = {};
+		//char * temp =  strtok(NULL, ":");
+		printNBytes(receiveBuffer,50);
+		memcpy(&remotePointer, receiveBuffer+3, 8);
+		//char formatted_string[100] = {};
 		// sprintf(formatted_string, "Got %" PRIx64 " from server", remotePointer);
-		print_debug("Got %" PRIx64 " from server", remotePointer);
+		//print_debug("Got %" PRIx64 " from server", remotePointer);
+
+		print_debug("Got : %p from server\n", (void *)remotePointer);
 
 		print_debug("Setting remotePointer to be return value");
 		retVal = remotePointer;
@@ -117,7 +114,7 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index,struct addrinf
 
 	// Send the data
 	printf("Sending Data: %d bytes to ", size);
-	printBytes((char*) remotePointer);
+	printNBytes((char*) remotePointer, 8);
 
 	print_debug("Sending message");
 	//sendMsg(sockfd, sendBuffer, size);
@@ -127,7 +124,7 @@ int writeToMemory(int sockfd, uint64_t * remotePointer, int index,struct addrinf
 	print_debug("Waiting for response");
 	// Wait for the response
 	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
-	receiveUDPLegacy(sockfd, receiveBuffer, BLOCK_SIZE, p);
+	receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
 
 
 	print_debug("Freeing sendBuffer and receiveBuffer");
@@ -163,7 +160,7 @@ int releaseMemory(int sockfd, uint64_t * remotePointer, struct addrinfo * p) {
 
 	// Receive response
 	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
-	receiveUDPLegacy(sockfd, receiveBuffer,BLOCK_SIZE, p);
+	receiveUDP(sockfd, receiveBuffer,BLOCK_SIZE, p);
 
 	free(sendBuffer);
 	free(receiveBuffer);
@@ -195,7 +192,7 @@ char * getMemory(int sockfd, uint64_t * remotePointer,struct addrinfo * p) {
 	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
 	// Receive response
 	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
-	receiveUDPLegacy(sockfd, receiveBuffer,BLOCK_SIZE, p);
+	receiveUDP(sockfd, receiveBuffer,BLOCK_SIZE, p);
 
 
 	free(sendBuffer);
@@ -203,13 +200,18 @@ char * getMemory(int sockfd, uint64_t * remotePointer,struct addrinfo * p) {
 	return receiveBuffer;
 }
 
-/*int interactiveMode( int sockfd, struct PointerMap * remotePointers ) {
+int interactiveMode( int sockfd,  struct addrinfo * p) {
 	long unsigned int len = 200;
 	char input[len];
 	char * localData;
 	int count = 0;
 	int i;
-
+	struct PointerMap remotePointers[100];
+	// Initialize remotePointers array
+	for (i = 0; i < 100; i++) {
+		remotePointers[i].AddrString = (char *) malloc(100);
+		remotePointers[i].Pointer = malloc(sizeof(uint64_t));
+}
 	int active = 1;
 	while (active) {
 		memset(input, 0, len);
@@ -221,16 +223,18 @@ char * getMemory(int sockfd, uint64_t * remotePointer,struct addrinfo * p) {
 			if (strcmp("", input) == 0) {
 				print_debug("Calling allocateMem");
 				
-				uint64_t remoteMemory = allocateMem(sockfd);
+				uint64_t remoteMemory = allocateMem(sockfd, p)
 				
 				// char formatted_string[100] = {};
 				// sprintf(formatted_string, "Got %" PRIx64 " from call", remoteMemory);
-				print_debug("Got %" PRIx64 " from call", remoteMemory);
+				//print_debug("Got %" PRIx64 " from call", remoteMemory);
+				print_debug("Got %p from call", (void *) remoteMemory);
 
 				print_debug("Creating pointer to remote memory address");
 
 				char addrString[100] = {};
-				sprintf(addrString, "%" PRIx64, remoteMemory);
+				//sprintf(addrString, "%" PRIx64, remoteMemory);
+				memcpy(addrString,&remoteMemory, 8);
 				strcpy(remotePointers[count].AddrString, addrString);
 				memcpy(remotePointers[count++].Pointer, &remoteMemory, sizeof(remoteMemory));
 				printf("Allocated pointer 0x%s\n", addrString);
@@ -246,16 +250,20 @@ char * getMemory(int sockfd, uint64_t * remotePointer,struct addrinfo * p) {
 				for (j = 0; j < num; j++) {
 					print_debug("Calling allocateMem");
 
-					uint64_t remoteMemory = allocateMem(sockfd);
+					uint64_t remoteMemory = allocateMem(sockfd, p);
 					
 					// char formatted_string[100] = {};
 					// sprintf(formatted_string, "Got %" PRIx64 " from call", remoteMemory);
-					print_debug("Got %" PRIx64 " from call", remoteMemory);
+					//print_debug("Got %" PRIx64 " from call", remoteMemory);
+					print_debug("Got %p from call", (void *) remoteMemory);
+
 
 					print_debug("Creating pointer to remote memory address");
 
 					char addrString[100] = {};
-					sprintf(addrString, "%" PRIx64, remoteMemory);
+					//sprintf(addrString, "%" PRIx64, remoteMemory);
+
+					memcpy(addrString,&remoteMemory, 8);
 					strcpy(remotePointers[count].AddrString, addrString);
 					memcpy(remotePointers[count++].Pointer, &remoteMemory, sizeof(remoteMemory));
 					printf("Allocated pointer 0x%s\n", addrString);
@@ -279,7 +287,7 @@ char * getMemory(int sockfd, uint64_t * remotePointer,struct addrinfo * p) {
 						// char message[100] = {};
 						// sprintf(message, "Retrieving data from pointer 0x%s\n", remotePointers[i].AddrString);
 						print_debug("Retrieving data from pointer 0x%s", remotePointers[i].AddrString);
-						localData = getMemory(sockfd, remotePointers[i].Pointer);
+						localData = getMemory(sockfd, remotePointers[i].Pointer, p);
 						printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
 					}
 				}
@@ -288,7 +296,7 @@ char * getMemory(int sockfd, uint64_t * remotePointer,struct addrinfo * p) {
 				// char message[100] = {};
 				// sprintf(message, "Retrieving data from pointer 0x%p\n", (void *) pointer);
 				print_debug("Retrieving data from pointer 0x%p", (void *) pointer);
-				localData = getMemory(sockfd, &pointer);
+				localData = getMemory(sockfd, &pointer, p);
 				printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
 			}
 		} else if (strcmp("W", input) == 0) {
@@ -299,13 +307,13 @@ char * getMemory(int sockfd, uint64_t * remotePointer,struct addrinfo * p) {
 				for (i = 0; i < 100; i++) {
 					if (strcmp(remotePointers[i].AddrString, "") != 0) {
 						printf("Writing data to pointer 0x%s\n", remotePointers[i].AddrString);
-						writeToMemory(sockfd, remotePointers[i].Pointer, i);
+						writeToMemory(sockfd, remotePointers[i].Pointer, i, p);
 					}
 				}
 			} else {
 				uint64_t pointer = getPointerFromString(input);
 				printf("Writing data to pointer %p\n", (void *) pointer);
-				writeToMemory(sockfd, &pointer, rand()%100);
+				writeToMemory(sockfd, &pointer, rand()%100, p);
 			}
 		} else if (strcmp("F", input) == 0) {
 			memset(input, 0, len);
@@ -315,7 +323,7 @@ char * getMemory(int sockfd, uint64_t * remotePointer,struct addrinfo * p) {
 				for (i = 0; i < 100; i++) {
 					if (strcmp(remotePointers[i].AddrString, "") != 0) {
 						printf("Freeing pointer 0x%s\n", remotePointers[i].AddrString);
-						releaseMemory(sockfd, remotePointers[i].Pointer);
+						releaseMemory(sockfd, remotePointers[i].Pointer, p);
 						remotePointers[i].AddrString = "";
 						remotePointers[i].Pointer = 0;
 					}
@@ -323,7 +331,7 @@ char * getMemory(int sockfd, uint64_t * remotePointer,struct addrinfo * p) {
 			} else {
 				uint64_t pointer = getPointerFromString(input);
 				printf("Freeing pointer %p\n", (void *) pointer);
-				releaseMemory(sockfd, &pointer);
+				releaseMemory(sockfd, &pointer, p);
 				for (i = 0; i < 100; i++) {
 					if (strcmp(remotePointers[i].AddrString, input+2) == 0){
 						remotePointers[i].AddrString = "";
@@ -343,7 +351,9 @@ char * getMemory(int sockfd, uint64_t * remotePointer,struct addrinfo * p) {
 
 			uint64_t newpointer = getPointerFromIPv6(temp);
 
-			printf("New pointer: %" PRIx64 ", Old pointer: %" PRIx64 "\n", newpointer, pointer);
+//			printf("New pointer: %" PRIx64 ", Old pointer: %" PRIx64 "\n", newpointer, pointer);
+			printf("New pointer: %p, Old pointer: %p\n", (void *) newpointer, (void *) pointer);
+
 
 		} else if (strcmp("Q", input) == 0) {
 			active = 0;
@@ -352,19 +362,32 @@ char * getMemory(int sockfd, uint64_t * remotePointer,struct addrinfo * p) {
 			printf("Try again.\n");
 		}
 	}
-}*/
+}
 
 
-int basicOperations( int sockfd, struct PointerMap * remotePointers, struct addrinfo * p) {
+int basicOperations( int sockfd, struct addrinfo * p) {
 	int i;
+	// Initialize remotePointers array
+	struct LinkedPointer * rootPointer = malloc( sizeof(struct LinkedPointer));;
+	struct LinkedPointer * nextPointer = rootPointer;
+	for (i = 0; i < 10; i++) {
+		nextPointer->AddrString = allocateMem(sockfd, p);
+		nextPointer->Pointer = malloc( sizeof(struct LinkedPointer));
+		printf("%p\n", (void *) rootPointer->AddrString);
+		printf("%p\n", (void *) nextPointer->AddrString);
+		nextPointer = nextPointer->Pointer;
+	}
+
 	for (i=0; i<10;i++) {
-		uint64_t remoteMemory = allocateMem(sockfd, p);
+		uint64_t remoteMemory = rootPointer->AddrString;
+		printf("%p\n", (void *) rootPointer->AddrString);
 		writeToMemory(sockfd, &remoteMemory, rand()%100, p);
 		char * test = getMemory(sockfd, &remoteMemory, p);
 		printf("Results of memory store: %.50s\n", test);
-
+		printf("Iteration %d\n", i);
 		releaseMemory(sockfd, &remoteMemory, p);
 		free(test);
+		rootPointer = rootPointer->Pointer;
 	}
 }
 
@@ -407,35 +430,17 @@ int main(int argc, char *argv[]) {
 			perror("client: socket");
 			continue;
 		}
+		const int on=1, off=0;
 
-/*		if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-			close(sockfd);
-			perror("client: connect");
-			continue;
-		}
-*/
+		setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
+		setsockopt(sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on));
+		setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
+
 		break;
 	}
-/*	
-	if (p == NULL) {
-		fprintf(stderr, "client: failed to connect\n");
-		return 2;
-	}*/
 
-/*	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *) p->ai_addr), s,
-			sizeof s);*/
-/*	printf("client: connecting to %s\n", s);
-*/
-
-	int i;
-	struct PointerMap remotePointers[100];
-	// Initialize remotePointers array
-	for (i = 0; i < 100; i++) {
-		remotePointers[i].AddrString = (char *) malloc(100);
-		remotePointers[i].Pointer = malloc(sizeof(uint64_t));
-	}
 	if(clientMode) {
-		basicOperations(sockfd,remotePointers, p);
+		basicOperations(sockfd, p);
 	} else {
 		//interactiveMode(sockfd,remotePointers);
 	}

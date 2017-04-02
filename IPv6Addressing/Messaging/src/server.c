@@ -2,21 +2,8 @@
  ** server.c -- a stream socket server demo
  */
 
-/*#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <sys/wait.h>
-#include <signal.h>
-#include <errno.h>
-*/
 #include "./lib/538_utils.h"
+#include "./lib/debug.h"
 
 #define BACKLOG 10     // how many pending connections queue will hold
 
@@ -77,7 +64,6 @@ int providePointer (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
 
 	printf("\nAllocated Pointer: %p -> %s\n",allocated, allocated);
-	printf("Content %s is stored at %p!\n\n", allocated, (void*)allocated);
 
 	print_debug("Freeing sendBuffer");
 	free(sendBuffer);
@@ -189,7 +175,7 @@ void handleClientRequests(int sock_fd,	struct addrinfo * p) {
 		// Get the message
 		//numbytes = receiveMsg(sock_fd, receiveBuffer, BLOCK_SIZE);
 		char s[INET6_ADDRSTRLEN];
-		numbytes = receiveUDPLegacy(sock_fd, receiveBuffer, BLOCK_SIZE, p);
+		numbytes = receiveUDP(sock_fd, receiveBuffer, BLOCK_SIZE, p);
 		inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
 		printf("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
 		// Parse the message (delimited by :)
@@ -202,6 +188,7 @@ void handleClientRequests(int sock_fd,	struct addrinfo * p) {
 
 		// Switch on the client command
 		if (strcmp(dataToWrite, "ALLOCATE") == 0) {
+			printf("Allocating...\n");
 			providePointer(sock_fd, splitResponse, p);
 		} else if (strcmp(dataToWrite, "WRITE") == 0) {
 			printf("Writing to pointer: ");
@@ -297,11 +284,11 @@ int main(int argc, char *argv[]) {
 	if (argc < 2) {
 		printf("Defaulting to standard values...\n");
 		argv[1] = "5000";
+		hints.ai_flags = AI_PASSIVE; // use my IP
+
 	}
 	hints.ai_family = AF_INET6;
 	hints.ai_socktype = SOCK_DGRAM;
-	hints.ai_flags = AI_PASSIVE; // use my IP
-
 	if ((rv = getaddrinfo(NULL, argv[1], &hints, &servinfo)) != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 		return 1;

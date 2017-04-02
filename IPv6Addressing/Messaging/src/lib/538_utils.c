@@ -1,28 +1,8 @@
 #define _GNU_SOURCE
 
-/*
-#include <stdio.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
-#include <netdb.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <time.h>
-#include <arpa/inet.h>
-#include <sys/wait.h>
-#include <netinet/in.h>
-*/
 
 #include "538_utils.h"
-
-/*void print_debug(char* message) {
-	if (DEBUG) {
-		printf("[DEBUG]: %s\n", message);
-	}
-}*/
+#include "debug.h"
 
 /* 
  * get sockaddr, IPv4 or IPv6:
@@ -138,9 +118,7 @@ int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p
 /*
  * Receives message from socket
  */
-//http://stackoverflow.com/questions/3062205/setting-the-source-ip-for-a-udp-socket
 int receiveUDPLegacy(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p) {
-	//Sockets Layer Call: recv()
 	int numbytes = 0;
 	char s[INET6_ADDRSTRLEN];
 	socklen_t slen = sizeof(struct sockaddr_in6);
@@ -155,6 +133,13 @@ int receiveUDPLegacy(int sockfd, char * receiveBuffer, int msgBlockSize, struct 
 	printf("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
 	return numbytes;
 }
+
+
+
+/*
+ * Receives message from socket
+ */
+ //http://stackoverflow.com/questions/3062205/setting-the-source-ip-for-a-udp-socket
 int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p) {
 
 	struct sockaddr_in6 from;
@@ -163,7 +148,6 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 	char msg_control[1024];
 	char udp_packet[msgBlockSize];
 	int numbytes = 0;
-
 	iovec[0].iov_base = udp_packet;
 	iovec[0].iov_len = sizeof(udp_packet);
 	msg.msg_name = &from;
@@ -174,69 +158,37 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 	msg.msg_controllen = sizeof(msg_control);
 	msg.msg_flags = 0;
 	numbytes = recvmsg(sockfd, &msg, 0);
-	//struct in_pktinfo in_pktinfo;
 	struct in6_pktinfo * in6_pktinfo;
-	//int have_in_pktinfo = 0;
-	//int have_in6_pktinfo = 0;
 	struct cmsghdr* cmsg;
 
-	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != 0; cmsg = CMSG_NXTHDR(&msg, cmsg))
-	{
-/*	  if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO) {
-	    in_pktinfo = *(struct in_pktinfo*)CMSG_DATA(cmsg);
-	   // have_in_pktinfo = 1;
-	  }*/
-
-	  if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO)
-	  {
-	    in6_pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
-	    //have_in6_pktinfo = 1;
-	    char s[INET6_ADDRSTRLEN];
-	    inet_ntop(p->ai_family,&in6_pktinfo->ipi6_addr, s, sizeof s);
-		printf("Message was sent to %s:%d \n",s, ntohs(((struct sockaddr_in6 *)&in6_pktinfo->ipi6_addr)->sin6_port));
-		memcpy(receiveBuffer,iovec[0].iov_base,iovec[0].iov_len);
-		p->ai_addr = (struct sockaddr *) &from;
-	  }
+	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != 0; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+		if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
+			in6_pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
+			char s[INET6_ADDRSTRLEN];
+			inet_ntop(p->ai_family,&in6_pktinfo->ipi6_addr, s, sizeof s);
+			print_debug("Packet was sent to this IP %s\n",s);
+			
+			memcpy(receiveBuffer,iovec[0].iov_base,iovec[0].iov_len);
+			memcpy(p->ai_addr, (struct sockaddr *) &from, sizeof(from));
+			p->ai_addrlen = sizeof(from);
+		}
 	}
+
+
+
 	return numbytes;
 }
 
 
-
-/*
- * Prints byte buffer
- */
-int printBytes(char * receiveBuffer) {
-	int i = 0;
-
-	while(receiveBuffer[i] != '\0') {
-		printf("%02x", (unsigned char) receiveBuffer[i]);
-		i++;
-	}
-	printf("\n");
-	return i;
-}
-
-// uint64_t getPointerFromString(char* input) {
-// 	uint64_t address;
-// 	sscanf(input, "%" SCNx64, &address);
-	
-// 	// char message[100]={};
-// 	// sprintf(message, "Received address: %" PRIx64 "\n", address);
-// 	print_debug("Received address: %" PRIx64 ".", address);
-
-// 	uint64_t pointer = (uint64_t *)address;
-// 	return pointer;
-// }
 uint64_t getPointerFromString(char* input) {
-	uint64_t address;
-	sscanf(input, "%" SCNx64, &address);
+	uint64_t address = 0;
+	memcpy(&input, &input, 64);
 	
 	// char message[100]={};
 	// sprintf(message, "Received address: %" PRIx64 "\n", address);
-	print_debug("Received address: %" PRIx64 ".", address);
+	//print_debug("Received address: %" PRIx64 ".", address);
 
-	uint64_t pointer = (uint64_t)address;
+	uint64_t pointer = address;
 	return pointer;
 }
 
@@ -275,8 +227,9 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
 	// Add the pointer
 	char* pointer_string = malloc(8 * sizeof(char));
 	
-	sprintf(pointer_string, "%" PRIx64, pointer);
+	//sprintf(pointer_string, "%" PRIx64, pointer);
 
+	memcpy(&pointer_string, &pointer,8);
 	printf("Pointer: %s\n", pointer_string);
 	printf("Address so far: %s\n", string_addr);
 	
@@ -305,7 +258,7 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
 
 	if (inet_pton(AF_INET6, string_addr, &newAddr) == 1) {
 		printf("SUCCESS: %s\n", string_addr);
-	    //successfully parsed string into "result"
+		//successfully parsed string into "result"
 	} else {
 		printf("ERROR: not a valid address [%s]\n", string_addr);
 		//failed, perhaps not a valid representation of IPv6?
