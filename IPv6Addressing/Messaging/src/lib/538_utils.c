@@ -225,11 +225,11 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
 	strcat(string_addr, ":");// Pads the pointer
 
 	// Add the pointer
-	char* pointer_string = malloc(8 * sizeof(char));
+	char* pointer_string = malloc(POINTER_SIZE * sizeof(char));
 	
 	//sprintf(pointer_string, "%" PRIx64, pointer);
 
-	memcpy(&pointer_string, &pointer,8);
+	memcpy(&pointer_string, &pointer,POINTER_SIZE);
 	printf("Pointer: %s\n", pointer_string);
 	printf("Address so far: %s\n", string_addr);
 	

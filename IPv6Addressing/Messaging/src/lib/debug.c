@@ -31,7 +31,7 @@ int printBytes(char * receiveBuffer) {
 int printNBytes(char * receiveBuffer, int num) {
 	int i;
 
-	for (i = num; i>=0; i--) {
+	for (i = num-1; i>=0; i--) {
 		printf("%02x", (unsigned char) receiveBuffer[i]);
 	}
 	printf("\n");
