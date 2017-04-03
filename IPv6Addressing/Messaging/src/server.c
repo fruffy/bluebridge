@@ -181,24 +181,29 @@ void handleClientRequests(int sock_fd,	struct addrinfo * p) {
 		// Parse the message (delimited by :)
 		printf("Message from client: %i bytes\n", numbytes);
 		printf("%s\n", receiveBuffer);
+		printBytes(receiveBuffer);
 
-		char * dataToWrite = strtok(receiveBuffer, ":");
-		printf("Client Command: %s\n", dataToWrite);
-		char * splitResponse = strtok(NULL, ":");
-
+		//char * dataToWrite = strtok(receiveBuffer, ":");
+		//printf("Client Command: %s\n", dataToWrite);
+		//char * splitResponse = strtok(NULL, ":");
+		char * splitResponse;
 		// Switch on the client command
-		if (strcmp(dataToWrite, "ALLOCATE") == 0) {
+		if (memcmp(receiveBuffer, "ALLOCATE",8) == 0) {
 			printf("Allocating...\n");
+			splitResponse = receiveBuffer+9;
 			providePointer(sock_fd, splitResponse, p);
-		} else if (strcmp(dataToWrite, "WRITE") == 0) {
+		} else if (memcmp(receiveBuffer, "WRITE",5) == 0) {
+			splitResponse = receiveBuffer+6;
 			printf("Writing to pointer: ");
-			printBytes(splitResponse);
+			printNBytes(splitResponse, 8);
 			writeMem(sock_fd, splitResponse, p);
-		} else if (strcmp(dataToWrite, "FREE") == 0) {
+		} else if (memcmp(receiveBuffer, "FREE",4) == 0) {
+			splitResponse = receiveBuffer+5;
 			printf("Deleting pointer: ");
 			printBytes(splitResponse);
 			freeMem(sock_fd, splitResponse, p);
-		} else if (strcmp(dataToWrite, "GET") == 0) {
+		} else if (memcmp(receiveBuffer, "GET",3) == 0) {
+			splitResponse = receiveBuffer+4;
 			printf("Retrieving data: ");
 			printBytes(splitResponse);
 			getMem(sock_fd, splitResponse, p);

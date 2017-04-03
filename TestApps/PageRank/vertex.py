@@ -102,9 +102,9 @@ if __name__ == '__main__':
 	# Need to read and write to disk
 	#reader = csv.reader(open('./twitter/twitter_rv.net', 'r'), delimiter='\t');
 
-	reader = csv.reader(open('./web-Google.txt', 'r'), delimiter='\t');
+	#reader = csv.reader(open('./web-Google.txt', 'r'), delimiter='\t');
 
-	#reader = csv.reader(open('./simple_routes.txt', 'r'), delimiter=' ')
+	reader = csv.reader(open('./inputs/simple_routes.txt', 'r'), delimiter=' ')
 	myGraph = dict()
 
 	start_time = time.time()
@@ -118,13 +118,12 @@ if __name__ == '__main__':
 		
 		myGraph[row[0]].append((row[0], row[1]))
 
-	print "Parsing complete. Took", time.time() - start_time, "s."
-
 	numNodes = len(myGraph);
 	print numNodes
 
 	sdsm = SharedMemorySystem(build_all_vertices(myGraph))
-	
+	print "Parsing complete. Took", time.time() - start_time, "s."
+
 	start_time = time.time()
 	sorted_ranks = pagerank(sdsm);
 	print "PageRank complete. Took", (time.time() - start_time), "s."
