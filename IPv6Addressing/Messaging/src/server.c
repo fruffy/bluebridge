@@ -45,6 +45,7 @@ int providePointer (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	print_debug("Creating allocated and sendBuffer with malloc");
 	char * allocated = calloc(BLOCK_SIZE,sizeof(char));
 	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
+
 	int size = 0;
 
 	print_debug("Constructing message in sendBuffer");
@@ -90,7 +91,7 @@ int writeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	print_debug("Data received (first 80 bytes): %.*s", 80, dataToWrite);
 	
 	// Copy the first eight bytes of receive buffer into the target
-	memcpy(&target, receiveBuffer, 8);
+	memcpy(&target, receiveBuffer, POINTER_SIZE);
 
 	// char message3[100] = {};
 	// sprintf(message3, "Target pointer: %p", (void*) target);
@@ -122,7 +123,7 @@ int freeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * target;
 	// Why copy when you're freeing the memory?
-	memcpy(&target, receiveBuffer, 8);
+	memcpy(&target, receiveBuffer, POINTER_SIZE);
 
 	printf("Content stored at %p has been freed!\n", (void*)target);
 	free(target);
@@ -144,7 +145,7 @@ int getMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	char * target;
 	printBytes(receiveBuffer);
 	// Copy eight bytes of the receiveBuffer into the target
-	memcpy(&target, receiveBuffer, 8);
+	memcpy(&target, receiveBuffer, POINTER_SIZE);
 
 	printf("Content length %lu is currently stored at %p!\n", strlen(target), (void*)target);
 
@@ -170,6 +171,8 @@ int getMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 void handleClientRequests(int sock_fd,	struct addrinfo * p) {
 	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	int numbytes;
+	char * splitResponse;
+
 	while (1) {
 		printf("Waiting for client message...\n");
 		// Get the message
@@ -180,35 +183,33 @@ void handleClientRequests(int sock_fd,	struct addrinfo * p) {
 		printf("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
 		// Parse the message (delimited by :)
 		printf("Message from client: %i bytes\n", numbytes);
-		printf("%s\n", receiveBuffer);
 		printBytes(receiveBuffer);
 
 		//char * dataToWrite = strtok(receiveBuffer, ":");
 		//printf("Client Command: %s\n", dataToWrite);
-		//char * splitResponse = strtok(NULL, ":");
-		char * splitResponse;
 		// Switch on the client command
-		if (memcmp(receiveBuffer, "ALLOCATE",8) == 0) {
+		if (memcmp(receiveBuffer, ALLOC_CMD,2) == 0) {
 			printf("Allocating...\n");
-			splitResponse = receiveBuffer+9;
+			splitResponse = receiveBuffer+2;
 			providePointer(sock_fd, splitResponse, p);
-		} else if (memcmp(receiveBuffer, "WRITE",5) == 0) {
-			splitResponse = receiveBuffer+6;
+		} else if (memcmp(receiveBuffer, WRITE_CMD,2) == 0) {
+			splitResponse = receiveBuffer+2;
 			printf("Writing to pointer: ");
-			printNBytes(splitResponse, 8);
+			printNBytes(splitResponse, POINTER_SIZE);
 			writeMem(sock_fd, splitResponse, p);
-		} else if (memcmp(receiveBuffer, "FREE",4) == 0) {
-			splitResponse = receiveBuffer+5;
+		} else if (memcmp(receiveBuffer, FREE_CMD,2) == 0) {
+			splitResponse = receiveBuffer+2;
 			printf("Deleting pointer: ");
-			printBytes(splitResponse);
+			printNBytes(splitResponse,POINTER_SIZE);
 			freeMem(sock_fd, splitResponse, p);
-		} else if (memcmp(receiveBuffer, "GET",3) == 0) {
-			splitResponse = receiveBuffer+4;
+		} else if (memcmp(receiveBuffer, GET_CMD,2) == 0) {
+			splitResponse = receiveBuffer+2;
 			printf("Retrieving data: ");
-			printBytes(splitResponse);
+			printNBytes(splitResponse,POINTER_SIZE);
 			getMem(sock_fd, splitResponse, p);
 		} else {
 			// TODO: what is this doing?
+			printf("Cannot match command!\n");
 			if (sendUDP(sock_fd, "Hello, world!", 13, p) == -1) {
 				perror("ERROR writing to socket");
 				exit(1);
