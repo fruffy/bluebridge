@@ -58,7 +58,7 @@ uint64_t allocateMem(int sockfd, struct addrinfo * p) {
 		print_debug("Memcopying the pointer");
 		//char * temp =  strtok(NULL, ":");
 		printNBytes(receiveBuffer,50);
-		memcpy(&remotePointer, receiveBuffer+3, 8);
+		memcpy(&remotePointer, receiveBuffer+4, 8);
 		//char formatted_string[100] = {};
 		// sprintf(formatted_string, "Got %" PRIx64 " from server", remotePointer);
 		//print_debug("Got %" PRIx64 " from server", remotePointer);
