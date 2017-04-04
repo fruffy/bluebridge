@@ -12,29 +12,26 @@ if __name__ == '__main__':
 
 	reader = csv.reader(open('./inputs/simple_routes.txt', 'r'), delimiter=' ')
 	
-	nodes = []
-	edges = []
-
 	myGraph = Graph(directed=True, vertex_attrs = {"name": []})
-
+	myDict = dict()
 
 	start_time = time.time()
 	for row in reader:
 		
-		if not (row[0]) in nodes:
-			nodes.append(row[0])
+		if not (row[0]) in myDict:
+			myDict[row[0]] = []
 		
-		if not (row[1]) in nodes:
-			nodes.append(row[1])
+		if not (row[1]) in myDict:
+			myDict[row[1]] = []
 		
-		edges.append((row[0], row[1]))
+		myDict[row[0]].append((row[0], row[1]))
 
 	print "Parsing complete. Took", time.time() - start_time, "s."
 
-	numNodes = len(nodes);
-	print numNodes
+	myGraph.add_vertices(myDict.keys())
 
-	myGraph.add_vertices(nodes)
+	# Clean, stolen from stackoverflow
+	edges = {x for v in myDict.itervalues() for x in v}
 	myGraph.add_edges(edges)
 
 	#sdsm = SharedMemorySystem(build_all_vertices(myGraph))
