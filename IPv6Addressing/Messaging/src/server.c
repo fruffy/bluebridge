@@ -49,10 +49,7 @@ int providePointer (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	int size = 0;
 	printf("Input pointer: %p\n", (void *) allocated);
 	struct in6_addr temp = getIPv6FromPointer((uint64_t) &allocated);
-	uint64_t newpointer = getPointerFromIPv6(temp);
 
-	//printf("New pointer: %" PRIx64 ", Old pointer: %" PRIx64 "\n", newpointer, pointer);
-	printf("New pointer: %p, Old pointer: %p\n", (void *) newpointer, (void *) allocated);
 
 	print_debug("Constructing message in sendBuffer");
 	memcpy(sendBuffer, "ACK:", sizeof("ACK:"));
@@ -87,17 +84,18 @@ int providePointer (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 int writeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * target;
-	printf("\nAllocated Pointer: %p -> %s\n",sendBuffer, sendBuffer);
-
 	// TODO: why is this +9?
-	char * dataToWrite = receiveBuffer + 9;
+	char * dataToWrite = receiveBuffer + IPV6_SIZE+1;
 	
 	// char * message2 = malloc(BLOCK_SIZE *sizeof(char));
 	// sprintf(message2, "Data received (first 80 bytes): %.*s\n", 80, dataToWrite);
 	print_debug("Data received (first 80 bytes): %.*s", 80, dataToWrite);
 	
-	// Copy the first eight bytes of receive buffer into the target
-	memcpy(&target, receiveBuffer, POINTER_SIZE);
+	struct in6_addr temp;
+	memcpy(&temp, receiveBuffer, IPV6_SIZE);
+	uint64_t pointer = getPointerFromIPv6(temp);
+	// Copy the first POINTER_SIZE bytes of receive buffer into the target
+	memcpy(&target, &pointer, POINTER_SIZE);
 
 	// char message3[100] = {};
 	// sprintf(message3, "Target pointer: %p", (void*) target);
@@ -129,8 +127,12 @@ int freeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * target;
 	// Why copy when you're freeing the memory?
-	memcpy(&target, receiveBuffer, POINTER_SIZE);
-
+	struct in6_addr temp;
+	memcpy(&temp, receiveBuffer, IPV6_SIZE);
+	uint64_t pointer = getPointerFromIPv6(temp);
+	// Copy the first POINTER_SIZE bytes of receive buffer into the target
+	memcpy(&target, &pointer, POINTER_SIZE);
+	
 	printf("Content stored at %p has been freed!\n", (void*)target);
 	free(target);
 	memcpy(sendBuffer, "ACK", sizeof("ACK"));
@@ -150,8 +152,11 @@ int getMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * target;
 	printBytes(receiveBuffer);
-	// Copy eight bytes of the receiveBuffer into the target
-	memcpy(&target, receiveBuffer, POINTER_SIZE);
+	// Copy POINTER_SIZE bytes of the receiveBuffer into the target
+	struct in6_addr temp;
+	memcpy(&temp, receiveBuffer, IPV6_SIZE);
+	uint64_t pointer = getPointerFromIPv6(temp);
+	memcpy(&target, &pointer, POINTER_SIZE);
 
 	printf("Content length %lu is currently stored at %p!\n", strlen(target), (void*)target);
 
@@ -201,17 +206,17 @@ void handleClientRequests(int sock_fd,	struct addrinfo * p) {
 		} else if (memcmp(receiveBuffer, WRITE_CMD,2) == 0) {
 			splitResponse = receiveBuffer+2;
 			printf("Writing to pointer: ");
-			printNBytes(splitResponse, POINTER_SIZE);
+			printNBytes(splitResponse, IPV6_SIZE);
 			writeMem(sock_fd, splitResponse, p);
 		} else if (memcmp(receiveBuffer, FREE_CMD,2) == 0) {
 			splitResponse = receiveBuffer+2;
 			printf("Deleting pointer: ");
-			printNBytes(splitResponse,POINTER_SIZE);
+			printNBytes(splitResponse,IPV6_SIZE);
 			freeMem(sock_fd, splitResponse, p);
 		} else if (memcmp(receiveBuffer, GET_CMD,2) == 0) {
 			splitResponse = receiveBuffer+2;
 			printf("Retrieving data: ");
-			printNBytes(splitResponse,POINTER_SIZE);
+			printNBytes(splitResponse,IPV6_SIZE);
 			getMem(sock_fd, splitResponse, p);
 		} else {
 			// TODO: what is this doing?

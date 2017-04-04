@@ -21,6 +21,11 @@
 #define GET_CMD		"03"
 #define FREE_CMD	"04"
 
+struct GUID
+{
+    uint8_t uint128_t[16];
+};
+
 void *get_in_addr(struct sockaddr *sa);
 
 int getLine(char *prmpt, char *buff, size_t sz);
