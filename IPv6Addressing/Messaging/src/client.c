@@ -12,11 +12,14 @@
 //	2. Check correctness of pointer on server side, it should never segfault.
 //			(Ignore illegal operations)
 ///////////////////////////////////////////////////////////////////////////////
+//To add the current correct route
+//sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo
 
 struct LinkedPointer {
 	struct in6_addr AddrString;
 	struct LinkedPointer * Pointer;
 };
+//TODO: Remove?
 struct PointerMap {
 	char* AddrString;
 	struct in6_addr* Pointer;
@@ -397,7 +400,7 @@ int main(int argc, char *argv[]) {
 	int rv;
 	
 	//specify interactive or automatic client mode
-	int isAutoMode = 0;
+	int isAutoMode = 1;
 
 	srand(time(NULL));
 
@@ -430,7 +433,6 @@ int main(int argc, char *argv[]) {
 		setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
 		setsockopt(sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on));
 		setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
-
 		break;
 	}
 

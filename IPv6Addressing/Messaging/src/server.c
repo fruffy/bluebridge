@@ -64,7 +64,17 @@ int providePointer (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	//printBytes(sendBuffer);
 	//printf("Interpretation of Server %s \n", sendBuffer);
 	print_debug("Sending message");
+	
 	//sendMsg(sock_fd, sendBuffer, size);
+	char s[INET6_ADDRSTRLEN];
+	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
+	printf("Previous pointer... %s:%d\n",s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );
+	printNBytes((char* )&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), 16);
+	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), &temp, sizeof(temp));
+	p->ai_addrlen = sizeof(temp);
+	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
+	printf("Inserting %u Pointer into packet header... %s:%d\n",p->ai_addrlen,s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );
+	printNBytes((char* )&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), 16);
 	sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
 
 	printf("\nAllocated Pointer: %p -> %s\n",allocated, allocated);

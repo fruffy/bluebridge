@@ -11,7 +11,8 @@
 #include <unistd.h>
 
 #define GLOBAL_ID "EA75:DB1A:68D8" // 48 bits for global id
-#define SUBNET_ID "C75F" // 16 bits for subnet id
+//#define SUBNET_ID "C75F" // 16 bits for subnet id
+#define SUBNET_ID "11"
 #define BLOCK_SIZE 4096 // max number of bytes we can get at once
 #define POINTER_SIZE sizeof(void*)
 #define IPV6_SIZE 16
@@ -35,9 +36,12 @@ int sendTCP(int sockfd, char * sendBuffer, int msgBlockSize);
 int receiveTCP(int sockfd, char * receiveBuffer, int msgBlockSize);
 
 int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p);
+int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p);
+
 
 int receiveUDPLegacy (int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p);
 int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p);
+int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p);
 
 uint64_t getPointerFromString(char* input);
 
