@@ -49,18 +49,19 @@ uint64_t allocateMem(int sockfd, struct addrinfo * p) {
 	if (memcmp(receiveBuffer,"ACK",3) == 0) {
 		print_debug("Response was ACK");
 		// If the message is ACK --> successful
-		uint64_t remotePointer =  0;
+		struct in6_addr * remotePointer =  calloc(1,sizeof(remotePointer));
 
 		print_debug("Memcopying the pointer");
-		printNBytes(receiveBuffer,POINTER_SIZE);
-		memcpy(&remotePointer, receiveBuffer+4, POINTER_SIZE);
+		printNBytes(receiveBuffer+4,IPV6_SIZE);
+		memcpy(remotePointer, receiveBuffer+4, IPV6_SIZE);
 		//char formatted_string[100] = {};
 		// sprintf(formatted_string, "Got %" PRIx64 " from server", remotePointer);
 		//print_debug("Got %" PRIx64 " from server", remotePointer);
+		printNBytes((char *)remotePointer,IPV6_SIZE);
 
 		print_debug("Got: %p from server\n", (void *)remotePointer);
 		print_debug("Setting remotePointer to be return value");
-		retVal = remotePointer;
+		retVal = getPointerFromIPv6(*remotePointer);
 	} else {
 		print_debug("Response was not successful");
 		// Not successful so we send another message?
@@ -435,7 +436,7 @@ int main(int argc, char *argv[]) {
 	if(clientMode) {
 		basicOperations(sockfd, p);
 	} else {
-		//interactiveMode(sockfd,remotePointers);
+		interactiveMode(sockfd, p);
 	}
 
 

@@ -47,11 +47,17 @@ int providePointer (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 
 	int size = 0;
+	printf("Input pointer: %p\n", (void *) allocated);
+	struct in6_addr temp = getIPv6FromPointer((uint64_t) &allocated);
+	uint64_t newpointer = getPointerFromIPv6(temp);
+
+	//printf("New pointer: %" PRIx64 ", Old pointer: %" PRIx64 "\n", newpointer, pointer);
+	printf("New pointer: %p, Old pointer: %p\n", (void *) newpointer, (void *) allocated);
 
 	print_debug("Constructing message in sendBuffer");
-	memcpy(sendBuffer+size, "ACK:", sizeof("ACK:"));
+	memcpy(sendBuffer, "ACK:", sizeof("ACK:"));
 	size += sizeof("ACK:") - 1;
-	memcpy(sendBuffer+size, &allocated, sizeof(allocated));
+	memcpy(sendBuffer+size, &temp, IPV6_SIZE);
 	size += sizeof(allocated);
 
 	// char message[100] = {};

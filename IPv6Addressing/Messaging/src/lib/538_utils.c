@@ -192,7 +192,7 @@ uint64_t getPointerFromString(char* input) {
 	return pointer;
 }
 
-uint64_t getPointerFromIPv6(struct in6_addr addr) {
+uint64_t getPointerFromIPv6Str(struct in6_addr addr) {
 	char* pointer = malloc(12 * sizeof(unsigned char));
 	char str[INET6_ADDRSTRLEN];
 
@@ -215,8 +215,35 @@ uint64_t getPointerFromIPv6(struct in6_addr addr) {
 	return getPointerFromString(pointer);
 }
 
+uint64_t getPointerFromIPv6(struct in6_addr addr) {
+
+	uint64_t temp = 0;
+	char str[INET6_ADDRSTRLEN];
+	inet_ntop(AF_INET6, addr.s6_addr, str, INET6_ADDRSTRLEN);
+	printf("String address: %s\n", str);
+
+	memcpy(&temp,addr.s6_addr+POINTER_SIZE,POINTER_SIZE);
+
+	printf("Pointer: ");
+	printNBytes((char*) &temp,POINTER_SIZE);
+
+	return temp;
+}
+
+
 struct in6_addr getIPv6FromPointer(uint64_t pointer) {
-	char* string_addr = calloc(16, sizeof(char));
+	// Add the pointer
+
+	struct in6_addr * newAddr = calloc(1, sizeof(struct in6_addr));
+	memcpy(newAddr->s6_addr+POINTER_SIZE, (char *)pointer,POINTER_SIZE);
+	char s[INET6_ADDRSTRLEN];
+	inet_ntop(AF_INET6,newAddr, s, sizeof s);
+	print_debug("IPv6 Pointer %s\n",s);
+	return *newAddr;
+}
+
+struct in6_addr getIPv6FromPointerStr(uint64_t pointer) {
+	char* string_addr = calloc(IPV6_SIZE, sizeof(char));
 
 	// Create the beginning of the address
 	strcat(string_addr, GLOBAL_ID);

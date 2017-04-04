@@ -14,6 +14,8 @@
 #define SUBNET_ID "C75F" // 16 bits for subnet id
 #define BLOCK_SIZE 4096 // max number of bytes we can get at once
 #define POINTER_SIZE sizeof(void*)
+#define IPV6_SIZE 16
+
 #define ALLOC_CMD	"01"
 #define WRITE_CMD	"02"
 #define GET_CMD		"03"
