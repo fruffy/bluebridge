@@ -21,10 +21,6 @@
 #define GET_CMD		"03"
 #define FREE_CMD	"04"
 
-struct GUID
-{
-    uint8_t uint128_t[16];
-};
 
 void *get_in_addr(struct sockaddr *sa);
 
@@ -48,5 +44,10 @@ uint64_t getPointerFromString(char* input);
 uint64_t getPointerFromIPv6(struct in6_addr addr);
 
 struct in6_addr getIPv6FromPointer(uint64_t pointer);
+
+struct in6_addr getIPv6FromPointerStr(uint64_t pointer);
+uint64_t getPointerFromIPv6Str(struct in6_addr addr);
+
+
 
 #endif

@@ -10,6 +10,7 @@
 //	1. IPv6 conversion method
 //			| global routing prefix (48) | subnet ID (16) | pointer (64)|
 //	2. Check correctness of pointer on server side, it should never segfault.
+//			(Ignore illegal operations)
 ///////////////////////////////////////////////////////////////////////////////
 
 struct LinkedPointer {
@@ -194,7 +195,7 @@ char * getMemory(int sockfd, struct in6_addr * remotePointer,struct addrinfo * p
 	return receiveBuffer;
 }
 
-/*int interactiveMode( int sockfd,  struct addrinfo * p) {
+int interactiveMode( int sockfd,  struct addrinfo * p) {
 	long unsigned int len = 200;
 	char input[len];
 	char * localData;
@@ -222,7 +223,7 @@ char * getMemory(int sockfd, struct in6_addr * remotePointer,struct addrinfo * p
 				// char formatted_string[100] = {};
 				// sprintf(formatted_string, "Got %" PRIx64 " from call", remoteMemory);
 				//print_debug("Got %" PRIx64 " from call", remoteMemory);
-				print_debug("Got %p from call", (void *) remoteMemory);
+				print_debug("Got %p from call", (void *) remoteMemory.s6_addr);
 
 				print_debug("Creating pointer to remote memory address");
 
@@ -249,7 +250,7 @@ char * getMemory(int sockfd, struct in6_addr * remotePointer,struct addrinfo * p
 					// char formatted_string[100] = {};
 					// sprintf(formatted_string, "Got %" PRIx64 " from call", remoteMemory);
 					//print_debug("Got %" PRIx64 " from call", remoteMemory);
-					print_debug("Got %p from call", (void *) remoteMemory);
+					print_debug("Got %p from call", (void *) remoteMemory.s6_addr);
 
 
 					print_debug("Creating pointer to remote memory address");
@@ -286,10 +287,10 @@ char * getMemory(int sockfd, struct in6_addr * remotePointer,struct addrinfo * p
 					}
 				}
 			} else {
-				struct in6_addr pointer = getPointerFromString(input);
+				struct in6_addr pointer = getIPv6FromPointer((uint64_t) input);
 				// char message[100] = {};
 				// sprintf(message, "Retrieving data from pointer 0x%p\n", (void *) pointer);
-				print_debug("Retrieving data from pointer 0x%p", (void *) pointer);
+				print_debug("Retrieving data from pointer 0x%p", (void *) pointer.s6_addr);
 				localData = getMemory(sockfd, &pointer, p);
 				printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
 			}
@@ -305,8 +306,8 @@ char * getMemory(int sockfd, struct in6_addr * remotePointer,struct addrinfo * p
 					}
 				}
 			} else {
-				struct in6_addr pointer = getPointerFromString(input);
-				printf("Writing data to pointer %p\n", (void *) pointer);
+				struct in6_addr pointer = getIPv6FromPointer((uint64_t) input);
+				printf("Writing data to pointer %p\n", (void *) pointer.s6_addr);
 				writeToMemory(sockfd, &pointer, rand()%100, p);
 			}
 		} else if (strcmp("F", input) == 0) {
@@ -323,8 +324,8 @@ char * getMemory(int sockfd, struct in6_addr * remotePointer,struct addrinfo * p
 					}
 				}
 			} else {
-				struct in6_addr pointer = getPointerFromString(input);
-				printf("Freeing pointer %p\n", (void *) pointer);
+				struct in6_addr pointer = getIPv6FromPointer((uint64_t) input);
+				printf("Freeing pointer %p\n", (void *) pointer.s6_addr);
 				releaseMemory(sockfd, &pointer, p);
 				for (i = 0; i < 100; i++) {
 					if (strcmp(remotePointers[i].AddrString, input+2) == 0){
@@ -336,14 +337,14 @@ char * getMemory(int sockfd, struct in6_addr * remotePointer,struct addrinfo * p
 		} else if (strcmp("T", input) == 0) {
 			memset(input, 0, len);
 			getLine("Please specify the memory address.\n", input, sizeof(input));
-			struct in6_addr pointer = getPointerFromString(input);
+			uint64_t pointer = getPointerFromString(input);
 			printf("Input pointer: %p\n", (void *) pointer);
 
-			struct in6_addr temp = getIPv6FromPointer(pointer);
+			struct in6_addr temp = getIPv6FromPointerStr(pointer);
 
 			printf("Received struct...\n");
 
-			struct in6_addr newpointer = getPointerFromIPv6(temp);
+			uint64_t newpointer = getPointerFromIPv6Str(temp);
 
 //			printf("New pointer: %" PRIx64 ", Old pointer: %" PRIx64 "\n", newpointer, pointer);
 			printf("New pointer: %p, Old pointer: %p\n", (void *) newpointer, (void *) pointer);
@@ -357,7 +358,7 @@ char * getMemory(int sockfd, struct in6_addr * remotePointer,struct addrinfo * p
 		}
 	}
 }
-*/
+
 
 int basicOperations( int sockfd, struct addrinfo * p) {
 	int i;
@@ -394,8 +395,9 @@ int main(int argc, char *argv[]) {
 	int sockfd;
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
-
-	int clientMode = 1;
+	
+	//specify interactive or automatic client mode
+	int isAutoMode = 0;
 
 	srand(time(NULL));
 
@@ -432,10 +434,10 @@ int main(int argc, char *argv[]) {
 		break;
 	}
 
-	if(clientMode) {
+	if(isAutoMode) {
 		basicOperations(sockfd, p);
 	} else {
-		//interactiveMode(sockfd, p);
+		interactiveMode(sockfd, p);
 	}
 
 
