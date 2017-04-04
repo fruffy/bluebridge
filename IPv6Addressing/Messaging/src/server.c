@@ -55,9 +55,9 @@ int providePointer (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	printf("New pointer: %p, Old pointer: %p\n", (void *) newpointer, (void *) allocated);
 
 	print_debug("Constructing message in sendBuffer");
-	memcpy(sendBuffer+size, "ACK:", sizeof("ACK:"));
+	memcpy(sendBuffer, "ACK:", sizeof("ACK:"));
 	size += sizeof("ACK:") - 1;
-	memcpy(sendBuffer+size, &allocated, sizeof(allocated));
+	memcpy(sendBuffer+size, &temp, IPV6_SIZE);
 	size += sizeof(allocated);
 
 	// char message[100] = {};
