@@ -371,7 +371,7 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 		printf("%p\n", (void *) nextPointer->AddrString);*/
 		nextPointer = nextPointer->Pointer;
 	}
-
+/*
 	for (i=0; i<10;i++) {
 		printf("Iteration %d\n", i+1);
 		uint64_t remoteMemory = rootPointer->AddrString;
@@ -382,7 +382,7 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 		releaseMemory(sockfd, &remoteMemory, p);
 		free(test);
 		rootPointer = rootPointer->Pointer;
-	}
+	}*/
 }
 
 
