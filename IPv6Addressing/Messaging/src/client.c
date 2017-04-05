@@ -87,14 +87,14 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 	free(receiveBuffer);
 
 	print_debug("Returning value");
-	//TODO: Implement error handling, retVal is passed as pointer into function and we return int error codes
+	//TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
 	return retVal;
 }
 
 /*
  * Sends a write command to the sockfd for pointer remotePointer
  */
-int writeToMemory(int sockfd, struct in6_addr * remotePointer, int index,struct addrinfo * p) {
+int writeToMemory(int sockfd, struct in6_addr * remotePointer, int index, struct addrinfo * p) {
 	print_debug("Mallocing sendBuffer and receiveBuffer");
 	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));

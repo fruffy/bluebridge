@@ -116,6 +116,31 @@ int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p
 	memset(sendBuffer, 0, msgBlockSize);
 	return EXIT_SUCCESS;
 }
+/*
+ * Sends message to specified socket
+ */
+int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr remotePointer) {
+	char s[INET6_ADDRSTRLEN];
+	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
+	printf("Previous pointer... %s:%d\n",s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );
+	printNBytes((char* )&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), 16);
+	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), &remotePointer, sizeof(remotePointer));
+	p->ai_addrlen = sizeof(remotePointer);
+	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
+	printf("Inserting %u Pointer into packet header... %s:%d\n",p->ai_addrlen,s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );
+	printNBytes((char* )&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), 16);
+	//wait for incoming connection
+	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
+	socklen_t slen = sizeof(struct sockaddr_in6);
+	printf("Sending to %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
+	if (sendto(sockfd,sendBuffer,msgBlockSize,0, p->ai_addr, slen) < 0) {
+		perror("ERROR writing to socket");
+		return EXIT_FAILURE;
+	}
+	memset(sendBuffer, 0, msgBlockSize);
+	return EXIT_SUCCESS;
+}
+
 
 //TODO: Remove?
 /*
