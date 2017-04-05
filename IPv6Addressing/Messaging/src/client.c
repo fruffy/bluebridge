@@ -31,17 +31,18 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 	print_debug("Mallocing send and receive buffers");
 	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
-
+	struct in6_addr * ipv6Pointer = malloc(sizeof(struct in6_addr));
 	print_debug("Memcopying ALLOCATE message into send buffer");
+
 	// Send message to server to allocate memory
 	memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
-	//sendMsg(sockfd, sendBuffer,8);
 
 	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
-
-	print_debug("Waiting to receive replyin receive buffer");
+	print_debug("Waiting to receive replying receive buffer");
 	// Wait to receive a message from the server
-	int numbytes = receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
+	int numbytes = receiveUDPIPv6(sockfd, receiveBuffer, BLOCK_SIZE, p,ipv6Pointer);
+	print_debug("Extracted: %p from server\n", (void *)(*ipv6Pointer).s6_addr);
+	printNBytes((char *)ipv6Pointer->s6_addr,IPV6_SIZE);
 
 	print_debug(" Received %d bytes\n", numbytes);
 	print_debug("Parsing response");
@@ -50,21 +51,23 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 	struct in6_addr retVal;
 
 	if (memcmp(receiveBuffer,"ACK",3) == 0) {
-		print_debug("Response was ACK");
+/*		print_debug("Response was ACK");
 		// If the message is ACK --> successful
 		struct in6_addr * remotePointer =  calloc(1,sizeof(struct in6_addr));
 
 		print_debug("Memcopying the pointer");
 		printNBytes(receiveBuffer+4,IPV6_SIZE);
 		memcpy(remotePointer, receiveBuffer+4, IPV6_SIZE);
+		
+		//TODO: Remove?
 		//char formatted_string[100] = {};
 		// sprintf(formatted_string, "Got %" PRIx64 " from server", remotePointer);
 		//print_debug("Got %" PRIx64 " from server", remotePointer);
 		printNBytes((char *)remotePointer,IPV6_SIZE);
 
 		print_debug("Got: %p from server\n", (void *)remotePointer);
-		print_debug("Setting remotePointer to be return value");
-		retVal = *remotePointer;
+		print_debug("Setting remotePointer to be return value");*/
+		retVal = *ipv6Pointer;
 	} else {
 		print_debug("Response was not successful");
 		// Not successful so we send another message?
@@ -77,13 +80,14 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 		// (i.e. -1)
 
 		print_debug("Keeping return value as 0");
-	}
+		}
 
 	print_debug("Freeing sendBuffer and receiveBuffer memory");
 	free(sendBuffer);
 	free(receiveBuffer);
 
 	print_debug("Returning value");
+	//TODO: Implement error handling, retVal is passed as pointer into function and we return int error codes
 	return retVal;
 }
 
@@ -337,6 +341,7 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 					}
 				}
 			}
+		//TODO: Remove?
 		} else if (strcmp("T", input) == 0) {
 			memset(input, 0, len);
 			getLine("Please specify the memory address.\n", input, sizeof(input));
@@ -376,7 +381,7 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 		nextPointer = nextPointer->Pointer;
 	}
 
-	for (i=0; i<10;i++) {
+/*	for (i=0; i<10;i++) {
 		printf("Iteration %d\n", i+1);
 		struct in6_addr remoteMemory = rootPointer->AddrString;
 		printf("Using Pointer: %p\n", (void *) getPointerFromIPv6(rootPointer->AddrString));
@@ -386,7 +391,7 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 		releaseMemory(sockfd, &remoteMemory, p);
 		free(test);
 		rootPointer = rootPointer->Pointer;
-	}
+	}*/
 }
 
 

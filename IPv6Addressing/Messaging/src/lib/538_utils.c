@@ -76,6 +76,7 @@ char * get_rdm_string(size_t num_bytes, int index) {
 /*
  * Sends message to specified socket
  */
+//TODO: Remove?
 int sendTCP(int sockfd, char * sendBuffer, int msgBlockSize) {
 	if (send(sockfd, sendBuffer, msgBlockSize, 0) < 0) {
 		perror("ERROR writing to socket");
@@ -88,6 +89,7 @@ int sendTCP(int sockfd, char * sendBuffer, int msgBlockSize) {
 /*
  * Receives message from socket
  */
+//TODO: Remove?
 int receiveTCP(int sockfd, char * receiveBuffer, int msgBlockSize) {
 	//Sockets Layer Call: recv()
 	int numbytes = 0;
@@ -115,23 +117,7 @@ int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p
 	return EXIT_SUCCESS;
 }
 
-/*
- * Sends message to specified socket
- */
-int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p) {
-	char s[INET6_ADDRSTRLEN];
-	//wait for incoming connection
-	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
-	socklen_t slen = sizeof(struct sockaddr_in6);
-	printf("Sending to %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
-	if (sendto(sockfd,sendBuffer,msgBlockSize,0, p->ai_addr, slen) < 0) {
-		perror("ERROR writing to socket");
-		return EXIT_FAILURE;
-	}
-	memset(sendBuffer, 0, msgBlockSize);
-	return EXIT_SUCCESS;
-}
-
+//TODO: Remove?
 /*
  * Receives message from socket
  */
@@ -150,11 +136,12 @@ int receiveUDPLegacy(int sockfd, char * receiveBuffer, int msgBlockSize, struct 
 	printf("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
 	return numbytes;
 }
+
 /*
  * Receives message from socket
  */
  //http://stackoverflow.com/questions/3062205/setting-the-source-ip-for-a-udp-socket
-int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p) {
+int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
 
 	struct sockaddr_in6 from;
 	struct iovec iovec[1];
@@ -182,7 +169,7 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 			char s[INET6_ADDRSTRLEN];
 			inet_ntop(p->ai_family,&in6_pktinfo->ipi6_addr, s, sizeof s);
 			print_debug("Packet was sent to this IP %s\n",s);
-			
+			memcpy(ipv6Pointer->s6_addr,&in6_pktinfo->ipi6_addr,IPV6_SIZE);
 			memcpy(receiveBuffer,iovec[0].iov_base,iovec[0].iov_len);
 			memcpy(p->ai_addr, (struct sockaddr *) &from, sizeof(from));
 			p->ai_addrlen = sizeof(from);
@@ -234,7 +221,7 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 	return numbytes;
 }
 
-
+//TODO: Remove?
 uint64_t getPointerFromString(char* input) {
 	uint64_t address = 0;
 	memcpy(&input, &input, 64);
@@ -247,6 +234,7 @@ uint64_t getPointerFromString(char* input) {
 	return pointer;
 }
 
+//TODO: Remove?
 uint64_t getPointerFromIPv6Str(struct in6_addr addr) {
 	char* pointer = malloc(12 * sizeof(unsigned char));
 	char str[INET6_ADDRSTRLEN];
@@ -298,7 +286,7 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
 	print_debug("IPv6 Pointer %s\n",s);
 	return *newAddr;
 }
-
+//TODO: Remove?
 struct in6_addr getIPv6FromPointerStr(uint64_t pointer) {
 	char* string_addr = calloc(IPV6_SIZE, sizeof(char));
 

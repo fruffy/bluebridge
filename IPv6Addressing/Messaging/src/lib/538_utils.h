@@ -10,9 +10,9 @@
 #include <time.h>
 #include <unistd.h>
 
+//TODO: Remove?
 #define GLOBAL_ID "EA75:DB1A:68D8" // 48 bits for global id
-//#define SUBNET_ID "C75F" // 16 bits for subnet id
-#define SUBNET_ID "11"
+#define SUBNET_ID "11" // 16 bits for subnet id
 #define BLOCK_SIZE 4096 // max number of bytes we can get at once
 #define POINTER_SIZE sizeof(void*)
 #define IPV6_SIZE 16
@@ -36,12 +36,11 @@ int sendTCP(int sockfd, char * sendBuffer, int msgBlockSize);
 int receiveTCP(int sockfd, char * receiveBuffer, int msgBlockSize);
 
 int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p);
-int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p);
 
 
 int receiveUDPLegacy (int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p);
 int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p);
-int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p);
+int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr * ipv6Pointer);
 
 uint64_t getPointerFromString(char* input);
 
@@ -51,7 +50,6 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer);
 
 struct in6_addr getIPv6FromPointerStr(uint64_t pointer);
 uint64_t getPointerFromIPv6Str(struct in6_addr addr);
-
 
 
 #endif
