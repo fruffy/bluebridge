@@ -94,33 +94,30 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 /*
  * Sends a write command to the sockfd for pointer remotePointer
  */
-int writeToMemory(int sockfd, struct in6_addr * remotePointer, int index, struct addrinfo * p) {
+int writeToMemory(int sockfd, struct addrinfo * p, char * payload,  struct in6_addr * toPointer) {
 	print_debug("Mallocing sendBuffer and receiveBuffer");
 	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
 
 	int size = 0;
 
-	print_debug("Copying the data to the send buffer");
+	print_debug("Copying the data toPointer the send buffer");
 
 	// Create the data
 	memcpy(sendBuffer, WRITE_CMD, sizeof(WRITE_CMD));
 	size += sizeof(WRITE_CMD) - 1; // Want it to rewrite null terminator
-	memcpy(sendBuffer+size,remotePointer->s6_addr,IPV6_SIZE);
+	memcpy(sendBuffer+size,toPointer->s6_addr,IPV6_SIZE);
 	size += IPV6_SIZE;
 
-	print_debug("Creating payload");
-	char * payload = get_rdm_string((BLOCK_SIZE-size), index);
-	memcpy(sendBuffer+size+1,payload, strlen(payload));
+	memcpy(sendBuffer+size+1,payload, BLOCK_SIZE - size);
 	size += strlen(payload);
 
 	// Send the data
 	printf("Sending Data: %d bytes to ", size);
-	printNBytes((char*) remotePointer->s6_addr, IPV6_SIZE);
+	printNBytes((char*) toPointer->s6_addr, IPV6_SIZE);
 
 	print_debug("Sending message");
-	//sendMsg(sockfd, sendBuffer, size);
-	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
+	sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
 
 
 	print_debug("Waiting for response");
@@ -141,7 +138,7 @@ int writeToMemory(int sockfd, struct in6_addr * remotePointer, int index, struct
 /*
  * Releases the remote memory
  */
-int releaseMemory(int sockfd, struct in6_addr * remotePointer, struct addrinfo * p) {
+int releaseMemory(int sockfd, struct addrinfo * p,  struct in6_addr * toPointer) {
 	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
 
@@ -150,15 +147,15 @@ int releaseMemory(int sockfd, struct in6_addr * remotePointer, struct addrinfo *
 	// Create message
 	memcpy(sendBuffer+size, FREE_CMD, sizeof(FREE_CMD));
 	size += sizeof(FREE_CMD) - 1; // Should be 5
-	memcpy(sendBuffer+size,remotePointer->s6_addr,IPV6_SIZE);
+	memcpy(sendBuffer+size,toPointer->s6_addr,IPV6_SIZE);
 	size += IPV6_SIZE; // Should be 8, total of 13
 
 	printf("Releasing Data with pointer: ");
-	printNBytes((char*)remotePointer->s6_addr,IPV6_SIZE);
+	printNBytes((char*)toPointer->s6_addr,IPV6_SIZE);
 
 	// Send message
 	//sendMsg(sockfd, sendBuffer, size);
-	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
+	sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
 
 	// Receive response
 	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
@@ -174,7 +171,7 @@ int releaseMemory(int sockfd, struct in6_addr * remotePointer, struct addrinfo *
 /*
  * Reads the remote memory
  */
-char * getMemory(int sockfd, struct in6_addr * remotePointer,struct addrinfo * p) {
+char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
 
@@ -183,15 +180,15 @@ char * getMemory(int sockfd, struct in6_addr * remotePointer,struct addrinfo * p
 	// Prep message
 	memcpy(sendBuffer, GET_CMD, sizeof(GET_CMD));
 	size += sizeof(GET_CMD) - 1; // Should be 4
-	memcpy(sendBuffer+size,remotePointer->s6_addr,IPV6_SIZE);
+	memcpy(sendBuffer+size,toPointer->s6_addr,IPV6_SIZE);
 	size += IPV6_SIZE; // Should be 8, total 12
 
 	printf("Retrieving Data with pointer: ");
-	printNBytes((char*)remotePointer,IPV6_SIZE);
+	printNBytes((char*)toPointer,IPV6_SIZE);
 
 	// Send message
 	//sendMsg(sockfd, sendBuffer, size);
-	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
+	sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
 	// Receive response
 	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
 	receiveUDP(sockfd, receiveBuffer,BLOCK_SIZE, p);
@@ -202,7 +199,7 @@ char * getMemory(int sockfd, struct in6_addr * remotePointer,struct addrinfo * p
 	return receiveBuffer;
 }
 
-int interactiveMode( int sockfd,  struct addrinfo * p) {
+/*int interactiveMode( int sockfd,  struct addrinfo * p) {
 	long unsigned int len = 200;
 	char input[len];
 	char * localData;
@@ -365,7 +362,7 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 			printf("Try again.\n");
 		}
 	}
-}
+}*/
 
 
 int basicOperations( int sockfd, struct addrinfo * p) {
@@ -381,17 +378,23 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 		nextPointer = nextPointer->Pointer;
 	}
 
-/*	for (i=0; i<10;i++) {
+	for (i=0; i<10;i++) {
+		srand(time(NULL));
+
 		printf("Iteration %d\n", i+1);
 		struct in6_addr remoteMemory = rootPointer->AddrString;
 		printf("Using Pointer: %p\n", (void *) getPointerFromIPv6(rootPointer->AddrString));
-		writeToMemory(sockfd, &remoteMemory, rand()%100, p);
-		char * test = getMemory(sockfd, &remoteMemory, p);
+		
+		print_debug("Creating payload");
+		char * payload = get_rdm_string(BLOCK_SIZE,  rand()%100);
+		writeToMemory(sockfd, p, payload, &remoteMemory);
+		char * test = getMemory(sockfd, p, &remoteMemory);
 		printf("Results of memory store: %.50s\n", test);
-		releaseMemory(sockfd, &remoteMemory, p);
+		releaseMemory(sockfd, p, &remoteMemory);
 		free(test);
+		free(payload);
 		rootPointer = rootPointer->Pointer;
-	}*/
+	}
 }
 
 
@@ -407,13 +410,17 @@ int main(int argc, char *argv[]) {
 	//specify interactive or automatic client mode
 	int isAutoMode = 1;
 
-	srand(time(NULL));
 
 	if (argc < 2) {
 		printf("Defaulting to standard values...\n");
 		argv[1] = "::1";
 		argv[2] = "5000";
 	}
+
+	//Routing configuration
+	// This is a temporary solution to enable the forwarding of unknown ipv6 subnets
+	int status = system("sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo");
+
 
 	// Tells the getaddrinfo to only return sockets
 	// which fit these params.
@@ -444,7 +451,7 @@ int main(int argc, char *argv[]) {
 	if(isAutoMode) {
 		basicOperations(sockfd, p);
 	} else {
-		interactiveMode(sockfd, p);
+		//interactiveMode(sockfd, p);
 	}
 
 

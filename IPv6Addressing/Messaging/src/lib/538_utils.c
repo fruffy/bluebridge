@@ -174,6 +174,7 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 	char msg_control[1024];
 	char udp_packet[msgBlockSize];
 	int numbytes = 0;
+	char s[INET6_ADDRSTRLEN];
 	iovec[0].iov_base = udp_packet;
 	iovec[0].iov_len = sizeof(udp_packet);
 	msg.msg_name = &from;
@@ -191,7 +192,6 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != 0; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
 		if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
 			in6_pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
-			char s[INET6_ADDRSTRLEN];
 			inet_ntop(p->ai_family,&in6_pktinfo->ipi6_addr, s, sizeof s);
 			print_debug("Packet was sent to this IP %s\n",s);
 			memcpy(ipv6Pointer->s6_addr,&in6_pktinfo->ipi6_addr,IPV6_SIZE);
@@ -200,6 +200,10 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 			p->ai_addrlen = sizeof(from);
 		}
 	}
+
+	inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
+	printf("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
+
 	return numbytes;
 }
 
@@ -230,11 +234,11 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 	numbytes = recvmsg(sockfd, &msg, 0);
 	struct in6_pktinfo * in6_pktinfo;
 	struct cmsghdr* cmsg;
+	char s[INET6_ADDRSTRLEN];
 
 	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != 0; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
 		if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
 			in6_pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
-			char s[INET6_ADDRSTRLEN];
 			inet_ntop(p->ai_family,&in6_pktinfo->ipi6_addr, s, sizeof s);
 			print_debug("Packet was sent to this IP %s\n",s);
 			
@@ -243,6 +247,9 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 			p->ai_addrlen = sizeof(from);
 		}
 	}
+/*	inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
+	printf("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));*/
+
 	return numbytes;
 }
 

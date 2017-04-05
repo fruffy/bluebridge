@@ -82,7 +82,7 @@ int providePointer (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
  * TODO: explain.
  * Writes a piece of memory?
  */
-int writeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
+int writeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
 	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * target;
 	// TODO: why is this +9?
@@ -94,7 +94,7 @@ int writeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 	
 	struct in6_addr temp;
 	memcpy(&temp, receiveBuffer, IPV6_SIZE);
-	uint64_t pointer = getPointerFromIPv6(temp);
+	uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
 	// Copy the first POINTER_SIZE bytes of receive buffer into the target
 	memcpy(&target, &pointer, POINTER_SIZE);
 
@@ -124,13 +124,13 @@ int writeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
  * TODO: explain.
  * This is freeing target memory?
  */
-int freeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
+int freeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
 	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * target;
 	// Why copy when you're freeing the memory?
 	struct in6_addr temp;
 	memcpy(&temp, receiveBuffer, IPV6_SIZE);
-	uint64_t pointer = getPointerFromIPv6(temp);
+	uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
 	// Copy the first POINTER_SIZE bytes of receive buffer into the target
 	memcpy(&target, &pointer, POINTER_SIZE);
 	
@@ -149,14 +149,14 @@ int freeMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
 /*
  * Gets memory and sends it
  */
-int getMem (int sock_fd, char * receiveBuffer, struct addrinfo * p) {
+int getMem (int sock_fd, char * receiveBuffer, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
 	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	char * target;
 	printBytes(receiveBuffer);
 	// Copy POINTER_SIZE bytes of the receiveBuffer into the target
 	struct in6_addr temp;
 	memcpy(&temp, receiveBuffer, IPV6_SIZE);
-	uint64_t pointer = getPointerFromIPv6(temp);
+	uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
 	memcpy(&target, &pointer, POINTER_SIZE);
 
 	printf("Content length %lu is currently stored at %p!\n", strlen(target), (void*)target);
@@ -184,21 +184,17 @@ void handleClientRequests(int sock_fd,	struct addrinfo * p) {
 	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
 	int numbytes;
 	char * splitResponse;
+	struct in6_addr * ipv6Pointer = calloc(1,sizeof(struct in6_addr));
 
 	while (1) {
 		printf("Waiting for client message...\n");
 		// Get the message
-		//numbytes = receiveMsg(sock_fd, receiveBuffer, BLOCK_SIZE);
-		char s[INET6_ADDRSTRLEN];
-		numbytes = receiveUDP(sock_fd, receiveBuffer, BLOCK_SIZE, p);
-		inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
-		printf("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
+
+		numbytes = receiveUDPIPv6(sock_fd, receiveBuffer, BLOCK_SIZE, p, ipv6Pointer);
+
 		// Parse the message (delimited by :)
 		printf("Message from client: %i bytes\n", numbytes);
-		printBytes(receiveBuffer);
 
-		//char * dataToWrite = strtok(receiveBuffer, ":");
-		//printf("Client Command: %s\n", dataToWrite);
 		// Switch on the client command
 		if (memcmp(receiveBuffer, ALLOC_CMD,2) == 0) {
 			printf("Allocating...\n");
@@ -208,17 +204,17 @@ void handleClientRequests(int sock_fd,	struct addrinfo * p) {
 			splitResponse = receiveBuffer+2;
 			printf("Writing to pointer: ");
 			printNBytes(splitResponse, IPV6_SIZE);
-			writeMem(sock_fd, splitResponse, p);
+			writeMem(sock_fd, splitResponse, p, ipv6Pointer);
 		} else if (memcmp(receiveBuffer, FREE_CMD,2) == 0) {
 			splitResponse = receiveBuffer+2;
 			printf("Deleting pointer: ");
 			printNBytes(splitResponse,IPV6_SIZE);
-			freeMem(sock_fd, splitResponse, p);
+			freeMem(sock_fd, splitResponse, p, ipv6Pointer);
 		} else if (memcmp(receiveBuffer, GET_CMD,2) == 0) {
 			splitResponse = receiveBuffer+2;
 			printf("Retrieving data: ");
 			printNBytes(splitResponse,IPV6_SIZE);
-			getMem(sock_fd, splitResponse, p);
+			getMem(sock_fd, splitResponse, p, ipv6Pointer);
 		} else {
 			// TODO: what is this doing?
 			printf("Cannot match command!\n");
