@@ -19,11 +19,7 @@ struct LinkedPointer {
 	struct in6_addr AddrString;
 	struct LinkedPointer * Pointer;
 };
-//TODO: Remove?
-struct PointerMap {
-	char* AddrString;
-	struct in6_addr* Pointer;
-};
+
 /*
  * Sends message to allocate memory
  */
@@ -40,18 +36,18 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
 	print_debug("Waiting to receive replying receive buffer");
 	// Wait to receive a message from the server
-	int numbytes = receiveUDPIPv6(sockfd, receiveBuffer, BLOCK_SIZE, p,ipv6Pointer);
-	print_debug("Extracted: %p from server\n", (void *)(*ipv6Pointer).s6_addr);
+	int numbytes = receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
+	print_debug("Extracted: %p from server", (void *)(*ipv6Pointer).s6_addr);
 	printNBytes((char *)ipv6Pointer->s6_addr,IPV6_SIZE);
 
-	print_debug(" Received %d bytes\n", numbytes);
+	print_debug("Received %d bytes", numbytes);
 	print_debug("Parsing response");
 	// Parse the response
 
 	struct in6_addr retVal;
 
 	if (memcmp(receiveBuffer,"ACK",3) == 0) {
-/*		print_debug("Response was ACK");
+		print_debug("Response was ACK");
 		// If the message is ACK --> successful
 		struct in6_addr * remotePointer =  calloc(1,sizeof(struct in6_addr));
 
@@ -66,8 +62,8 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 		printNBytes((char *)remotePointer,IPV6_SIZE);
 
 		print_debug("Got: %p from server\n", (void *)remotePointer);
-		print_debug("Setting remotePointer to be return value");*/
-		retVal = *ipv6Pointer;
+		print_debug("Setting remotePointer to be return value");
+		retVal = *remotePointer;
 	} else {
 		print_debug("Response was not successful");
 		// Not successful so we send another message?
@@ -80,7 +76,7 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 		// (i.e. -1)
 
 		print_debug("Keeping return value as 0");
-		}
+	}
 
 	print_debug("Freeing sendBuffer and receiveBuffer memory");
 	free(sendBuffer);
@@ -106,13 +102,12 @@ int writeToMemory(int sockfd, struct addrinfo * p, char * payload,  struct in6_a
 	// Create the data
 	memcpy(sendBuffer, WRITE_CMD, sizeof(WRITE_CMD));
 	size += sizeof(WRITE_CMD) - 1; // Want it to rewrite null terminator
-	memcpy(sendBuffer+size,toPointer->s6_addr,IPV6_SIZE);
-	size += IPV6_SIZE;
+/*	memcpy(sendBuffer+size,toPointer->s6_addr,IPV6_SIZE);
+	size += IPV6_SIZE;*/
 
 	memcpy(sendBuffer+size+1,payload, BLOCK_SIZE - size);
 	size += strlen(payload);
 
-	// Send the data
 	printf("Sending Data: %d bytes to ", size);
 	printNBytes((char*) toPointer->s6_addr, IPV6_SIZE);
 
@@ -121,8 +116,6 @@ int writeToMemory(int sockfd, struct addrinfo * p, char * payload,  struct in6_a
 
 
 	print_debug("Waiting for response");
-	// Wait for the response
-	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
 	receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
 
 
@@ -199,7 +192,124 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 	return receiveBuffer;
 }
 
-/*int interactiveMode( int sockfd,  struct addrinfo * p) {
+
+
+int basicOperations( int sockfd, struct addrinfo * p) {
+	int i;
+	// Initialize remotePointers array
+	struct LinkedPointer * rootPointer = malloc( sizeof(struct LinkedPointer));
+	struct LinkedPointer * nextPointer = rootPointer;
+	//init the root element
+	nextPointer->Pointer = malloc( sizeof(struct LinkedPointer));
+	nextPointer->AddrString = allocateMem(sockfd, p);
+	for (i = 0; i < 9; i++) {
+		nextPointer = nextPointer->Pointer;
+		nextPointer->Pointer = malloc( sizeof(struct LinkedPointer));
+		nextPointer->AddrString = allocateMem(sockfd, p);
+		//printNBytes((char *) rootPointer->AddrString.s6_addr, 16);
+		//printNBytes((char *) nextPointer->AddrString.s6_addr, 16);
+	}
+	//don't point to garbage
+	nextPointer->Pointer = NULL;
+	
+	i = 1;
+	while(rootPointer != NULL)	{
+
+		printf("Iteration %d\n", i);
+		struct in6_addr remoteMemory = rootPointer->AddrString;
+		printf("Using Pointer: %p\n", (void *) getPointerFromIPv6(rootPointer->AddrString));
+		print_debug("Creating payload");
+		srand(time(NULL));
+		char * payload = get_rdm_string(BLOCK_SIZE,  rand()%100);
+		writeToMemory(sockfd, p, payload, &remoteMemory);
+		char * test = getMemory(sockfd, p, &remoteMemory);
+		printf("Results of memory store: %.50s\n", test);
+		releaseMemory(sockfd, p, &remoteMemory);
+		free(test);
+		free(payload);
+		rootPointer = rootPointer->Pointer;
+		i++;
+	}
+}
+
+
+/*
+ * Main workhorse method. Parses arguments, setups connections
+ * Allows user to issue commands on the command line.
+ */
+int main(int argc, char *argv[]) {
+	int sockfd;
+	struct addrinfo hints, *servinfo, *p;
+	int rv;
+	
+	//specify interactive or automatic client mode
+	const int isAutoMode = 1;
+	//Socket operator variables
+	const int on=1, off=0;
+
+	if (argc < 2) {
+		printf("Defaulting to standard values...\n");
+		argv[1] = "::1";
+		argv[2] = "5000";
+	}
+
+	//Routing configuration
+	// This is a temporary solution to enable the forwarding of unknown ipv6 subnets
+	printf("%d\n",system("sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo"));
+
+
+	// Tells the getaddrinfo to only return sockets
+	// which fit these params.
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_INET6;
+	hints.ai_socktype = SOCK_DGRAM;
+
+	if ((rv = getaddrinfo(argv[1], argv[2], &hints, &servinfo)) != 0) {
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+		return 1;
+	}
+
+	// loop through all the results and connect to the first we can
+	for (p = servinfo; p != NULL; p = p->ai_next) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol))
+				== -1) {
+			perror("client: socket");
+			continue;
+		}
+		setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
+		setsockopt(sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on));
+		setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
+		break;
+	}
+
+	if(isAutoMode) {
+		basicOperations(sockfd, p);
+	} else {
+		//interactiveMode(sockfd, p);
+	}
+
+
+
+	freeaddrinfo(servinfo); // all done with this structure
+
+	// TODO: send close message so the server exits
+	close(sockfd);
+
+	return 0;
+}
+
+
+
+
+//TODO: Remove?
+struct PointerMap {
+	char* AddrString;
+	struct in6_addr* Pointer;
+};
+/*
+ * Interactive structure for debugging purposes
+ */
+int interactiveMode( int sockfd,  struct addrinfo * p) {
 	long unsigned int len = 200;
 	char input[len];
 	char * localData;
@@ -286,7 +396,7 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 						// char message[100] = {};
 						// sprintf(message, "Retrieving data from pointer 0x%s\n", remotePointers[i].AddrString);
 						print_debug("Retrieving data from pointer 0x%s", remotePointers[i].AddrString);
-						localData = getMemory(sockfd, remotePointers[i].Pointer, p);
+						localData = getMemory(sockfd, p, remotePointers[i].Pointer);
 						printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
 					}
 				}
@@ -295,7 +405,7 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 				// char message[100] = {};
 				// sprintf(message, "Retrieving data from pointer 0x%p\n", (void *) pointer);
 				print_debug("Retrieving data from pointer 0x%p", (void *) pointer.s6_addr);
-				localData = getMemory(sockfd, &pointer, p);
+				localData = getMemory(sockfd, p, &pointer);
 				printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
 			}
 		} else if (strcmp("W", input) == 0) {
@@ -306,13 +416,17 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 				for (i = 0; i < 100; i++) {
 					if (strcmp(remotePointers[i].AddrString, "") != 0) {
 						printf("Writing data to pointer 0x%s\n", remotePointers[i].AddrString);
-						writeToMemory(sockfd, remotePointers[i].Pointer, i, p);
+						srand(time(NULL));
+						char * payload = get_rdm_string(BLOCK_SIZE,  rand()%100);
+						writeToMemory(sockfd, p, payload, remotePointers[i].Pointer);
 					}
 				}
 			} else {
 				struct in6_addr pointer = getIPv6FromPointer((uint64_t) input);
 				printf("Writing data to pointer %p\n", (void *) pointer.s6_addr);
-				writeToMemory(sockfd, &pointer, rand()%100, p);
+				srand(time(NULL));
+				char * payload = get_rdm_string(BLOCK_SIZE,  rand()%100);
+				writeToMemory(sockfd, p, payload, remotePointers[i].Pointer);
 			}
 		} else if (strcmp("F", input) == 0) {
 			memset(input, 0, len);
@@ -322,7 +436,7 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 				for (i = 0; i < 100; i++) {
 					if (strcmp(remotePointers[i].AddrString, "") != 0) {
 						printf("Freeing pointer 0x%s\n", remotePointers[i].AddrString);
-						releaseMemory(sockfd, remotePointers[i].Pointer, p);
+						releaseMemory(sockfd, p, remotePointers[i].Pointer);
 						remotePointers[i].AddrString = "";
 						remotePointers[i].Pointer = 0;
 					}
@@ -330,7 +444,7 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 			} else {
 				struct in6_addr pointer = getIPv6FromPointer((uint64_t) input);
 				printf("Freeing pointer %p\n", (void *) pointer.s6_addr);
-				releaseMemory(sockfd, &pointer, p);
+				releaseMemory(sockfd, p, &pointer);
 				for (i = 0; i < 100; i++) {
 					if (strcmp(remotePointers[i].AddrString, input+2) == 0){
 						remotePointers[i].AddrString = "";
@@ -362,104 +476,4 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 			printf("Try again.\n");
 		}
 	}
-}*/
-
-
-int basicOperations( int sockfd, struct addrinfo * p) {
-	int i;
-	// Initialize remotePointers array
-	struct LinkedPointer * rootPointer = malloc( sizeof(struct LinkedPointer));;
-	struct LinkedPointer * nextPointer = rootPointer;
-	for (i = 0; i < 10; i++) {
-		nextPointer->AddrString = allocateMem(sockfd, p);
-		nextPointer->Pointer = malloc( sizeof(struct LinkedPointer));
-/*		printf("%p\n", (void *) rootPointer->AddrString);
-		printf("%p\n", (void *) nextPointer->AddrString);*/
-		nextPointer = nextPointer->Pointer;
-	}
-
-	for (i=0; i<10;i++) {
-		srand(time(NULL));
-
-		printf("Iteration %d\n", i+1);
-		struct in6_addr remoteMemory = rootPointer->AddrString;
-		printf("Using Pointer: %p\n", (void *) getPointerFromIPv6(rootPointer->AddrString));
-		
-		print_debug("Creating payload");
-		char * payload = get_rdm_string(BLOCK_SIZE,  rand()%100);
-		writeToMemory(sockfd, p, payload, &remoteMemory);
-		char * test = getMemory(sockfd, p, &remoteMemory);
-		printf("Results of memory store: %.50s\n", test);
-		releaseMemory(sockfd, p, &remoteMemory);
-		free(test);
-		free(payload);
-		rootPointer = rootPointer->Pointer;
-	}
-}
-
-
-/*
- * Main workhorse method. Parses arguments, setups connections
- * Allows user to issue commands on the command line.
- */
-int main(int argc, char *argv[]) {
-	int sockfd;
-	struct addrinfo hints, *servinfo, *p;
-	int rv;
-	
-	//specify interactive or automatic client mode
-	int isAutoMode = 1;
-
-
-	if (argc < 2) {
-		printf("Defaulting to standard values...\n");
-		argv[1] = "::1";
-		argv[2] = "5000";
-	}
-
-	//Routing configuration
-	// This is a temporary solution to enable the forwarding of unknown ipv6 subnets
-	int status = system("sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo");
-
-
-	// Tells the getaddrinfo to only return sockets
-	// which fit these params.
-	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_INET6;
-	hints.ai_socktype = SOCK_DGRAM;
-
-	if ((rv = getaddrinfo(argv[1], argv[2], &hints, &servinfo)) != 0) {
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-		return 1;
-	}
-
-	// loop through all the results and connect to the first we can
-	for (p = servinfo; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol))
-				== -1) {
-			perror("client: socket");
-			continue;
-		}
-		const int on=1, off=0;
-
-		setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
-		setsockopt(sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on));
-		setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
-		break;
-	}
-
-	if(isAutoMode) {
-		basicOperations(sockfd, p);
-	} else {
-		//interactiveMode(sockfd, p);
-	}
-
-
-
-	freeaddrinfo(servinfo); // all done with this structure
-
-	// TODO: send close message so the server exits
-	close(sockfd);
-
-	return 0;
 }

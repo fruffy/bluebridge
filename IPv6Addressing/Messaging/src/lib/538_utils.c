@@ -102,13 +102,14 @@ int receiveTCP(int sockfd, char * receiveBuffer, int msgBlockSize) {
 }
 /*
  * Sends message to specified socket
+ * Simpler version where we do not need the fancy to insert the IPv6Addr into the header
  */
 int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p) {
 	char s[INET6_ADDRSTRLEN];
 	//wait for incoming connection
 	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
 	socklen_t slen = sizeof(struct sockaddr_in6);
-	printf("Sending to %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
+	print_debug("Sending to %s:%d", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
 	if (sendto(sockfd,sendBuffer,msgBlockSize,0, p->ai_addr, slen) < 0) {
 		perror("ERROR writing to socket");
 		return EXIT_FAILURE;
@@ -120,19 +121,19 @@ int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p
  * Sends message to specified socket
  */
 int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr remotePointer) {
+	
 	char s[INET6_ADDRSTRLEN];
 	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
-	printf("Previous pointer... %s:%d\n",s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );
-	printNBytes((char* )&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), 16);
+	print_debug("Previous pointer... %s:%d",s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );
+	
 	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), &remotePointer, sizeof(remotePointer));
 	p->ai_addrlen = sizeof(remotePointer);
+	
 	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
-	printf("Inserting %u Pointer into packet header... %s:%d\n",p->ai_addrlen,s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );
-	printNBytes((char* )&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), 16);
-	//wait for incoming connection
-	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
+	print_debug("Inserting %u Pointer into packet header... %s:%d",p->ai_addrlen,s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );
+	
+	
 	socklen_t slen = sizeof(struct sockaddr_in6);
-	printf("Sending to %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
 	if (sendto(sockfd,sendBuffer,msgBlockSize,0, p->ai_addr, slen) < 0) {
 		perror("ERROR writing to socket");
 		return EXIT_FAILURE;
@@ -193,7 +194,7 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 		if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
 			in6_pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
 			inet_ntop(p->ai_family,&in6_pktinfo->ipi6_addr, s, sizeof s);
-			print_debug("Packet was sent to this IP %s\n",s);
+			print_debug("Received packet was sent to this IP %s",s);
 			memcpy(ipv6Pointer->s6_addr,&in6_pktinfo->ipi6_addr,IPV6_SIZE);
 			memcpy(receiveBuffer,iovec[0].iov_base,iovec[0].iov_len);
 			memcpy(p->ai_addr, (struct sockaddr *) &from, sizeof(from));
@@ -211,44 +212,21 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 
 /*
  * Receives message from socket
+ * Simpler version where we do not need the fancy msghdr structure
  */
- //http://stackoverflow.com/questions/3062205/setting-the-source-ip-for-a-udp-socket
 int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p) {
 
-	struct sockaddr_in6 from;
-	struct iovec iovec[1];
-	struct msghdr msg;
-	char msg_control[1024];
-	char udp_packet[msgBlockSize];
 	int numbytes = 0;
-	iovec[0].iov_base = udp_packet;
-	iovec[0].iov_len = sizeof(udp_packet);
-	msg.msg_name = &from;
-	msg.msg_namelen = sizeof(from);
-	msg.msg_iov = iovec;
-	msg.msg_iovlen = sizeof(iovec) / sizeof(*iovec);
-	msg.msg_control = msg_control;
-	msg.msg_controllen = sizeof(msg_control);
-	msg.msg_flags = 0;
+	socklen_t slen = sizeof(struct sockaddr_in6);
 
-	numbytes = recvmsg(sockfd, &msg, 0);
-	struct in6_pktinfo * in6_pktinfo;
-	struct cmsghdr* cmsg;
-	char s[INET6_ADDRSTRLEN];
-
-	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != 0; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-		if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
-			in6_pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
-			inet_ntop(p->ai_family,&in6_pktinfo->ipi6_addr, s, sizeof s);
-			print_debug("Packet was sent to this IP %s\n",s);
-			
-			memcpy(receiveBuffer,iovec[0].iov_base,iovec[0].iov_len);
-			memcpy(p->ai_addr, (struct sockaddr *) &from, sizeof(from));
-			p->ai_addrlen = sizeof(from);
-		}
+	memset(receiveBuffer, 0, msgBlockSize);
+	if ((numbytes = recvfrom(sockfd,receiveBuffer, msgBlockSize, 0, p->ai_addr,&slen)) == -1) {
+		perror("ERROR reading from socket");
+		exit(1);
 	}
-/*	inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
-	printf("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));*/
+	char s[INET6_ADDRSTRLEN];
+	inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
+	printf("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
 
 	return numbytes;
 }
@@ -315,7 +293,7 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
 
 	char s[INET6_ADDRSTRLEN];
 	inet_ntop(AF_INET6,newAddr, s, sizeof s);
-	print_debug("IPv6 Pointer %s\n",s);
+	print_debug("IPv6 Pointer %s",s);
 	return *newAddr;
 }
 //TODO: Remove?
@@ -337,18 +315,18 @@ struct in6_addr getIPv6FromPointerStr(uint64_t pointer) {
 	printf("Pointer: %s\n", pointer_string);
 	printf("Address so far: %s\n", string_addr);
 	
-	print_debug("Pointer length: %lu\n", strlen(pointer_string));
-	print_debug("Address length: %lu\n", strlen(string_addr));
+	print_debug("Pointer length: %lu", strlen(pointer_string));
+	print_debug("Address length: %lu", strlen(string_addr));
 
 	unsigned int i;
 
 	for (i = 0; i < strlen(pointer_string); i+=4) {
 		char* substr = malloc(4 * sizeof(char));
 		strcat(string_addr, ":");
-		print_debug("Creating copy\n");
+		print_debug("Creating copy");
 		strncpy(substr, pointer_string+i, 4);
-		print_debug("Copy: %s\n", substr);
-		print_debug("Performing concatenation\n");
+		print_debug("Copy: %s", substr);
+		print_debug("Performing concatenation");
 		strcat(string_addr, substr);
 		//strcat(string_addr, pointer_string[i]);
 		//strcat(string_addr, pointer_string[i+1]);
@@ -356,7 +334,7 @@ struct in6_addr getIPv6FromPointerStr(uint64_t pointer) {
 		//strcat(string_addr, pointer_string[i+3]);
 	}
 
-	print_debug("New address: %s\n", string_addr);
+	print_debug("New address: %s", string_addr);
 
 	struct in6_addr newAddr;
 
