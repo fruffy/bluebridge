@@ -34,7 +34,7 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 	memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
 
 	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
-	print_debug("Waiting to receive replying receive buffer");
+	print_debug("Waiting for reply");
 	// Wait to receive a message from the server
 	int numbytes = receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
 	print_debug("Extracted: %p from server", (void *)(*ipv6Pointer).s6_addr);
@@ -86,7 +86,6 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 	//TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
 	return retVal;
 }
-
 /*
  * Sends a write command to the sockfd for pointer remotePointer
  */
@@ -255,9 +254,9 @@ int main(int argc, char *argv[]) {
 
 	//Routing configuration
 	// This is a temporary solution to enable the forwarding of unknown ipv6 subnets
-	printf("%d\n",system("sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo"));
-
-
+	//printf("%d\n",system("sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo"));
+	//ip -6 route add local ::3131:0:0:0:0/64  dev h1-eth0
+	//ip -6 route add local ::3131:0:0:0:0/64  dev h2-eth0
 	// Tells the getaddrinfo to only return sockets
 	// which fit these params.
 	memset(&hints, 0, sizeof hints);

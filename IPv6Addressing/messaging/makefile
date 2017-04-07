@@ -3,12 +3,14 @@ srcDir = src
 objDir = obj
 binDir = bin
 libDir = lib
-app := client server
+app := client server ndpproxy
 
 
 CC = gcc
 #CFlags += -c -Wextra -Werror -Wall -g3
 CFlags += -c -Wextra -Wall -g3
+LDFlags := -lpcap
+
 sources := $(shell find "$(srcDir)/$(libDir)" -name '*.$(srcExt)')
 srcDirs := $(shell find . -name '*.$(srcExt)' -exec dirname {} \; | uniq)
 objects := $(patsubst %.$(srcExt),$(objDir)/%.o,$(sources))
