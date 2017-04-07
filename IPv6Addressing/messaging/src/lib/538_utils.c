@@ -50,7 +50,7 @@ int getLine(char *prmpt, char *buff, size_t sz) {
  * Gets random byte array with size num_bytes
  */
 unsigned char *gen_rdm_bytestream(size_t num_bytes) {
-	unsigned char *stream = malloc(num_bytes);
+	unsigned char *stream = (unsigned char *) malloc(num_bytes);
 	size_t i;
 
 	for (i = 0; i < num_bytes; i++) {
@@ -59,9 +59,27 @@ unsigned char *gen_rdm_bytestream(size_t num_bytes) {
 
 	return stream;
 }
+/*
+ * Gets random byte array with size num_bytes
+ */
+struct in6_addr * gen_rdm_IPv6Target() {
+	// Add the pointer
+
+	struct in6_addr * newAddr = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
+	unsigned char * rndBytes = gen_rdm_bytestream(4);
+	memcpy(newAddr->s6_addr+6,SUBNET_ID,2);
+	memcpy(newAddr->s6_addr+8,rndBytes,4);
+
+
+	char s[INET6_ADDRSTRLEN];
+	inet_ntop(AF_INET6,newAddr, s, sizeof s);
+	print_debug("Target IPv6 Pointer %s",s);
+	free(rndBytes);
+	return newAddr;
+}
 
 char * get_rdm_string(size_t num_bytes, int index) {
-	char* stream = malloc(num_bytes);
+	char* stream = (char *) malloc(num_bytes);
 	char *string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.-#'?!";
 
 	sprintf(stream, "%d:", index);
@@ -246,7 +264,7 @@ uint64_t getPointerFromString(char* input) {
 
 //TODO: Remove?
 uint64_t getPointerFromIPv6Str(struct in6_addr addr) {
-	char* pointer = malloc(12 * sizeof(unsigned char));
+	char* pointer = (char *) malloc(12 * sizeof(unsigned char));
 	char str[INET6_ADDRSTRLEN];
 
 	unsigned int i;
@@ -287,7 +305,7 @@ uint64_t getPointerFromIPv6(struct in6_addr addr) {
 struct in6_addr getIPv6FromPointer(uint64_t pointer) {
 	// Add the pointer
 
-	struct in6_addr * newAddr = calloc(1, sizeof(struct in6_addr));
+	struct in6_addr * newAddr = (struct in6_addr *) calloc(1, sizeof(struct in6_addr));
 	memcpy(newAddr->s6_addr+IPV6_SIZE-POINTER_SIZE, (char *)pointer,POINTER_SIZE);
 	memcpy(newAddr->s6_addr+6,SUBNET_ID,2);
 
@@ -298,7 +316,7 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
 }
 //TODO: Remove?
 struct in6_addr getIPv6FromPointerStr(uint64_t pointer) {
-	char* string_addr = calloc(IPV6_SIZE, sizeof(char));
+	char* string_addr = (char*) calloc(IPV6_SIZE, sizeof(char));
 
 	// Create the beginning of the address
 	strcat(string_addr, GLOBAL_ID);
@@ -307,7 +325,7 @@ struct in6_addr getIPv6FromPointerStr(uint64_t pointer) {
 	strcat(string_addr, ":");// Pads the pointer
 
 	// Add the pointer
-	char* pointer_string = malloc(POINTER_SIZE * sizeof(char));
+	char* pointer_string = (char*) malloc(POINTER_SIZE * sizeof(char));
 	
 	//sprintf(pointer_string, "%" PRIx64, pointer);
 
@@ -321,7 +339,7 @@ struct in6_addr getIPv6FromPointerStr(uint64_t pointer) {
 	unsigned int i;
 
 	for (i = 0; i < strlen(pointer_string); i+=4) {
-		char* substr = malloc(4 * sizeof(char));
+		char* substr = (char *) malloc(4 * sizeof(char));
 		strcat(string_addr, ":");
 		print_debug("Creating copy");
 		strncpy(substr, pointer_string+i, 4);

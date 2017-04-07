@@ -29,6 +29,8 @@ int getLine(char *prmpt, char *buff, size_t sz);
 
 unsigned char *gen_rdm_bytestream(size_t num_bytes);
 
+struct in6_addr * gen_rdm_IPv6Target();
+
 char *get_rdm_string(size_t num_bytes, int index);
 
 int sendTCP(int sockfd, char * sendBuffer, int msgBlockSize);
@@ -44,7 +46,6 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr * ipv6Pointer);
 
 uint64_t getPointerFromString(char* input);
-
 uint64_t getPointerFromIPv6(struct in6_addr addr);
 
 struct in6_addr getIPv6FromPointer(uint64_t pointer);

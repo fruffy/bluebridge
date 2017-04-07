@@ -1,3 +1,3 @@
 #!/bin/sh
 
-./bin/client fe80::6401:e3ff:fe88:2027 5000
+./bin/client fe80::2455:35ff:fe96:eafd 5000

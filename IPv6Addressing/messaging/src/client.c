@@ -25,12 +25,14 @@ struct LinkedPointer {
  */
 struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 	print_debug("Mallocing send and receive buffers");
-	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
-	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
-	struct in6_addr * ipv6Pointer = malloc(sizeof(struct in6_addr));
+	char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
+	char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 	print_debug("Memcopying ALLOCATE message into send buffer");
+	struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
 
-	// Send message to server to allocate memory
+	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+	p->ai_addrlen = sizeof(*ipv6Pointer);
+	
 	memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
 
 	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
@@ -49,7 +51,7 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 	if (memcmp(receiveBuffer,"ACK",3) == 0) {
 		print_debug("Response was ACK");
 		// If the message is ACK --> successful
-		struct in6_addr * remotePointer =  calloc(1,sizeof(struct in6_addr));
+		struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
 
 		print_debug("Memcopying the pointer");
 		printNBytes(receiveBuffer+4,IPV6_SIZE);
@@ -91,8 +93,8 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
  */
 int writeToMemory(int sockfd, struct addrinfo * p, char * payload,  struct in6_addr * toPointer) {
 	print_debug("Mallocing sendBuffer and receiveBuffer");
-	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
-	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
+	char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 
 	int size = 0;
 
@@ -131,8 +133,8 @@ int writeToMemory(int sockfd, struct addrinfo * p, char * payload,  struct in6_a
  * Releases the remote memory
  */
 int releaseMemory(int sockfd, struct addrinfo * p,  struct in6_addr * toPointer) {
-	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
-	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
+	char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 
 	int size = 0;
 
@@ -164,8 +166,8 @@ int releaseMemory(int sockfd, struct addrinfo * p,  struct in6_addr * toPointer)
  * Reads the remote memory
  */
 char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
-	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
-	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
+	char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 
 	int size = 0;
 
@@ -196,14 +198,14 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 int basicOperations( int sockfd, struct addrinfo * p) {
 	int i;
 	// Initialize remotePointers array
-	struct LinkedPointer * rootPointer = malloc( sizeof(struct LinkedPointer));
+	struct LinkedPointer * rootPointer = (struct LinkedPointer *) malloc( sizeof(struct LinkedPointer));
 	struct LinkedPointer * nextPointer = rootPointer;
 	//init the root element
-	nextPointer->Pointer = malloc( sizeof(struct LinkedPointer));
+	nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
 	nextPointer->AddrString = allocateMem(sockfd, p);
 	for (i = 0; i < 9; i++) {
 		nextPointer = nextPointer->Pointer;
-		nextPointer->Pointer = malloc( sizeof(struct LinkedPointer));
+		nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
 		nextPointer->AddrString = allocateMem(sockfd, p);
 		//printNBytes((char *) rootPointer->AddrString.s6_addr, 16);
 		//printNBytes((char *) nextPointer->AddrString.s6_addr, 16);
@@ -318,7 +320,7 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 	// Initialize remotePointers array
 	for (i = 0; i < 100; i++) {
 		remotePointers[i].AddrString = (char *) malloc(100);
-		remotePointers[i].Pointer = malloc(sizeof(struct in6_addr));
+		remotePointers[i].Pointer = (struct in6_addr * ) malloc(sizeof(struct in6_addr));
 }
 	int active = 1;
 	while (active) {

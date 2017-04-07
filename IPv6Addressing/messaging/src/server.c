@@ -42,8 +42,8 @@ int addchar(char* charadr) {
  * Creates a new pointer to a new part of memory then sends it?
  */
 int providePointer(int sock_fd, struct addrinfo * p) {
-	char * allocated = calloc(BLOCK_SIZE,sizeof(char));
-	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * allocated = (char *) calloc(BLOCK_SIZE,sizeof(char));
+	char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 
 	int size = 0;
 	printf("Input pointer: %p\n", (void *) allocated);
@@ -75,7 +75,7 @@ int providePointer(int sock_fd, struct addrinfo * p) {
  * Writes a piece of memory?
  */
 int writeMem(int sock_fd, char * receiveBuffer, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
-	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 	//Point to data after command
 	char * dataToWrite = receiveBuffer + 1;
 	
@@ -103,7 +103,7 @@ int writeMem(int sock_fd, char * receiveBuffer, struct addrinfo * p, struct in6_
  * This is freeing target memory?
  */
 int freeMem(int sock_fd, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
-	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 	uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
 	
 	printf("Content stored at %p has been freed!\n", (void*)pointer);
@@ -119,7 +119,7 @@ int freeMem(int sock_fd, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
  * Gets memory and sends it
  */
 int getMem(int sock_fd, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
-	char * sendBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 	uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
 
 	printf("Content length %lu is currently stored at %p!\n", strlen((char *)pointer), (void*)pointer);
@@ -143,9 +143,9 @@ int getMem(int sock_fd, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
  * TODO: get message format
  */
 void handleClientRequests(int sock_fd,	struct addrinfo * p) {
-	char * receiveBuffer = calloc(BLOCK_SIZE,sizeof(char));
+	char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 	char * splitResponse;
-	struct in6_addr * ipv6Pointer = calloc(1,sizeof(struct in6_addr));
+	struct in6_addr * ipv6Pointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
 
 	while (1) {
 		printf("Waiting for client message...\n");
