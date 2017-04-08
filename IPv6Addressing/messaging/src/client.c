@@ -7,10 +7,17 @@
 
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
-//	1. IPv6 conversion method
-//			| global routing prefix (48) | subnet ID (16) | pointer (64)|
-//	2. Check correctness of pointer on server side, it should never segfault.
-//			(Ignore illegal operations)
+//	1. Check correctness of pointer on server side, it should never segfault.
+//		(Ignore illegal operations)
+//		-> Maintain list of allocated points
+//		-> Should be very efficient
+//		-> Judy array insert and delete or hashtable?
+//	2. Implement userfaultd on the client side
+//	3. Integrate functional ndp proxy server into the server program
+//	4. Implement IP subnet state awareness
+//		(server allocates memory address related to its assignment)
+//	5. Remove unneeded code and print5 statements
+//	6. Fix interactive mode and usability bugs
 ///////////////////////////////////////////////////////////////////////////////
 //To add the current correct route
 //sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo
@@ -30,8 +37,8 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 	print_debug("Memcopying ALLOCATE message into send buffer");
 	struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
 
-	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-	p->ai_addrlen = sizeof(*ipv6Pointer);
+	//memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+	//p->ai_addrlen = sizeof(*ipv6Pointer);
 	
 	memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
 
@@ -52,19 +59,16 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 		print_debug("Response was ACK");
 		// If the message is ACK --> successful
 		struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-
 		print_debug("Memcopying the pointer");
 		printNBytes(receiveBuffer+4,IPV6_SIZE);
+		// Copy the returned pointer
 		memcpy(remotePointer, receiveBuffer+4, IPV6_SIZE);
-		
-		//TODO: Remove?
-		//char formatted_string[100] = {};
-		// sprintf(formatted_string, "Got %" PRIx64 " from server", remotePointer);
-		//print_debug("Got %" PRIx64 " from server", remotePointer);
-		printNBytes((char *)remotePointer,IPV6_SIZE);
-
-		print_debug("Got: %p from server\n", (void *)remotePointer);
-		print_debug("Setting remotePointer to be return value");
+		// Insert information about the source host (black magic)
+		//00 00 00 00 01 02 00 00 00 00 00 00 00 00 00 00
+		//			  ^  ^ these two bytes (subnet and host ID)
+		memcpy(remotePointer->s6_addr+4, get_in_addr(p->ai_addr)+4, 2);
+		printNBytes((char *) remotePointer, IPV6_SIZE);
+		print_debug("Got: %p from server", (void *)remotePointer);
 		retVal = *remotePointer;
 	} else {
 		print_debug("Response was not successful");
@@ -148,11 +152,9 @@ int releaseMemory(int sockfd, struct addrinfo * p,  struct in6_addr * toPointer)
 	printNBytes((char*)toPointer->s6_addr,IPV6_SIZE);
 
 	// Send message
-	//sendMsg(sockfd, sendBuffer, size);
 	sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
 
 	// Receive response
-	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
 	receiveUDP(sockfd, receiveBuffer,BLOCK_SIZE, p);
 
 	free(sendBuffer);
@@ -181,10 +183,8 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 	printNBytes((char*)toPointer,IPV6_SIZE);
 
 	// Send message
-	//sendMsg(sockfd, sendBuffer, size);
 	sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
 	// Receive response
-	//receiveMsg(sockfd, receiveBuffer, BLOCK_SIZE);
 	receiveUDP(sockfd, receiveBuffer,BLOCK_SIZE, p);
 
 
@@ -210,7 +210,8 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 		//printNBytes((char *) rootPointer->AddrString.s6_addr, 16);
 		//printNBytes((char *) nextPointer->AddrString.s6_addr, 16);
 	}
-	//don't point to garbage
+	// don't point to garbage
+	// temp fix
 	nextPointer->Pointer = NULL;
 	
 	i = 1;
@@ -310,7 +311,7 @@ struct PointerMap {
 /*
  * Interactive structure for debugging purposes
  */
-int interactiveMode( int sockfd,  struct addrinfo * p) {
+/*int interactiveMode( int sockfd,  struct addrinfo * p) {
 	long unsigned int len = 200;
 	char input[len];
 	char * localData;
@@ -477,4 +478,4 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 			printf("Try again.\n");
 		}
 	}
-}
+}*/

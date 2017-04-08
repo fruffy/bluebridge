@@ -3,6 +3,7 @@
 
 #include "538_utils.h"
 #include "debug.h"
+const int SUBNET_ID = 1;// 16 bits for subnet id
 
 /* 
  * get sockaddr, IPv4 or IPv6:
@@ -67,7 +68,7 @@ struct in6_addr * gen_rdm_IPv6Target() {
 
 	struct in6_addr * newAddr = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
 	unsigned char * rndBytes = gen_rdm_bytestream(4);
-	memcpy(newAddr->s6_addr+6,SUBNET_ID,2);
+	memcpy(newAddr->s6_addr+6,&SUBNET_ID,1);
 	memcpy(newAddr->s6_addr+8,rndBytes,4);
 
 
@@ -306,16 +307,18 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
 	// Add the pointer
 
 	struct in6_addr * newAddr = (struct in6_addr *) calloc(1, sizeof(struct in6_addr));
-	memcpy(newAddr->s6_addr+IPV6_SIZE-POINTER_SIZE, (char *)pointer,POINTER_SIZE);
-	memcpy(newAddr->s6_addr+6,SUBNET_ID,2);
 
 	char s[INET6_ADDRSTRLEN];
+
+	memcpy(newAddr->s6_addr+IPV6_SIZE-POINTER_SIZE, (char *)pointer,POINTER_SIZE);
+	memcpy(newAddr->s6_addr+4,&SUBNET_ID,1);
+
 	inet_ntop(AF_INET6,newAddr, s, sizeof s);
 	print_debug("IPv6 Pointer %s",s);
 	return *newAddr;
 }
 //TODO: Remove?
-struct in6_addr getIPv6FromPointerStr(uint64_t pointer) {
+/*struct in6_addr getIPv6FromPointerStr(uint64_t pointer) {
 	char* string_addr = (char*) calloc(IPV6_SIZE, sizeof(char));
 
 	// Create the beginning of the address
@@ -365,4 +368,4 @@ struct in6_addr getIPv6FromPointerStr(uint64_t pointer) {
 	}
 
 	return newAddr;
-}
+}*/
