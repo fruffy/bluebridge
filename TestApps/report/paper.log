@@ -1,0 +1,849 @@
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/Debian) (format=pdflatex 2015.6.4)  9 APR 2017 12:03
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**paper.tex
+(./paper.tex
+LaTeX2e <2011/06/27>
+Babel <3.9h> and hyphenation patterns for 78 languages loaded.
+(/usr/share/texlive/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2007/10/19 v1.4h Standard LaTeX document class
+(/usr/share/texlive/texmf-dist/tex/latex/base/size10.clo
+File: size10.clo 2007/10/19 v1.4h Standard LaTeX file (size option)
+)
+\c@part=\count79
+\c@section=\count80
+\c@subsection=\count81
+\c@subsubsection=\count82
+\c@paragraph=\count83
+\c@subparagraph=\count84
+\c@figure=\count85
+\c@table=\count86
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+\bibindent=\dimen102
+)
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/times.sty
+Package: times 2005/04/12 PSNFSS-v9.2a (SPQR) 
+)
+(/usr/share/texlive/texmf-dist/tex/latex/preprint/fullpage.sty
+Package: fullpage 1999/02/23 1.1 (PWD)
+\FP@margin=\skip43
+)
+(/usr/share/texlive/texmf-dist/tex/latex/booktabs/booktabs.sty
+Package: booktabs 2005/04/14 v1.61803 publication quality tables
+\heavyrulewidth=\dimen103
+\lightrulewidth=\dimen104
+\cmidrulewidth=\dimen105
+\belowrulesep=\dimen106
+\belowbottomsep=\dimen107
+\aboverulesep=\dimen108
+\abovetopsep=\dimen109
+\cmidrulesep=\dimen110
+\cmidrulekern=\dimen111
+\defaultaddspace=\dimen112
+\@cmidla=\count87
+\@cmidlb=\count88
+\@aboverulesep=\dimen113
+\@belowrulesep=\dimen114
+\@thisruleclass=\count89
+\@lastruleclass=\count90
+\@thisrulewidth=\dimen115
+)
+(/usr/share/texlive/texmf-dist/tex/latex/preprint/balance.sty
+Package: balance 1999/02/23 4.3 (PWD)
+\oldvsize=\dimen116
+)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/graphicx.sty
+Package: graphicx 1999/02/16 v1.0f Enhanced LaTeX Graphics (DPC,SPQR)
+
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/keyval.sty
+Package: keyval 1999/03/16 v1.13 key=value parser (DPC)
+\KV@toks@=\toks14
+)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/graphics.sty
+Package: graphics 2009/02/05 v1.0o Standard LaTeX Graphics (DPC,SPQR)
+
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/trig.sty
+Package: trig 1999/03/16 v1.09 sin cos tan (DPC)
+)
+(/usr/share/texlive/texmf-dist/tex/latex/latexconfig/graphics.cfg
+File: graphics.cfg 2010/04/23 v1.9 graphics configuration of TeX Live
+)
+Package graphics Info: Driver file: pdftex.def on input line 91.
+
+(/usr/share/texlive/texmf-dist/tex/latex/pdftex-def/pdftex.def
+File: pdftex.def 2011/05/27 v0.06d Graphics/color for pdfTeX
+
+(/usr/share/texlive/texmf-dist/tex/generic/oberdiek/infwarerr.sty
+Package: infwarerr 2010/04/08 v1.3 Providing info/warning/error messages (HO)
+)
+(/usr/share/texlive/texmf-dist/tex/generic/oberdiek/ltxcmds.sty
+Package: ltxcmds 2011/11/09 v1.22 LaTeX kernel commands for general use (HO)
+)
+\Gread@gobject=\count91
+))
+\Gin@req@height=\dimen117
+\Gin@req@width=\dimen118
+)
+(/usr/share/texlive/texmf-dist/tex/latex/tools/xspace.sty
+Package: xspace 2009/10/20 v1.13 Space after command names (DPC,MH)
+)
+(/usr/share/texlive/texmf-dist/tex/latex/url/url.sty
+\Urlmuskip=\muskip10
+Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
+)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/color.sty
+Package: color 2005/11/14 v1.0j Standard LaTeX Color (DPC)
+
+(/usr/share/texlive/texmf-dist/tex/latex/latexconfig/color.cfg
+File: color.cfg 2007/01/18 v1.5 color configuration of teTeX/TeXLive
+)
+Package color Info: Driver file: pdftex.def on input line 130.
+)
+(/usr/share/texlive/texmf-dist/tex/latex/colortbl/colortbl.sty
+Package: colortbl 2012/02/13 v1.0a Color table columns (DPC)
+
+(/usr/share/texlive/texmf-dist/tex/latex/tools/array.sty
+Package: array 2008/09/09 v2.4c Tabular extension package (FMi)
+\col@sep=\dimen119
+\extrarowheight=\dimen120
+\NC@list=\toks15
+\extratabsurround=\skip44
+\backup@length=\skip45
+)
+\everycr=\toks16
+\minrowclearance=\skip46
+)
+(/usr/share/texlive/texmf-dist/tex/latex/tools/tabularx.sty
+Package: tabularx 1999/01/07 v2.07 `tabularx' package (DPC)
+\TX@col@width=\dimen121
+\TX@old@table=\dimen122
+\TX@old@col=\dimen123
+\TX@target=\dimen124
+\TX@delta=\dimen125
+\TX@cols=\count92
+\TX@ftn=\toks17
+)
+(/usr/share/texlive/texmf-dist/tex/latex/framed/framed.sty
+Package: framed 2011/10/22 v 0.96: framed or shaded text with page breaks
+\OuterFrameSep=\skip47
+\fb@frw=\dimen126
+\fb@frh=\dimen127
+\FrameRule=\dimen128
+\FrameSep=\dimen129
+)
+(/usr/share/texlive/texmf-dist/tex/latex/algorithm2e/algorithm2e.sty
+Package: algorithm2e 2013/01/06 v5.00 algorithms environments
+\c@AlgoLine=\count93
+
+(/usr/share/texlive/texmf-dist/tex/latex/base/ifthen.sty
+Package: ifthen 2001/05/26 v1.1c Standard LaTeX ifthen package (DPC)
+)
+(/usr/share/texlive/texmf-dist/tex/latex/relsize/relsize.sty
+Package: relsize 2013/03/29 ver 4.1
+)
+********************************************************
+Package `algorithm2e' Release 5.0 -- january 06 2013 --
+- algorithm2e-announce@lirmm.fr mailing list for announcement about releases
+- algorithm2e-discussion@lirmm.fr mailing list for discussion about package
+subscribe by emailing sympa@lirmm.fr with 'subscribe <list> <firstname name>'
+- Author: Christophe Fiorio (cfiorio@um2.fr)
+********************************************************
+\skiptotal=\skip48
+\skiplinenumber=\skip49
+\skiprule=\skip50
+\skiphlne=\skip51
+\skiptext=\skip52
+\skiplength=\skip53
+\algomargin=\skip54
+\skipalgocfslide=\skip55
+\algowidth=\dimen130
+\inoutsize=\dimen131
+\inoutindent=\dimen132
+\interspacetitleruled=\dimen133
+\interspacealgoruled=\dimen134
+\interspacetitleboxruled=\dimen135
+\algocf@inoutbox=\box26
+\algocf@inputbox=\box27
+\AlCapSkip=\skip56
+\AlCapHSkip=\skip57
+\algoskipindent=\skip58
+\algocf@nlbox=\box28
+\algocf@hangingbox=\box29
+\algocf@untilbox=\box30
+\algocf@skipuntil=\skip59
+\algocf@capbox=\box31
+\algoheightruledefault=\skip60
+\algoheightrule=\skip61
+\algotitleheightruledefault=\skip62
+\algotitleheightrule=\skip63
+\c@algocfline=\count94
+\c@algocfproc=\count95
+\c@algocf=\count96
+\algocf@algoframe=\box32
+\algocf@algobox=\box33
+) (/usr/share/texlive/texmf-dist/tex/latex/algorithms/algorithmic.sty
+Package: algorithmic 2009/08/24 v0.1 Document Style `algorithmic'
+\c@ALC@unique=\count97
+\c@ALC@line=\count98
+\c@ALC@rem=\count99
+\c@ALC@depth=\count100
+\ALC@tlm=\skip64
+\algorithmicindent=\skip65
+)
+(/usr/share/texlive/texmf-dist/tex/latex/listings/listings.sty
+\lst@mode=\count101
+\lst@gtempboxa=\box34
+\lst@token=\toks18
+\lst@length=\count102
+\lst@currlwidth=\dimen136
+\lst@column=\count103
+\lst@pos=\count104
+\lst@lostspace=\dimen137
+\lst@width=\dimen138
+\lst@newlines=\count105
+\lst@lineno=\count106
+\lst@maxwidth=\dimen139
+
+(/usr/share/texlive/texmf-dist/tex/latex/listings/lstmisc.sty
+File: lstmisc.sty 2013/08/26 1.5b (Carsten Heinz)
+\c@lstnumber=\count107
+\lst@skipnumbers=\count108
+\lst@framebox=\box35
+)
+(/usr/share/texlive/texmf-dist/tex/latex/listings/listings.cfg
+File: listings.cfg 2013/08/26 1.5b listings configuration
+))
+Package: listings 2013/08/26 1.5b (Carsten Heinz)
+
+(/usr/share/texlive/texmf-dist/tex/latex/pbox/pbox.sty
+Package: pbox 2011/12/07 v1.2 Dynamic parboxes
+
+(/usr/share/texlive/texmf-dist/tex/latex/tools/calc.sty
+Package: calc 2007/08/22 v4.3 Infix arithmetic (KKT,FJ)
+\calc@Acount=\count109
+\calc@Bcount=\count110
+\calc@Adimen=\dimen140
+\calc@Bdimen=\dimen141
+\calc@Askip=\skip66
+\calc@Bskip=\skip67
+LaTeX Info: Redefining \setlength on input line 76.
+LaTeX Info: Redefining \addtolength on input line 77.
+\calc@Ccount=\count111
+\calc@Cskip=\skip68
+)
+\pb@xlen=\skip69
+)
+(/usr/share/texlive/texmf-dist/tex/latex/enumitem/enumitem.sty
+Package: enumitem 2011/09/28 v3.5.2 Customized lists
+\labelindent=\skip70
+\enit@outerparindent=\dimen142
+\enit@toks=\toks19
+\enit@inbox=\box36
+\enitdp@description=\count112
+)
+(/usr/share/texlive/texmf-dist/tex/latex/caption/caption.sty
+Package: caption 2013/05/02 v3.3-89 Customizing captions (AR)
+
+(/usr/share/texlive/texmf-dist/tex/latex/caption/caption3.sty
+Package: caption3 2013/05/02 v1.6-88 caption3 kernel (AR)
+Package caption3 Info: TeX engine: e-TeX on input line 57.
+\captionmargin=\dimen143
+\captionmargin@=\dimen144
+\captionwidth=\dimen145
+\caption@tempdima=\dimen146
+\caption@indent=\dimen147
+\caption@parindent=\dimen148
+\caption@hangindent=\dimen149
+)
+\c@ContinuedFloat=\count113
+Package caption Info: listings package is loaded.
+)
+\c@theorem=\count114
+\c@definition=\count115
+\c@observation=\count116
+\c@example=\count117
+\c@notation=\count118
+\c@fact=\count119
+
+(./annotations.tex (/usr/share/texlive/texmf-dist/tex/generic/ulem/ulem.sty
+\UL@box=\box37
+\UL@hyphenbox=\box38
+\UL@skip=\skip71
+\UL@hook=\toks20
+\UL@height=\dimen150
+\UL@pe=\count120
+\UL@pixel=\dimen151
+\ULC@box=\box39
+Package: ulem 2012/05/18
+\ULdepth=\dimen152
+)
+(/usr/share/texmf/tex/latex/xcolor/xcolor.sty
+Package: xcolor 2007/01/21 v2.11 LaTeX color extensions (UK)
+
+(/usr/share/texlive/texmf-dist/tex/latex/latexconfig/color.cfg
+File: color.cfg 2007/01/18 v1.5 color configuration of teTeX/TeXLive
+)
+Package xcolor Info: Driver file: pdftex.def on input line 225.
+LaTeX Info: Redefining \color on input line 702.
+Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1337.
+Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1341.
+Package xcolor Info: Model `RGB' extended on input line 1353.
+Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1355.
+Package xcolor Info: Model `Hsb' substituted by `hsb' on input line 1356.
+Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1357.
+Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1358.
+Package xcolor Info: Model `Gray' substituted by `gray' on input line 1359.
+Package xcolor Info: Model `wave' substituted by `hsb' on input line 1360.
+)
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/amssymb.sty
+Package: amssymb 2013/01/14 v3.01 AMS font symbols
+
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/amsfonts.sty
+Package: amsfonts 2013/01/14 v3.01 Basic AMSFonts support
+\@emptytoks=\toks21
+\symAMSa=\mathgroup4
+\symAMSb=\mathgroup5
+LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
+(Font)                  U/euf/m/n --> U/euf/b/n on input line 106.
+))
+(/usr/share/texlive/texmf-dist/tex/latex/wasysym/wasysym.sty
+Package: wasysym 2003/10/30 v2.0 Wasy-2 symbol support package
+\symwasy=\mathgroup6
+LaTeX Font Info:    Overwriting symbol font `wasy' in version `bold'
+(Font)                  U/wasy/m/n --> U/wasy/b/n on input line 90.
+)) (./paper.aux
+
+LaTeX Warning: Label `sec:instrumentation' multiply defined.
+
+)
+\openout1 = `paper.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 116.
+LaTeX Font Info:    ... okay on input line 116.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 116.
+LaTeX Font Info:    ... okay on input line 116.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 116.
+LaTeX Font Info:    ... okay on input line 116.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 116.
+LaTeX Font Info:    ... okay on input line 116.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 116.
+LaTeX Font Info:    ... okay on input line 116.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 116.
+LaTeX Font Info:    ... okay on input line 116.
+LaTeX Font Info:    Try loading font information for OT1+ptm on input line 116.
+
+ (/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1ptm.fd
+File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
+)
+(/usr/share/texlive/texmf-dist/tex/context/base/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count121
+\scratchdimen=\dimen153
+\scratchbox=\box40
+\nofMPsegments=\count122
+\nofMParguments=\count123
+\everyMPshowfont=\toks22
+\MPscratchCnt=\count124
+\MPscratchDim=\dimen154
+\MPnumerator=\count125
+\makeMPintoPDFobject=\count126
+\everyMPtoPDFconversion=\toks23
+) (/usr/share/texlive/texmf-dist/tex/generic/oberdiek/pdftexcmds.sty
+Package: pdftexcmds 2011/11/29 v0.20 Utility functions of pdfTeX for LuaTeX (HO
+)
+
+(/usr/share/texlive/texmf-dist/tex/generic/oberdiek/ifluatex.sty
+Package: ifluatex 2010/03/01 v1.3 Provides the ifluatex switch (HO)
+Package ifluatex Info: LuaTeX not detected.
+)
+(/usr/share/texlive/texmf-dist/tex/generic/oberdiek/ifpdf.sty
+Package: ifpdf 2011/01/30 v2.3 Provides the ifpdf switch (HO)
+Package ifpdf Info: pdfTeX in PDF mode is detected.
+)
+Package pdftexcmds Info: LuaTeX not detected.
+Package pdftexcmds Info: \pdf@primitive is available.
+Package pdftexcmds Info: \pdf@ifprimitive is available.
+Package pdftexcmds Info: \pdfdraftmode found.
+)
+(/usr/share/texlive/texmf-dist/tex/latex/oberdiek/epstopdf-base.sty
+Package: epstopdf-base 2010/02/09 v2.5 Base part for package epstopdf
+
+(/usr/share/texlive/texmf-dist/tex/latex/oberdiek/grfext.sty
+Package: grfext 2010/08/19 v1.1 Manage graphics extensions (HO)
+
+(/usr/share/texlive/texmf-dist/tex/generic/oberdiek/kvdefinekeys.sty
+Package: kvdefinekeys 2011/04/07 v1.3 Define keys (HO)
+))
+(/usr/share/texlive/texmf-dist/tex/latex/oberdiek/kvoptions.sty
+Package: kvoptions 2011/06/30 v3.11 Key value format for package options (HO)
+
+(/usr/share/texlive/texmf-dist/tex/generic/oberdiek/kvsetkeys.sty
+Package: kvsetkeys 2012/04/25 v1.16 Key value parser (HO)
+
+(/usr/share/texlive/texmf-dist/tex/generic/oberdiek/etexcmds.sty
+Package: etexcmds 2011/02/16 v1.5 Avoid name clashes with e-TeX commands (HO)
+Package etexcmds Info: Could not find \expanded.
+(etexcmds)             That can mean that you are not using pdfTeX 1.50 or
+(etexcmds)             that some package has redefined \expanded.
+(etexcmds)             In the latter case, load this package earlier.
+)))
+Package grfext Info: Graphics extension search list:
+(grfext)             [.png,.pdf,.jpg,.mps,.jpeg,.jbig2,.jb2,.PNG,.PDF,.JPG,.JPE
+G,.JBIG2,.JB2,.eps]
+(grfext)             \AppendGraphicsExtensions on input line 452.
+
+(/usr/share/texlive/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
+File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
+e
+))
+\c@lstlisting=\count127
+Package caption Info: Begin \AtBeginDocument code.
+Package caption Info: End \AtBeginDocument code.
+LaTeX Font Info:    Try loading font information for U+msa on input line 122.
+
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
+File: umsa.fd 2013/01/14 v3.01 AMS symbols A
+)
+LaTeX Font Info:    Try loading font information for U+msb on input line 122.
+
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
+File: umsb.fd 2013/01/14 v3.01 AMS symbols B
+)
+LaTeX Font Info:    Try loading font information for U+wasy on input line 122.
+
+(/usr/share/texlive/texmf-dist/tex/latex/wasysym/uwasy.fd
+File: uwasy.fd 2003/10/30 v2.0 Wasy-2 symbol font definitions
+) (./abstract.tex
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <14.4> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 2.
+)
+(./intro.tex
+Underfull \hbox (badness 10000) in paragraph at lines 22--46
+\OT1/ptm/m/n/10 Developing cor-rect dis-tributed sys-tems re-mains a
+ []
+
+[1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}
+
+
+]
+LaTeX Font Info:    Try loading font information for OMS+ptm on input line 171.
+
+
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/omsptm.fd
+File: omsptm.fd 
+)
+LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <10> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 171.
+
+Underfull \hbox (badness 1655) in paragraph at lines 175--179
+[]\OT1/ptm/m/n/10 We de-vel-oped three heuris-tics for merg-ing dis-
+ []
+
+) (./formal.tex) (./instrumentation.tex
+<fig/dinv-flow.pdf, id=13, 699.61375pt x 99.37125pt>
+File: fig/dinv-flow.pdf Graphic file (type pdf)
+ <use fig/dinv-flow.pdf>
+Package pdftex.def Info: fig/dinv-flow.pdf used on input line 16.
+(pdftex.def)             Requested size: 422.77664pt x 60.0508pt.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 17.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 22.
+LaTeX Font Info:    Try loading font information for OT1+pcr on input line 53.
+
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1pcr.fd
+File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
+)
+Underfull \hbox (badness 1735) in paragraph at lines 42--58
+[]\OT1/ptm/b/n/10 Injecting vec-tor clocks. \OT1/ptm/m/n/10 Dinv in-tro-duces v
+ec-tor
+ []
+
+
+Underfull \hbox (badness 1789) in paragraph at lines 42--58
+\OT1/ptm/m/n/10 ploit-ing the con-ven-tions fol-lowed by Go's net-work-
+ []
+
+
+Underfull \hbox (badness 2050) in paragraph at lines 42--58
+\OT1/ptm/m/n/10 ing \OT1/ptm/m/it/10 net \OT1/ptm/m/n/10 li-brary. This li-brar
+y im-ple-ments TCP, IP,
+ []
+
+
+Underfull \hbox (badness 1163) in paragraph at lines 42--58
+\OT1/ptm/m/n/10 UDP, RPC, and IPC pro-to-cols; all of these, ex-cept
+ []
+
+
+Underfull \hbox (badness 1132) in paragraph at lines 42--58
+\OT1/ptm/m/n/10 from net-work pay-loads, and the orig-i-nal func-tion is
+ []
+
+[2] <fig/data-flow-3.pdf, id=17, 459.7175pt x 426.59375pt>
+File: fig/data-flow-3.pdf Graphic file (type pdf)
+
+<use fig/data-flow-3.pdf>
+Package pdftex.def Info: fig/data-flow-3.pdf used on input line 72.
+(pdftex.def)             Requested size: 234.8775pt x 217.95699pt.
+
+Overfull \hbox (5.0pt too wide) in paragraph at lines 72--80
+[][] 
+ []
+
+
+Underfull \vbox (badness 2205) has occurred while \output is active []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 148--148
+[]\OT1/ptm/m/n/9 Location
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 148--148
+[]\OT1/ptm/m/n/9 Variables
+ []
+
+) (./log-analysis.tex <fig/time-diagram.pdf, id=18, 387.4475pt x 282.05376pt>
+File: fig/time-diagram.pdf Graphic file (type pdf)
+
+<use fig/time-diagram.pdf>
+Package pdftex.def Info: fig/time-diagram.pdf used on input line 54.
+(pdftex.def)             Requested size: 234.8775pt x 170.98949pt.
+
+Overfull \hbox (5.0pt too wide) in paragraph at lines 54--58
+[][] 
+ []
+
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [3 <./fig/dinv-flow.pdf> <./fig/data-flow-3.pdf>]
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <9> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 151.
+
+<fig/gossip-execution-dig.pdf, id=69, 445.665pt x 242.9075pt>
+File: fig/gossip-execution-dig.pdf Graphic file (type pdf)
+
+<use fig/gossip-execution-dig.pdf>
+Package pdftex.def Info: fig/gossip-execution-dig.pdf used on input line 209.
+(pdftex.def)             Requested size: 234.8775pt x 128.0176pt.
+
+Overfull \hbox (5.0pt too wide) in paragraph at lines 209--217
+[][] 
+ []
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+<fig/cuts-to-dpp-dig.pdf, id=70, 604.2575pt x 511.9125pt>
+File: fig/cuts-to-dpp-dig.pdf Graphic file (type pdf)
+
+<use fig/cuts-to-dpp-dig.pdf>
+Package pdftex.def Info: fig/cuts-to-dpp-dig.pdf used on input line 223.
+(pdftex.def)             Requested size: 234.8775pt x 198.98112pt.
+
+Overfull \hbox (5.0pt too wide) in paragraph at lines 223--231
+[][] 
+ []
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+[4 <./fig/time-diagram.pdf>]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [5 <./fig/gossip-execution-dig.pdf> <./fig/cuts-to-dpp-dig.pdf>]
+LaTeX Font Info:    Try loading font information for OT1+phv on input line 398.
+
+
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1phv.fd
+File: ot1phv.fd 2001/06/04 scalable font definitions for OT1/phv.
+)
+LaTeX Font Info:    Font shape `OT1/phv/bx/n' in size <10> not available
+(Font)              Font shape `OT1/phv/b/n' tried instead on input line 398.
+LaTeX Font Info:    Font shape `OT1/phv/bx/n' in size <7> not available
+(Font)              Font shape `OT1/phv/b/n' tried instead on input line 398.
+LaTeX Font Info:    Font shape `OT1/phv/m/it' in size <9> not available
+(Font)              Font shape `OT1/phv/m/sl' tried instead on input line 398.
+)
+(./implementation.tex) (./evaluation.tex [6] [7]
+Underfull \hbox (badness 1102) in paragraph at lines 237--248
+\OT1/ptm/m/it/10 iden-ti-cal in all en-tries up to the given in-dex\OT1/ptm/m/n
+/10 '' [[]].
+ []
+
+
+Underfull \hbox (badness 1122) in paragraph at lines 237--248
+\OT1/ptm/m/n/10 to de-tect that in all cases (node[i]-commitIndex) ==
+ []
+
+[8] [9] <fig/raft-performance-plot.pdf, id=167, 345.29pt x 187.70125pt>
+File: fig/raft-performance-plot.pdf Graphic file (type pdf)
+
+<use fig/raft-performance-plot.pdf>
+Package pdftex.def Info: fig/raft-performance-plot.pdf used on input line 451.
+(pdftex.def)             Requested size: 229.8775pt x 124.96297pt.
+
+Overfull \hbox (3.05603pt too wide) in paragraph at lines 508--508
+[]\OT1/ptm/b/n/9 Logging
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 508--508
+\OT1/ptm/b/n/9 an-no-
+ []
+
+
+Overfull \hbox (4.3274pt too wide) in paragraph at lines 508--508
+[]\OT1/ptm/b/n/9 Annotations 
+ []
+
+
+Overfull \hbox (5.04488pt too wide) in paragraph at lines 508--508
+[]\OT1/ptm/b/n/9 Runtime
+ []
+
+
+Overfull \hbox (5.04488pt too wide) in paragraph at lines 508--508
+[]\OT1/ptm/b/n/9 Runtime 
+ []
+
+
+Overfull \hbox (6.86296pt too wide) in paragraph at lines 508--508
+\OT1/ptm/b/n/9 overhead
+ []
+
+<fig/bandwidth-overhead.pdf, id=168, 216.81pt x 100.375pt>
+File: fig/bandwidth-overhead.pdf Graphic file (type pdf)
+
+<use fig/bandwidth-overhead.pdf>
+Package pdftex.def Info: fig/bandwidth-overhead.pdf used on input line 575.
+(pdftex.def)             Requested size: 234.8775pt x 108.7449pt.
+
+Overfull \hbox (5.0pt too wide) in paragraph at lines 575--576
+[][] 
+ []
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+[10 <./fig/raft-performance-plot.pdf>]
+Underfull \hbox (badness 10000) in paragraph at lines 604--604
+[]\OT1/ptm/b/n/9 System
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 604--604
+\OT1/ptm/b/n/9 run-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 604--604
+\OT1/ptm/b/n/9 time
+ []
+
+
+Underfull \hbox (badness 7685) in paragraph at lines 604--604
+[]\OT1/ptm/b/n/9 Log size
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 604--604
+\OT1/ptm/b/n/9 Raft
+ []
+
+
+Overfull \hbox (1.20932pt too wide) in paragraph at lines 604--604
+[]\OT1/ptm/b/n/9 Analysis
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 604--604
+\OT1/ptm/b/n/9 time
+ []
+
+
+Underfull \hbox (badness 7685) in paragraph at lines 604--604
+[]\OT1/ptm/b/n/9 Log size
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 604--604
+\OT1/ptm/b/n/9 GCache
+ []
+
+
+Overfull \hbox (1.20932pt too wide) in paragraph at lines 604--604
+[]\OT1/ptm/b/n/9 Analysis
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 604--604
+\OT1/ptm/b/n/9 time
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 604--604
+\OT1/ptm/b/n/9 GCache
+ []
+
+
+Overfull \hbox (2.34892pt too wide) in paragraph at lines 602--612
+ [][] 
+ []
+
+<fig/dynamic-analysis-runtime.pdf, id=177, 382.42876pt x 187.70125pt>
+File: fig/dynamic-analysis-runtime.pdf Graphic file (type pdf)
+
+<use fig/dynamic-analysis-runtime.pdf>
+Package pdftex.def Info: fig/dynamic-analysis-runtime.pdf used on input line 62
+6.
+(pdftex.def)             Requested size: 234.8775pt x 115.28235pt.
+
+Overfull \hbox (5.0pt too wide) in paragraph at lines 626--627
+[][] 
+ []
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+) (./discussion.tex [11 <./fig/bandwidth-overhead.pdf> <./fig/dynamic-analysis-
+runtime.pdf>]) (./related.tex) (./conclusion.tex) [12] (./appendix.tex
+Underfull \hbox (badness 1077) in paragraph at lines 65--69
+[]\OT1/ptm/m/it/10 An in-ter-ac-tion or-
+ []
+
+[13] <fig/cut-total-ordering-partial.jpg, id=199, 803.0pt x 401.5pt>
+File: fig/cut-total-ordering-partial.jpg Graphic file (type jpg)
+
+<use fig/cut-total-ordering-partial.jpg>
+Package pdftex.def Info: fig/cut-total-ordering-partial.jpg used on input line 
+359.
+(pdftex.def)             Requested size: 234.8775pt x 117.43674pt.
+
+Overfull \hbox (5.0pt too wide) in paragraph at lines 359--360
+[][] 
+ []
+
+[14 <./fig/cut-total-ordering-partial.jpg>] [15]
+<fig/merge-point-logs.jpg, id=207, 652.4375pt x 301.125pt>
+File: fig/merge-point-logs.jpg Graphic file (type jpg)
+
+<use fig/merge-point-logs.jpg>
+Package pdftex.def Info: fig/merge-point-logs.jpg used on input line 670.
+(pdftex.def)             Requested size: 234.8775pt x 108.4049pt.
+
+Overfull \hbox (5.0pt too wide) in paragraph at lines 670--671
+[][] 
+ []
+
+LaTeX Font Info:    Try loading font information for OML+ptm on input line 715.
+
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/omlptm.fd
+File: omlptm.fd 
+)
+LaTeX Font Info:    Font shape `OML/ptm/m/n' in size <9> not available
+(Font)              Font shape `OML/cmm/m/it' tried instead on input line 715.
+LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <9> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 715.
+ [16 <./fig/merge-point-logs.jpg>]) (./paper.bbl
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+
+
+Package balance Warning: You have called \balance in second column
+(balance)                Columns might not be balanced.
+
+[17]
+Underfull \hbox (badness 10000) in paragraph at lines 27--30
+[]\OT1/ptm/m/n/10 coreos.  A dis-tributed init sys-tem.
+ []
+
+
+Underfull \hbox (badness 2103) in paragraph at lines 32--36
+\OT1/ptm/m/n/10 the most crit-i-cal data of a dis-tributed sys-tem.
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 69--73
+[]\OT1/ptm/m/n/10 B. Fitz-patrick.  group-cache is a caching
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 69--73
+\OT1/ptm/m/n/10 and cache-filling li-brary, in-tended as a re-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 69--73
+\OT1/ptm/m/n/10 place-ment for mem-cached in many cases.
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 97--100
+[]\OT1/ptm/m/n/10 Jackpal.  A(nother) bit-tor-rent client writ-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 97--100
+\OT1/ptm/m/n/10 ten in the go pro-gram-ming lan-guage.
+ []
+
+[18]
+Underfull \hbox (badness 1694) in paragraph at lines 186--189
+[]\OT1/ptm/m/n/10 RunLim.  Run-lim.  $\OT1/pcr/m/n/10 http : / / fmv . jku . at
+ /
+ []
+
+
+Underfull \hbox (badness 2080) in paragraph at lines 208--212
+[]\OT1/ptm/m/n/10 B. H. Sigel-man, L. A. Bar-roso, M. Bur-rows,
+ []
+
+
+Underfull \hbox (badness 1454) in paragraph at lines 242--248
+\OT1/ptm/m/n/10 Trans-par-ent model check-ing of un-mod-i-fied dis-
+ []
+
+) [19] (./paper.aux)
+
+LaTeX Warning: There were multiply-defined labels.
+
+ ) 
+Here is how much of TeX's memory you used:
+ 7621 strings out of 493304
+ 109833 string characters out of 6139872
+ 214631 words of memory out of 5000000
+ 10872 multiletter control sequences out of 15000+600000
+ 40902 words of font info for 92 fonts, out of 8000000 for 9000
+ 957 hyphenation exceptions out of 8191
+ 38i,19n,40p,596b,1604s stack positions out of 5000i,500n,10000p,200000b,80000s
+{/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texliv
+e/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmex9.pfb></usr/share/texlive/
+texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-
+dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/texlive/texmf-dist/fo
+nts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texmf-dist/fonts/typ
+e1/public/amsfonts/cm/cmmi9.pfb></usr/share/texlive/texmf-dist/fonts/type1/publ
+ic/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsf
+onts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/
+cmr9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.p
+fb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.pfb></us
+r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></usr/share
+/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texliv
+e/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></usr/share/texlive/texmf
+-dist/fonts/type1/public/amsfonts/symbols/msam10.pfb></usr/share/texlive/texmf-
+dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/fonts/ty
+pe1/urw/helvetic/uhvb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/helv
+etic/uhvro8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmb8a.pf
+b></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/t
+exlive/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on paper.pdf (19 pages, 512056 bytes).
+PDF statistics:
+ 286 PDF objects out of 1000 (max. 8388607)
+ 207 compressed objects within 3 object streams
+ 0 named destinations out of 1000 (max. 500000)
+ 51 words of extra memory for PDF output out of 10000 (max. 10000000)
+

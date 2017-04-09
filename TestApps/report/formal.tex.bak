@@ -1,0 +1,61 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Distributed State Background}
+\label{sec:formal}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Performing analysis on distributed state requires a method for
+%% observing it.
+%
+In this section we overview our model of distributed state, and how it
+can be observed from the partially ordered logs of an execution. Our
+model is formally described in Appendix~\ref{sec:formal-appendix};
+here we overview the model informally.
+
+During a systems execution each instruction is an \emph{event} in our
+model.
+%
+  An \emph{event instance} is a reference to a specific \emph{event}.
+  The state of a node at any \emph{event instance} is the set of
+  values for all the variables resident in memory.
+%
+  A \emph{state transition} is the change to variables which occur at
+  an \emph{event}. A complete execution of a node is therefore a
+  totally ordered sequence of events corresponding to \emph{state
+  transitions}.
+%
+The state of a single node at an \emph{event} can be recorded by
+writing the values of its variables to a log.  In a message passing
+system sending and receiving events can be used as primitives for
+partially ordering events between nodes.  Establishing the partial
+ordering can be done in practice by maintaining vector clocks on each
+node~\cite{mattern_vector_clocks_1989}.  For convenience we will refer
+to the complete set of all node events paired with vector clocks as a
+\emph{log}. 
+
+All of our analysis techniques are performed on a log produced by a
+system after it has executed.
+%
+  Determining which combination of states on separate nodes should be
+  used to detect meaningful distributed invariants requires additional
+  constraints. 
+ 
+ A \emph{consistent cut} is a moment in logical time at which all
+ messages sent up until that point have also been received. More
+ concisely it is a relative time where messages are in flight. Testing
+ state invariants over \emph{consistent cuts} ensures that no state
+ which would invalidate an invariant is in flight.  The complete set
+ of consistent cuts which occur during the execution of a system
+ provide a step-by-step view of its state transitions on which we
+ preform our analysis.
+
+%
+Aggregating node state can be done in a variety of ways which produce
+alternative views of a systems invariant properties. Analysis of
+distrbuted state reqires the merging the state of independent nodes.
+We refer to points at which the states of two or more nodes are merged
+by our log merging algorithm as a \emph{distributed program point}. In
+Section~\ref{sec:log-analysis} we propose heuristic approaches for
+building distributed program points, all of which operate at the
+granularity of consistent cuts. In the following section we describe
+\dinv's design.
+%

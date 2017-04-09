@@ -1,0 +1,115 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Discussion}
+\label{sec:discussion}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\textbf{Using Dinv.} Dinv infers invariants that are \emph{likely}
+because it is a dynamic analysis approach that only considers some
+finite set of system behaviors. The inferred invariants are not a
+verification of the system.
+%
+But, Dinv is pragmatic when considering today's software development
+practices that include widely used dynamic analyses like testing.
+%
+Unlike testing Dinv helps developers understand what happened. Dinv
+can be extended towards testing by having developers assert expected
+Dinv-inferred invariants for a set of curated executions.
+
+%% standard practice. Moreover, Dinv can actually augment the results of
+%% test runs.
+
+%% we were able to observe it under real
+%% world conditions (long runs, failure scenarios) without needing a
+%% complete specification of it's behavior.
+%% %
+%% Dinv allowed us to refine and narrow the instrumentation iteratively
+%% based on actual execution results.
+
+To use Dinv a developer must have access to the system's source code,
+and they must be familiar with the system. In our evaluation we considered
+four large distributed systems, none of which we were familiar with
+prior to this study. In each case we used all of the resources
+available to us (papers, source code, documentation) to understand the
+desired system properties and to interpret Dinv's output. We have not
+carried out a formal usability study on Dinv, but we do have some
+anecdotal evidence that it is not difficult to use: students with no
+prior distributed systems background successfully used it in a
+graduate distributed systems course. 
+
+%% Its' behavior, which is often not
+%% thoroughly documented, must be translated into \emph{likely
+%%   specifications} that we can infer.
+%
+
+Depending on design of the system distributed state may be difficult
+to identify and encode, particularly when this requires reasoning
+about program paths that lead to network actions.
+%
+As we had no prior knowledge about the four systems in our evaluation
+and were successful in inferring interesting properties we are
+confident that with proper training developers would be able to
+similarly instrument their systems.
+%
+% However, the catch is that the developer must be willing to and is
+% sufficiently familiar with their system to interpret \emph{likely
+%  specifications} that we infer for their system.
+
+\textbf{Merging strategies.} Dinv's three merging strategies
+(Section~\ref{sec:merging}) were motivated by our evaluation
+experience. These cover different views on the systems and allow Dinv
+to detect a wide range of invariants, from properties true across all
+hosts during the entire execution, to eventual consistency properties
+observed on the level of send-receive pairs. Even so, these strategies
+are not exhaustive. All three merging strategies were implemented in
+less than 15 LOC; we therefore think that custom merging strategies
+offer a reasonable way to extend Dinv.
+
+%% The lattice structure provides all data necessary for different
+%% analysis approaches.
+
+\textbf{Daikon templates for distributed system invariants.}  Daikon
+is designed to infer invariants for program points in a sequential
+system. Dinv uses Daikon by presenting it with a synthetic program
+point that actually corresponds to a distributed state. This approach
+has its limits. In particular, Daikon supports a fixed set of
+invariant templates that at most describe 3-ary relations. %This is
+%insufficient for mining invariants like the one given earlier:
+For an invariant mentioned earlier, $coordinator.commit =
+replica_i.commit$ for each replica $i$, Dinv mines as many individual
+invariants as there are replicas in the system.
+%
+%Another approach 
+%is to extend Daikon invariant templates to be 
+%
+We experimented with adding support for n-ary properties to Daikon and
+see promising results. These properties would help to compactly
+describe properties of larger systems, like those with many nodes.
+%% We also added an invariant while
+%% trying another approach to checking eventual consistency, by showing
+%% that at each point the difference in state between hosts is bounded.
+
+\textbf{Analyzing executions containing failures}. A major challenge
+for distributed systems is dealing with failures. In our experiments
+with the SWIM protocol in Serf we have shown that Dinv can establish
+properties of a system during network partitions. However, in general,
+Dinv is limited in the kinds of system failures it can be used to
+study.
+%
+\dinv's decision to split the execution into strongly consistent cuts
+and translating the happens-before graph into a lattice structure
+assumes a relatively stable execution environment. For example, a run
+with a network partition that is not resolved before the end of
+execution, may not result in any cuts from the point where the
+partitioned occurred. Supporting other failure cases may require
+changing \dinv's analyses; a nuanced, but feasible project.
+
+%% , we were able to extract useful knowledge from
+%% executions with network failures.
+%
+
+%% On the other hand, infrequently communicating nodes will force the
+%% lattice to fan out during log analysis which often set's an upper
+%% bound on the number of analysed hosts for performance reasons. Further
+%% code optimization of \dinv or the application of more advanced
+%% algorithms might alleviate this problem. We didn't feel our analysis
+%% to be limited by the number of nodes behind a reasonable threshold.

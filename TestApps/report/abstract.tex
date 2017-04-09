@@ -1,0 +1,74 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{abstract}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Distributed systems are difficult to debug and understand. A key
+reason for this is distributed state, which is not easily accessible
+and must be pieced together from the states of the individual nodes in
+the system.
+
+We propose Dinv, an approach to help developers of distributed systems
+uncover the runtime distributed state properties of their
+systems. Dinv uses static and dynamic program analyses to infer
+relations between variables at different nodes. For example, in a
+leader election algorithm, Dinv can relate the variable $leader$ at
+different nodes to derive the invariant
+$\forall~\textrm{nodes}~i,j,~leader_i == leader_j$. This can increase
+the developer's confidence in the correctness of their system.
+
+Dinv works on systems implemented in Go and has negligible
+instrumentation overhead. We applied it to several popular distributed
+systems, such as etcd Raft, Hashicorp Serf, and Taipei-Torrent, all of
+which have thousands of lines of code and are widely used. For these
+systems Dinv derived useful invariants, including invariants that
+capture the correctness of distributed routing strategies, leadership,
+and key hash distribution.
+
+%% Distributed systems are difficult to debug and understand. A key
+%% reasons for this is distributed state, which is not easily accessible
+%% and must be pieced together from the state at the individual hosts in
+%% the system. Developers have few tools to help them extract and reason
+%% about distributed state. By contrast, the state of a sequential
+%% program is well defined (e.g., stack and heap), easy to inspect (e.g.,
+%% with breakpoints) and can be checked for correctness (e.g., by
+%% asserting invariants).
+
+%% We propose an approach that help developers to understand the runtime
+%% properties of a distributed system.  Out approach is realized as a
+%% tool DInv, consisting of two components, an instrumenter and log
+%% analyzer. DInv statically detects networking calls, instruments them
+%% with vector clocks automatically, and translates user placed
+%% annotations into code which logs variables interacting with the
+%% network at runtime.  The second component, merges the resulting host
+%% logs from several executions and uses the implicit happened-before
+%% graph of communication in the logged executions to infer likely
+%% invariants of distributed state. In particular, DInv infers
+%% Daikon-style properties that relate variables that are local to
+%% different hosts in the system and have held across all the recorded
+%% executions.
+
+%% DInv's work on systems implemented in Go. We have applied these tools
+%% to a variety of popular distributed systems, such as etcd raft, and
+%% Taipei-Torrent which have thousands of lines of code and are used in
+%% industry, and by consumers. DInv was able to verify many of the
+%% invariant properties of these systems by detecting their invariant data
+%% properties.
+
+%% We also evaluated our tool with a user study in which we compared them
+%% against manual comprehension of Go programs. We found that DInv
+%% improves on both the speed and accuracy with which developers are able
+%% to reason about distributed system control flow and derive useful
+%% system properties.
+
+%%  approach that uses a combination of static
+%% and dynamic analyses to identify and record at runtime the sets of
+%% concrete values for node variables that make up distributed state in a
+%% distributed system. It then determines consistent snapshots of
+%% distributed state in the system and uses the Daikon
+%% tool~\cite{ernst_daikon_tse_2001} to infer likely data relations, or
+%% invariants, over the tracked variables.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{abstract}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

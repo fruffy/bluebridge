@@ -1,0 +1,256 @@
+\begin{thebibliography}{10}
+
+\bibitem{cloc}
+AlDanial.
+\newblock cloc: Count lines of code.
+\newblock \url{https://github.com/AlDanial/cloc}, 2016.
+
+\bibitem{Beschastnikh2012}
+I.~Beschastnikh, Y.~Brun, M.~D. Ernst, A.~Krishnamurthy, and T.~E. Anderson.
+\newblock Mining temporal invariants from partially ordered logs.
+\newblock {\em SIGOPS Oper. Syst. Rev.}, 45(3):39--46, Jan. 2012.
+
+\bibitem{dist_snapshots_Chandy1985}
+K.~M. Chandy and L.~Lamport.
+\newblock Distributed snapshots: determining global states of distributed
+  systems.
+\newblock {\em ACM Trans. Comput. Syst.}, 3(1):63--75, Feb. 1985.
+
+\bibitem{Cooper:1991:CDG:122759.122774}
+R.~Cooper and K.~Marzullo.
+\newblock Consistent detection of global predicates.
+\newblock In {\em Proceedings of the 1991 ACM/ONR Workshop on Parallel and
+  Distributed Debugging}, PADD '91, pages 167--174, New York, NY, USA, 1991.
+  ACM.
+
+\bibitem{fleet}
+coreos.
+\newblock A distributed init system.
+\newblock https://github.com/coreos/fleet, 2013.
+
+\bibitem{etcdraft}
+Coreos.
+\newblock Distributed reliable key-value store for the most critical data of a
+  distributed system.
+\newblock https://github.com/coreos/etcd, 2013.
+
+\bibitem{locksmith}
+coreos.
+\newblock Reboot manager for the coreos update engine.
+\newblock https://github.com/coreos/locksmith, 2014.
+
+\bibitem{das2002swim}
+A.~Das, I.~Gupta, and A.~Motivala.
+\newblock Swim: Scalable weakly-consistent infection-style process group
+  membership protocol.
+\newblock In {\em Dependable Systems and Networks, 2002. DSN 2002. Proceedings.
+  International Conference on}, pages 303--312. IEEE, 2002.
+
+\bibitem{Fay2011}
+{\'U}.~Erlingsson, M.~Peinado, S.~Peter, and M.~Budiu.
+\newblock Fay: Extensible distributed tracing from kernels to clusters.
+\newblock In {\em ACM Symposium on Operating Systems Principles (SOSP)}. ACM,
+  October 2011.
+
+\bibitem{Ernst07}
+M.~D. Ernst, J.~H. Perkins, P.~J. Guo, S.~McCamant, C.~Pacheco, M.~S. Tschantz,
+  and C.~Xiao.
+\newblock The {Daikon} system for dynamic detection of likely invariants.
+\newblock {\em Science of Computer Programming}, 69(1--3):35--45, Dec. 2007.
+
+\bibitem{fidge_vector_clocks_1988}
+C.~J. Fidge.
+\newblock Timestamps in {M}essage-{P}assing {S}ystems that {P}reserve the
+  {P}artial {O}rdering.
+\newblock In {\em 11th Australian Computer Science Conference}, pages 55--66,
+  University of Queensland, Australia, 1988.
+
+\bibitem{groupcache}
+B.~Fitzpatrick.
+\newblock groupcache is a caching and cache-filling library, intended as a
+  replacement for memcached in many cases.
+\newblock https://github.com/golang/groupcache, 2014.
+
+\bibitem{Garg}
+V.~K. Garg.
+\newblock Maximal antichain lattice algorithms for distributed computations.
+
+\bibitem{geels_friday_nsdi_2007}
+D.~Geels, G.~Altekar, P.~Maniatis, T.~Roscoe, and I.~Stoica.
+\newblock {Friday: Global Comprehension for Distributed Replay}.
+\newblock In {\em Networked Systems Design and Implementation (NSDI)},
+  Cambridge, MA, USA, 2007.
+
+\bibitem{serf}
+Hashicorp.
+\newblock Service orchestration and management tool.
+\newblock https://www.serf.io/docs/internals/gossip.html, 2014.
+
+\bibitem{hawblitzel_ironfleet_sosp2015}
+C.~Hawblitzel, J.~Howell, M.~Kapritsos, J.~R. Lorch, B.~Parno, M.~L. Roberts,
+  S.~Setty, and B.~Zill.
+\newblock {IronFleet: Proving Practical Distributed Systems Correct}.
+\newblock In {\em Proceedings of the 25th Symposium on Operating Systems
+  Principles}, SOSP '15, pages 1--17, New York, NY, USA, 2015. ACM.
+
+\bibitem{taipeitorrent}
+Jackpal.
+\newblock A(nother) bittorrent client written in the go programming language.
+\newblock https://github.com/jackpal/Taipei-Torrent, 2010.
+
+\bibitem{godoctor}
+R.~A. Jeff~Overbey.
+\newblock Go doctor - the golang refactoring engine.
+\newblock http://gorefactor.org/index.html, 2014.
+
+\bibitem{nictukudht}
+Y.~Junqueira.
+\newblock Kademlia/mainline dht node in go.
+\newblock https://github.com/nictuku/dht, 2012.
+
+\bibitem{VeriFlow}
+A.~Khurshid, X.~Zou, W.~Zhou, M.~Caesar, and P.~B. Godfrey.
+\newblock {VeriFlow: Verifying Network-Wide Invariants in Real Time}.
+\newblock In {\em NSDI}, 2013.
+
+\bibitem{killian_macemc_nsdi_2007}
+C.~Killian, J.~W. Anderson, R.~Jhala, and A.~Vahdat.
+\newblock Life, death, and the critical transition: finding liveness bugs in
+  systems code.
+\newblock In {\em Networked Systems Design and Implementation (NSDI)},
+  Cambridge, MA, USA, 2007.
+
+\bibitem{kubernetes}
+Kubernetes.
+\newblock Production-grade container scheduling and management.
+\newblock http://kubernetes.io/, 2014.
+
+\bibitem{lamport78}
+L.~Lamport.
+\newblock Time, clocks, and the ordering of events in a distributed system.
+\newblock {\em CACM}, 21(7):558--565, 1978.
+
+\bibitem{liu_d3s_nsdi_2008}
+X.~Liu, Z.~Guo, X.~Wang, F.~Chen, X.~Lian, J.~Tang, M.~Wu, M.~F. Kaashoek, and
+  Z.~Zhang.
+\newblock {D3S: Debugging Deployed Distributed Systems}.
+\newblock In {\em Networked Systems Design and Implementation (NSDI)}, San
+  Francisco, CA, USA, 2008.
+
+\bibitem{lou_mining_distsys_deps_osr_2010}
+J.~G. Lou, Q.~Fu, Y.~Wang, and J.~Li.
+\newblock {Mining dependency in distributed systems through unstructured logs
+  analysis}.
+\newblock {\em SIGOPS Oper. Syst. Rev.}, 44(1):91--96, Mar. 2010.
+
+\bibitem{Mace2015}
+J.~Mace, R.~Roelke, and R.~Fonseca.
+\newblock Pivot tracing: Dynamic causal monitoring for distributed systems.
+\newblock In {\em Proceedings of the 25th Symposium on Operating Systems
+  Principles}, SOSP '15, pages 378--393, New York, NY, USA, 2015. ACM.
+
+\bibitem{mattern_vector_clocks_1989}
+F.~Mattern.
+\newblock Virtual {T}ime and {G}lobal {S}tates of {D}istributed {S}ystems.
+\newblock In {\em Parallel and Distributed Algorithms}, pages 215--226, 1989.
+
+\bibitem{Maymounkov2002}
+P.~Maymounkov and D.~Mazi{\`e}res.
+\newblock {Kademlia: A Peer-to-Peer Information System Based on the XOR
+  Metric}.
+\newblock In {\em IPTPS}, 2002.
+
+\bibitem{RaftATC14}
+D.~Ongaro and J.~Ousterhout.
+\newblock {In Search of an Understandable Consensus Algorithm}.
+\newblock In {\em USENIX ATC}, 2014.
+
+\bibitem{Ottenstein:1984}
+K.~J. Ottenstein and L.~M. Ottenstein.
+\newblock The program dependence graph in a software development environment.
+\newblock {\em SIGPLAN Not.}, 19(5):177--184, Apr. 1984.
+
+\bibitem{Ousterhout91therole}
+J.~K. Ousterhout.
+\newblock {The Role of Distributed State}.
+\newblock In {\em In CMU Computer Science: a 25th Anniversary Commemorative},
+  pages 199--217. ACM Press, 1991.
+
+\bibitem{reynolds_pip_2006}
+P.~Reynolds, C.~Killian, J.~L. Wiener, J.~C. Mogul, M.~A. Shah, and A.~Vahdat.
+\newblock Pip: {D}etecting the {U}nexpected in {D}istributed {S}ystems.
+\newblock In {\em 3rd conference on Networked Systems Design \& Implementation
+  - Volume 3}, NSDI'06, page~9. USENIX Association, 2006.
+
+\bibitem{runlim}
+RunLim.
+\newblock Runlim.
+\newblock \url{http://fmv.jku.at/runlim/}, 2016.
+
+\bibitem{Sambasivan11}
+R.~R. Sambasivan, A.~X. Zheng, M.~D. Rosa, E.~Krevat, S.~Whitman, M.~Stroucken,
+  W.~Wang, L.~Xu, and G.~R. Ganger.
+\newblock {Diagnosing Performance Changes by Comparing Request Flows}.
+\newblock In {\em NSDI}, 2011.
+
+\bibitem{state_machine_replication_Schneider1990}
+F.~B. Schneider.
+\newblock Implementing fault-tolerant services using the state machine
+  approach: a tutorial.
+\newblock {\em ACM Comput. Surv.}, 22(4):299--319, Dec. 1990.
+
+\bibitem{scottminimizing}
+C.~Scott, A.~Panda, V.~Brajkovic, G.~Necula, A.~Krishnamurthy, and S.~Shenker.
+\newblock {Minimizing Faulty Executions of Distributed Systems}.
+\newblock In {\em NSDI}, 2016.
+
+\bibitem{Dapper}
+B.~H. Sigelman, L.~A. Barroso, M.~Burrows, P.~Stephenson, M.~Plakal, D.~Beaver,
+  S.~Jaspan, and C.~Shanbhag.
+\newblock Dapper, a large-scale distributed systems tracing infrastructure.
+\newblock Technical report, Google, Inc., 2010.
+
+\bibitem{Walkinshaw03thejava}
+N.~Walkinshaw, M.~Roper, M.~Wood, and N.~W.~M. Roper.
+\newblock The java system dependence graph.
+\newblock In {\em In Third IEEE International Workshop on Source Code Analysis
+  and Manipulation}, pages 5--5, 2003.
+
+\bibitem{wilcox_verdi_pldi15}
+J.~R. Wilcox, D.~Woos, P.~Panchekha, Z.~Tatlock, X.~Wang, M.~D. Ernst, and
+  T.~Anderson.
+\newblock Verdi: A framework for implementing and formally verifying
+  distributed systems.
+\newblock In {\em Proceedings of the 36th ACM SIGPLAN Conference on Programming
+  Language Design and Implementation}, PLDI 2015, pages 357--368, New York, NY,
+  USA, 2015. ACM.
+
+\bibitem{xu_console_log_mining_sosp_2009}
+W.~Xu, L.~Huang, A.~Fox, D.~Patterson, and M.~I. Jordan.
+\newblock {D}etecting {L}arge-{S}cale {S}ystem {P}roblems by {M}ining {C}onsole
+  {L}ogs.
+\newblock In {\em SOSP}, 2009.
+
+\bibitem{yabandeh_avenger_srds_2011}
+M.~Yabandeh, A.~Anand, M.~Canini, and D.~Kostic.
+\newblock {Finding Almost-Invariants in Distributed Systems}.
+\newblock In {\em Proceedings of the 2011 IEEE 30th International Symposium on
+  Reliable Distributed Systems}, SRDS '11, pages 177--182, Washington, DC, USA,
+  2011. IEEE Computer Society.
+
+\bibitem{yang_modist_nsdi09}
+J.~Yang, T.~Chen, M.~Wu, Z.~Xu, X.~Liu, H.~Lin, M.~Yang, F.~Long, L.~Zhang, and
+  L.~Zhou.
+\newblock Modist: Transparent model checking of unmodified distributed systems.
+\newblock In {\em Proceedings of the 6th USENIX Symposium on Networked Systems
+  Design and Implementation}, NSDI'09, pages 213--228, Berkeley, CA, USA, 2009.
+  USENIX Association.
+
+\bibitem{Zhao:2014:LNR:2685048.2685099}
+X.~Zhao, Y.~Zhang, D.~Lion, M.~F. Ullah, Y.~Luo, D.~Yuan, and M.~Stumm.
+\newblock Lprof: A non-intrusive request flow profiler for distributed systems.
+\newblock In {\em Proceedings of the 11th USENIX Conference on Operating
+  Systems Design and Implementation}, OSDI'14, pages 629--644, Berkeley, CA,
+  USA, 2014. USENIX Association.
+
+\end{thebibliography}

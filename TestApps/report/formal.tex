@@ -1,0 +1,60 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Distributed state background}
+\label{sec:formal}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Performing analysis on distributed state requires a method for
+%% observing it.
+%
+
+% JS: I would like to know why I am explained all this. Why is it
+% important that I learn all this? What kind of state invariant should
+% I imagine?  Perhaps it is simpler to describe consistent cut with
+% math, the words confused me. "A cut is consistent if, for all events
+% e and e': ( e ∈ C and e ' → e ) ⇒ e ' ∈ C ". is clearer, no?
+
+In this section we overview our model of distributed state and how it
+can be observed from the partially ordered logs of an
+execution. Appendix~\ref{sec:formal-appendix} contains a more formal
+description.
+
+During a system's execution, each instruction is an \emph{event} and an
+\emph{event instance} is a reference to a specific \emph{event}. The
+\emph{state} of a node at an event instance is the set of values for
+all the variables resident in memory.  The state of a node can be
+recorded by writing the variable values to a log.  A \emph{state
+  transition} is the change to some variable values in response to an
+event instance. An execution of a node is a totally ordered sequence
+of events corresponding to state transitions.
+%
+In a message passing system the sending and receiving events allow a
+partial ordering of events across nodes. Vector clocks can
+establish this ordering~\cite{mattern_vector_clocks_1989}. We will use
+\emph{log} to refer to the sequence of node states paired with vector
+clocks generated in a single execution of the system.
+
+Most of Dinv's analyses run on a log produced by a system
+after it has executed. Determining the combination of states across
+the nodes that should be used to detect meaningful distributed
+invariants requires additional constraints.
+% 
+A \emph{\scc} is a consistent cut in which all messages sent up until
+that point have also been received (i.e., no messages are in flight). We
+also use \scc to denote the corresponding set of system node states.
+%
+Inferring state invariants over a \scc ensures that no messages in
+flight can invalidate an invariant on arrival. The complete set of
+\scc{s} which occur during the execution of a system provide a
+step-by-step view of the system's global state transitions on which
+Dinv performs its analysis.
+
+To infer distributed invariants Dinv aggregates the state of nodes in
+a \scc into a combined global state. It does this in several ways,
+each of which is a \emph{merging strategy}. These produce alternative
+views of a system. We refer to points at which two or more states are
+merged by our log merging algorithm as a \emph{distributed program
+  point}. %% Section~\ref{sec:log-analysis} describes three approaches
+%% for building distributed program points, all of which operate at the
+%% granularity of \scc.
+Next, we describe \dinv's design.
+%

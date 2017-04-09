@@ -1,0 +1,34 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Implementation}
+\label{sec:implementation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\dinv is implemented in 8k \footnote{All LOC counts were collected
+useing cloc~\cite{cloc} test code was ommited from the counts.} lines
+of Go code.  To maintain vector clocks we developed our own vector
+clock library.  The library implements an optimized version of the
+vector clock algorithm, and includes a static analysis tool for
+automatically injecting vector clocks into Go programs.  We
+constructed a database of the functions and built wrappers for each
+function. Functions are first-class objects in Go, which allows them
+to be passed into other functions as arguments.  We make use of Go's
+AST library to build and traverse the AST of a program and search for
+networking functions in our database. When a match is detected, we
+perform a rotation on the the AST node containing the networking call
+and inject our code.
+
+We developed a seperate component for instrumenting logging
+annotations.  The instrumentation component makes use of control flow,
+and data flow from GoDoctor~\cite{godoctor}. Furthermore
+we developed a component for merging logs, and a runtime inviornment
+which writes variables to a log.  \dinv requires a working
+installation of Daikon, and has been tested on Ubuntu 14.04 \& 16.04.
+\dinv runs on Go 1.6.
+
+%, and takes $0.01s$ to build. 
+%
+%% Dinv also has a number of dependencies, most notably the
+%% Go vector clock library GoVec. Currently DInv requires that user
+%% systems incorporate the GoVec library API in their communication layer
+%% protocols. The complete list of dependencies can be found in the
+%% online installation instructions at
