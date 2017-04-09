@@ -3,18 +3,18 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The modern internet generates petabytes of data per day. Processing
-    vast amounts of data is an increasingly common task for both
+    vast ammounts of data is an increasingly common task for both
     scientists and modestly experienced programmers. Often this data
-    is naturally represented as a graph, such as social media friends,
+    is naturally represeted as a graph, such as social media freinds,
     and requires clusters of machines to process. Concurrent trends in
-    data centre architecture suggest that the rack is the new server,
-    and shared memory is now a feasible interface between rack
-    collocated servers. These trends made us wonder \textit{How simple
+    data center archetecture suggest that the rack is the new server,
+    and shared memory is now a feasable interface between rack
+    colocated servers. These trends made us wonder \textit{How simple
     can fast graph processing be on a rack of servers?}. We
     investigated the tradeoffs of the conventional pregal style
     \textit{"think like a vertex"} programming model, and found its
     performance unacceptable. In contrast we find that a
-    \textit{"Think like a sub-graph"} model respects locality in common
+    \textit{"Think like a subgraph"} model respects locality in common
     graphs, provides a more holistic programming interface, and runs
     fast!
 

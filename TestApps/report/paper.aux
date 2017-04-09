@@ -1,223 +1,58 @@
 \relax 
-\citation{Ousterhout91therole}
-\citation{scottminimizing}
-\citation{Ernst07}
+\citation{Malewicz:2010:PSL:1807167.1807184}
+\citation{Ching:2015:OTE:2824032.2824077}
+\citation{Kyrola:2012:GLG:2387880.2387884}
+\citation{Low:2012:DGF:2212351.2212354}
+\citation{Xin:2013:GRD:2484425.2484427}
+\citation{Gonzalez:2012:PDG:2387880.2387883}
+\citation{Vavilapalli:2013:AHY:2523616.2523633}
+\citation{Zaharia:2012:RDD:2228298.2228301}
+\citation{Isard:2007:DDD:1272996.1273005}
+\citation{Murray:2013:NTD:2517349.2522738}
+\citation{Kyrola:2012:GLG:2387880.2387884}
+\citation{Keleher:1994:TDS:1267074.1267084}
+\citation{Power:2010:PBF:1924943.1924964}
+\citation{Morin:2004:KDP:1111682.1111729}
+\citation{Haddad:2001:MCL:374794.374800}
+\citation{Huang06vodca:view-oriented}
+\citation{facebook-rack}
+\citation{machine}
+\citation{intel-rsa}
+\citation{seamicro}
+\citation{Han:2013:NSR:2535771.2535778}
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}}
 \newlabel{sec:intro}{{1}{1}}
-\citation{etcdraft}
-\citation{taipeitorrent}
-\citation{groupcache}
-\citation{serf}
-\citation{RaftATC14}
-\citation{mattern_vector_clocks_1989}
-\@writefile{toc}{\contentsline {section}{\numberline {2}Distributed state background}{2}}
-\newlabel{sec:formal}{{2}{2}}
-\@writefile{toc}{\contentsline {section}{\numberline {3}Dinv\xspace  design}{2}}
-\newlabel{sec:instrumentation}{{3}{2}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}System instrumentation}{2}}
-\newlabel{sec:instrumentation}{{3.1}{2}}
-\citation{Ottenstein:1984}
-\citation{Walkinshaw03thejava}
-\citation{serf}
-\citation{das2002swim}
-\citation{Cooper:1991:CDG:122759.122774}
-\citation{Garg}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overview of the steps in Dinv\xspace  .\relax }}{3}}
-\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
-\newlabel{fig:dinv-flow}{{1}{3}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Example illustrating network interacting variables (underlined) contained in the forward slice from $msg := conn.Read()$. Two annotations on lines 6 and 12 are also highlighted. \relax }}{3}}
-\newlabel{fig:data-flow}{{2}{3}}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Instrumentation strategies and the control (automatic/manual) offered by each strategy for selecting state logging location and set of logged variables.\relax }}{3}}
-\newlabel{table:inst-strat}{{1}{3}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces \textbf  {(a)} Space-time diagram of an execution of code in Figure\nobreakspace  {}2\hbox {} with two nodes, Node 0 and Node 1. \textbf  {(b)} Lattice corresponding to this execution with strongly consistent cut\xspace  {s} indicated in bold.\relax }}{4}}
-\newlabel{fig:time-lattice}{{3}{4}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Extracting strongly consistent cut\xspace  {s}}{4}}
-\newlabel{sec:log-analysis}{{3.2}{4}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Merging cuts into distributed program points}{4}}
-\newlabel{sec:merging}{{3.3}{4}}
-\newlabel{alg:mineStates}{{\caption@xref {alg:mineStates}{ on input line 159}}{4}}
-\@writefile{loa}{\contentsline {algocf}{\numberline {1}{\ignorespaces High level log merging overview\relax }}{4}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Sample SWIM execution with 4 nodes running code from Figure\nobreakspace  {}2\hbox {}. This diagram is a subset of a larger execution. Points $L1$ and $L2$ on each node timeline represent the execution of two separate logging functions. $L1$ and $L2$ corresponds to lines 12 and 6 in Figure\nobreakspace  {}2\hbox {} respectivly. Dashed lines $C1$, $C2$, $C3$ are strongly consistent cut\xspace  {s} of the execution including just these 4 nodes.\relax }}{5}}
-\newlabel{fig:gossip-execution}{{4}{5}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Illustration of the three merging strategies that convert cuts into sets of distributed program points. On the left, are cuts $C1$, $C2$, $C3$ from Figure\nobreakspace  {}4\hbox {} depicted as sets of logged state. The right side shows how the three merging strategies, \textbf  {WCM}: whole cut merge, \textbf  {SR}: send-receive merge, and \textbf  {TO}: total order merge, produce different distributed program points. Highlighted are two matching distributed programs points.\relax }}{5}}
-\newlabel{fig:cuts-to-dpp}{{5}{5}}
-\citation{Ernst07}
-\citation{cloc}
-\citation{godoctor}
-\@writefile{loa}{\contentsline {algocf}{\numberline {2}{\ignorespaces Extract the set of distributed program points from a consistent distributed state\relax }}{6}}
-\newlabel{alg:dpp}{{2}{6}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Bucketing distributed program points by type}{6}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Using Daikon to infer invariants}{6}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Implementation}{6}}
-\newlabel{sec:implementation}{{4}{6}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Applying Dinv\xspace  to complex systems}{6}}
-\newlabel{sec:application}{{5}{6}}
-\citation{etcdraft}
-\citation{taipeitorrent}
-\citation{groupcache}
-\citation{serf}
-\citation{runlim}
-\citation{serf}
-\citation{das2002swim}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Evaluation: checking systems}{7}}
-\newlabel{sec:eval-checking}{{6}{7}}
-\newlabel{sec:checking-systems}{{6}{7}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Checking SWIM protocol in Serf}{7}}
-\citation{RaftATC14}
-\citation{kubernetes}
-\citation{fleet}
-\citation{locksmith}
-\citation{RaftATC14}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Invariants listed by system, their corresponding data invariants, and descriptions\relax }}{8}}
-\newlabel{table:invariant-table}{{2}{8}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Checking etcd Raft}{8}}
-\citation{nictukudht}
-\citation{Maymounkov2002}
-\citation{groupcache}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Checking Taipei-Torrent}{9}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}Checking Groupcache}{9}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Evaluation: Dinv\xspace  overhead}{10}}
-\newlabel{sec:eval-perf}{{7}{10}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Time required to instrument Etcd Raft, for logging state and vector clocks.\relax }}{10}}
-\newlabel{fig:inst-perf}{{6}{10}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Runtime performance of logging code.\relax }}{10}}
-\newlabel{table:run-perf}{{3}{10}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Difference in bandwidths between instrumented and un-instrumented etcd Raft.\relax }}{11}}
-\newlabel{fig:bandwidth-overhead}{{7}{11}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Dinv\xspace  's dynamic analysis runtime vs the runtime of etcd Raft and GroupCache (GCache).\relax }}{11}}
-\newlabel{table:execution-vs-mergetime}{{4}{11}}
-\@writefile{toc}{\contentsline {section}{\numberline {8}Discussion}{11}}
-\newlabel{sec:discussion}{{8}{11}}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Dinv\xspace  's dynamic analysis runtime vs the number of nodes in etcd Raft\relax }}{11}}
-\newlabel{fig:nodes-vs-mergetime}{{8}{11}}
-\citation{dist_snapshots_Chandy1985}
-\citation{state_machine_replication_Schneider1990}
-\citation{geels_friday_nsdi_2007}
-\citation{yang_modist_nsdi09}
-\citation{killian_macemc_nsdi_2007}
-\citation{lou_mining_distsys_deps_osr_2010}
-\citation{Beschastnikh2012}
-\citation{xu_console_log_mining_sosp_2009}
-\citation{Sambasivan11}
-\citation{Ernst07}
-\citation{yabandeh_avenger_srds_2011}
-\citation{Dapper}
-\citation{Zhao:2014:LNR:2685048.2685099}
-\citation{Fay2011}
-\citation{Mace2015}
-\citation{wilcox_verdi_pldi15}
-\citation{hawblitzel_ironfleet_sosp2015}
-\citation{yang_modist_nsdi09}
-\citation{killian_macemc_nsdi_2007}
-\citation{reynolds_pip_2006}
-\citation{geels_friday_nsdi_2007}
-\citation{liu_d3s_nsdi_2008}
-\citation{VeriFlow}
-\@writefile{toc}{\contentsline {section}{\numberline {9}Related work}{12}}
-\newlabel{sec:related}{{9}{12}}
-\@writefile{toc}{\contentsline {section}{\numberline {10}Conclusion}{12}}
-\newlabel{sec:conclusion}{{10}{12}}
-\citation{lamport78}
-\@writefile{toc}{\contentsline {section}{\numberline {A}Formal definitions}{13}}
-\newlabel{sec:formal-appendix}{{A}{13}}
-\newlabel{def:host_event_type}{{1}{13}}
-\newlabel{def:syste_event_type}{{2}{13}}
-\newlabel{def:event_instance}{{3}{13}}
-\newlabel{def:host_trace}{{4}{13}}
-\newlabel{def:host_ordering}{{5}{13}}
-\newlabel{def:interaction_ordering}{{6}{13}}
-\newlabel{def:system_trace}{{7}{13}}
-\newlabel{def:log}{{8}{13}}
-\newlabel{def:node_state}{{9}{13}}
-\newlabel{def:host_execution}{{10}{13}}
-\newlabel{def:distributed_state}{{11}{13}}
-\citation{fidge_vector_clocks_1988}
-\citation{mattern_vector_clocks_1989}
-\citation{Ottenstein:1984}
-\citation{Walkinshaw03thejava}
-\newlabel{def:cut}{{12}{14}}
-\newlabel{def:consistent_cut}{{13}{14}}
-\newlabel{def:distributed_program_point}{{14}{14}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces distributed program points in totally ordered subsets\relax }}{14}}
-\newlabel{def:consistent_distributed_state}{{15}{14}}
-\@writefile{toc}{\contentsline {section}{\numberline {B}Ordering events with vector time}{14}}
-\newlabel{sec:formal-vector-clocks}{{B}{14}}
-\@writefile{toc}{\contentsline {section}{\numberline {C}Logging node state}{14}}
-\newlabel{sec:logging-variables}{{C}{14}}
-\@writefile{loa}{\contentsline {algocf}{\numberline {3}{\ignorespaces Algorithm converting commented logging annotation to logging code.\relax }}{15}}
-\newlabel{alg:instrument}{{3}{15}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {C.1}Logging functions}{15}}
-\newlabel{sec:logging-functions}{{C.1}{15}}
-\@writefile{toc}{\contentsline {section}{\numberline {D}Constructing the lattice}{15}}
-\newlabel{sec:lattice-appendix}{{D}{15}}
-\@writefile{loa}{\contentsline {algocf}{\numberline {4}{\ignorespaces Lattice Construction Algorithm\relax }}{15}}
-\newlabel{alg:lattice}{{4}{15}}
-\@writefile{toc}{\contentsline {section}{\numberline {E}Constructing strongly consistent cuts}{15}}
-\newlabel{sec:consistent-cuts-appendix}{{E}{15}}
-\@writefile{loa}{\contentsline {algocf}{\numberline {5}{\ignorespaces Sent and Received message enumeration\relax }}{16}}
-\newlabel{alg:enumerate}{{5}{16}}
-\@writefile{loa}{\contentsline {algocf}{\numberline {6}{\ignorespaces Algorithm for determining which lattice points correspond to a consistent cut\relax }}{16}}
-\newlabel{alg:mineCuts}{{6}{16}}
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Retrieve consistent node states from logs\relax }}{16}}
-\@writefile{loa}{\contentsline {algocf}{\numberline {7}{\ignorespaces Collect the Host's state, for each consistent cut\relax }}{16}}
-\newlabel{alg:collectStates}{{7}{16}}
-\@writefile{toc}{\contentsline {section}{\numberline {F}Daikon background}{16}}
-\newlabel{daikon-appendix}{{F}{16}}
-\newlabel{lst:loopinvariants}{{1}{16}}
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {1}simple program with loop invariants}{16}}
 \bibstyle{abbrv}
 \bibdata{paper}
-\bibcite{cloc}{1}
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Daikon Invariants\relax }}{17}}
-\newlabel{table:daikon-invariants}{{5}{17}}
-\newlabel{lst:insturmenteddaikonLoop}{{2}{17}}
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {2}Code instrumented to produce trace}{17}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {F.1}Translation Daikon invariants to first order logic}{17}}
-\newlabel{sec:daikon-to-fol}{{F.1}{17}}
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Raft Strong Leadership Invariant\relax }}{17}}
-\newlabel{table:Existance-Invariant}{{6}{17}}
-\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces File A-Leader B-Follower C-Follower\relax }}{17}}
-\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces File A-Follower B-Leader C-Follower\relax }}{17}}
-\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces File A-Follower B-Follower C-Leader\relax }}{17}}
-\bibcite{Beschastnikh2012}{2}
-\bibcite{dist_snapshots_Chandy1985}{3}
-\bibcite{Cooper:1991:CDG:122759.122774}{4}
-\bibcite{fleet}{5}
-\bibcite{etcdraft}{6}
-\bibcite{locksmith}{7}
-\bibcite{das2002swim}{8}
-\bibcite{Fay2011}{9}
-\bibcite{Ernst07}{10}
-\bibcite{fidge_vector_clocks_1988}{11}
-\bibcite{groupcache}{12}
-\bibcite{Garg}{13}
-\bibcite{geels_friday_nsdi_2007}{14}
-\bibcite{serf}{15}
-\bibcite{hawblitzel_ironfleet_sosp2015}{16}
-\bibcite{taipeitorrent}{17}
-\bibcite{godoctor}{18}
-\bibcite{nictukudht}{19}
-\bibcite{VeriFlow}{20}
-\bibcite{killian_macemc_nsdi_2007}{21}
-\bibcite{kubernetes}{22}
-\bibcite{lamport78}{23}
-\bibcite{liu_d3s_nsdi_2008}{24}
-\bibcite{lou_mining_distsys_deps_osr_2010}{25}
-\bibcite{Mace2015}{26}
-\bibcite{mattern_vector_clocks_1989}{27}
-\bibcite{Maymounkov2002}{28}
-\bibcite{RaftATC14}{29}
-\bibcite{Ottenstein:1984}{30}
-\bibcite{Ousterhout91therole}{31}
-\bibcite{reynolds_pip_2006}{32}
-\bibcite{runlim}{33}
-\bibcite{Sambasivan11}{34}
-\bibcite{state_machine_replication_Schneider1990}{35}
-\bibcite{scottminimizing}{36}
-\bibcite{Dapper}{37}
-\bibcite{Walkinshaw03thejava}{38}
-\bibcite{wilcox_verdi_pldi15}{39}
-\bibcite{xu_console_log_mining_sosp_2009}{40}
-\bibcite{yabandeh_avenger_srds_2011}{41}
-\bibcite{yang_modist_nsdi09}{42}
-\bibcite{Zhao:2014:LNR:2685048.2685099}{43}
+\bibcite{facebook-rack}{1}
+\bibcite{machine}{2}
+\bibcite{intel-rsa}{3}
+\bibcite{seamicro}{4}
+\bibcite{Ching:2015:OTE:2824032.2824077}{5}
+\bibcite{Gonzalez:2012:PDG:2387880.2387883}{6}
+\bibcite{Haddad:2001:MCL:374794.374800}{7}
+\bibcite{Han:2013:NSR:2535771.2535778}{8}
+\bibcite{Huang06vodca:view-oriented}{9}
+\bibcite{Isard:2007:DDD:1272996.1273005}{10}
+\bibcite{Keleher:1994:TDS:1267074.1267084}{11}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related work}{2}}
+\newlabel{sec:related}{{2}{2}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}API}{2}}
+\newlabel{sec:api}{{3}{2}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Partitioning}{2}}
+\newlabel{sec:partition}{{4}{2}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Evaluation}{2}}
+\newlabel{sec:eval}{{5}{2}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Discussion}{2}}
+\newlabel{sec:discussion}{{6}{2}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusion}{2}}
+\newlabel{sec:conclusion}{{7}{2}}
+\bibcite{Kyrola:2012:GLG:2387880.2387884}{12}
+\bibcite{Low:2012:DGF:2212351.2212354}{13}
+\bibcite{Malewicz:2010:PSL:1807167.1807184}{14}
+\bibcite{Morin:2004:KDP:1111682.1111729}{15}
+\bibcite{Murray:2013:NTD:2517349.2522738}{16}
+\bibcite{Power:2010:PBF:1924943.1924964}{17}
+\bibcite{Vavilapalli:2013:AHY:2523616.2523633}{18}
+\bibcite{Xin:2013:GRD:2484425.2484427}{19}
+\bibcite{Zaharia:2012:RDD:2228298.2228301}{20}

@@ -3,264 +3,78 @@
 \label{sec:intro}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+Big data processing is complicated. Typically scientists, and
+experienced programmers alike struggle with manninging and configuring
+clusters of machines to processes large ammounts of data. Frameworks
+like Hadoop and Pregal have signifcantly eased the difficulty of big
+data processing, but they remain intimidating for the lay man. We
+noticed a trend in non-systems scientists, and researchers, that they
+wanted to \textit{"Just write python code that ran on a bunch of
+computers"}. For the benifit of science we investigated how to make
+this dream a reality.
 
-The demand for reliable distributed systems is constantly on the rise.
-The last two decades have seen a paradigm shift from PC's to SAS and
-cloud storage. Industrial control systems, and ATM's are naturally
-distributed applications, which are being implemented at an ever
-increasing rate. Failures of these systems are frequent and severe,
-the estimated cost of data centre downtime in 2013 amounted to almost
-285 million USD's~\cite{gagnaire2012downtime}.
+Making all pyhon code run on clusters of machines is impracticle, and
+due to network overhead would lead to sluggish un-optimal code. Insted
+we concented our efforts on a common, but difficult big data
+processing task, graph processing. Many frameworks exist for
+distributed graph
+processing~\cite{Malewicz:2010:PSL:1807167.1807184,Ching:2015:OTE:2824032.2824077,Kyrola:2012:GLG:2387880.2387884,Low:2012:DGF:2212351.2212354,Xin:2013:GRD:2484425.2484427,Gonzalez:2012:PDG:2387880.2387883},
+and many general frameworks exist which are used for graph
+processing~\cite{Vavilapalli:2013:AHY:2523616.2523633,Zaharia:2012:RDD:2228298.2228301,Isard:2007:DDD:1272996.1273005,Murray:2013:NTD:2517349.2522738}.
+These frameworks vary in their complexity, but none are
+\textit{"acessable"} for programmers with no systems experience.
 
-The construction of dependable distributed systems is difficult. In contrast
-to centralized computing, distributed systems suffer from unreliable networks,
-race conditions, and partial failures. Exhaustively reasoning through corner
-cases and potential bugs which arise from these complications has proven
-difficult for humans. 
+With the exception of~\cite{Kyrola:2012:GLG:2387880.2387884} the
+afformentioned systems suffer a common pitfall to accessability; they
+expose the complexity of a distributed message passing system to the
+user. Extensive work has been done to hide this complexity in the
+abstraction of distributed shared memory (DSM)
+~\cite{Keleher:1994:TDS:1267074.1267084,Power:2010:PBF:1924943.1924964,Morin:2004:KDP:1111682.1111729,Haddad:2001:MCL:374794.374800,Huang06vodca:view-oriented}.
+The benifits of DSM have been ignored in recent years due its flaws,
+mainly fate sharing and sub optimal performance. Dismissing DSM may
+well have been a shortsighted mistake. Ultra dense memory, and the
+approach of terrabit bandwith within a rack give modern racks the
+appearance of single machines, and has lead twards disagregaded
+archectectures~\cite{facebook-rack,machine,intel-rsa,seamicro,Han:2013:NSR:2535771.2535778}.
+Such futeristic systems lend themselves naturally to DSM which
+motivates our proposal for a corresponding computation framework.
 
-%\sg{why are bugs difficult for us to catch?}
-\todo{cut this if dinv debugging never works (talk about verification instead)}
-Bugs in distributed systems are difficult to isolate and reproduce.
-Atypical and unwanted behaviour can occur erratically due to a number
-of factors acting in concert. Heisenbugs for instance are typically
-identified through the manual inspection of log files, forcing
-developers to hypothesize about the state in which the bug occurred.
-To prevent bugs developers construct large test suits to simulate the
-runtime conditions of their systems, which in itself is a difficult
-problem. Because of this the quality of these test suits is often un-verifiable.
+The largest disadvantage of DSM is performance. Programers can write
+terribly performant programs by failing to reason about the location
+of memory, leading to memory thrashing. In computation where a high
+degree of consistancy between shared resources DSM is the wrong tool
+for the job. In contrast when large ammounts of comutation can be
+performed between memory synchronizations DSM provides a simple and
+efficient programming model. Graph processing suffers from a lack of
+locality. In computations such as PageRank a single intteration may
+require edge updates which require the synchronization of every
+machine in a cluster. This problem can be largely avoided in practice
+by carfully preprocessing graphs into partions where the minimun
+number of graph edges cross machines. The cost of preprocessing a
+graph can be large, in some cases the complexity of finding a good
+partition is greater than solving the initial problem! Here we
+demonstrate that the cost of graph partioning is worth it for the
+benifits that DSM provides.
 
+In this paper we attack the problem of developing a simple and
+efficient graph processing interface for DSM. Specifically we make the
+following contributions.
 
-%\sg{what techniques do we have?}
-Software specification is useful for verifying the correctness of
-software.  A subset of a specification are program invariants.
-Invariants are properties which hold at any point. Developers can
-specify invariants manually, unfortunately this process is laborious,
-and, as systems become more elaborate, determining invariants becomes
-difficult and time consuming.
+\begin{itemize}
+        \item A simple graph processing api
+        \item A graph paritioning scheme optimal for DSM
+        \item An evaluation of processing performance between partitioned DSM processing, and pregal style graph processing
+\end{itemize}
 
-%\sg{why we can just use Daikon} 
-Daikon is a dynamic analysis tool which automatically
-detects likely data invariants in sequential systems ~\cite{Ernst07}. However, it
-lacks the facilities to analyze distributed systems. Daikon requires
-an explicit ordered log of a programs execution to infer
-invariants.In distributed systems no such ordering is present. In A
-system with only two hosts the number of potential execution orderings
-is the product of the program points on the hosts. As the number of
-hosts grows, the number of execution orderings grows exponentially.
-Secondly Daikon requires access to variables values, which are not
-resident on single machine.
-
-%\sg{DInv distription}\todo{integrate}
-DInv is a static and dynamic software analysis tool-chain that infers
-state invariants of a distributed system written in Go. As an example,
-a distributed system may include host-local state that records the
-current leader in the system (e.g., a.leader is the current leader
-recognized by host a). A desirable invariant in the system is that all
-hosts recognize the same leader (i.e., a.leader == b.leader ==
-c.leader). Such invariants, if they are enforced by the system, may
-indicate that the system is functioning correctly. And, a violation of
-such an invariant, indicates that the system has a bug, or is not
-implementing the specification. Unfortunately, such specifications are
-rarely written down, and in this project we infer such invariants from
-dynamic observations of system activity.
-%
-DInv is a first tool of its kind: numerous invariant/specification
-mining tools exist for sequential systems, but DInv is the first tool
-to mine data-based invariants of distributed systems.
-
-
-%\sg{why clock interleaving makes this problem non trivial}
-If every machine had a synchronized clock this problem could be
-solved by merging the logs of individual hosts based on timestamps.
-Distributed clock synchronization has a variety of solutions, none of
-which are perfectly accurate
-~\cite{Cristian1998,Gusella1989}. Without the
-ability to accurately order all events in a distributed system the
-next best approach is to exploit events which can be totally ordered
-with respect to one another. In particular the events of sending and
-receiving a message can be totally ordered because a message cannot be
-received before it is sent. Vector timestamps provide a
-synchronization mechanism which captures these events and can be used
-to provide partial orderings for all such events in a distributed
-system ~\cite{mattern_vector_clocks_1989}.  Partial orderings derived
-from vector clocks can be used to linearize communication patterns and
-provide instances at which invariants can be inferred.
-
-%\sg{local vs distributed data invariants} 
-\todo{This is reiterated better in the instrumentation section, either consolidate or move that argument here}
-Data Invariants in
-distributed systems can be classified into two categories. Firstly
-invariants on variables resident on a single machine, and invariants
-between variables on separate machines. Single hosts in a distributed
-system could be instrumented with Daikon, and have their local
-invariants detected. Our investigation is aimed to detect invariants
-on the global state of distributed systems.  Therefore, we only
-analyze variables which affect sent messages, or are affected by
-received messages. Variables which interact with network communication
-can be delineated from localized variables by via static analysis.
-Specifically program slicing ~\cite{Ottenstein:1984} can be used to
-determine variables which interact with the network.
-
-Using these concepts we have extended the functionality of Daikon to
-distributed systems. Our tool the Distributed Invariant Detector
-(DInv) instruments distributed systems to log variables affected by
-network communication along with vector time stamps. Using novel
-algorithms DInv merges the execution logs. Finally Daikon is run on
-the merged logs to infer likely data invariants from the distributed
-execution.
+The remainder of this paper is organized as follows. In
+Section~\ref{sec:related} we over view related work. In
+Section~\ref{sec:api} we describe our graph processing API.
+Section~\ref{sec:partition} we describe our approach to graph
+partitioning.In Section~\ref{sec:eval} we evaluate our framework
+against a pregal style \textit{think like a vetex model}.
+Section~\ref{sec:discussion} describes our experiences with our
+system, and Section~\ref{sec:conclusion} concludes the paper.
 
 
-\todo{Integrate the motivating example into the introduction. It
-  should not be a separate section at the end of the intro, but flow
-  naturally from the start of the intro. The example should be used in
-  the intro to demonstrate three things: (1) why the problem is
-  complex, (2) what is the input/output of our tool-chain, and (3) why
-  the output is helpful for some SE task -- comprehension or debugging
-  or verification.}
 
 
-\todo{Verify the correctness of Ricart-Agrawala instead of dining philosophers}
-
-DInv automatically detects likely data invariants which makes it
-useful tool for verifying the correctness of distributed systems.
-Ricart-Agrawala is a canonical distributed system algorithm. A correct
-implementation of the Ricart-Agrawala exhibits a number of
-invariants relating access to critical sections. We {\bf
-automatically verified the correctness of an implementation of Ricart-Agrawala}
-through the detection of such invariants.
-
-In particular when a host machine is in a critical section no other host
-may be in the critical section. More formally. 
-
-
-$\exists H_i (critical),\; \forall j \neq i, \; H_j \neg (critical)$
-
-
-In order to test DInv we wrote our own implementation of
-Ricart-Agrawala in Go. The program was designed to run with an
-arbitrary number of hosts. Our method for detecting data invariants
-requires that the line of code on which the invariant is detected, be
-executed a sufficiently large number of times. Our test program took
-the number of times each host was to gain access to the critical
-section as an argument. The
-hosts communicated via a message passing system implemented
-with UDP.
-
-\todo{Some of these details can stay in the intro, but you do not want
-  to be too low-level so early at the start. Also, the example should
-  not depend on these details -- explain what is going on conceptually
-  without talking about the details of how it works too much.}
-%
-
-Running DInv on a program requires the instrumentation of its source
-code. Its network communication must maintain vector clocks
-\cite{mattern_vector_clocks_1989}. Furthermore, logging annotations
-must be added to the lines of code to log the variables on which
-invariants will be inferred. We used \textit{GoVector} \cite{govector}
-to track vector clocks.  The state of each host was tracked with a
-boolean variable \textit{critical} which was set to true while
-executing the critical section.  \textit{//@dump} annotations were
-placed in the critical section, and in the main loop for each host.
-
-\todo{You are describing this like an evaluation/experiment. You do
-not need to do this for the intro. But, you DO need to emphasize
-relevance -- why is this approach helpful to a developer who might be
-working on such a system?}
-
-%
-
-We ran our test with 5 hosts \textit{$H_0...H_4$} respectfully. Each
-host was set to run the critical section $10$ times so
-invariants could be inferred with reasonable confidence level. From
-DInv's output we detected that whenever a host entered a critical
-section, no other host was executing it.
-
-\begin{framed}
-    %\begin{align*}
-    $\;$\\
-    $H_0-Critical = true $\\
-    $H_0-Critical \neq H_1-Critical $\\
-    $H_0-Critical \neq H_2-Critical $\\
-    $H_0-Critical \neq H_3-Critical $\\
-    $H_0-Critical \neq H_4-Critical $\\
-    $ \;\;\;\;\;\; \vdots \\$
-    $H_4-Critical = true $\\
-    $H_4-Critical \neq H_0-Critical $\\
-    $H_4-Critical \neq H_1-Critical $\\
-    $H_4-Critical \neq H_2-Critical $\\
-    $H_4-Critical \neq H_3-Critical $\\
-    %\end{align*}
-\end{framed}
-
-
-The Ricart-Agrawala source contains $357$ lines of code. DInv
-instrumented the code in $1.37s$. The program was set to execute for
-$30s$ on $5$ hosts, generating $2050$ log lines. Merging logs took
-$2.738s$. Finally executing Daikon on the resultant traces took $2m
-48s$. $2169$ likely data invariants were detected.
-
-\todo{create a picture discribing Ricart-Agrawala}
-
-%\begin{figure}[h]
-%    \includegraphics[width=0.25\textwidth]{fig/dining-phil.png}
-%  \caption{Dining Philosophers}
-%\end{figure}
-
-%%
-%%\sc{TODO: give example of data invariants}
-%%
-%%\sc{TODO: there exists a tool, Daikon, to detect these invariants for sequential systems}
-%%
-%%\sc{TODO: this paper introduces a similar tool to Daikon, but for distributed systems}
-%%
-%%\sc{TODO: this is different from prior work because the focus is on data affected by communication, and the introducing the concept of consistent distributed state; TODO: find related work of viewing distributed processing as sequential processing.}
-
-
-Data invariants mined from execution of distributed system give
-insight into program behaviour. Inferred invariants can be used to
-demonstrate that a system meets particular specifications, aid in the
-comprehension of a program, and provide a method for detecting the
-introduction of unwanted or buggy behaviour. In this paper we focus on
-two applications of distributed system invariants.
-
-\textbf{Automatic test suit evaluation.} Mutation testing evaluates
-test suits by injecting artificial defects into a program. Mutants
-have been demonstrated to be representative of real faults
-~\cite{Holmes14}. Furthermore, the percentage of mutants a test suit
-can detect, has been demonstrated to be an effective measure of its
-quality ~\cite{Andrews05ismutation}. An unfortunate downside to
-mutation testing is the generation of equivalent mutations. Equivalent
-mutants are changes to a program which change the syntax without
-altering the semantics. These are a problem because they are
-undetectable by tests, and pollute the percentage of mutants a test
-suite can catch.  The manual identification of equivalent mutants has
-been demonstrated to be extremely labour intensive. The JAVALANCHE
-project ~\cite{Schuler:2009:EMT:1572272.1572282} showed that mutants
-which do not alter a programs invariants have a high likelihood of
-being equivalent. This result allows for the automatic detection of
-equivalent mutants, thereby increasing the efficiency of mutation
-testing.
-
-To show DInv's usefulness as a distributed version of Daikon we
-implemented JAVALANCHE for distributed systems written in
-go. Following their methodology we compared the performance of DInv,
-v.s traditional Daikon. We found that \sg{Dinv outperforms Daikon in
-  accurately profiling invariants which lead to bugs in distributed
-  systems}
-
-
-\textbf{Program Understanding.} If designing distributed systems is
-hard, reasoning about expected behaviour through source code and stale
-documentation is near impossible. Networked variables which define a
-hosts state, and those which are passed over the network are
-interspersed with common variables designated to localized
-computation. Identifying networked variables may be difficult, but
-reasoning about their dynamic behaviour is far harder. By both
-detecting and specifying the behaviour of networked variables DInv can
-ease the indoctrination of new developers to a distributed system and
-help them to reason about its behaviour.
-
-
-\todo{The introduction must end with a list of contributions that the
-  paper makes. These should be major research take-aways that are (1)
-  novel, (2) interesting, and (3) untactful.}
