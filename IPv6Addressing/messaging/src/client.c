@@ -37,20 +37,17 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 	print_debug("Memcopying ALLOCATE message into send buffer");
 	struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
 
-	//memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-	//p->ai_addrlen = sizeof(*ipv6Pointer);
+	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+	p->ai_addrlen = sizeof(*ipv6Pointer);
 	
 	memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
 
 	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
-	print_debug("Waiting for reply");
 	// Wait to receive a message from the server
 	int numbytes = receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
 	print_debug("Extracted: %p from server", (void *)(*ipv6Pointer).s6_addr);
-	printNBytes((char *)ipv6Pointer->s6_addr,IPV6_SIZE);
-
+	//printNBytes((char *)ipv6Pointer->s6_addr,IPV6_SIZE);
 	print_debug("Received %d bytes", numbytes);
-	print_debug("Parsing response");
 	// Parse the response
 
 	struct in6_addr retVal;
@@ -59,15 +56,14 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 		print_debug("Response was ACK");
 		// If the message is ACK --> successful
 		struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-		print_debug("Memcopying the pointer");
+		printf("Received pointer data: ");
 		printNBytes(receiveBuffer+4,IPV6_SIZE);
 		// Copy the returned pointer
 		memcpy(remotePointer, receiveBuffer+4, IPV6_SIZE);
 		// Insert information about the source host (black magic)
 		//00 00 00 00 01 02 00 00 00 00 00 00 00 00 00 00
-		//			  ^  ^ these two bytes (subnet and host ID)
+		//			  ^  ^ these two bytes are stored (subnet and host ID)
 		memcpy(remotePointer->s6_addr+4, get_in_addr(p->ai_addr)+4, 2);
-		printNBytes((char *) remotePointer, IPV6_SIZE);
 		print_debug("Got: %p from server", (void *)remotePointer);
 		retVal = *remotePointer;
 	} else {
@@ -96,7 +92,8 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
  * Sends a write command to the sockfd for pointer remotePointer
  */
 int writeToMemory(int sockfd, struct addrinfo * p, char * payload,  struct in6_addr * toPointer) {
-	print_debug("Mallocing sendBuffer and receiveBuffer");
+	
+	//TODO: Error handling
 	char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 	char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 
@@ -107,28 +104,16 @@ int writeToMemory(int sockfd, struct addrinfo * p, char * payload,  struct in6_a
 	// Create the data
 	memcpy(sendBuffer, WRITE_CMD, sizeof(WRITE_CMD));
 	size += sizeof(WRITE_CMD) - 1; // Want it to rewrite null terminator
-/*	memcpy(sendBuffer+size,toPointer->s6_addr,IPV6_SIZE);
-	size += IPV6_SIZE;*/
-
 	memcpy(sendBuffer+size+1,payload, BLOCK_SIZE - size);
 	size += strlen(payload);
 
-	printf("Sending Data: %d bytes to ", size);
+	printf("Sending Data: %d bytes to remote pointer ", size);
 	printNBytes((char*) toPointer->s6_addr, IPV6_SIZE);
-
-	print_debug("Sending message");
 	sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
-
-
-	print_debug("Waiting for response");
 	receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
-
-
-	print_debug("Freeing sendBuffer and receiveBuffer");
 	free(sendBuffer);
 	free(receiveBuffer);
 
-	print_debug("Returning");
 	// TODO change to be meaningful, i.e., error message
 	return 0;
 }
@@ -204,6 +189,8 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 	nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
 	nextPointer->AddrString = allocateMem(sockfd, p);
 	for (i = 0; i < 9; i++) {
+		srand(time(NULL));
+
 		nextPointer = nextPointer->Pointer;
 		nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
 		nextPointer->AddrString = allocateMem(sockfd, p);
@@ -249,7 +236,7 @@ int main(int argc, char *argv[]) {
 	//Socket operator variables
 	const int on=1, off=0;
 
-	if (argc < 2) {
+	if (argc <= 2) {
 		printf("Defaulting to standard values...\n");
 		argv[1] = "::1";
 		argv[2] = "5000";
@@ -266,7 +253,7 @@ int main(int argc, char *argv[]) {
 	hints.ai_family = AF_INET6;
 	hints.ai_socktype = SOCK_DGRAM;
 
-	if ((rv = getaddrinfo(argv[1], argv[2], &hints, &servinfo)) != 0) {
+	if ((rv = getaddrinfo(NULL, argv[2], &hints, &servinfo)) != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 		return 1;
 	}

@@ -15,6 +15,7 @@ from mininet.node import RemoteController
 from mininet.cli import CLI
 from mininet.link import TCLink
 from mininet.topolib import TreeNet
+import time
 
 
 class BlueBridge(Topo):
@@ -46,18 +47,28 @@ def run():
     hostNum = 1
     for host in hosts:
         print host
-        host.cmd('ifconfig h' + str(hostNum) + '-eth0 inet6 add 0:0:010' + str(hostNum) + '::/48')
-        print host.cmd('ip -6 route add local 0:0:0100::/40  dev h' + str(hostNum) + '-eth0')
+
+        # switch to host.config later
+        ipstring = 'h' + str(hostNum) +'-eth0 inet6 add 0:0:01' + '{0:02x}'.format(hostNum) + '::/46'
+        host.config(ip=ipstring)
+        # host.cmdPrint('ifconfig h' + str(hostNum) +
+                      # '-eth0 inet6 add 0:0:01' + '{0:02x}'.format(hostNum) + '::/46')
+        host.cmdPrint('ip -6 route add local 0:0:0100::/40  dev h' +
+                      str(hostNum) + '-eth0')
+        # xterm -e bash -c
+        host.cmdPrint('./messaging/bin/server &')
+        host.cmdPrint('xterm -hold -e \"./messaging/bin/ndpproxy -i h"' + str(hostNum) + '"-eth0 0:0:01"' + "{0:02x}".format(hostNum) + '"::/46; bash\" &')
+
         hostNum += 1
 
     net.startTerms()
+
     for host in hosts:
         print host
-        # host.cmd('./messaging/bin/server')
+
     CLI(net)
 
     net.stop()
-# if the script is run directly (sudo custom/optical.py):
 
 
 if __name__ == '__main__':

@@ -362,14 +362,12 @@ int main (int argc, char **argv)
 		fprintf (stderr, "pcap_setfilter `%s': %s\n", filter_exp, pcap_geterr (ph));
 		return EXIT_FAILURE;
 	}
-	printf("GOT THIS FAR\n");
-
+	printf("INFO: Disabled demon mode.\n");
 /*	if (-1 == daemon(0, 0)) {
 		printf("daeomon\n");
 		perror ("daemon");
 		return EXIT_FAILURE;
 	}*/
-	printf("GOT THIS FAR2\n");
 
 	if (pid_file) {
 		fprintf (pid_file, "%d\n", getpid());

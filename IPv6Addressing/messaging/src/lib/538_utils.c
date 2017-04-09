@@ -4,7 +4,7 @@
 #include "538_utils.h"
 #include "debug.h"
 const int SUBNET_ID = 1;// 16 bits for subnet id
-
+const int NUM_HOSTS = 3; // number of hosts in the rack
 /* 
  * get sockaddr, IPv4 or IPv6:
  */
@@ -61,24 +61,32 @@ unsigned char *gen_rdm_bytestream(size_t num_bytes) {
 	return stream;
 }
 /*
- * Gets random byte array with size num_bytes
+ * Generates a random IPv6 address target under specific constraints
+ * This is used by the client to request a pointer from a random server in the network
+ * In future implementations this will be handled by the switch and controller to 
+ * loadbalance. The client will send out a generic request. 
  */
 struct in6_addr * gen_rdm_IPv6Target() {
 	// Add the pointer
 
 	struct in6_addr * newAddr = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-	unsigned char * rndBytes = gen_rdm_bytestream(4);
-	memcpy(newAddr->s6_addr+6,&SUBNET_ID,1);
-	memcpy(newAddr->s6_addr+8,rndBytes,4);
+	uint8_t rndHost = (rand()% NUM_HOSTS)+1;
+	// Insert subnet id
+	memcpy(newAddr->s6_addr+4,&SUBNET_ID,1);
+	//We are allocating from a random host
+	memcpy(newAddr->s6_addr+5,&rndHost,1);
 
 
 	char s[INET6_ADDRSTRLEN];
 	inet_ntop(AF_INET6,newAddr, s, sizeof s);
 	print_debug("Target IPv6 Pointer %s",s);
-	free(rndBytes);
 	return newAddr;
 }
 
+/*
+ * Gets random string array with size num_bytes
+ */
+//TODO Remove?
 char * get_rdm_string(size_t num_bytes, int index) {
 	char* stream = (char *) malloc(num_bytes);
 	char *string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.-#'?!";
@@ -94,34 +102,7 @@ char * get_rdm_string(size_t num_bytes, int index) {
 
 /*
  * Sends message to specified socket
- */
-//TODO: Remove?
-int sendTCP(int sockfd, char * sendBuffer, int msgBlockSize) {
-	if (send(sockfd, sendBuffer, msgBlockSize, 0) < 0) {
-		perror("ERROR writing to socket");
-		return EXIT_FAILURE;
-	}
-	memset(sendBuffer, 0, msgBlockSize);
-	return EXIT_SUCCESS;
-}
-
-/*
- * Receives message from socket
- */
-//TODO: Remove?
-int receiveTCP(int sockfd, char * receiveBuffer, int msgBlockSize) {
-	//Sockets Layer Call: recv()
-	int numbytes = 0;
-	memset(receiveBuffer, 0, msgBlockSize);
-	if ((numbytes = recv(sockfd, receiveBuffer, msgBlockSize, 0)) == -1) {
-		perror("ERROR reading from socket");
-		exit(1);
-	}
-	return numbytes;
-}
-/*
- * Sends message to specified socket
- * Simpler version where we do not need the fancy to insert the IPv6Addr into the header
+ * Simpler version where we do not need to insert the IPv6Addr into the header
  */
 int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p) {
 	char s[INET6_ADDRSTRLEN];
@@ -139,6 +120,8 @@ int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p
 /*
  * Sends message to specified socket
  */
+//TODO Evaluate what variables and structures are actually needed here
+//TODO: Error handling
 int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr remotePointer) {
 	
 	char s[INET6_ADDRSTRLEN];
@@ -149,8 +132,7 @@ int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo
 	p->ai_addrlen = sizeof(remotePointer);
 	
 	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
-	print_debug("Inserting %u Pointer into packet header... %s:%d",p->ai_addrlen,s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );
-	
+	print_debug("Inserting %u Pointer into packet header... %s:%d",p->ai_addrlen,s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );	
 	
 	socklen_t slen = sizeof(struct sockaddr_in6);
 	if (sendto(sockfd,sendBuffer,msgBlockSize,0, p->ai_addr, slen) < 0) {
@@ -162,30 +144,13 @@ int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo
 }
 
 
-//TODO: Remove?
 /*
- * Receives message from socket
- */
-int receiveUDPLegacy(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p) {
-	int numbytes = 0;
-	char s[INET6_ADDRSTRLEN];
-	socklen_t slen = sizeof(struct sockaddr_in6);
-
-	memset(receiveBuffer, 0, msgBlockSize);
-	if ((numbytes = recvfrom(sockfd,receiveBuffer, msgBlockSize, 0, p->ai_addr,&slen)) == -1) {
-		perror("ERROR reading from socket");
-		exit(1);
-	}
-	//wait for incoming connection
-	inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
-	printf("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
-	return numbytes;
-}
-
-/*
- * Receives message from socket
+ * Receives message from socket and also store the destination ip of the incoming packet
+ * This will be our pointer or any additional command
  */
  //http://stackoverflow.com/questions/3062205/setting-the-source-ip-for-a-udp-socket
+//TODO Evaluate what variables and structures are actually needed here
+//TODO: Error handling
 int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
 
 	struct sockaddr_in6 from;
@@ -205,6 +170,8 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 	msg.msg_controllen = sizeof(msg_control);
 	msg.msg_flags = 0;
 
+	printf("Waiting for response...\n");
+	memset(receiveBuffer, 0, msgBlockSize);
 	numbytes = recvmsg(sockfd, &msg, 0);
 	struct in6_pktinfo * in6_pktinfo;
 	struct cmsghdr* cmsg;
@@ -239,6 +206,8 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 	socklen_t slen = sizeof(struct sockaddr_in6);
 
 	memset(receiveBuffer, 0, msgBlockSize);
+	printf("Waiting for response...\n");
+
 	if ((numbytes = recvfrom(sockfd,receiveBuffer, msgBlockSize, 0, p->ai_addr,&slen)) == -1) {
 		perror("ERROR reading from socket");
 		exit(1);
@@ -250,69 +219,26 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 	return numbytes;
 }
 
-//TODO: Remove?
-uint64_t getPointerFromString(char* input) {
-	uint64_t address = 0;
-	memcpy(&input, &input, 64);
-	
-	// char message[100]={};
-	// sprintf(message, "Received address: %" PRIx64 "\n", address);
-	//print_debug("Received address: %" PRIx64 ".", address);
-
-	uint64_t pointer = address;
+/*
+ * Get a POINTER_SIZE pointer from an IPV6_SIZE ip address 
+ */
+uint64_t getPointerFromIPv6(struct in6_addr addr) {
+	uint64_t pointer = 0;
+	memcpy(&pointer,addr.s6_addr+IPV6_SIZE-POINTER_SIZE, POINTER_SIZE);
+	printf("Converted IPv6 to Pointer: ");
+	printNBytes((char*) &pointer,POINTER_SIZE);
 	return pointer;
 }
 
-//TODO: Remove?
-uint64_t getPointerFromIPv6Str(struct in6_addr addr) {
-	char* pointer = (char *) malloc(12 * sizeof(unsigned char));
-	char str[INET6_ADDRSTRLEN];
-
-	unsigned int i;
-
-	inet_ntop(AF_INET6, addr.s6_addr, str, INET6_ADDRSTRLEN);
-
-	printf("String address: %s\n", str);
-
-	int j = 0;
-	for (i = strlen(str) - 14; i < strlen(str); i++) { // 14 b/c :
-		if (str[i] != ':') {
-			pointer[j] = str[i];
-			j++;
-		}
-	}
-
-	printf("Pointer: %s\n", pointer);
-
-	return getPointerFromString(pointer);
-}
-
-uint64_t getPointerFromIPv6(struct in6_addr addr) {
-
-	uint64_t temp = 0;
-	char str[INET6_ADDRSTRLEN];
-	inet_ntop(AF_INET6, addr.s6_addr, str, INET6_ADDRSTRLEN);
-	printf("String address: %s\n", str);
-
-	memcpy(&temp,addr.s6_addr+POINTER_SIZE,POINTER_SIZE);
-
-	printf("Pointer: ");
-	printNBytes((char*) &temp,POINTER_SIZE);
-
-	return temp;
-}
-
-
+/*
+ * Convert a POINTER_SIZE bit pointer to a IPV6_SIZE bit IPv6 address\
+ * (beginning at the POINTER_SIZEth bit)
+ */
 struct in6_addr getIPv6FromPointer(uint64_t pointer) {
-	// Add the pointer
-
 	struct in6_addr * newAddr = (struct in6_addr *) calloc(1, sizeof(struct in6_addr));
-
 	char s[INET6_ADDRSTRLEN];
-
-	memcpy(newAddr->s6_addr+IPV6_SIZE-POINTER_SIZE, (char *)pointer,POINTER_SIZE);
+	memcpy(newAddr->s6_addr+IPV6_SIZE-POINTER_SIZE, (char *)pointer, POINTER_SIZE);
 	memcpy(newAddr->s6_addr+4,&SUBNET_ID,1);
-
 	inet_ntop(AF_INET6,newAddr, s, sizeof s);
 	print_debug("IPv6 Pointer %s",s);
 	return *newAddr;
@@ -369,3 +295,57 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
 
 	return newAddr;
 }*/
+
+//TODO: Remove?
+uint64_t getPointerFromString(char* input) {
+	uint64_t address = 0;
+	memcpy(&input, &input, 64);
+	uint64_t pointer = address;
+	return pointer;
+}
+
+//TODO: Remove?
+uint64_t getPointerFromIPv6Str(struct in6_addr addr) {
+	char* pointer = (char *) malloc(12 * sizeof(unsigned char));
+	char str[INET6_ADDRSTRLEN];
+	unsigned int i;
+	inet_ntop(AF_INET6, addr.s6_addr, str, INET6_ADDRSTRLEN);
+	printf("String address: %s\n", str);
+	int j = 0;
+	for (i = strlen(str) - 14; i < strlen(str); i++) { // 14 b/c :
+		if (str[i] != ':') {
+			pointer[j] = str[i];
+			j++;
+		}
+	}
+	printf("Pointer: %s\n", pointer);
+	return getPointerFromString(pointer);
+}
+
+/*
+ * Sends message to specified socket
+ */
+//TODO: Remove? Do we still need TCP?
+int sendTCP(int sockfd, char * sendBuffer, int msgBlockSize) {
+	if (send(sockfd, sendBuffer, msgBlockSize, 0) < 0) {
+		perror("ERROR writing to socket");
+		return EXIT_FAILURE;
+	}
+	memset(sendBuffer, 0, msgBlockSize);
+	return EXIT_SUCCESS;
+}
+
+/*
+ * Receives message from socket
+ */
+//TODO: Remove? Do we still need TCP?
+int receiveTCP(int sockfd, char * receiveBuffer, int msgBlockSize) {
+	//Sockets Layer Call: recv()
+	int numbytes = 0;
+	memset(receiveBuffer, 0, msgBlockSize);
+	if ((numbytes = recv(sockfd, receiveBuffer, msgBlockSize, 0)) == -1) {
+		perror("ERROR reading from socket");
+		exit(1);
+	}
+	return numbytes;
+}

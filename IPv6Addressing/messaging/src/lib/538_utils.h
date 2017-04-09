@@ -41,7 +41,6 @@ int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p
 int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr  ipv6Pointer);
 
 
-int receiveUDPLegacy (int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p);
 int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p);
 int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr * ipv6Pointer);
 
