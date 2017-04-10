@@ -10,8 +10,6 @@
 #include <time.h>
 #include <unistd.h>
 
-//TODO: Remove?
-#define GLOBAL_ID "EA75:DB1A:68D8" // 48 bits for global id
 
 #define BLOCK_SIZE 4096 // max number of bytes we can get at once
 #define POINTER_SIZE sizeof(void*)

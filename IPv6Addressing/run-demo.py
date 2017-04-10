@@ -49,15 +49,20 @@ def run():
         print host
 
         # switch to host.config later
-        ipstring = 'h' + str(hostNum) +'-eth0 inet6 add 0:0:01' + '{0:02x}'.format(hostNum) + '::/46'
-        host.config(ip=ipstring)
-        # host.cmdPrint('ifconfig h' + str(hostNum) +
-                      # '-eth0 inet6 add 0:0:01' + '{0:02x}'.format(hostNum) + '::/46')
-        host.cmdPrint('ip -6 route add local 0:0:0100::/40  dev h' +
-                      str(hostNum) + '-eth0')
+        # ipstring = 'h' + str(hostNum) +'-eth0 inet6 add 0:0:01' + '{0:02x}'.format(hostNum) + '::/46'
+        # host.config(ip=ipstring)
+
+        # ip -6 neigh add proxy 2001:0DB8:A::2 dev eth0
+        # host.cmdPrint('ip -6 route add 0:0:0100::/40  via '+ host.IP)
         # xterm -e bash -c
-        host.cmdPrint('./messaging/bin/server &')
-        host.cmdPrint('xterm -hold -e \"./messaging/bin/ndpproxy -i h"' + str(hostNum) + '"-eth0 0:0:01"' + "{0:02x}".format(hostNum) + '"::/46; bash\" &')
+        host.cmdPrint('ip address change dev h' + str(hostNum) +
+                       '-eth0 scope global 0:0:01' + '{0:02x}'.format(hostNum) + '::/48')
+        host.cmdPrint('ip -6 route add local 0:0:0100::/40  dev h' +
+                       str(hostNum) + '-eth0')
+        host.cmdPrint('route -A inet6 add default gw 0:0:01' + '{0:02x}'.format(hostNum) + '::/48')
+        host.cmdPrint('xterm  -T \"server'+ str(hostNum) +'\" -e \"./messaging/bin/server; bash\" &')
+        host.cmdPrint('xterm  -T \"ndpproxt'+ str(hostNum) +'\" -e \"./messaging/bin/ndpproxy -i h' + str(hostNum) +
+                       '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
 
         hostNum += 1
 
@@ -69,7 +74,6 @@ def run():
     CLI(net)
 
     net.stop()
-
 
 if __name__ == '__main__':
     setLogLevel('info')
