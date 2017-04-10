@@ -1,0 +1,80 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+\label{sec:intro}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Big data processing is complicated. Typically scientists, and
+experienced programmers alike struggle with managing and configuring
+clusters of machines to processes large amounts of data. Frameworks
+like Hadoop and Pregal have significantly eased the difficulty of big
+data processing, but they remain intimidating for the lay man. We
+noticed a trend in non-systems scientists, and researchers, that they
+wanted to \textit{"Just write python code that ran on a bunch of
+computers"}. For the benefit of science we investigated how to make
+this dream a reality.
+
+Making all Python code run on clusters of machines is impractical, and
+due to network overhead would lead to sluggish un-optimal code. Instead
+we concentrated our efforts on a common, but difficult big data
+processing task, graph processing. Many frameworks exist for
+distributed graph
+processing~\cite{Malewicz:2010:PSL:1807167.1807184,Ching:2015:OTE:2824032.2824077,Kyrola:2012:GLG:2387880.2387884,Low:2012:DGF:2212351.2212354,Xin:2013:GRD:2484425.2484427,Gonzalez:2012:PDG:2387880.2387883},
+and many general frameworks exist which are used for graph
+processing~\cite{Vavilapalli:2013:AHY:2523616.2523633,Zaharia:2012:RDD:2228298.2228301,Isard:2007:DDD:1272996.1273005,Murray:2013:NTD:2517349.2522738}.
+These frameworks vary in their complexity, but none are
+\textit{"accessible"} for programmers with no systems experience.
+
+With the exception of~\cite{Kyrola:2012:GLG:2387880.2387884} the
+aforementioned systems suffer a common pitfall to accessibility; they
+expose the complexity of a distributed message passing system to the
+user. Extensive work has been done to hide this complexity in the
+abstraction of distributed shared memory (DSM)
+~\cite{Keleher:1994:TDS:1267074.1267084,Power:2010:PBF:1924943.1924964,Morin:2004:KDP:1111682.1111729,Haddad:2001:MCL:374794.374800,Huang06vodca:view-oriented}.
+The benefits of DSM have been ignored in recent years due its flaws,
+mainly fate sharing and sub optimal performance. Dismissing DSM may
+well have been a shortsighted mistake. Ultra dense memory, and the
+approach of terabit bandwidth within a rack give modern racks the
+appearance of single machines, and has lead towards disaggregated
+architectures~\cite{facebook-rack,machine,intel-rsa,seamicro,Han:2013:NSR:2535771.2535778}.
+Such futuristic systems lend themselves naturally to DSM which
+motivates our proposal for a corresponding computation framework.
+
+The largest disadvantage of DSM is performance. Programmers can write
+terribly performant programs by failing to reason about the location
+of memory, leading to memory thrashing. In computation where a high
+degree of consistency between shared resources DSM is the wrong tool
+for the job. In contrast when large amounts of computation can be
+performed between memory synchronizations DSM provides a simple and
+efficient programming model. Graph processing suffers from a lack of
+locality. In computations such as PageRank a single iteration may
+require edge updates which require the synchronization of every
+machine in a cluster. This problem can be largely avoided in practice
+by carefully pre-processing graphs into partitions where the minimum
+number of graph edges cross machines. The cost of pre-processing a
+graph can be large, in some cases the complexity of finding a good
+partition is greater than solving the initial problem! Here we
+demonstrate that the cost of graph partitioning is worth it for the
+benefits that DSM provides.
+
+In this paper we attack the problem of developing a simple and
+efficient graph processing interface for DSM. Specifically we make the
+following contributions.
+
+\begin{itemize}
+        \item A simple graph processing api
+        \item A graph partitioning scheme optimal for DSM
+        \item An evaluation of processing performance between partitioned DSM processing, and pregal style graph processing
+\end{itemize}
+
+The remainder of this paper is organized as follows. In
+Section~\ref{sec:related} we over view related work. In
+Section~\ref{sec:api} we describe our graph processing API.
+Section~\ref{sec:partition} we describe our approach to graph
+partitioning.In Section~\ref{sec:eval} we evaluate our framework
+against a pregal style \textit{think like a vertex model}.
+Section~\ref{sec:discussion} describes our experiences with our
+system, and Section~\ref{sec:conclusion} concludes the paper.
+
+
+
+

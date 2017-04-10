@@ -1,0 +1,57 @@
+This is BibTeX, Version 0.99d (TeX Live 2013/Debian)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: paper.aux
+The style file: abbrv.bst
+Database file #1: paper.bib
+I was expecting an "="---line 10531 of file paper.bib
+ : 
+ : 6h2Ut
+(Error may have been on previous line)
+I'm skipping whatever remains of this entry
+Warning--to sort, need author or key in facebook-rack
+Warning--to sort, need author or key in machine
+Warning--to sort, need author or key in intel-rsa
+Warning--to sort, need author or key in seamicro
+Warning--empty year in Zaharia:2012:RDD:2228298.2228301
+You've used 20 entries,
+            2118 wiz_defined-function locations,
+            627 strings with 9073 characters,
+and the built_in function-call counts, 8939 in all, are:
+= -- 885
+> -- 502
+< -- 11
++ -- 200
+- -- 180
+* -- 664
+:= -- 1380
+add.period$ -- 63
+call.type$ -- 20
+change.case$ -- 150
+chr.to.int$ -- 0
+cite$ -- 25
+duplicate$ -- 335
+empty$ -- 644
+format.name$ -- 180
+if$ -- 1939
+int.to.chr$ -- 0
+int.to.str$ -- 20
+missing$ -- 16
+newline$ -- 95
+num.names$ -- 32
+pop$ -- 174
+preamble$ -- 1
+purify$ -- 130
+quote$ -- 0
+skip$ -- 276
+stack$ -- 0
+substring$ -- 487
+swap$ -- 115
+text.length$ -- 11
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 80
+warning$ -- 5
+while$ -- 69
+width$ -- 22
+write$ -- 228
+(There was 1 error message)
