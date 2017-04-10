@@ -31,7 +31,6 @@
 
 #include <sys/types.h>
 #include <ifaddrs.h>          // getifaddrs(), freeifaddrs()
-
 #include <pcap.h>
 
 int sd; // socket descriptor
@@ -78,6 +77,7 @@ int send_nd_nadvert (struct in6_addr *dst, struct in6_addr *target)
 	struct in6_pktinfo *pktinfo;
 	struct iovec iov;
 	struct sockaddr_in6 destination;
+	char s[INET6_ADDRSTRLEN];
 
 	struct {
 		// IPv6 pseudo-header to compute the ICMPv6 checksum
@@ -94,6 +94,10 @@ int send_nd_nadvert (struct in6_addr *dst, struct in6_addr *target)
 	} opkt; // TODO: __attribute__ ((packed));
 
 	int icmp_len = sizeof (struct nd_neighbor_advert) + sizeof (struct nd_opt_hdr) + IFHWADDRLEN;
+	inet_ntop(AF_INET6,dst, s, sizeof s);
+	printf("Target %s\n",s);
+	inet_ntop(AF_INET6,target, s, sizeof s);
+	printf("Dest %s\n",s);
 
 	memset (&opkt, 0, sizeof (opkt));
 	opkt.psrc = source;
@@ -107,11 +111,17 @@ int send_nd_nadvert (struct in6_addr *dst, struct in6_addr *target)
 	opkt.icmp_opt_hdr.nd_opt_len = 1;
 	memcpy (&opkt.mac_addr, &ifr.ifr_addr.sa_data, IFHWADDRLEN);
 	opkt.icmp_hdr.nd_na_cksum = checksum ((unsigned short int *) &opkt, sizeof (opkt));
-
+	
+	inet_ntop(AF_INET6,dst, s, sizeof s);
+	printf("AddressDestFirst%s\n",s);
+	
 	// prepare destination
 	memset (&destination, 0, sizeof (destination));
-	memcpy (&destination.sin6_addr, dst, sizeof (*dst));
+	memcpy (&destination.sin6_addr, dst, sizeof (struct in6_addr));
 	destination.sin6_family = AF_INET6;
+
+	inet_ntop(AF_INET6,&destination.sin6_addr, s, sizeof s);
+	printf("AddressDestAfter%s\n",s);
 
 	// Prepare msghdr for sendmsg().
 	memset (&msghdr, 0, sizeof (msghdr));
@@ -148,16 +158,26 @@ int send_nd_nadvert (struct in6_addr *dst, struct in6_addr *target)
 	pktinfo = (struct in6_pktinfo *) CMSG_DATA (cmsghdr2);
 	pktinfo->ipi6_ifindex = ifindex;
 	pktinfo->ipi6_addr = source;
-
+	inet_ntop(AF_INET6,&pktinfo->ipi6_addr, s, sizeof s);
+	printf("AddressSource %s\n",s);
+	inet_ntop(AF_INET6,&destination.sin6_addr, s, sizeof s);
+	printf("AddressDest %s\n",s);
 	int ret = 1;
 	if (sendmsg (sd, &msghdr, 0) < 0) {
 		perror ("sendmsg");
 		ret = 0;
 	}
 	free (msghdr.msg_control);
-
+	/*sleep(10); */
 	return ret;
 }
+/*sendmsg(3, {msg_name(28)={sa_family=AF_INET6, sin6_port=htons(0), inet_pton(AF_INET6, "::", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0},
+msg_iov(1)=[{"\210\0bV\0\0\0\0\0\0\0\0\1\1\0\0\0\0\0\0\0\0\0\0\2\1\342\263\202\375\245\264", 32}], msg_controllen=64,
+[{cmsg_len=20, cmsg_level=SOL_IPV6, cmsg_type=52}, {cmsg_len=36, cmsg_level=SOL_IPV6, cmsg_type=50}], msg_flags=0}, 0) = -1 EINVAL (Invalid argument)
+*/
+/*sendmsg(3, {msg_name(28)={sa_family=AF_INET6, sin6_port=htons(0), inet_pton(AF_INET6, "0:0:101::", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0},
+msg_iov(1)=[{"\210\0\231\262\0\0\0\0\0\0\0\0\1\2\0\0P\5B\1\0\0\0\0\2\1\372i\30e\223d", 32}], msg_controllen=64,
+[{cmsg_len=20, cmsg_level=SOL_IPV6, cmsg_type=52}, {cmsg_len=36, cmsg_level=SOL_IPV6, cmsg_type=50}], msg_flags=0}, 0) = 32*/
 
 int find_link_local_ip (char *ifname, struct in6_addr * result)
 {
@@ -174,6 +194,33 @@ int find_link_local_ip (char *ifname, struct in6_addr * result)
 			if (i->ifa_addr->sa_family == AF_INET6) {
 				struct sockaddr_in6 * v6addr = (struct sockaddr_in6 *) i->ifa_addr;
 				if (IN6_IS_ADDR_LINKLOCAL (&v6addr->sin6_addr)) {
+					*result = v6addr->sin6_addr;
+					ret = 1;
+					break;
+				}
+			}
+		}
+		i = i->ifa_next;
+	}
+	
+	freeifaddrs (list);
+	return ret;
+}
+int find_non_local_ip (char *ifname, struct in6_addr * result)
+{
+	int ret = 0;
+	struct ifaddrs * list;
+	if (0 != getifaddrs (&list)) {
+		perror ("getifaddrs");
+		return 0;
+	}
+	
+	struct ifaddrs *i = list;
+	while (i) {
+		if (0 == strcmp (i->ifa_name, ifname)) {
+			if (i->ifa_addr->sa_family == AF_INET6) {
+				struct sockaddr_in6 * v6addr = (struct sockaddr_in6 *) i->ifa_addr;
+				if (IN6_IS_ADDR_LINKLOCAL (&v6addr->sin6_addr) == 0) {
 					*result = v6addr->sin6_addr;
 					ret = 1;
 					break;
@@ -293,6 +340,7 @@ int main (int argc, char **argv)
 			fprintf (stderr, "Invalid IPv6 prefix length %d\n", mask);
 			return EXIT_FAILURE;
 		}
+		printf("Address1 %s\n",addr);
 		switch (inet_pton (AF_INET6, addr, &v6buff))
 		{
 			case -1:
@@ -307,6 +355,9 @@ int main (int argc, char **argv)
 			fprintf (stderr, "malloc() failed\n");
 			return EXIT_FAILURE;
 		}
+		char s[INET6_ADDRSTRLEN];
+		inet_ntop(AF_INET6,&v6buff, s, sizeof s);
+		printf("Address2 %s\n",s);
 		new_item->addr = v6buff;
 		new_item->mask = mask;
 		new_item->next = filters;
@@ -317,7 +368,10 @@ int main (int argc, char **argv)
 		fprintf (stderr, "Unable to obtain IPv6 link-local address on %s\n", ifr.ifr_name);
 		return EXIT_FAILURE;
 	}
-
+/*	if (! find_link_local_ip (ifr.ifr_name, &source)) {
+		fprintf (stderr, "Unable to obtain IPv6 link-local address on %s\n", ifr.ifr_name);
+		return EXIT_FAILURE;
+	}*/
 	// Request a raw socket descriptor sd.
 	if ((sd = socket (AF_INET6, SOCK_RAW, IPPROTO_ICMPV6)) < 0) {
 		perror ("socket");
@@ -329,6 +383,7 @@ int main (int argc, char **argv)
 		perror ("SO_BINDTODEVICE");
 		return EXIT_FAILURE;
 	}
+		printf("check3 \n");
 
 	// Retrieve source interface index.
 	if ((ifindex = if_nametoindex (ifr.ifr_name)) == 0) {
@@ -368,7 +423,6 @@ int main (int argc, char **argv)
 		perror ("daemon");
 		return EXIT_FAILURE;
 	}*/
-
 	if (pid_file) {
 		fprintf (pid_file, "%d\n", getpid());
 		fclose (pid_file);
@@ -401,8 +455,20 @@ int main (int argc, char **argv)
 		if (header->caplen < len)
 			continue;
 		struct nd_neighbor_solicit * ns = (struct nd_neighbor_solicit * ) hdr3;
-
+		char s[INET6_ADDRSTRLEN];
+		inet_ntop(AF_INET6,&hdr2->ip6_src, s, sizeof s);
+		printf("Whats going on here %s\n",s);
 		if (! filters || addr_matches_filter (filters, &ns->nd_ns_target))
+			inet_ntop(AF_INET6,&hdr2->ip6_src, s, sizeof s);
+			printf("Whats going on here2 %s\n",s);
+/*			if (strcmp(s,"::") == 0) {
+				int temp = 1;
+				struct in6_addr * test = &hdr2->ip6_src;
+				memcpy(test->s6_addr+15, &temp,1);
+			}
+			inet_ntop(AF_INET6,&hdr2->ip6_src, s, sizeof s);
+			printf("Whats going on here3 %s\n",s);*/
+
 			if (! send_nd_nadvert (&hdr2->ip6_src, &ns->nd_ns_target))
 				break;
 	}

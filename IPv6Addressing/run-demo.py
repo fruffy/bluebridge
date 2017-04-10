@@ -16,6 +16,8 @@ from mininet.cli import CLI
 from mininet.link import TCLink
 from mininet.topolib import TreeNet
 import time
+from mininet.node import Host
+from functools import partial
 
 
 class BlueBridge(Topo):
@@ -39,15 +41,19 @@ topos = {'BlueBridge': (lambda: BlueBridge())}
 
 def run():
     # c = RemoteController('c', '0.0.0.0', 6633)
-    net = TreeNet(depth=1, fanout=3)
+    privateDirs = [('./config', '/tmp/%(name)s/var/config')]
+    host = partial(Host,
+                   privateDirs=privateDirs)
+    net = TreeNet(depth=1, fanout=3, host=host)
     # net.addController(c)
     net.start()
-
+    directories = [directory[0] if isinstance(directory, tuple)
+                   else directory for directory in privateDirs]
+    info('Private Directories:', directories, '\n')
     hosts = net.hosts
     hostNum = 1
     for host in hosts:
         print host
-
         # switch to host.config later
         # ipstring = 'h' + str(hostNum) +'-eth0 inet6 add 0:0:01' + '{0:02x}'.format(hostNum) + '::/46'
         # host.config(ip=ipstring)
@@ -55,22 +61,24 @@ def run():
         # ip -6 neigh add proxy 2001:0DB8:A::2 dev eth0
         # host.cmdPrint('ip -6 route add 0:0:0100::/40  via '+ host.IP)
         # xterm -e bash -c
+        testString = "\"proxy h" + str(hostNum) + "-eth0 { ttl 5000 router no rule 0:0:01" + '{0:02x}'.format(hostNum) + "::/48 { static } }\" > ./config/ndp_conf.conf"
+        print testString
+        host.cmdPrint('echo ' + testString)
         host.cmdPrint('ip address change dev h' + str(hostNum) +
-                       '-eth0 scope global 0:0:01' + '{0:02x}'.format(hostNum) + '::/48')
+                      '-eth0 scope global 0:0:01' + '{0:02x}'.format(hostNum) + '::/48')
         host.cmdPrint('ip -6 route add local 0:0:0100::/40  dev h' +
-                       str(hostNum) + '-eth0')
-        host.cmdPrint('route -A inet6 add default gw 0:0:01' + '{0:02x}'.format(hostNum) + '::/48')
-        host.cmdPrint('xterm  -T \"server'+ str(hostNum) +'\" -e \"./messaging/bin/server; bash\" &')
-        host.cmdPrint('xterm  -T \"ndpproxt'+ str(hostNum) +'\" -e \"./messaging/bin/ndpproxy -i h' + str(hostNum) +
-                       '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
+                      str(hostNum) + '-eth0')
+        host.cmdPrint('xterm  -T \"server' + str(hostNum) +
+                      '\" -e \"./messaging/bin/server; bash\" &')
+        # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"valgrind ./messaging/bin/ndpproxy -i h' + str(hostNum) +
+        #                '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
+        #host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"./messaging/launchProxy.sh -i h' + str(hostNum) +
+        #               '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
+        host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"ndppd -vvv -c ./config/ndp_conf.conf; bash\" &')
 
         hostNum += 1
 
     net.startTerms()
-
-    for host in hosts:
-        print host
-
     CLI(net)
 
     net.stop()
