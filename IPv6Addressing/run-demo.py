@@ -91,7 +91,7 @@ def run():
         # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"./messaging/launchProxy.sh -i h' + str(hostNum) +
         #               '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
         host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) +
-                      '\" -e \"ndppd -vvv -c ./config/ndp_conf.conf; bash\" &')
+                      '\" -e \"./ndpproxy/ndppd -vvv -c ./config/ndp_conf.conf; bash\" &')
         # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) +
         #               '\" -e \"radvd -n --debug=5 -C ./config/radvd.conf; bash\" &')
         hostNum += 1
