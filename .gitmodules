@@ -1,0 +1,9 @@
+[submodule "IPv6Addressing/mininet"]
+	path = IPv6Addressing/mininet
+	url = https://github.com/mininet/mininet
+[submodule "IPv6Addressing/ryu"]
+	path = IPv6Addressing/ryu
+	url = https://github.com/mininet/mininet
+[submodule "IPv6Addressing/ndpproxy"]
+	path = IPv6Addressing/ndpproxy
+	url = https://github.com/mininet/mininet
