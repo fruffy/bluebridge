@@ -18,6 +18,9 @@
 //		(server allocates memory address related to its assignment)
 //	5. Remove unneeded code and print5 statements
 //	6. Fix interactive mode and usability bugs
+//	7. Switch to raw socket packets (hope is to get rid of NDP requests)
+//	http://stackoverflow.com/questions/15702601/kernel-bypass-for-udp-and-tcp-on-linux-what-does-it-involve
+//	https://austinmarton.wordpress.com/2011/09/14/sending-raw-ethernet-packets-from-a-specific-interface-in-c-on-linux/
 ///////////////////////////////////////////////////////////////////////////////
 //To add the current correct route
 //sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo

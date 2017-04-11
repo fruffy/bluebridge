@@ -15,6 +15,7 @@ from mininet.node import RemoteController
 from mininet.cli import CLI
 from mininet.link import TCLink
 from mininet.topolib import TreeNet
+
 import time
 from mininet.node import Host
 from functools import partial
@@ -28,11 +29,12 @@ class BlueBridge(Topo):
 
         # Initialize topology
         Topo.__init__(self)
+
         switch = self.addSwitch('s1')
-        for hostNum in range(1, 42):
+
+        for hostNum in range(1, 4):
             # Add hosts and switches
             host = self.addHost('h' + str(hostNum))
-            host.setIP(self, "::1101:0:0:0:0")
             self.addLink(host, switch)
 
 
@@ -40,12 +42,18 @@ topos = {'BlueBridge': (lambda: BlueBridge())}
 
 
 def run():
-    # c = RemoteController('c', '0.0.0.0', 6633)
     privateDirs = [('./config', '/tmp/%(name)s/var/config')]
+    # c = RemoteController('c', '0.0.0.0', 5555)
+
     host = partial(Host,
                    privateDirs=privateDirs)
-    net = TreeNet(depth=1, fanout=3, host=host)
+    topo = BlueBridge()
+
+    # controller is used by s1-s3
+    net = Mininet(topo=topo, host=host, build=False)
+    # net = TreeNet(depth=1, fanout=3, host=host, controller=RemoteController)
     # net.addController(c)
+    net.build()
     net.start()
     directories = [directory[0] if isinstance(directory, tuple)
                    else directory for directory in privateDirs]
@@ -61,21 +69,31 @@ def run():
         # ip -6 neigh add proxy 2001:0DB8:A::2 dev eth0
         # host.cmdPrint('ip -6 route add 0:0:0100::/40  via '+ host.IP)
         # xterm -e bash -c
-        testString = "\"proxy h" + str(hostNum) + "-eth0 { ttl 5000 router no rule 0:0:01" + '{0:02x}'.format(hostNum) + "::/48 { static } }\" > ./config/ndp_conf.conf"
+        testString = "\"proxy h" + str(hostNum) + "-eth0 { ttl 5000 router no rule 0:0:01" + '{0:02x}'.format(
+            hostNum) + "::/48 { static } }\" > ./config/ndp_conf.conf"
         print testString
+
+        testString2 = "\"interface h" + str(hostNum) + "-eth0 {\n AdvSendAdvert on;\n MinRtrAdvInterval 3;\n MaxRtrAdvInterval 10;\n prefix 0:0:01" + '{0:02x}'.format(
+            hostNum) + "::/48 {\n AdvOnLink on;\n AdvAutonomous on;\n AdvRouterAddr on;\n };\n };\" > ./config/radvd.conf"
+        print testString2
+
         host.cmdPrint('echo ' + testString)
+        host.cmdPrint('echo ' + testString2)
         host.cmdPrint('ip address change dev h' + str(hostNum) +
                       '-eth0 scope global 0:0:01' + '{0:02x}'.format(hostNum) + '::/48')
         host.cmdPrint('ip -6 route add local 0:0:0100::/40  dev h' +
                       str(hostNum) + '-eth0')
+        host.cmdPrint('ip -6 route add local 0:0:01' + '{0:02x}'.format(hostNum) + '::/48 dev lo')
         host.cmdPrint('xterm  -T \"server' + str(hostNum) +
                       '\" -e \"./messaging/bin/server; bash\" &')
         # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"valgrind ./messaging/bin/ndpproxy -i h' + str(hostNum) +
         #                '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
-        #host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"./messaging/launchProxy.sh -i h' + str(hostNum) +
+        # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"./messaging/launchProxy.sh -i h' + str(hostNum) +
         #               '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
-        host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"ndppd -vvv -c ./config/ndp_conf.conf; bash\" &')
-
+        host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) +
+                      '\" -e \"ndppd -vvv -c ./config/ndp_conf.conf; bash\" &')
+        # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) +
+        #               '\" -e \"radvd -n --debug=5 -C ./config/radvd.conf; bash\" &')
         hostNum += 1
 
     net.startTerms()
