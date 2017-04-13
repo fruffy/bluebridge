@@ -69,6 +69,7 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 		//			  ^  ^ these two bytes are stored (subnet and host ID)
 		memcpy(remotePointer->s6_addr+4, get_in_addr(p->ai_addr)+4, 2);
 		print_debug("Got: %p from server", (void *)remotePointer);
+
 		retVal = *remotePointer;
 	} else {
 		print_debug("Response was not successful");
