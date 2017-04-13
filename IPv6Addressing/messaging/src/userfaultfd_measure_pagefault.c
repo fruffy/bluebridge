@@ -80,9 +80,9 @@ struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer) 
         // Copy the returned pointer
         memcpy(remotePointer, receiveBuffer+4, IPV6_SIZE);
         // Insert information about the source host (black magic)
-        //00 00 00 00 01 02 00 00 00 00 00 00 00 00 00 00
+        //00 00 00 00 01 01 00 00 00 00 00 00 00 00 00 00
         //            ^  ^ these two bytes are stored (subnet and host ID)
-        memcpy(remotePointer->s6_addr+4, get_in_addr(p->ai_addr)+4, 2);
+        //memcpy(remotePointer->s6_addr+4, get_in_addr(p->ai_addr)+4, 2);
         print_debug("Got: %p from server", (void *)remotePointer);
 
         retVal = *remotePointer;
@@ -101,16 +101,15 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
     char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 
     int size = 0;
-
+    printf("teasdasds\n");
     // Prep message
     memcpy(sendBuffer, GET_CMD, sizeof(GET_CMD));
     size += sizeof(GET_CMD) - 1; // Should be 4
     memcpy(sendBuffer+size,toPointer->s6_addr,IPV6_SIZE);
     size += IPV6_SIZE; // Should be 8, total 12
-
-    printf("Retrieving Data with pointer: ");
-    printNBytes((char*)toPointer,IPV6_SIZE);
-
+    int test = 1;
+    printNBytes((char*) p->ai_addr,16);
+    memcpy(toPointer->s6_addr+5, &test, 1);
     // Send message
     sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
     // Receive response

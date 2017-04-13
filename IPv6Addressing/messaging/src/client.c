@@ -16,7 +16,7 @@
 //	3. Integrate functional ndp proxy server into the server program
 //	4. Implement IP subnet state awareness
 //		(server allocates memory address related to its assignment)
-//	5. Remove unneeded code and print5 statements
+//	5. Remove unneeded code and print statements
 //	6. Fix interactive mode and usability bugs
 //	7. Switch to raw socket packets (hope is to get rid of NDP requests)
 //	http://stackoverflow.com/questions/15702601/kernel-bypass-for-udp-and-tcp-on-linux-what-does-it-involve
@@ -40,9 +40,9 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 	print_debug("Memcopying ALLOCATE message into send buffer");
 
 	// Lines are for ndpproxy DO NOT REMOVE
-	//struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
-	//memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-	//p->ai_addrlen = sizeof(*ipv6Pointer);
+	struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
+	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+	p->ai_addrlen = sizeof(*ipv6Pointer);
 	
 	memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
 
