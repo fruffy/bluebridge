@@ -43,9 +43,8 @@
 *.sublime-workspace
 
 # For IPv6
-IPv6Addressing/messaging/bin/*
-IPv6Addressing/messaging/src/test\.c
-IPv6Addressing/messaging/makefile_old
+IPv6Addressing/messaging/bin/
+
 
 # For Python
 TestApps/PageRank/bin
