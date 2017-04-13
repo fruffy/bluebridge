@@ -174,7 +174,7 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 	msg.msg_controllen = sizeof(msg_control);
 	msg.msg_flags = 0;
 
-	printf("Waiting for response...\n");
+	print_debug("Waiting for response...\n");
 	memset(receiveBuffer, 0, msgBlockSize);
 	numbytes = recvmsg(sockfd, &msg, 0);
 	struct in6_pktinfo * in6_pktinfo;
@@ -193,7 +193,7 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 	}
 
 	inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
-	printf("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
+	print_debug("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
 
 	return numbytes;
 }
@@ -210,7 +210,7 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 	socklen_t slen = sizeof(struct sockaddr_in6);
 
 	memset(receiveBuffer, 0, msgBlockSize);
-	printf("Waiting for response...\n");
+	print_debug("Waiting for response...\n");
 
 	if ((numbytes = recvfrom(sockfd,receiveBuffer, msgBlockSize, 0, p->ai_addr,&slen)) == -1) {
 		perror("ERROR reading from socket");
@@ -218,7 +218,7 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 	}
 	char s[INET6_ADDRSTRLEN];
 	inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
-	printf("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
+	print_debug("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
 
 	return numbytes;
 }
@@ -229,8 +229,8 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 uint64_t getPointerFromIPv6(struct in6_addr addr) {
 	uint64_t pointer = 0;
 	memcpy(&pointer,addr.s6_addr+IPV6_SIZE-POINTER_SIZE, POINTER_SIZE);
-	printf("Converted IPv6 to Pointer: ");
-	printNBytes((char*) &pointer,POINTER_SIZE);
+	// printf("Converted IPv6 to Pointer: ");
+	// printNBytes((char*) &pointer,POINTER_SIZE);
 	return pointer;
 }
 

@@ -62,7 +62,7 @@ struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer) 
     memcpy(sendBuffer+size, &pointer, POINTER_SIZE);
     size += POINTER_SIZE; // Should be 8, total 12
 
-    printf("Retrieving address for pointer: %" PRIx64 "\n", pointer);
+    // printf("Retrieving address for pointer: %" PRIx64 "\n", pointer);
 
     // Send message
     sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
@@ -75,8 +75,8 @@ struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer) 
         print_debug("Response was ACK");
         // If the message is ACK --> successful
         struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-        printf("Received IPv6 data: ");
-        printNBytes(receiveBuffer+4,IPV6_SIZE);
+        // printf("Received IPv6 data: ");
+        // printNBytes(receiveBuffer+4,IPV6_SIZE);
         // Copy the returned pointer
         memcpy(remotePointer, receiveBuffer+4, IPV6_SIZE);
         // Insert information about the source host (black magic)
@@ -101,14 +101,14 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
     char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 
     int size = 0;
-    printf("teasdasds\n");
+
     // Prep message
     memcpy(sendBuffer, GET_CMD, sizeof(GET_CMD));
     size += sizeof(GET_CMD) - 1; // Should be 4
     memcpy(sendBuffer+size,toPointer->s6_addr,IPV6_SIZE);
     size += IPV6_SIZE; // Should be 8, total 12
     int test = 1;
-    printNBytes((char*) p->ai_addr,16);
+    // printNBytes((char*) p->ai_addr,16);
     memcpy(toPointer->s6_addr+5, &test, 1);
     // Send message
     sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
@@ -224,7 +224,7 @@ static void *handler(void *arg)
             uint64_t start_addr = (uint64_t) region;
             int index = (int) (addr - start_addr)/get_page_size();
 
-            fprintf(stdout, "Address: %"PRIx64", index: %d\n", (uint64_t) msg.arg.pagefault.address, index);
+            // fprintf(stdout, "Address: %"PRIx64", index: %d\n", (uint64_t) msg.arg.pagefault.address, index);
 
             if (addr_map[index] > 0) {
             //     // Do remote things
@@ -233,21 +233,21 @@ static void *handler(void *arg)
 
             //     // 2. Get stuff from the remote server
             //     //      a. getMemory() from client.c
-                fprintf(stdout, "Grabbing IPv6 for %"PRIx64"\n", (uint64_t) msg.arg.pagefault.address);
+                // fprintf(stdout, "Grabbing IPv6 for %"PRIx64"\n", (uint64_t) msg.arg.pagefault.address);
 
                 struct in6_addr remoteMachine = getRemoteAddr(sockfd_server, p_server, addr_map[index]);
 
                 char s[INET6_ADDRSTRLEN];
                 inet_ntop(AF_INET6, &remoteMachine, s, sizeof(s));
 
-                fprintf(stdout, "Remote Machine is... %s\n", s);
+                // fprintf(stdout, "Remote Machine is... %s\n", s);
 
                 char* val = getMemory(sockfd_server, p_server, &remoteMachine);
 
-                printf("Results of memory store: %.50s\n", val);
+                // printf("Results of memory store: %.50s\n", val);
             } else {
             //     // Do local things
-                fprintf(stdout, "Doing local things with addr %"PRIx64"\n", (uint64_t) msg.arg.pagefault.address);
+                // fprintf(stdout, "Doing local things with addr %"PRIx64"\n", (uint64_t) msg.arg.pagefault.address);
             }
 
             // TODO: should I modify such that it does actually access disk?
@@ -273,10 +273,10 @@ static void *handler(void *arg)
 }
 
 struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
-    print_debug("Mallocing send and receive buffers");
+    // print_debug("Mallocing send and receive buffers");
     char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
     char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
-    print_debug("Memcopying ALLOCATE message into send buffer");
+    // print_debug("Memcopying ALLOCATE message into send buffer");
 
     // Lines are for ndpproxy DO NOT REMOVE
     //struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
@@ -299,8 +299,8 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
         print_debug("Response was ACK");
         // If the message is ACK --> successful
         struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-        printf("Received pointer data: ");
-        printNBytes(receiveBuffer+4,IPV6_SIZE);
+        // printf("Received pointer data: ");
+        // printNBytes(receiveBuffer+4,IPV6_SIZE);
         // Copy the returned pointer
         memcpy(remotePointer, receiveBuffer+4, IPV6_SIZE);
         // Insert information about the source host (black magic)
@@ -323,11 +323,11 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
         print_debug("Keeping return value as 0");
     }
 
-    print_debug("Freeing sendBuffer and receiveBuffer memory");
+    // print_debug("Freeing sendBuffer and receiveBuffer memory");
     free(sendBuffer);
     free(receiveBuffer);
 
-    print_debug("Returning value");
+    // print_debug("Returning value");
     //TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
     return retVal;
 }
