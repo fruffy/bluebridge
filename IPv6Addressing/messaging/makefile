@@ -3,13 +3,13 @@ srcDir = src
 objDir = obj
 binDir = bin
 libDir = lib
-app := client server ndpproxy nd-proxy
+app := client server userfaultfd_measure_pagefault
 
 
 CC = gcc
 #CFlags += -c -Wextra -Werror -Wall -g3
 CFlags += -c -Wextra -Wall -g3
-LDFlags := -lpcap 
+LDFlags := -lpcap -pthread -lm
 
 sources := $(shell find "$(srcDir)/$(libDir)" -name '*.$(srcExt)')
 srcDirs := $(shell find . -name '*.$(srcExt)' -exec dirname {} \; | uniq)
