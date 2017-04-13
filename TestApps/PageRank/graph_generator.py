@@ -4,9 +4,10 @@ import pdb
 
 from igraph import *
 
-if __name__ == '__main__':
+CLUSTER_SIZE = 500
 
-    CLUSTER_SIZE = 5000
+
+def get_sample_graph():
 
     start_time = time.time()
 
@@ -15,16 +16,31 @@ if __name__ == '__main__':
     g2 = Graph.Full(CLUSTER_SIZE)
 
     myGraph = g1.__add__(g2)
-    myGraph.add_edge(1, CLUSTER_SIZE + 1)
+
+    total_nodes = len(myGraph.vs())
+    myGraph["total_nodes"] = total_nodes
+    myGraph.vs["rank"] = 1 / float(total_nodes)
     myGraph.vs["host"] = (["m1"] * CLUSTER_SIZE) + (["m2"] * CLUSTER_SIZE)
+    myGraph.vs["message_queue"] = [[] for _ in xrange(total_nodes)]
+
+    myGraph.es["is_external"] = False
+    myGraph.add_edge(1, CLUSTER_SIZE + 1, is_external=True)
 
     print "Graph creation complete. Took", (time.time() - start_time), "s."
+    return myGraph
+
+
+if __name__ == '__main__':
+
+    myGraph = get_sample_graph()
 
     start_time = time.time()
 
     ranks = myGraph.pagerank(directed=False, damping=0.9)
     sorted_ranks = sorted(
         enumerate(ranks), key=operator.itemgetter(1), reverse=True)
+
+    print "PageRank complete. Took", (time.time() - start_time), "s."
 
     print sum(ranks)
 
@@ -33,5 +49,3 @@ if __name__ == '__main__':
     print "--------------------"
 
     print sorted_ranks[1:30]
-
-    print "PageRank complete. Took", (time.time() - start_time), "s."
