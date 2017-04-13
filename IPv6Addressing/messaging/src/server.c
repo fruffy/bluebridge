@@ -61,6 +61,32 @@ int providePointer(int sock_fd, struct addrinfo * p) {
 	return 0;
 }
 
+int sendAddr(int sock_fd, struct addrinfo * p, char* receiveBuffer) {
+	//TODO: Error handling if we runt out of memory, this will fail
+	char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
+	char * pointerStr = (char *) calloc(POINTER_SIZE, sizeof(char));
+
+	// memcpy(pointerStr, receiveBuffer, POINTER_SIZE);
+
+	int size = 0;
+	uint64_t pointer = 0;
+	memcpy(&pointer, &receiveBuffer, POINTER_SIZE);
+
+	// printf("Pointer %" PRIx64 "\n", pointer);
+	// = getPointerFromString(pointerStr);
+	struct in6_addr ipv6Pointer = getIPv6FromPointer(pointer);
+	memcpy(sendBuffer, "ACK:", sizeof("ACK:"));
+	size += sizeof("ACK:") - 1;
+	memcpy(sendBuffer+size, &ipv6Pointer, IPV6_SIZE); 
+
+	sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
+
+	free(sendBuffer);
+
+	// TODO change to be meaningful, i.e., error message
+	return 0;
+}
+
 /*
  * TODO: explain.
  * Writes a piece of memory?
@@ -164,6 +190,14 @@ void handleClientRequests(int sock_fd,	struct addrinfo * p) {
 			printf("******FREE DATA: ");
 			printNBytes((char *) ipv6Pointer,IPV6_SIZE);
 			freeMem(sock_fd, p, ipv6Pointer);
+		} else if (memcmp(receiveBuffer, GET_ADDR_CMD,2) == 0) {
+			splitResponse = receiveBuffer+2;
+			printf("******GET ADDRESS: \n");
+			printf("Calling send address\n");
+			// printNBytes((char *) ipv6Pointer,IPV6_SIZE);
+			printNBytes(splitResponse, POINTER_SIZE);
+			sendAddr(sock_fd, p, splitResponse);
+			printf("Done send address\n");
 		} else {
 			printf("Cannot match command!\n");
 			if (sendUDP(sock_fd, "Hello, world!", 13, p) == -1) {

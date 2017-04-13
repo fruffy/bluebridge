@@ -241,6 +241,7 @@ uint64_t getPointerFromIPv6(struct in6_addr addr) {
 struct in6_addr getIPv6FromPointer(uint64_t pointer) {
 	struct in6_addr * newAddr = (struct in6_addr *) calloc(1, sizeof(struct in6_addr));
 	char s[INET6_ADDRSTRLEN];
+	// printf("Memcpy in getIPv6FromPointer\n");
 	memcpy(newAddr->s6_addr+IPV6_SIZE-POINTER_SIZE, (char *)pointer, POINTER_SIZE);
 	memcpy(newAddr->s6_addr+4,&SUBNET_ID,1);
 	inet_ntop(AF_INET6,newAddr, s, sizeof s);
@@ -300,11 +301,12 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
 	return newAddr;
 }*/
 
-//TODO: Remove?
 uint64_t getPointerFromString(char* input) {
 	uint64_t address = 0;
-	memcpy(&input, &input, 64);
+	// printf("Memcpy in getPointerFromString\n");
+	memcpy(&address, &input, POINTER_SIZE);
 	uint64_t pointer = address;
+	// printf("Returning pointer\n");
 	return pointer;
 }
 
