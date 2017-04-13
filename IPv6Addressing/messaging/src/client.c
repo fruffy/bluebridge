@@ -18,6 +18,9 @@
 //		(server allocates memory address related to its assignment)
 //	5. Remove unneeded code and print5 statements
 //	6. Fix interactive mode and usability bugs
+//	7. Switch to raw socket packets (hope is to get rid of NDP requests)
+//	http://stackoverflow.com/questions/15702601/kernel-bypass-for-udp-and-tcp-on-linux-what-does-it-involve
+//	https://austinmarton.wordpress.com/2011/09/14/sending-raw-ethernet-packets-from-a-specific-interface-in-c-on-linux/
 ///////////////////////////////////////////////////////////////////////////////
 //To add the current correct route
 //sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo
@@ -35,17 +38,18 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 	char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 	char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 	print_debug("Memcopying ALLOCATE message into send buffer");
-	struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
 
-	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-	p->ai_addrlen = sizeof(*ipv6Pointer);
+	// Lines are for ndpproxy DO NOT REMOVE
+	//struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
+	//memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+	//p->ai_addrlen = sizeof(*ipv6Pointer);
 	
 	memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
 
 	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
 	// Wait to receive a message from the server
 	int numbytes = receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
-	print_debug("Extracted: %p from server", (void *)(*ipv6Pointer).s6_addr);
+	// print_debug("Extracted: %p from server", (void *)(*ipv6Pointer).s6_addr); // DO NOT REMOVE NEEDED FOR NDPPROXY
 	//printNBytes((char *)ipv6Pointer->s6_addr,IPV6_SIZE);
 	print_debug("Received %d bytes", numbytes);
 	// Parse the response
@@ -65,6 +69,7 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 		//			  ^  ^ these two bytes are stored (subnet and host ID)
 		memcpy(remotePointer->s6_addr+4, get_in_addr(p->ai_addr)+4, 2);
 		print_debug("Got: %p from server", (void *)remotePointer);
+
 		retVal = *remotePointer;
 	} else {
 		print_debug("Response was not successful");
@@ -178,8 +183,6 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 	return receiveBuffer;
 }
 
-
-
 int basicOperations( int sockfd, struct addrinfo * p) {
 	int i;
 	// Initialize remotePointers array
@@ -221,7 +224,6 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 	}
 }
 
-
 /*
  * Main workhorse method. Parses arguments, setups connections
  * Allows user to issue commands on the command line.
@@ -244,7 +246,7 @@ int main(int argc, char *argv[]) {
 
 	//Routing configuration
 	// This is a temporary solution to enable the forwarding of unknown ipv6 subnets
-	//printf("%d\n",system("sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo"));
+	printf("%d\n",system("sudo ip -6 route add local 0:0100::/40  dev lo"));
 	//ip -6 route add local ::3131:0:0:0:0/64  dev h1-eth0
 	//ip -6 route add local ::3131:0:0:0:0/64  dev h2-eth0
 	// Tells the getaddrinfo to only return sockets
@@ -276,8 +278,6 @@ int main(int argc, char *argv[]) {
 	} else {
 		//interactiveMode(sockfd, p);
 	}
-
-
 
 	freeaddrinfo(servinfo); // all done with this structure
 

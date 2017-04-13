@@ -10,17 +10,16 @@
 #include <time.h>
 #include <unistd.h>
 
-//TODO: Remove?
-#define GLOBAL_ID "EA75:DB1A:68D8" // 48 bits for global id
 
 #define BLOCK_SIZE 4096 // max number of bytes we can get at once
 #define POINTER_SIZE sizeof(void*)
 #define IPV6_SIZE 16
 
-#define ALLOC_CMD	"01"
-#define WRITE_CMD	"02"
-#define GET_CMD		"03"
-#define FREE_CMD	"04"
+#define ALLOC_CMD		"01"
+#define WRITE_CMD		"02"
+#define GET_CMD			"03"
+#define FREE_CMD		"04"
+#define GET_ADDR_CMD	"05"
 
 
 void *get_in_addr(struct sockaddr *sa);
