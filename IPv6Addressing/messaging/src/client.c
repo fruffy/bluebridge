@@ -16,7 +16,7 @@
 //	3. Integrate functional ndp proxy server into the server program
 //	4. Implement IP subnet state awareness
 //		(server allocates memory address related to its assignment)
-//	5. Remove unneeded code and print5 statements
+//	5. Remove unneeded code and print statements
 //	6. Fix interactive mode and usability bugs
 //	7. Switch to raw socket packets (hope is to get rid of NDP requests)
 //	http://stackoverflow.com/questions/15702601/kernel-bypass-for-udp-and-tcp-on-linux-what-does-it-involve
@@ -40,9 +40,9 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 	print_debug("Memcopying ALLOCATE message into send buffer");
 
 	// Lines are for ndpproxy DO NOT REMOVE
-	//struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
-	//memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-	//p->ai_addrlen = sizeof(*ipv6Pointer);
+	struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
+	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+	p->ai_addrlen = sizeof(*ipv6Pointer);
 	
 	memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
 
@@ -112,7 +112,7 @@ int writeToMemory(int sockfd, struct addrinfo * p, char * payload,  struct in6_a
 	memcpy(sendBuffer+size+1,payload, BLOCK_SIZE - size);
 	size += strlen(payload);
 
-	printf("Sending Data: %d bytes to remote pointer ", size);
+	printf("Sending Data: %d bytes", size);
 	printNBytes((char*) toPointer->s6_addr, IPV6_SIZE);
 	sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
 	receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
@@ -212,7 +212,7 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 		printf("Using Pointer: %p\n", (void *) getPointerFromIPv6(rootPointer->AddrString));
 		print_debug("Creating payload");
 		srand(time(NULL));
-		char * payload = get_rdm_string(BLOCK_SIZE,  rand()%100);
+		char * payload = gen_rdm_bytestream(BLOCK_SIZE);
 		writeToMemory(sockfd, p, payload, &remoteMemory);
 		char * test = getMemory(sockfd, p, &remoteMemory);
 		printf("Results of memory store: %.50s\n", test);
@@ -246,9 +246,9 @@ int main(int argc, char *argv[]) {
 
 	//Routing configuration
 	// This is a temporary solution to enable the forwarding of unknown ipv6 subnets
-	printf("%d\n",system("sudo ip -6 route add local 0:0100::/40  dev lo"));
-	//ip -6 route add local ::3131:0:0:0:0/64  dev h1-eth0
-	//ip -6 route add local ::3131:0:0:0:0/64  dev h2-eth0
+	//printf("%d\n",system("sudo ip -6 route add local 0:0100::/40  dev lo"));
+	//ip -6 route add local ::0100:0:0:0:0/64  dev h1-eth0
+	//ip -6 route add local ::0100:0:0:0:0/64  dev h2-eth0
 	// Tells the getaddrinfo to only return sockets
 	// which fit these params.
 	memset(&hints, 0, sizeof hints);
@@ -275,10 +275,7 @@ int main(int argc, char *argv[]) {
 
 	if(isAutoMode) {
 		basicOperations(sockfd, p);
-	} else {
-		//interactiveMode(sockfd, p);
 	}
-
 	freeaddrinfo(servinfo); // all done with this structure
 
 	// TODO: send close message so the server exits
@@ -295,174 +292,3 @@ struct PointerMap {
 	char* AddrString;
 	struct in6_addr* Pointer;
 };
-/*
- * Interactive structure for debugging purposes
- */
-/*int interactiveMode( int sockfd,  struct addrinfo * p) {
-	long unsigned int len = 200;
-	char input[len];
-	char * localData;
-	int count = 0;
-	int i;
-	struct PointerMap remotePointers[100];
-	// Initialize remotePointers array
-	for (i = 0; i < 100; i++) {
-		remotePointers[i].AddrString = (char *) malloc(100);
-		remotePointers[i].Pointer = (struct in6_addr * ) malloc(sizeof(struct in6_addr));
-}
-	int active = 1;
-	while (active) {
-		memset(input, 0, len);
-		getLine("Please specify if you would like to (L)ist pointers, (A)llocate, (F)ree, (W)rite, or (R)equest data.\nPress Q to quit the program.\n", input, sizeof(input));
-		if (strcmp("A", input) == 0) {
-			memset(input, 0, len);
-			getLine("Specify a number of address or press enter for one.\n", input, sizeof(input));
-
-			if (strcmp("", input) == 0) {
-				print_debug("Calling allocateMem");
-				
-				struct in6_addr remoteMemory = allocateMem(sockfd, p)
-				
-				// char formatted_string[100] = {};
-				// sprintf(formatted_string, "Got %" PRIx64 " from call", remoteMemory);
-				//print_debug("Got %" PRIx64 " from call", remoteMemory);
-				print_debug("Got %p from call", (void *) remoteMemory.s6_addr);
-
-				print_debug("Creating pointer to remote memory address");
-
-				char addrString[100] = {};
-				//sprintf(addrString, "%" PRIx64, remoteMemory);
-				memcpy(addrString,&remoteMemory, POINTER_SIZE);
-				strcpy(remotePointers[count].AddrString, addrString);
-				memcpy(remotePointers[count++].Pointer, &remoteMemory, sizeof(remoteMemory));
-				printf("Allocated pointer 0x%s\n", addrString);
-				printf("Allocated pointer address %p\n", &remoteMemory);
-			} else {
-				int num = atoi(input);
-
-				// char message[100] = {};
-				// sprintf(message, "Received %d as input", num);
-				print_debug("Received %d as input", num);
-
-				int j; 
-				for (j = 0; j < num; j++) {
-					print_debug("Calling allocateMem");
-
-					struct in6_addr remoteMemory = allocateMem(sockfd, p);
-					
-					// char formatted_string[100] = {};
-					// sprintf(formatted_string, "Got %" PRIx64 " from call", remoteMemory);
-					//print_debug("Got %" PRIx64 " from call", remoteMemory);
-					print_debug("Got %p from call", (void *) remoteMemory.s6_addr);
-
-
-					print_debug("Creating pointer to remote memory address");
-
-					char addrString[100] = {};
-					//sprintf(addrString, "%" PRIx64, remoteMemory);
-
-					memcpy(addrString,&remoteMemory, POINTER_SIZE);
-					strcpy(remotePointers[count].AddrString, addrString);
-					memcpy(remotePointers[count++].Pointer, &remoteMemory, sizeof(remoteMemory));
-					printf("Allocated pointer 0x%s\n", addrString);
-					printf("Allocated pointer address %p\n", &remoteMemory);
-				}
-			}
-		} else if (strcmp("L", input) == 0){
-			printf("Remote Address\tPointer\n");
-			for (i = 0; i < 100; i++){
-				if (strcmp(remotePointers[i].AddrString, "") != 0) {
-					printf("0x%s\t%p\n", remotePointers[i].AddrString, remotePointers[i].Pointer);
-				}
-			}
-		} else if (strcmp("R", input) == 0) {
-			memset(input, 0, len);
-			getLine("Please specify the memory address.\n", input, sizeof(input));
-
-			if (strcmp("A", input) == 0) {
-				for (i = 0; i < 100; i++) {
-					if (strcmp(remotePointers[i].AddrString, "") != 0) {
-						// char message[100] = {};
-						// sprintf(message, "Retrieving data from pointer 0x%s\n", remotePointers[i].AddrString);
-						print_debug("Retrieving data from pointer 0x%s", remotePointers[i].AddrString);
-						localData = getMemory(sockfd, p, remotePointers[i].Pointer);
-						printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
-					}
-				}
-			} else {
-				struct in6_addr pointer = getIPv6FromPointer((uint64_t) input);
-				// char message[100] = {};
-				// sprintf(message, "Retrieving data from pointer 0x%p\n", (void *) pointer);
-				print_debug("Retrieving data from pointer 0x%p", (void *) pointer.s6_addr);
-				localData = getMemory(sockfd, p, &pointer);
-				printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
-			}
-		} else if (strcmp("W", input) == 0) {
-			memset(input, 0, len);
-			getLine("Please specify the memory address.\n", input, sizeof(input));
-
-			if (strcmp("A", input) == 0) {
-				for (i = 0; i < 100; i++) {
-					if (strcmp(remotePointers[i].AddrString, "") != 0) {
-						printf("Writing data to pointer 0x%s\n", remotePointers[i].AddrString);
-						srand(time(NULL));
-						char * payload = get_rdm_string(BLOCK_SIZE,  rand()%100);
-						writeToMemory(sockfd, p, payload, remotePointers[i].Pointer);
-					}
-				}
-			} else {
-				struct in6_addr pointer = getIPv6FromPointer((uint64_t) input);
-				printf("Writing data to pointer %p\n", (void *) pointer.s6_addr);
-				srand(time(NULL));
-				char * payload = get_rdm_string(BLOCK_SIZE,  rand()%100);
-				writeToMemory(sockfd, p, payload, remotePointers[i].Pointer);
-			}
-		} else if (strcmp("F", input) == 0) {
-			memset(input, 0, len);
-			getLine("Please specify the memory address.\n", input, sizeof(input));
-			
-			if (strcmp("A", input) == 0) {
-				for (i = 0; i < 100; i++) {
-					if (strcmp(remotePointers[i].AddrString, "") != 0) {
-						printf("Freeing pointer 0x%s\n", remotePointers[i].AddrString);
-						releaseMemory(sockfd, p, remotePointers[i].Pointer);
-						remotePointers[i].AddrString = "";
-						remotePointers[i].Pointer = 0;
-					}
-				}
-			} else {
-				struct in6_addr pointer = getIPv6FromPointer((uint64_t) input);
-				printf("Freeing pointer %p\n", (void *) pointer.s6_addr);
-				releaseMemory(sockfd, p, &pointer);
-				for (i = 0; i < 100; i++) {
-					if (strcmp(remotePointers[i].AddrString, input+2) == 0){
-						remotePointers[i].AddrString = "";
-						remotePointers[i].Pointer = 0;
-					}
-				}
-			}
-		//TODO: Remove?
-		} else if (strcmp("T", input) == 0) {
-			memset(input, 0, len);
-			getLine("Please specify the memory address.\n", input, sizeof(input));
-			uint64_t pointer = getPointerFromString(input);
-			printf("Input pointer: %p\n", (void *) pointer);
-
-			struct in6_addr temp = getIPv6FromPointerStr(pointer);
-
-			printf("Received struct...\n");
-
-			uint64_t newpointer = getPointerFromIPv6Str(temp);
-
-//			printf("New pointer: %" PRIx64 ", Old pointer: %" PRIx64 "\n", newpointer, pointer);
-			printf("New pointer: %p, Old pointer: %p\n", (void *) newpointer, (void *) pointer);
-
-
-		} else if (strcmp("Q", input) == 0) {
-			active = 0;
-			printf("Ende Gelaende\n");
-		} else {
-			printf("Try again.\n");
-		}
-	}
-}*/

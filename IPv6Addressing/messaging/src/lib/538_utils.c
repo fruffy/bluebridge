@@ -62,6 +62,7 @@ unsigned char *gen_rdm_bytestream(size_t num_bytes) {
 
 	return stream;
 }
+
 /*
  * Generates a random IPv6 address target under specific constraints
  * This is used by the client to request a pointer from a random server in the network
@@ -88,20 +89,27 @@ struct in6_addr * gen_rdm_IPv6Target() {
 }
 
 /*
- * Gets random string array with size num_bytes
+ * Generates a fixed IPv6 address target based on the provides int value
+ * This is used by the client to request a pointer from a random server in the network
+ * In future implementations this will be handled by the switch and controller to 
+ * loadbalance. The client will send out a generic request. 
  */
-//TODO Remove?
-char * get_rdm_string(size_t num_bytes, int index) {
-	char* stream = (char *) malloc(num_bytes);
-	char *string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.-#'?!";
+struct in6_addr * gen_fixed_IPv6Target(uint8_t rndHost) {
+	// Add the pointer
 
-	sprintf(stream, "%d:", index);
+	struct in6_addr * newAddr = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
+	/*// Insert link local id
+	memcpy(newAddr->s6_addr,&GLOBAL_ID,2);*/
+	// Insert subnet id
+	memcpy(newAddr->s6_addr+4,&SUBNET_ID,1);
+	//We are allocating from a random host
+	memcpy(newAddr->s6_addr+5,&rndHost,1);
 
-	size_t i = strlen(stream);
-	for (; i < num_bytes; i++) {
-		stream[i] = string[rand()%strlen(string)];
-	}
-	return stream;
+
+	char s[INET6_ADDRSTRLEN];
+	inet_ntop(AF_INET6,newAddr, s, sizeof s);
+	print_debug("Target IPv6 Pointer %s",s);
+	return newAddr;
 }
 
 /*
@@ -174,7 +182,7 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 	msg.msg_controllen = sizeof(msg_control);
 	msg.msg_flags = 0;
 
-	printf("Waiting for response...\n");
+	print_debug("Waiting for response...\n");
 	memset(receiveBuffer, 0, msgBlockSize);
 	numbytes = recvmsg(sockfd, &msg, 0);
 	struct in6_pktinfo * in6_pktinfo;
@@ -193,12 +201,10 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 	}
 
 	inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
-	printf("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
+	print_debug("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
 
 	return numbytes;
 }
-
-
 
 /*
  * Receives message from socket
@@ -210,7 +216,7 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 	socklen_t slen = sizeof(struct sockaddr_in6);
 
 	memset(receiveBuffer, 0, msgBlockSize);
-	printf("Waiting for response...\n");
+	print_debug("Waiting for response...\n");
 
 	if ((numbytes = recvfrom(sockfd,receiveBuffer, msgBlockSize, 0, p->ai_addr,&slen)) == -1) {
 		perror("ERROR reading from socket");
@@ -218,7 +224,7 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 	}
 	char s[INET6_ADDRSTRLEN];
 	inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
-	printf("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
+	print_debug("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
 
 	return numbytes;
 }
@@ -229,8 +235,8 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 uint64_t getPointerFromIPv6(struct in6_addr addr) {
 	uint64_t pointer = 0;
 	memcpy(&pointer,addr.s6_addr+IPV6_SIZE-POINTER_SIZE, POINTER_SIZE);
-	printf("Converted IPv6 to Pointer: ");
-	printNBytes((char*) &pointer,POINTER_SIZE);
+	// printf("Converted IPv6 to Pointer: ");
+	// printNBytes((char*) &pointer,POINTER_SIZE);
 	return pointer;
 }
 
@@ -247,111 +253,4 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
 	inet_ntop(AF_INET6,newAddr, s, sizeof s);
 	print_debug("IPv6 Pointer %s",s);
 	return *newAddr;
-}
-//TODO: Remove?
-/*struct in6_addr getIPv6FromPointerStr(uint64_t pointer) {
-	char* string_addr = (char*) calloc(IPV6_SIZE, sizeof(char));
-
-	// Create the beginning of the address
-	strcat(string_addr, GLOBAL_ID);
-	strcat(string_addr, ":");
-	strcat(string_addr, SUBNET_ID);
-	strcat(string_addr, ":");// Pads the pointer
-
-	// Add the pointer
-	char* pointer_string = (char*) malloc(POINTER_SIZE * sizeof(char));
-	
-	//sprintf(pointer_string, "%" PRIx64, pointer);
-
-	memcpy(&pointer_string, &pointer,POINTER_SIZE);
-	printf("Pointer: %s\n", pointer_string);
-	printf("Address so far: %s\n", string_addr);
-	
-	print_debug("Pointer length: %lu", strlen(pointer_string));
-	print_debug("Address length: %lu", strlen(string_addr));
-
-	unsigned int i;
-
-	for (i = 0; i < strlen(pointer_string); i+=4) {
-		char* substr = (char *) malloc(4 * sizeof(char));
-		strcat(string_addr, ":");
-		print_debug("Creating copy");
-		strncpy(substr, pointer_string+i, 4);
-		print_debug("Copy: %s", substr);
-		print_debug("Performing concatenation");
-		strcat(string_addr, substr);
-		//strcat(string_addr, pointer_string[i]);
-		//strcat(string_addr, pointer_string[i+1]);
-		//strcat(string_addr, pointer_string[i+2]);
-		//strcat(string_addr, pointer_string[i+3]);
-	}
-
-	print_debug("New address: %s", string_addr);
-
-	struct in6_addr newAddr;
-
-	if (inet_pton(AF_INET6, string_addr, &newAddr) == 1) {
-		printf("SUCCESS: %s\n", string_addr);
-		//successfully parsed string into "result"
-	} else {
-		printf("ERROR: not a valid address [%s]\n", string_addr);
-		//failed, perhaps not a valid representation of IPv6?
-	}
-
-	return newAddr;
-}*/
-
-uint64_t getPointerFromString(char* input) {
-	uint64_t address = 0;
-	// printf("Memcpy in getPointerFromString\n");
-	memcpy(&address, &input, POINTER_SIZE);
-	uint64_t pointer = address;
-	// printf("Returning pointer\n");
-	return pointer;
-}
-
-//TODO: Remove?
-uint64_t getPointerFromIPv6Str(struct in6_addr addr) {
-	char* pointer = (char *) malloc(12 * sizeof(unsigned char));
-	char str[INET6_ADDRSTRLEN];
-	unsigned int i;
-	inet_ntop(AF_INET6, addr.s6_addr, str, INET6_ADDRSTRLEN);
-	printf("String address: %s\n", str);
-	int j = 0;
-	for (i = strlen(str) - 14; i < strlen(str); i++) { // 14 b/c :
-		if (str[i] != ':') {
-			pointer[j] = str[i];
-			j++;
-		}
-	}
-	printf("Pointer: %s\n", pointer);
-	return getPointerFromString(pointer);
-}
-
-/*
- * Sends message to specified socket
- */
-//TODO: Remove? Do we still need TCP?
-int sendTCP(int sockfd, char * sendBuffer, int msgBlockSize) {
-	if (send(sockfd, sendBuffer, msgBlockSize, 0) < 0) {
-		perror("ERROR writing to socket");
-		return EXIT_FAILURE;
-	}
-	memset(sendBuffer, 0, msgBlockSize);
-	return EXIT_SUCCESS;
-}
-
-/*
- * Receives message from socket
- */
-//TODO: Remove? Do we still need TCP?
-int receiveTCP(int sockfd, char * receiveBuffer, int msgBlockSize) {
-	//Sockets Layer Call: recv()
-	int numbytes = 0;
-	memset(receiveBuffer, 0, msgBlockSize);
-	if ((numbytes = recv(sockfd, receiveBuffer, msgBlockSize, 0)) == -1) {
-		perror("ERROR reading from socket");
-		exit(1);
-	}
-	return numbytes;
 }

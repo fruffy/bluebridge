@@ -5,6 +5,7 @@ import graph_generator as gg
 
 from igraph import *
 
+
 def pagerank(myGraph, d=0.9):
 
     remote_hits_dict = dict()
@@ -41,21 +42,37 @@ if __name__ == '__main__':
 
     print sys.argv
 
-    if len(sys.argv) != 3:
-        print "USAGE: python pagerank_homebrew.py CLUSTERSIZE DISTRIBUTION"
+    if len(sys.argv) < 3:
+        print "USAGE: python pagerank_homebrew.py DISTRIBUTION input_file (CLUSTERS)"
         exit()
 
-    cluster_size = int(sys.argv[1])
-    distribution = sys.argv[2]
+    distribution = sys.argv[1]
+    graph = sys.argv[2]
 
     if distribution not in ['smart', 'hash']:
         print "DISTRIBUTION must be one of: smart, hash"
         exit()
 
-    myGraph = gg.get_sample_graph(cluster_size=cluster_size, distribution=distribution)
+    myGraph = Graph()
+    start_time = time.time()
+
+    if graph == "new":
+        cluster_size = sys.argv[3]
+        myGraph = gg.get_sample_graph(cluster_size=cluster_size, distribution=distribution)
+    else:
+        myGraph = Graph.Load(graph, format="ncol")
+        total_nodes = len(myGraph.vs())
+        myGraph["total_nodes"] = total_nodes
+        myGraph.vs["rank"] = 1 / float(total_nodes)
+        myGraph.vs["host"] = "m1"
+        myGraph.vs["message_queue"] = [[] for _ in xrange(total_nodes)]
+        myGraph.es["is_external"] = False
+
+    print "Parsing complete. Took", time.time() - start_time, "s."
 
     start_time = time.time()
 
+    hits = dict()
     ranks, hits = pagerank(myGraph)
     #ranks = myGraph.pagerank(directed=False, damping=0.9)
 

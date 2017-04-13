@@ -83,7 +83,8 @@ def run():
                       '-eth0 scope global 0:0:01' + '{0:02x}'.format(hostNum) + '::/48')
         host.cmdPrint('ip -6 route add local 0:0:0100::/40  dev h' +
                       str(hostNum) + '-eth0')
-        host.cmdPrint('ip -6 route add local 0:0:01' + '{0:02x}'.format(hostNum) + '::/48 dev lo')
+        host.cmdPrint('ip -6 route add local 0:0:01' +
+                      '{0:02x}'.format(hostNum) + '::/48 dev lo')
         host.cmdPrint('xterm  -T \"server' + str(hostNum) +
                       '\" -e \"./messaging/bin/server; bash\" &')
         # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"valgrind ./messaging/bin/ndpproxy -i h' + str(hostNum) +
@@ -92,8 +93,6 @@ def run():
         #               '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
         host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) +
                       '\" -e \"./ndpproxy/ndppd -vvv -c ./config/ndp_conf.conf; bash\" &')
-        # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) +
-        #               '\" -e \"radvd -n --debug=5 -C ./config/radvd.conf; bash\" &')
         hostNum += 1
 
     net.startTerms()

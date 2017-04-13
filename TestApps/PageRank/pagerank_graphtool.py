@@ -20,7 +20,7 @@ if __name__ == '__main__':
     NUM_NODES = 10
 
     start_time = time.time()
-    myGraph = Graph.Load(inputFile, format="edge")
+    myGraph = Graph.Load(inputFile, format="ncol")
     print "Parsing complete. Took", time.time() - start_time, "s."
 
     '''

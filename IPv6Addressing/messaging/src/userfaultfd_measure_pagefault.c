@@ -20,7 +20,7 @@
 #include "./lib/538_utils.h"
 #include "./lib/debug.h"
 
-#define NUM_PAGES 10
+#define NUM_PAGES 1000
 
 static volatile int stop;
 void *region;
@@ -61,8 +61,12 @@ struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer) 
     size += sizeof(GET_ADDR_CMD) - 1; // Should be 4
     memcpy(sendBuffer+size, &pointer, POINTER_SIZE);
     size += POINTER_SIZE; // Should be 8, total 12
-
-    printf("Retrieving address for pointer: %" PRIx64 "\n", pointer);
+    // Lines are for ndpproxy DO NOT REMOVE
+    struct in6_addr * ipv6Pointer = gen_fixed_IPv6Target(1);
+    memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+    p->ai_addrlen = sizeof(*ipv6Pointer);
+    
+    // printf("Retrieving address for pointer: %" PRIx64 "\n", pointer);
 
     // Send message
     sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
@@ -75,12 +79,12 @@ struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer) 
         print_debug("Response was ACK");
         // If the message is ACK --> successful
         struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-        printf("Received IPv6 data: ");
-        printNBytes(receiveBuffer+4,IPV6_SIZE);
+        // printf("Received IPv6 data: ");
+        // printNBytes(receiveBuffer+4,IPV6_SIZE);
         // Copy the returned pointer
         memcpy(remotePointer, receiveBuffer+4, IPV6_SIZE);
         // Insert information about the source host (black magic)
-        //00 00 00 00 01 02 00 00 00 00 00 00 00 00 00 00
+        //00 00 00 00 01 01 00 00 00 00 00 00 00 00 00 00
         //            ^  ^ these two bytes are stored (subnet and host ID)
         memcpy(remotePointer->s6_addr+4, get_in_addr(p->ai_addr)+4, 2);
         print_debug("Got: %p from server", (void *)remotePointer);
@@ -108,9 +112,6 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
     memcpy(sendBuffer+size,toPointer->s6_addr,IPV6_SIZE);
     size += IPV6_SIZE; // Should be 8, total 12
 
-    printf("Retrieving Data with pointer: ");
-    printNBytes((char*)toPointer,IPV6_SIZE);
-
     // Send message
     sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
     // Receive response
@@ -120,6 +121,41 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
     free(sendBuffer);
 
     return receiveBuffer;
+}
+
+void print_times(uint64_t* first_rtt_start, uint64_t* first_rtt_end, uint64_t* second_rtt_start, uint64_t* second_rtt_end, uint64_t* handler_start, uint64_t* handler_end) {
+    FILE *f1 = fopen("first_rtt_times.csv", "w");
+    if (f1 == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+
+    FILE *f2 = fopen("second_rtt_times.csv", "w");
+    if (f2 == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+
+    FILE *f3 = fopen("handler_times.csv", "w");
+    if (f3 == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+
+    fprintf(f1, "start (ns),end (ns)\n");
+    fprintf(f2, "start (ns),end (ns)\n");
+    fprintf(f3, "start (ns),end (ns)\n");
+
+    int i;
+    for (i = 0; i < NUM_PAGES; i++) {
+        fprintf(f1, "%llu,%llu\n", (unsigned long long) first_rtt_start[i], (unsigned long long) first_rtt_end[i]);
+        fprintf(f2, "%llu,%llu\n", (unsigned long long) second_rtt_start[i], (unsigned long long) second_rtt_end[i]);
+        fprintf(f3, "%llu,%llu\n", (unsigned long long) handler_start[i], (unsigned long long) handler_end[i]);
+    }
+
+    fclose(f1);
+    fclose(f2);
+    fclose(f3);
 }
 
 static void *handler(void *arg)
@@ -165,7 +201,35 @@ static void *handler(void *arg)
         break;
     }
 //*/
+
+    uint64_t *first_rtt_start = malloc(sizeof(uint64_t) * NUM_PAGES);
+    assert(first_rtt_start);
+    memset(first_rtt_start, 0, sizeof(uint64_t) * NUM_PAGES);
+
+    uint64_t *first_rtt_end = malloc(sizeof(uint64_t) * NUM_PAGES);
+    assert(first_rtt_end);
+    memset(first_rtt_end, 0, sizeof(uint64_t) * NUM_PAGES);
+
+    uint64_t *second_rtt_start = malloc(sizeof(uint64_t) * NUM_PAGES);
+    assert(second_rtt_start);
+    memset(second_rtt_start, 0, sizeof(uint64_t) * NUM_PAGES);
+
+    uint64_t *second_rtt_end = malloc(sizeof(uint64_t) * NUM_PAGES);
+    assert(second_rtt_end);
+    memset(second_rtt_end, 0, sizeof(uint64_t) * NUM_PAGES);
+
+    uint64_t *handler_start = malloc(sizeof(uint64_t) * NUM_PAGES);
+    assert(handler_start);
+    memset(handler_start, 0, sizeof(uint64_t) * NUM_PAGES);
+
+    uint64_t *handler_end = malloc(sizeof(uint64_t) * NUM_PAGES);
+    assert(handler_end);
+    memset(handler_end, 0, sizeof(uint64_t) * NUM_PAGES);
+
+    int i = 0;
+
     for (;;) {
+        handler_start[i] = getns();
         struct uffd_msg msg;
 
         struct pollfd pollfd[1];
@@ -176,7 +240,7 @@ static void *handler(void *arg)
         int pollres = poll(pollfd, 1, 2000);
 
         if (stop)
-            return NULL;
+            goto EXIT;
 
         switch (pollres) {
         case -1:
@@ -225,7 +289,7 @@ static void *handler(void *arg)
             uint64_t start_addr = (uint64_t) region;
             int index = (int) (addr - start_addr)/get_page_size();
 
-            fprintf(stdout, "Address: %"PRIx64", index: %d\n", (uint64_t) msg.arg.pagefault.address, index);
+            // fprintf(stdout, "Address: %"PRIx64", index: %d\n", (uint64_t) msg.arg.pagefault.address, index);
 
             if (addr_map[index] > 0) {
             //     // Do remote things
@@ -234,50 +298,58 @@ static void *handler(void *arg)
 
             //     // 2. Get stuff from the remote server
             //     //      a. getMemory() from client.c
-                fprintf(stdout, "Grabbing IPv6 for %"PRIx64"\n", (uint64_t) msg.arg.pagefault.address);
-
+                // fprintf(stdout, "Grabbing IPv6 for %"PRIx64"\n", (uint64_t) msg.arg.pagefault.address);
+                first_rtt_start[i] = getns();
                 struct in6_addr remoteMachine = getRemoteAddr(sockfd_server, p_server, addr_map[index]);
+                first_rtt_end[i] = getns();
 
                 char s[INET6_ADDRSTRLEN];
                 inet_ntop(AF_INET6, &remoteMachine, s, sizeof(s));
 
-                fprintf(stdout, "Remote Machine is... %s\n", s);
-
+                // fprintf(stdout, "Remote Machine is... %s\n", s);
+                second_rtt_start[i] = getns();
                 char* val = getMemory(sockfd_server, p_server, &remoteMachine);
+                second_rtt_end[i] = getns();
+                
+                struct uffdio_copy copy;
+                copy.src = (long long)buf;
+                copy.dst = (long long)addr;
+                copy.len = page_size;
+                copy.mode = 0;
+                if (ioctl(param->uffd, UFFDIO_COPY, &copy) == -1) {
+                    perror("ioctl/copy");
+                    exit(1);
+                }
 
-                printf("Results of memory store: %.50s\n", val);
-            } else {
-            //     // Do local things
-                fprintf(stdout, "Doing local things with addr %"PRIx64"\n", (uint64_t) msg.arg.pagefault.address);
-            }
-
-            // TODO: should I modify such that it does actually access disk?
-            struct uffdio_copy copy;
-            copy.src = (long long)buf;
-            copy.dst = (long long)addr;
-            copy.len = page_size;
-            copy.mode = 0;
-            if (ioctl(param->uffd, UFFDIO_COPY, &copy) == -1) {
-                perror("ioctl/copy");
-                exit(1);
+                handler_end[i] = getns();
+                i++;
+                // printf("Results of memory store: %.50s\n", val);
             }
         }
 
     }
 
-/*
-    freeaddrinfo(servinfo);
+EXIT:
+
+    print_times(first_rtt_start, first_rtt_end, second_rtt_start, second_rtt_end, handler_start, handler_end);
+
+    freeaddrinfo(servinfo_server);
     close(sockfd_server);
-    close(sockfd_ds);
-*/
+    free(first_rtt_start);
+    free(second_rtt_start);
+    free(first_rtt_end);
+    free(second_rtt_end);
+    free(handler_start);
+    free(handler_end);
+
     return NULL;
 }
 
 struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
-    print_debug("Mallocing send and receive buffers");
+    // print_debug("Mallocing send and receive buffers");
     char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
     char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
-    print_debug("Memcopying ALLOCATE message into send buffer");
+    // print_debug("Memcopying ALLOCATE message into send buffer");
 
     // Lines are for ndpproxy DO NOT REMOVE
     //struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
@@ -300,8 +372,8 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
         print_debug("Response was ACK");
         // If the message is ACK --> successful
         struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-        printf("Received pointer data: ");
-        printNBytes(receiveBuffer+4,IPV6_SIZE);
+        // printf("Received pointer data: ");
+        // printNBytes(receiveBuffer+4,IPV6_SIZE);
         // Copy the returned pointer
         memcpy(remotePointer, receiveBuffer+4, IPV6_SIZE);
         // Insert information about the source host (black magic)
@@ -324,11 +396,11 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
         print_debug("Keeping return value as 0");
     }
 
-    print_debug("Freeing sendBuffer and receiveBuffer memory");
+    // print_debug("Freeing sendBuffer and receiveBuffer memory");
     free(sendBuffer);
     free(receiveBuffer);
 
-    print_debug("Returning value");
+    // print_debug("Returning value");
     //TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
     return retVal;
 }
@@ -426,12 +498,12 @@ int main(int argc, char **argv)
     long i;
     char *cur = region;
     for (i = 0; i < NUM_PAGES; i++) {
-        if (i % 2) {
+        // if (i % 1) {
             // Allocate remote memory
             addr_map[i] = getPointerFromIPv6(allocateMem(sockfd_server, p_server));
-        } else {
-            addr_map[i] = 0;
-        }
+        // } else {
+            // addr_map[i] = 0;
+        // }
     }
 
     if ((uffdio_register.ioctls & UFFD_API_RANGE_IOCTLS) !=
@@ -452,11 +524,14 @@ int main(int argc, char **argv)
 
     sleep(1);
 
-    // track the latencies for each page
-    uint64_t *latencies = malloc(sizeof(uint64_t) * NUM_PAGES);
-    assert(latencies);
-    memset(latencies, 0, sizeof(uint64_t) * NUM_PAGES);
+    // track the total latencies for each page
+    uint64_t *total_start = malloc(sizeof(uint64_t) * NUM_PAGES);
+    assert(total_start);
+    memset(total_start, 0, sizeof(uint64_t) * NUM_PAGES);
 
+    uint64_t *total_end = malloc(sizeof(uint64_t) * NUM_PAGES);
+    assert(total_end);
+    memset(total_end, 0, sizeof(uint64_t) * NUM_PAGES);
     // touch each page in the region
     // TODO: just reads each region. Need to modify so it does 
     //       reads and writes. 
@@ -468,11 +543,10 @@ int main(int argc, char **argv)
 
         // Write value --> faults b/c page not in memory
         for (i = 0; i < NUM_PAGES; i++) {
-            uint64_t start = getns();
+            total_start[i] = getns();
             // int v = *((int*)cur);
             *cur = val; // Writes the letter C, TODO: figure out how to make it do a full string
-            uint64_t dur = getns() - start;
-            latencies[i] = dur;
+            total_end[i] = getns();
             cur += page_size;
             val++;
             if (val > 0x7E) {
@@ -484,10 +558,9 @@ int main(int argc, char **argv)
         cur = region;
         int value = 0;
         for (i = 0; i < NUM_PAGES; i++) {
-            uint64_t start = getns();
+            total_start[i] = getns();
             char v = *cur; // Get the current value as a char
-            uint64_t dur = getns() - start;
-            latencies[i] = dur;
+            total_end[i] = getns();
             value += (int)v;
             cur += page_size;
         }
@@ -502,40 +575,53 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    long double average, /*variance, std_deviation, */sum = 0/*, sum1 = 0*/;
-    uint64_t min = UINT64_MAX, max = 0;
+    // long double average, /*variance, std_deviation, */sum = 0/*, sum1 = 0*/;
+    // uint64_t min = UINT64_MAX, max = 0;
 
-    for (i = 0; i < NUM_PAGES; i++) {
-        sum += (long double) latencies[i];
-        if (latencies[i] > max) {
-            max = latencies[i];
-        }
+    // for (i = 0; i < NUM_PAGES; i++) {
+    //     sum += (long double) total_latencies[i];
+    //     if (total_latencies[i] > max) {
+    //         max = total_latencies[i];
+    //     }
 
-        if (latencies[i] < min) {
-            min = latencies[i];
-        }
-    }
+    //     if (total_latencies[i] < min) {
+    //         min = total_latencies[i];
+    //     }
+    // }
 
-    average = sum / (long double) NUM_PAGES;
+    // average = sum / (long double) NUM_PAGES;
 
     /*  Compute  variance  and standard deviation  */
 
     // for (i = 0; i < NUM_PAGES; i++) {
-    //     sum1 += ((long double) latencies[i] - average)*((long double) latencies[i] - average);
+    //     sum1 += ((long double) total_latencies[i] - average)*((long double) total_latencies[i] - average);
     // }
 
     // variance = sum1 / (long double)NUM_PAGES;
 
     // std_deviation = sqrt(variance);
 
-    // Prints the latencies per page. Want just an average, median, min, max. 
+    // Prints the total_latencies per page. Want just an average, median, min, max. 
     // for (i = 0; i < NUM_PAGES; i++) {
-    //     fprintf(stdout, "%llu\n", (unsigned long long)latencies[i]);
+    //     fprintf(stdout, "%llu\n", (unsigned long long)total_latencies[i]);
     // }
-    fprintf(stdout, "Start: %"PRIx64"\n", (uint64_t) region);
-    fprintf(stdout, "Mean: %Lf\nMinimum: %llu\nMaximum: %llu\n", average, (unsigned long long) min, (unsigned long long) max);
+    // fprintf(stdout, "Start: %"PRIx64"\n", (uint64_t) region);
+    // fprintf(stdout, "Mean: %Lf\nMinimum: %llu\nMaximum: %llu\n", average, (unsigned long long) min, (unsigned long long) max);
 
-    free(latencies);
+    FILE *f = fopen("total_times.csv", "w");
+    if (f == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+
+    fprintf(f, "start (ns),end (ns)\n");
+
+    for (i = 0; i < NUM_PAGES; i++) {
+        fprintf(f, "%llu,%llu\n", (unsigned long long) total_start[i], (unsigned long long) total_end[i]);
+    }
+
+    free(total_start);
+    free(total_end);
     munmap(region, page_size * NUM_PAGES);
 
     return 0;
