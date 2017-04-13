@@ -61,7 +61,11 @@ struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer) 
     size += sizeof(GET_ADDR_CMD) - 1; // Should be 4
     memcpy(sendBuffer+size, &pointer, POINTER_SIZE);
     size += POINTER_SIZE; // Should be 8, total 12
-
+    // Lines are for ndpproxy DO NOT REMOVE
+    struct in6_addr * ipv6Pointer = gen_fixed_IPv6Target(1);
+    memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+    p->ai_addrlen = sizeof(*ipv6Pointer);
+    
     // printf("Retrieving address for pointer: %" PRIx64 "\n", pointer);
 
     // Send message
@@ -82,7 +86,7 @@ struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer) 
         // Insert information about the source host (black magic)
         //00 00 00 00 01 01 00 00 00 00 00 00 00 00 00 00
         //            ^  ^ these two bytes are stored (subnet and host ID)
-        //memcpy(remotePointer->s6_addr+4, get_in_addr(p->ai_addr)+4, 2);
+        memcpy(remotePointer->s6_addr+4, get_in_addr(p->ai_addr)+4, 2);
         print_debug("Got: %p from server", (void *)remotePointer);
 
         retVal = *remotePointer;
@@ -107,9 +111,7 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
     size += sizeof(GET_CMD) - 1; // Should be 4
     memcpy(sendBuffer+size,toPointer->s6_addr,IPV6_SIZE);
     size += IPV6_SIZE; // Should be 8, total 12
-    int test = 1;
-    // printNBytes((char*) p->ai_addr,16);
-    memcpy(toPointer->s6_addr+5, &test, 1);
+
     // Send message
     sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
     // Receive response
