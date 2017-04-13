@@ -1,30 +1,40 @@
 import time
 import operator
+import random
 import pdb
+import sys
 
 from igraph import *
 
-CLUSTER_SIZE = 500
 
-
-def get_sample_graph():
+def get_sample_graph(cluster_size=500, distribution="smart"):
 
     start_time = time.time()
 
     # Make a best case graph!
-    g1 = Graph.Full(CLUSTER_SIZE)
-    g2 = Graph.Full(CLUSTER_SIZE)
+    g1 = Graph.Full(cluster_size)
+    g2 = Graph.Full(cluster_size)
 
     myGraph = g1.__add__(g2)
 
     total_nodes = len(myGraph.vs())
     myGraph["total_nodes"] = total_nodes
     myGraph.vs["rank"] = 1 / float(total_nodes)
-    myGraph.vs["host"] = (["m1"] * CLUSTER_SIZE) + (["m2"] * CLUSTER_SIZE)
+
+    # The natural ordering of nodes
+    host_list = (["m1"] * cluster_size) + (["m2"] * cluster_size)
+
+    if (distribution == "smart"):
+        myGraph.vs["host"] = host_list
+    elif (distribution == "hash"):
+        # Permutes the hosts randomly
+        random.shuffle(host_list)
+        myGraph.vs["host"] = host_list
+
     myGraph.vs["message_queue"] = [[] for _ in xrange(total_nodes)]
 
     myGraph.es["is_external"] = False
-    myGraph.add_edge(1, CLUSTER_SIZE + 1, is_external=True)
+    myGraph.add_edge(1, cluster_size + 1, is_external=True)
 
     print "Graph creation complete. Took", (time.time() - start_time), "s."
     return myGraph
@@ -32,7 +42,20 @@ def get_sample_graph():
 
 if __name__ == '__main__':
 
-    myGraph = get_sample_graph()
+    print sys.argv
+
+    if len(sys.argv) != 3:
+        print "USAGE: python graph_generator.py CLUSTERSIZE DISTRIBUTION"
+        exit()
+
+    cluster_size = int(sys.argv[1])
+    distribution = sys.argv[2]
+
+    if distribution not in ['smart', 'hash']:
+        print "DISTRIBUTION must be one of: smart, hash"
+        exit()
+
+    myGraph = get_sample_graph(cluster_size=cluster_size, distribution=distribution)
 
     start_time = time.time()
 
