@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"runtime/pprof"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -13,14 +14,20 @@ import (
 const DAMP = 0.85
 
 var (
-    itt = 20
-    tests = 20
-    profile = false
+	itt     = 20
+	tests   = 20
+	profile = false
 )
 
 type page struct {
 	incomming_rank float32
-	edges          []int //id's of other nodes
+	edges          []int
+}
+
+type page2 struct {
+	incomming_rank float32
+	edge_offset    int
+	num_edges      int
 }
 
 func newPage(pid int) *page {
@@ -38,55 +45,93 @@ func (p *page) String() string {
 	return s
 }
 
+func (p page2) MemoryString() string {
+	var s string
+	s += fmt.Sprintf("---------page----------\n")
+	s += fmt.Sprintf("---------rank----------\n")
+	s += fmt.Sprintf("%+v\n", &p.incomming_rank)
+	s += fmt.Sprintf("---offset----#edges----\n")
+	s += fmt.Sprintf("%d-%d\n", p.edge_offset, p.num_edges)
+	s += fmt.Sprintf("---------edges----------\n")
+	for i := 0; i < p.num_edges; i++ {
+		s += fmt.Sprintf("%+v\n", &(edges[p.edge_offset+i]))
+	}
+	s += "]\n"
+	return s
+}
+
 var pages map[int]*page
-var apages []page
+
+//apages is a memory map for vertex id's and is potentially sparse
+//index i of apages corresponds to the id of the vertex it represents
+//It is similar to a hash
+var apages []page2
 var ids []int
 var edgenorm []float32
 var rank []float32
+var edges []int
 
 func main() {
-    if profile {
-        f, err := os.Create("cpu.prof")
-        if err != nil {
-            log.Fatal("could not create CPU profile: ", err)
-        }
-        if err := pprof.StartCPUProfile(f); err != nil {
-            log.Fatal("could not start CPU profile: ", err)
-        }
-        defer pprof.StopCPUProfile()
-    }
+	if profile {
+		f, err := os.Create("cpu.prof")
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
 	pages = make(map[int]*page, 0)
 	parseFile("../web-Google.txt")
 	//parseFile("../tiny.txt")
 	//fmt.Println("parsed")
-    for i := 0; i < tests; i++ {
-        start := time.Now()
-        pageRank2(itt)
-        dir := time.Now().Sub(start)
-        fmt.Printf("Rounds %d Duration %f\n", itt, dir.Seconds())
-    }
+	for i := 0; i < tests; i++ {
+		start := time.Now()
+		//pageRank2(itt)
+		pageRank3(itt)
+		dir := time.Now().Sub(start)
+		fmt.Printf("Rounds %d Duration %f\n", itt, dir.Seconds())
+	}
 
 	//for i := range pages {
 	//	fmt.Print((*pages[i]).String())
 	//}
 }
-
-func pageRank2(rounds int) {
-    var outrank float32
-    var alpha = (1-DAMP)*(1.0/float32(len(pages)))
+func pageRank3(rounds int) {
+	var outrank float32
+	var alpha = (1 - DAMP) * (1.0 / float32(len(pages)))
 	for i := 0; i < rounds; i++ {
 		for j := 0; j < len(ids); j++ {
-            outrank = rank[j] / edgenorm[j]
-        
-            for k := 0; k < len(apages[j].edges); k++ {
-                apages[apages[j].edges[k]].incomming_rank += outrank
-            }
+			outrank = rank[j] / edgenorm[j]
+
+			for k := 0; k < apages[j].num_edges; k++ {
+				apages[edges[k+apages[j].edge_offset]].incomming_rank += outrank
+			}
 		}
 		for j := 0; j < len(ids); j++ {
-	        rank[j] = alpha + (DAMP * apages[j].incomming_rank)
+			rank[j] = alpha + (DAMP * apages[j].incomming_rank)
 		}
 	}
 }
+
+/*
+func pageRank2(rounds int) {
+	var outrank float32
+	var alpha = (1 - DAMP) * (1.0 / float32(len(pages)))
+	for i := 0; i < rounds; i++ {
+		for j := 0; j < len(ids); j++ {
+			outrank = rank[j] / edgenorm[j]
+
+			for k := 0; k < len(apages[j].edges); k++ {
+				apages[apages[j].edges[k]].incomming_rank += outrank
+			}
+		}
+		for j := 0; j < len(ids); j++ {
+			rank[j] = alpha + (DAMP * apages[j].incomming_rank)
+		}
+	}
+}*/
 
 /*
 func pageRank(rounds int) {
@@ -126,6 +171,7 @@ func parseFile(filename string) {
 	var i int
 	var buf string
 	var max int
+	var e int
 	for scanner.Scan() {
 		buf = scanner.Text()
 		//fmt.Println(buf)
@@ -154,22 +200,39 @@ func parseFile(filename string) {
 				}
 				pages[a].edges = append(pages[a].edges, b)
 				pages[b].incomming_rank = 0.0
+				e++
 			}
 		}
 	}
 	//fmt.Printf("Max = %d\n", max)
-	apages = make([]page, max+1)
 	ids = make([]int, len(pages))
+	//apages and edges are the main structures
+	apages = make([]page2, max+1)
+	edges = make([]int, e)
+	//edgenorm and rank are optimizations
 	edgenorm = make([]float32, len(pages))
 	rank = make([]float32, len(pages))
-	j := 0
+	j := 0 // id index
+	k := 0 //edge index
 	for i := range pages {
-		apages[i] = *pages[i]
-		ids[j] = i
-        rank[j] = 1.0
-        edgenorm[j] = float32((len(apages[j].edges) + 1))
+		ids[j] = i //id[index] = vertex-id
 		j++
 	}
+	sort.Ints(ids)
+	for i, id := range ids {
+		apages[id].num_edges = len(pages[id].edges)
+		rank[i] = 1.0
+		edgenorm[i] = float32((apages[id].num_edges + 1))
+		for l := range pages[id].edges {
+			apages[id].edge_offset = k
+			edges[k] = pages[id].edges[l]
+			k++
+		}
+	}
+
+	//for i := range apages {
+	//	fmt.Println(apages[i].MemoryString())
+	//}
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)

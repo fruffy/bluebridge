@@ -3,7 +3,7 @@ srcDir = src
 objDir = obj
 binDir = bin
 libDir = lib
-app := client server userfaultfd_measure_pagefault
+app := client server userfaultfd_measure_pagefault udpcooked
 
 
 CC = gcc
