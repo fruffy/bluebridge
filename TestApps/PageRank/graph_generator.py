@@ -12,17 +12,18 @@ def get_sample_graph(cluster_size=500, distribution="smart"):
     start_time = time.time()
 
     # Make a best case graph!
-    g1 = Graph.Full(cluster_size)
+    g1 = Graph.Star(cluster_size)
     g2 = Graph.Full(cluster_size)
 
     myGraph = g1.__add__(g2)
 
     total_nodes = len(myGraph.vs())
+    myGraph.vs["name"] = [format(x) for x in range(100)]
     myGraph["total_nodes"] = total_nodes
     myGraph.vs["rank"] = 1 / float(total_nodes)
 
     # The natural ordering of nodes
-    host_list = (["m1"] * cluster_size) + (["m2"] * cluster_size)
+    host_list = ([0] * cluster_size) + ([1] * cluster_size)
 
     if (distribution == "smart"):
         myGraph.vs["host"] = host_list
@@ -32,9 +33,7 @@ def get_sample_graph(cluster_size=500, distribution="smart"):
         myGraph.vs["host"] = host_list
 
     myGraph.vs["message_queue"] = [[] for _ in xrange(total_nodes)]
-
-    myGraph.es["is_external"] = False
-    myGraph.add_edge(1, cluster_size + 1, is_external=True)
+    myGraph.add_edge(0, cluster_size)
 
     print "Graph creation complete. Took", (time.time() - start_time), "s."
     return myGraph
