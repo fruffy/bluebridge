@@ -45,6 +45,34 @@ func (p *page) String() string {
 	return s
 }
 
+func printPages() {
+	for i, id := range ids {
+		fmt.Printf("Page: %d,", id)
+		fmt.Printf("Num_Edges: %d,", apages[id].num_edges)
+		fmt.Printf("Edge_Offset: %d,", apages[id].edge_offset)
+		fmt.Printf("Rank: %f,", rank[i])
+		fmt.Printf("Incomming-Rank: %f,", apages[id].incomming_rank)
+		fmt.Printf("EdgeNorm: %f,", edgenorm[i])
+		fmt.Print("Edges: [")
+		for j := 0; j < apages[id].num_edges; j++ {
+			fmt.Printf("%d,", edges[apages[id].edge_offset+j])
+		}
+		fmt.Println("]")
+	}
+}
+
+/*
+func (p page2) String() string {
+	var s string
+	s += fmt.Sprintf("I-Rank: %f ", p.incomming_rank)
+	s += "Edges: ["
+	for _, e := range p.edges {
+		s += fmt.Sprintf("%d,", e)
+	}
+	s += "] "
+	return s
+}*/
+
 func (p page2) MemoryString() string {
 	var s string
 	s += fmt.Sprintf("---------page----------\n")
@@ -72,6 +100,7 @@ var rank []float32
 var edges []int
 
 func main() {
+	graphFile := os.Args[1]
 	if profile {
 		f, err := os.Create("cpu.prof")
 		if err != nil {
@@ -83,16 +112,22 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	pages = make(map[int]*page, 0)
-	parseFile("../web-Google.txt")
+	start := time.Now()
+	parseFile(graphFile)
+	dir := time.Now().Sub(start)
+	fmt.Printf("Parse Duration %f\n", dir.Seconds())
 	//parseFile("../tiny.txt")
 	//fmt.Println("parsed")
+	total := 0.0
 	for i := 0; i < tests; i++ {
 		start := time.Now()
 		//pageRank2(itt)
 		pageRank3(itt)
 		dir := time.Now().Sub(start)
 		fmt.Printf("Rounds %d Duration %f\n", itt, dir.Seconds())
+		total += dir.Seconds()
 	}
+	fmt.Printf("Average time %f\n", total/float64(tests))
 
 	//for i := range pages {
 	//	fmt.Print((*pages[i]).String())
@@ -100,19 +135,22 @@ func main() {
 }
 func pageRank3(rounds int) {
 	var outrank float32
-	var alpha = (1 - DAMP) * (1.0 / float32(len(pages)))
+	var alpha = (1 - DAMP) / float32(len(pages))
 	for i := 0; i < rounds; i++ {
+		//printPages()
 		for j := 0; j < len(ids); j++ {
 			outrank = rank[j] / edgenorm[j]
-
 			for k := 0; k < apages[j].num_edges; k++ {
-				apages[edges[k+apages[j].edge_offset]].incomming_rank += outrank
+				//send message to another page
+				apages[edges[apages[j].edge_offset+k]].incomming_rank += outrank
 			}
 		}
 		for j := 0; j < len(ids); j++ {
 			rank[j] = alpha + (DAMP * apages[j].incomming_rank)
+			//apages[j].incomming_rank[j] = 0.0
 		}
 	}
+	//printPages()
 }
 
 /*
@@ -132,7 +170,6 @@ func pageRank2(rounds int) {
 		}
 	}
 }*/
-
 /*
 func pageRank(rounds int) {
 	for i := 0; i < rounds; i++ {
@@ -147,10 +184,10 @@ func pageRank(rounds int) {
 
 func sendMessages(id int) {
 	var outrank float32
-	var p page
+	var p page2
 	p = apages[id]
-	outrank = p.rank / float32((len(p.edges) + 1))
-	for i := 0; i < len(p.edges); i++ {
+	outrank = rank[id] / float32((p.num_edges + 1))
+	for i := 0; i < p.num_edges; i++ {
 		apages[p.edges[i]].incomming_rank += outrank
 	}
 }
@@ -186,6 +223,7 @@ func parseFile(filename string) {
 				if err != nil {
 					log.Fatal(err)
 				}
+				//fmt.Printf("%d -> %d\n", a, b)
 				if _, ok := pages[a]; !ok {
 					pages[a] = newPage(a)
 				}
@@ -204,7 +242,6 @@ func parseFile(filename string) {
 			}
 		}
 	}
-	//fmt.Printf("Max = %d\n", max)
 	ids = make([]int, len(pages))
 	//apages and edges are the main structures
 	apages = make([]page2, max+1)
@@ -221,10 +258,11 @@ func parseFile(filename string) {
 	sort.Ints(ids)
 	for i, id := range ids {
 		apages[id].num_edges = len(pages[id].edges)
+		//fmt.Printf("#edges %d %d", id, len(pages[id].edges))
 		rank[i] = 1.0
-		edgenorm[i] = float32((apages[id].num_edges + 1))
+		edgenorm[i] = float32(apages[id].num_edges + 1)
+		apages[id].edge_offset = k
 		for l := range pages[id].edges {
-			apages[id].edge_offset = k
 			edges[k] = pages[id].edges[l]
 			k++
 		}
