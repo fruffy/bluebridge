@@ -15,7 +15,7 @@ const DAMP = 0.85
 
 var (
 	itt     = 20
-	tests   = 20
+	tests   = 10
 	profile = false
 )
 
@@ -136,21 +136,27 @@ func main() {
 func pageRank3(rounds int) {
 	var outrank float32
 	var alpha = (1 - DAMP) / float32(len(pages))
+	var count int64
 	for i := 0; i < rounds; i++ {
 		//printPages()
 		for j := 0; j < len(ids); j++ {
 			outrank = rank[j] / edgenorm[j]
-			for k := 0; k < apages[j].num_edges; k++ {
+			//fmt.Printf("page %d\n", ids[j])
+			for k := 0; k < apages[ids[j]].num_edges; k++ {
 				//send message to another page
-				apages[edges[apages[j].edge_offset+k]].incomming_rank += outrank
+				apages[edges[apages[ids[j]].edge_offset+k]].incomming_rank += outrank
+				//fmt.Printf("page: %d edge %d\n", ids[j], edges[apages[ids[j]].edge_offset+k])
+				count++
 			}
 		}
+		fmt.Println(count)
+		count = 0
 		for j := 0; j < len(ids); j++ {
-			rank[j] = alpha + (DAMP * apages[j].incomming_rank)
+			rank[j] = alpha + (DAMP * apages[ids[j]].incomming_rank)
 			//apages[j].incomming_rank[j] = 0.0
 		}
+		//printPages()
 	}
-	//printPages()
 }
 
 /*
