@@ -41,27 +41,15 @@ class BlueBridge(Topo):
 topos = {'BlueBridge': (lambda: BlueBridge())}
 
 
-def run():
-    privateDirs = [('./config', '/tmp/%(name)s/var/config')]
-    # c = RemoteController('c', '0.0.0.0', 5555)
-
-    host = partial(Host,
-                   privateDirs=privateDirs)
-    topo = BlueBridge()
-
-    # controller is used by s1-s3
-    net = Mininet(topo=topo, host=host, build=False)
-    # net = TreeNet(depth=1, fanout=3, host=host, controller=RemoteController)
-    # net.addController(c)
-    net.build()
-    net.start()
-    directories = [directory[0] if isinstance(directory, tuple)
-                   else directory for directory in privateDirs]
-    info('Private Directories:', directories, '\n')
-    hosts = net.hosts
+def configureHosts(net):
     hostNum = 1
+    hosts = net.hosts
+    switch = net.switch(name=('s1'))
+
     for host in hosts:
         print host
+        switch.cmd('ip -6 route add local 0:0:01' +
+                   '{0:02x}'.format(hostNum) + '::/48 dev s1-eth' + str(hostNum))
         # switch to host.config later
         # ipstring = 'h' + str(hostNum) +'-eth0 inet6 add 0:0:01' + '{0:02x}'.format(hostNum) + '::/46'
         # host.config(ip=ipstring)
@@ -73,12 +61,7 @@ def run():
             hostNum) + "::/48 { static } }\" > ./config/ndp_conf.conf"
         print testString
 
-        testString2 = "\"interface h" + str(hostNum) + "-eth0 {\n AdvSendAdvert on;\n MinRtrAdvInterval 3;\n MaxRtrAdvInterval 10;\n prefix 0:0:01" + '{0:02x}'.format(
-            hostNum) + "::/48 {\n AdvOnLink on;\n AdvAutonomous on;\n AdvRouterAddr on;\n };\n };\" > ./config/radvd.conf"
-        print testString2
-
         host.cmdPrint('echo ' + testString)
-        host.cmdPrint('echo ' + testString2)
         host.cmdPrint('ip address change dev h' + str(hostNum) +
                       '-eth0 scope global 0:0:01' + '{0:02x}'.format(hostNum) + '::/48')
         host.cmdPrint('ip -6 route add local 0:0:0100::/40  dev h' +
@@ -95,6 +78,25 @@ def run():
                       '\" -e \"./ndpproxy/ndppd -vvv -c ./config/ndp_conf.conf; bash\" &')
         hostNum += 1
 
+
+def run():
+    privateDirs = [('./config', '/tmp/%(name)s/var/config')]
+    # c = RemoteController('c', '0.0.0.0', 6633)
+
+    host = partial(Host,
+                   privateDirs=privateDirs)
+    topo = BlueBridge()
+
+    # controller is used by s1-s3
+    net = Mininet(topo=topo, host=host, build=False)
+    # net = TreeNet(depth=1, fanout=3, host=host, controller=RemoteController)
+    # net.addController(c)
+    net.build()
+    net.start()
+    directories = [directory[0] if isinstance(directory, tuple)
+                   else directory for directory in privateDirs]
+    info('Private Directories:', directories, '\n')
+    configureHosts(net)
     net.startTerms()
     CLI(net)
 
