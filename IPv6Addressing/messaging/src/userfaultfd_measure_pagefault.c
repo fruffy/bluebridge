@@ -30,7 +30,8 @@ struct params {
     long page_size;
 };
 
-static uint64_t addr_map[NUM_PAGES];
+static uint64_t addr_map_int[NUM_PAGES];
+static struct in6_addr* addr_map_in6[NUM_PAGES];
 
 static inline uint64_t getns(void)
 {
@@ -162,7 +163,6 @@ static void *handler(void *arg)
 {
     struct params *param = arg;
     long page_size = param->page_size;
-    char buf[page_size];
 ///*
     // Setup network connections to server and directory server.
     int sockfd_server;
@@ -231,6 +231,7 @@ static void *handler(void *arg)
     for (;;) {
         handler_start[i] = getns();
         struct uffd_msg msg;
+        char buf[page_size];
 
         struct pollfd pollfd[1];
         pollfd[0].fd = param->uffd;
@@ -291,22 +292,32 @@ static void *handler(void *arg)
 
             // fprintf(stdout, "Address: %"PRIx64", index: %d\n", (uint64_t) msg.arg.pagefault.address, index);
 
-            if (addr_map[index] > 0) {
-            //     // Do remote things
-            //     // 1. Get machine from the remote directory service server
-            //     //      a. Prepare packet, send to DS, receive IPv6 address back
+            if (addr_map_int[index] > 0 || addr_map_in6[index] != NULL) {
+                // Do remote things
+                // 1. Get machine from the remote directory service server
+                //      a. Prepare packet, send to DS, receive IPv6 address back
 
-            //     // 2. Get stuff from the remote server
-            //     //      a. getMemory() from client.c
-                // fprintf(stdout, "Grabbing IPv6 for %"PRIx64"\n", (uint64_t) msg.arg.pagefault.address);
-                first_rtt_start[i] = getns();
-                struct in6_addr remoteMachine = getRemoteAddr(sockfd_server, p_server, addr_map[index]);
-                first_rtt_end[i] = getns();
+                // 2. Get stuff from the remote server
+                //      a. getMemory() from client.c
+                struct in6_addr remoteMachine;
 
-                char s[INET6_ADDRSTRLEN];
-                inet_ntop(AF_INET6, &remoteMachine, s, sizeof(s));
+                if (addr_map_in6[index] == NULL) {
+                    printf("Not IPv6\n");
+                    first_rtt_start[i] = getns();
+                    remoteMachine = getRemoteAddr(sockfd_server, p_server, addr_map_int[index]);
+                    first_rtt_end[i] = getns();
 
-                // fprintf(stdout, "Remote Machine is... %s\n", s);
+                    char s[INET6_ADDRSTRLEN];
+                    inet_ntop(AF_INET6, &remoteMachine, s, sizeof(s));
+                    fprintf(stdout, "Remote Machine is... %s\n", s);
+                } else {
+                    printf("IPv6\n");
+                    remoteMachine = *addr_map_in6[index];
+
+                    char s[INET6_ADDRSTRLEN];
+                    inet_ntop(AF_INET6, &remoteMachine, s, sizeof(s));
+                    fprintf(stdout, "Remote Machine is... %s\n", s);
+                }
                 second_rtt_start[i] = getns();
                 char* val = getMemory(sockfd_server, p_server, &remoteMachine);
                 second_rtt_end[i] = getns();
@@ -324,6 +335,39 @@ static void *handler(void *arg)
                 handler_end[i] = getns();
                 i++;
                 // printf("Results of memory store: %.50s\n", val);
+            } else {
+                // handler_start[i] = getns();
+
+                FILE *f;
+                // char cmdname[8192];
+                // snprintf(cmdname, sizeof(cmdname), "zcat tmp%d.gz", 1);
+                f = fopen("temp.txt", "r");
+                if (f == NULL) {
+                    perror("open temp.txt");
+                    exit(1);
+                }
+                // char buf[page_size];
+                if (fread(buf, page_size, 1, f) != 0) {
+                    perror("fread");
+                    exit(1);
+                }
+                if (fclose(f)) {
+                    perror("fclose");
+                    exit(1);
+                }
+
+                struct uffdio_copy copy;
+                copy.src = (long long)buf;
+                copy.dst = (long long)addr;
+                copy.len = page_size;
+                copy.mode = 0;
+                if (ioctl(param->uffd, UFFDIO_COPY, &copy) == -1) {
+                    perror("ioctl/copy");
+                    exit(1);
+                }
+
+                handler_end[i] = getns();
+                i++;
             }
         }
 
@@ -346,23 +390,19 @@ EXIT:
 }
 
 struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
-    // print_debug("Mallocing send and receive buffers");
     char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
     char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
-    // print_debug("Memcopying ALLOCATE message into send buffer");
 
     // Lines are for ndpproxy DO NOT REMOVE
-    //struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
-    //memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-    //p->ai_addrlen = sizeof(*ipv6Pointer);
+    struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
+    memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+    p->ai_addrlen = sizeof(*ipv6Pointer);
     
     memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
 
     sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
     // Wait to receive a message from the server
     int numbytes = receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
-    // print_debug("Extracted: %p from server", (void *)(*ipv6Pointer).s6_addr); // DO NOT REMOVE NEEDED FOR NDPPROXY
-    //printNBytes((char *)ipv6Pointer->s6_addr,IPV6_SIZE);
     print_debug("Received %d bytes", numbytes);
     // Parse the response
 
@@ -372,8 +412,6 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
         print_debug("Response was ACK");
         // If the message is ACK --> successful
         struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-        // printf("Received pointer data: ");
-        // printNBytes(receiveBuffer+4,IPV6_SIZE);
         // Copy the returned pointer
         memcpy(remotePointer, receiveBuffer+4, IPV6_SIZE);
         // Insert information about the source host (black magic)
@@ -386,22 +424,14 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
         print_debug("Response was not successful");
         // Not successful so we send another message?
         memcpy(sendBuffer, "What's up?", sizeof("What's up?"));
-        //sendMsg(sockfd, sendBuffer, sizeof("What's up?"));
         sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
-
-
-        // TODO: why do we return 0? Isn't there a better number 
-        // (i.e. -1)
 
         print_debug("Keeping return value as 0");
     }
 
-    // print_debug("Freeing sendBuffer and receiveBuffer memory");
     free(sendBuffer);
     free(receiveBuffer);
 
-    // print_debug("Returning value");
-    //TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
     return retVal;
 }
 
@@ -410,7 +440,9 @@ int main(int argc, char **argv)
     int uffd;
     long page_size;
     pthread_t uffd_thread;
-    int measure_write = 0; // Bool which determine measuring read or write
+    int measure_write = 1; // 1 = write, 0 = read
+    int remote = 1; // 0 = local, 1 = remote
+    int directService = 0; // 1 = directory service, 0 = no directory service
 
     page_size = get_page_size();
 
@@ -498,12 +530,24 @@ int main(int argc, char **argv)
     long i;
     char *cur = region;
     for (i = 0; i < NUM_PAGES; i++) {
-        // if (i % 1) {
+        if (remote) {
             // Allocate remote memory
-            addr_map[i] = getPointerFromIPv6(allocateMem(sockfd_server, p_server));
-        // } else {
-            // addr_map[i] = 0;
-        // }
+            if (directService) {
+                addr_map_int[i] = getPointerFromIPv6(allocateMem(sockfd_server, p_server));
+            } else {
+                struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
+                struct in6_addr temp = allocateMem(sockfd_server, p_server);
+
+                memcpy(remotePointer, &temp, IPV6_SIZE);
+                addr_map_in6[i] = remotePointer;
+            }
+        } else {
+            if (directService) {
+                addr_map_int[i] = 0;
+            } else {
+                addr_map_in6[i] = NULL;
+            }
+        }
     }
 
     if ((uffdio_register.ioctls & UFFD_API_RANGE_IOCTLS) !=
@@ -533,9 +577,6 @@ int main(int argc, char **argv)
     assert(total_end);
     memset(total_end, 0, sizeof(uint64_t) * NUM_PAGES);
     // touch each page in the region
-    // TODO: just reads each region. Need to modify so it does 
-    //       reads and writes. 
-    // int value;
     cur = region;
 
     if (measure_write) {
