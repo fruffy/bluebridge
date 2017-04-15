@@ -394,9 +394,9 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
     char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 
     // Lines are for ndpproxy DO NOT REMOVE
-    //struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
-    //memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-    //p->ai_addrlen = sizeof(*ipv6Pointer);
+    struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
+    memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+    p->ai_addrlen = sizeof(*ipv6Pointer);
     
     memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
 
@@ -535,8 +535,11 @@ int main(int argc, char **argv)
             if (directService) {
                 addr_map_int[i] = getPointerFromIPv6(allocateMem(sockfd_server, p_server));
             } else {
-                struct in6_addr remotePointer = allocateMem(sockfd_server, p_server);
-                addr_map_in6[i] = &remotePointer;
+                struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
+                struct in6_addr temp = allocateMem(sockfd_server, p_server);
+
+                memcpy(remotePointer, &temp, IPV6_SIZE);
+                addr_map_in6[i] = remotePointer;
             }
         } else {
             if (directService) {
