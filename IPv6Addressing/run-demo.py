@@ -58,7 +58,7 @@ def configureHosts(net):
         # host.cmdPrint('ip -6 route add 0:0:0100::/40  via '+ host.IP)
         # xterm -e bash -c
         testString = "\"proxy h" + str(hostNum) + "-eth0 { ttl 5000 router no rule 0:0:01" + '{0:02x}'.format(
-            hostNum) + "::/48 { static } }\" > ./config/ndp_conf.conf"
+            hostNum) + "::/48 { static } }\" > ./tmp/config/ndp_conf.conf"
         print testString
 
         host.cmdPrint('echo ' + testString)
@@ -75,12 +75,12 @@ def configureHosts(net):
         # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"./messaging/launchProxy.sh -i h' + str(hostNum) +
         #               '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
         host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) +
-                      '\" -e \"./ndpproxy/ndppd -vvv -c ./config/ndp_conf.conf; bash\" &')
+                      '\" -e \"./ndpproxy/ndppd -vvv -c ./tmp/config/ndp_conf.conf; bash\" &')
         hostNum += 1
 
 
 def run():
-    privateDirs = [('./config', '/tmp/%(name)s/var/config')]
+    privateDirs = [('./tmp/config', '/tmp/%(name)s/var/config')]
     # c = RemoteController('c', '0.0.0.0', 6633)
 
     host = partial(Host,
