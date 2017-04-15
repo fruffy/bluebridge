@@ -33,10 +33,11 @@ def get_sample_graph(cluster_size=500, distribution="smart"):
         myGraph.vs["host"] = host_list
 
     myGraph.vs["message_queue"] = [[] for _ in xrange(total_nodes)]
+    myGraph.vs["in_edges"] = [[] for _ in xrange(total_nodes)]
 
     # Add 10 edges
     for i in xrange(10):
-        myGraph.add_edge(i, cluster_size + i)
+        myGraph.add_edge(i, cluster_size + 1)
 
     print "Graph creation complete. Took", (time.time() - start_time), "s."
     return myGraph
