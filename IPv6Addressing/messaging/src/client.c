@@ -60,8 +60,11 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 		print_debug("Response was ACK");
 		// If the message is ACK --> successful
 		struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-		printf("Received pointer data: ");
-		printNBytes(receiveBuffer+4,IPV6_SIZE);
+		
+		if (DEBUG) {
+			printf("Received pointer data: ");
+			printNBytes(receiveBuffer+4,IPV6_SIZE);
+		}
 		// Copy the returned pointer
 		memcpy(remotePointer, receiveBuffer+4, IPV6_SIZE);
 		// Insert information about the source host (black magic)
@@ -112,8 +115,11 @@ int writeToMemory(int sockfd, struct addrinfo * p, char * payload,  struct in6_a
 	memcpy(sendBuffer+size+1,payload, BLOCK_SIZE - size);
 	size += strlen(payload);
 
-	printf("Sending Data: %d bytes", size);
-	printNBytes((char*) toPointer->s6_addr, IPV6_SIZE);
+	if (DEBUG) {
+		printf("Sending Data: %d bytes", size);
+		printNBytes((char*) toPointer->s6_addr, IPV6_SIZE);
+	}
+
 	sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
 	receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
 	free(sendBuffer);
@@ -138,8 +144,10 @@ int releaseMemory(int sockfd, struct addrinfo * p,  struct in6_addr * toPointer)
 	memcpy(sendBuffer+size,toPointer->s6_addr,IPV6_SIZE);
 	size += IPV6_SIZE; // Should be 8, total of 13
 
-	printf("Releasing Data with pointer: ");
-	printNBytes((char*)toPointer->s6_addr,IPV6_SIZE);
+	if (DEBUG) {
+		printf("Releasing Data with pointer: ");
+		printNBytes((char*)toPointer->s6_addr,IPV6_SIZE);
+	}
 
 	// Send message
 	sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
@@ -169,8 +177,10 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 	memcpy(sendBuffer+size,toPointer->s6_addr,IPV6_SIZE);
 	size += IPV6_SIZE; // Should be 8, total 12
 
-	printf("Retrieving Data with pointer: ");
-	printNBytes((char*)toPointer,IPV6_SIZE);
+	if (DEBUG) {
+		printf("Retrieving Data with pointer: ");
+		printNBytes((char*)toPointer,IPV6_SIZE);
+	}
 
 	// Send message
 	sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
@@ -183,7 +193,66 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 	return receiveBuffer;
 }
 
+void print_times( uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* write_latency, uint64_t* free_latency, int num_iters){
+	FILE *allocF = fopen("alloc_latency.csv", "w");
+    if (allocF == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+
+    FILE *readF = fopen("read_latency.csv", "w");
+    if (readF == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+
+    FILE *writeF = fopen("write_latency.csv", "w");
+    if (writeF == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+
+    FILE *freeF = fopen("free_latency.csv", "w");
+    if (freeF == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+
+    fprintf(allocF, "latency (ns)\n");
+    fprintf(readF, "latency (ns)\n");
+    fprintf(writeF, "latency (ns)\n");
+
+    int i;
+    for (i = 0; i < num_iters; i++) {
+        fprintf(allocF, "%llu\n", (unsigned long long) alloc_latency[i]);
+        fprintf(readF, "%llu\n", (unsigned long long) read_latency[i]);
+        fprintf(writeF, "%llu\n", (unsigned long long) write_latency[i]);
+        fprintf(freeF, "%llu\n", (unsigned long long) free_latency[i]);
+    }
+
+    fclose(allocF);
+    fclose(readF);
+    fclose(writeF);
+    fclose(freeF);
+}
+
 int basicOperations( int sockfd, struct addrinfo * p) {
+	int num_iters = 1000;
+	uint64_t *alloc_latency = malloc(sizeof(uint64_t) * num_iters);
+    assert(alloc_latency);
+    memset(alloc_latency, 0, sizeof(uint64_t) * num_iters);
+
+    uint64_t *read_latency = malloc(sizeof(uint64_t) * num_iters);
+    assert(read_latency);
+    memset(read_latency, 0, sizeof(uint64_t) * num_iters);
+
+    uint64_t *write_latency = malloc(sizeof(uint64_t) * num_iters);
+    assert(write_latency);
+    memset(write_latency, 0, sizeof(uint64_t) * num_iters);
+
+    uint64_t *free_latency = malloc(sizeof(uint64_t) * num_iters);
+    assert(free_latency);
+    memset(free_latency, 0, sizeof(uint64_t) * num_iters);
 	int i;
 	// Initialize remotePointers array
 	struct LinkedPointer * rootPointer = (struct LinkedPointer *) malloc( sizeof(struct LinkedPointer));
@@ -191,12 +260,15 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 	//init the root element
 	nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
 	nextPointer->AddrString = allocateMem(sockfd, p);
-	for (i = 0; i < 999; i++) {
+	for (i = 0; i < num_iters; i++) {
 		srand(time(NULL));
 
 		nextPointer = nextPointer->Pointer;
 		nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
+
+		uint64_t start = getns();
 		nextPointer->AddrString = allocateMem(sockfd, p);
+		alloc_latency[i] = getns() - start;
 		//printNBytes((char *) rootPointer->AddrString.s6_addr, 16);
 		//printNBytes((char *) nextPointer->AddrString.s6_addr, 16);
 	}
@@ -207,21 +279,39 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 	i = 1;
 	while(rootPointer != NULL)	{
 
-		printf("Iteration %d\n", i);
+		print_debug("Iteration %d\n", i);
 		struct in6_addr remoteMemory = rootPointer->AddrString;
-		printf("Using Pointer: %p\n", (void *) getPointerFromIPv6(rootPointer->AddrString));
+		print_debug("Using Pointer: %p\n", (void *) getPointerFromIPv6(rootPointer->AddrString));
 		print_debug("Creating payload");
 		srand(time(NULL));
 		char * payload = gen_rdm_bytestream(BLOCK_SIZE);
+
+		uint64_t wStart = getns();
 		writeToMemory(sockfd, p, payload, &remoteMemory);
+		write_latency[i - 1] = getns() - wStart;
+
+		uint64_t rStart = getns();
 		char * test = getMemory(sockfd, p, &remoteMemory);
-		printf("Results of memory store: %.50s\n", test);
+		read_latency[i - 1] = getns() - rStart;
+
+		print_debug("Results of memory store: %.50s\n", test);
+		
+		uint64_t fStart = getns();
 		releaseMemory(sockfd, p, &remoteMemory);
+		free_latency[i-1] = getns() - fStart;
+
 		free(test);
 		free(payload);
 		rootPointer = rootPointer->Pointer;
 		i++;
 	}
+
+	print_times(alloc_latency, read_latency, write_latency, free_latency, num_iters);
+
+	free(alloc_latency);
+    free(write_latency);
+    free(read_latency);
+    free(free_latency);
 }
 
 /*

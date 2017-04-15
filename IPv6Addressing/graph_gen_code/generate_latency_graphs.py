@@ -13,6 +13,31 @@ import matplotlib.colors as colors
 SPINE_COLOR = 'gray'
 
 all_data = [None, None, None, None, None, None]
+microbench = None
+
+class MicroBenchData:
+    def __init__(self, alloc, read, write, free, conversion=1000.0):
+        self.alloc_latency = alloc
+        self.read_latency = read
+        self.write_latency = write
+        self.free_latency = free
+        self.conv = conversion
+
+    def getMedian(self):
+        alloc_med = np.median(self.alloc_latency)/self.conv
+        read_med = np.median(self.read_latency)/self.conv
+        write_med = np.median(self.write_latency)/self.conv
+        free_med = np.median(self.free_latency)/self.conv
+
+        return alloc_med, read_med, write_med, free_med
+
+    def getPercentile(self, percentile):
+        alloc = np.percentile(self.alloc_latency, percentile)/self.conv
+        read = np.percentile(self.read_latency, percentile)/self.conv
+        write = np.percentile(self.write_latency, percentile)/self.conv
+        free = np.percentile(self.free_latency, percentile)/self.conv
+
+        return alloc, read, write, free
 
 class Data:
     def __init__(self, dtype, tl, enf, exf, h, r1, gd, conversion=1000.0):
@@ -50,39 +75,22 @@ class Data:
 
             return (total_latency_med, rtt1_med, rtt2_med, enter_fault_med, exit_fault_med, everything)
 
-    def get95th(self):
+    def getPercentile(self, percentile):
         if self.dtype == 'local':
-            total_95 = np.percentile(self.total_latency, 95)/self.conv
-            get_data_95 = np.percentile(self.get_data, 95)/self.conv
-            enter_fault_95 = np.percentile(self.enter_fault, 95)/self.conv
-            exit_fault_95 = np.percentile(self.exit_fault, 95)/self.conv
+            total = np.percentile(self.total_latency, percentile)/self.conv
+            get_data = np.percentile(self.get_data, percentile)/self.conv
+            enter_fault = np.percentile(self.enter_fault, percentile)/self.conv
+            exit_fault = np.percentile(self.exit_fault, percentile)/self.conv
 
-            return (total_95, 0, get_data_95, enter_fault_95, exit_fault_95)
+            return (total, 0, get_data, enter_fault, exit_fault)
         else:
-            total_95 = np.percentile(self.total_latency, 95)/self.conv
-            rtt1_95 = np.percentile(self.rtt1, 95)/self.conv
-            rtt2_95 = np.percentile(self.rtt2, 95)/self.conv
-            enter_fault_95 = np.percentile(self.enter_fault, 95)/self.conv
-            exit_fault_95 = np.percentile(self.exit_fault, 95)/self.conv
+            total = np.percentile(self.total_latency, percentile)/self.conv
+            rtt1 = np.percentile(self.rtt1, percentile)/self.conv
+            rtt2 = np.percentile(self.rtt2, percentile)/self.conv
+            enter_fault = np.percentile(self.enter_fault, percentile)/self.conv
+            exit_fault = np.percentile(self.exit_fault, percentile)/self.conv
 
-            return (total_95, rtt1_95, rtt2_95, enter_fault_95, exit_fault_95)
-
-    def get5th(self):
-        if self.dtype == 'local':
-            total_5 = np.percentile(self.total_latency, 5)/self.conv
-            get_data_5 = np.percentile(self.get_data, 5)/self.conv
-            enter_fault_5 = np.percentile(self.enter_fault, 5)/self.conv
-            exit_fault_5 = np.percentile(self.exit_fault, 5)/self.conv
-
-            return (total_5, 0, get_data_5, enter_fault_5, exit_fault_5)
-        else:
-            total_5 = np.percentile(self.total_latency, 5)/self.conv
-            rtt1_5 = np.percentile(self.rtt1, 5)/self.conv
-            rtt2_5 = np.percentile(self.rtt2, 5)/self.conv
-            enter_fault_5 = np.percentile(self.enter_fault, 5)/self.conv
-            exit_fault_5 = np.percentile(self.exit_fault, 5)/self.conv
-
-            return (total_5, rtt1_5, rtt2_5, enter_fault_5, exit_fault_5)
+            return (total, rtt1, rtt2, enter_fault, exit_fault)
 
 def getDataIndex(dtype, access_type, ds):
     if dtype == 'local':
@@ -169,7 +177,7 @@ def usage():
     print("USAGE: python generate_latency_graphs.py <data folder>")
 
 def parse_input_file(input_file, raw_data):
-    print("Parsing " + os.path.basename(input_file))
+    # print("Parsing " + os.path.basename(input_file))
 
     ftype = os.path.basename(input_file).split('_')[0]
 
@@ -194,6 +202,7 @@ def parse_line(line, ftype, raw_data):
         sys.exit()
 
 def parse_input_folder(input_dir):
+    global all_data
     total_latency = []
     rtt1 = []
     rtt2 = []
@@ -246,6 +255,7 @@ def parse_input_folder(input_dir):
     dtype, access_type, ds = parse_folder_name(folder_name)
 
     all_data[getDataIndex(dtype, access_type, ds)] = Data(dtype, total_latency, enter_fault, exit_fault, handler_latency, rtt1, rtt2)
+    # import pdb; pdb.set_trace()
 
 def parse_folder_name(folder_name):
     splitname = folder_name.split('_')
@@ -255,6 +265,54 @@ def parse_folder_name(folder_name):
 
     return splitname
 
+def parse_microbench(folder_name):
+    global microbench
+    # Alloc, read, write, free
+    latencies = [[], [], [], []]
+
+    folder_name = os.path.abspath(folder_name)
+
+    for input_file in os.listdir(folder_name):
+        # print(input_file)
+        if input_file.endswith(".csv"):
+            latencies[getMicroIndex(input_file)] = parse_micro_file(os.path.join(folder_name, input_file))
+
+    # Add to microbench data
+    microbench = MicroBenchData(latencies[0], latencies[1], latencies[2], latencies[3])
+    # import pdb; pdb.set_trace()
+
+def parse_micro_file(file_name):
+    with open(file_name) as f:
+        temp = f.readlines()[1:] # Ignore header
+        temp = [int(x.strip()) for x in temp]
+    return temp
+
+def getMicroIndex(name):
+    if "alloc" in name:
+        return 0
+    elif "read" in name:
+        return 1
+    elif "write" in name:
+        return 2
+    elif "free" in name:
+        return 3
+
+def display_microbench():
+    fig, ax = plt.subplots()
+
+    width = 0.25
+    ind = np.arange(4)
+
+    ax.bar(ind, microbench.getMedian(), color='White')
+
+    ax.set_xticks(ind+1.5*width)
+    ax.set_xticklabels(['Alloc', 'Read', 'Write', 'Free'])
+
+    ax.set_ylabel("Latency ($\micro$s)")
+
+    plt.tight_layout()
+    format_axes(ax)
+    plt.savefig("Microbenchmarks_Latency.pdf")
 
 def display_breakdown(btype, values):
     # Displays the breakdown of latencies for each operation: read, write
@@ -282,6 +340,7 @@ def display_breakdown(btype, values):
     plt.savefig("Latency_Breakdown_" + btype + ".pdf", bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 def generate_breakdown(btype):
+    global all_data
     #total_latency_med, rtt1_med, rtt2_med, enter_fault_med, exit_fault_med, everything
     if btype == 'read':
         remote_ds = all_data[0].getMedian()
@@ -323,6 +382,7 @@ def display_total():
     plt.savefig("Latency_Total_Comparison.pdf", bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 def get_latencies():
+    global all_data
     remote_ds = [all_data[0].getMedian()[0], all_data[3].getMedian()[0]]
     remote_nods = [all_data[1].getMedian()[0], all_data[4].getMedian()[0]]
     local = [all_data[2].getMedian()[0], all_data[5].getMedian()[0]]
@@ -339,8 +399,18 @@ if __name__ == '__main__':
         sys.exit()
 
     for sub_folder in os.listdir(input_dir):
-        if os.path.isdir(sub_folder):
-            parse_input_folder(sub_folder)
+        # print("Looking at %s" % sub_folder)
+        full_path = os.path.join(input_dir, sub_folder)
+        if os.path.isdir(full_path):
+            if "microbench" in sub_folder:
+                # print("Parsing microbenchmarks")
+                parse_microbench(full_path)
+            else:   
+                parse_input_folder(full_path)
+        else:
+            print("Could not parse %s" % sub_folder)
+
+    display_microbench()
 
     display_total()
 

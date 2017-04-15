@@ -33,14 +33,6 @@ struct params {
 static uint64_t addr_map_int[NUM_PAGES];
 static struct in6_addr* addr_map_in6[NUM_PAGES];
 
-static inline uint64_t getns(void)
-{
-    struct timespec ts;
-    int ret = clock_gettime(CLOCK_MONOTONIC, &ts);
-    assert(ret == 0);
-    return (((uint64_t)ts.tv_sec) * 1000000000ULL) + ts.tv_nsec;
-}
-
 static long get_page_size(void)
 {
     long ret = sysconf(_SC_PAGESIZE);

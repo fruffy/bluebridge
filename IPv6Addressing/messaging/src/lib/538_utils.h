@@ -9,6 +9,7 @@
 #include <netdb.h>
 #include <time.h>
 #include <unistd.h>
+#include <assert.h>
 
 
 #define BLOCK_SIZE 4096 // max number of bytes we can get at once
@@ -42,6 +43,13 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 uint64_t getPointerFromIPv6(struct in6_addr addr);
 struct in6_addr getIPv6FromPointer(uint64_t pointer);
 
+static inline uint64_t getns(void)
+{
+    struct timespec ts;
+    int ret = clock_gettime(CLOCK_MONOTONIC, &ts);
+    assert(ret == 0);
+    return (((uint64_t)ts.tv_sec) * 1000000000ULL) + ts.tv_nsec;
+}
 
 
 #endif
