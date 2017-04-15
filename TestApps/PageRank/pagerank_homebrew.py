@@ -12,19 +12,21 @@ from igraph import *
 
 NUM_ITERATIONS = 20
 
+
 def pagerank_distributed(args, d=0.9):
 
     myGraph = args[0]
     shared_mem = args[1]
 
     remote_hits_dict = dict()
+    local_vs = myGraph.vs.select(state_ne="p")
 
     # This needs to change to shared mem
     for t in range(NUM_ITERATIONS):
 
         remote_hits = 0
 
-        for vertex in (myGraph.vs.select(state_ne="p")):
+        for vertex in local_vs:
 
             outrank = vertex["rank"] / (len(vertex.neighbors()) + 1)
             vertex["message_queue"].append(outrank)
@@ -36,7 +38,7 @@ def pagerank_distributed(args, d=0.9):
                 else:
                     nextVertex["message_queue"].append(outrank)
 
-        for vertex in (myGraph.vs.select(state_ne="p")):
+        for vertex in local_vs:
 
             # Default amount from the random jump
             base_surfer_rank = (1 / float(myGraph["total_nodes"]))
@@ -68,7 +70,7 @@ def pagerank_distributed(args, d=0.9):
         remote_hits_dict[t] = remote_hits
 
     # Return only the non proxy vertices
-    return (myGraph.vs.select(state_ne="p")["rank"], remote_hits_dict)
+    return (local_vs["rank"], remote_hits_dict)
 
 
 def pagerank(myGraph, d=0.9):
@@ -126,16 +128,24 @@ def partition_graph(oneGraph, shared_mem, num_hosts=None):
 
     # Get mapping of idx to name
     name_map = np.array(oneGraph.vs["name"])
+    sg_name_map = dict()
+    edge_storage = dict()
+    temp_shared_mem = dict()
 
     for i in xrange(num_hosts):
+        
         vertices = (np.where(np_members == i)[0]).tolist()
+        
         subgraph = oneGraph.subgraph(vertices)
         subgraph.vs["state"] = "l"
         subgraphs.append(subgraph)
 
-    num_external = 0
+        edge_storage[i] = {}
+        sg_name_map[i] = np.array(subgraph.vs["name"])
 
     print "Graph is cut.", num_cuts, "edges cut. Took", time.time() - start_time, "s."
+
+    num_external = 0
 
     start_time = time.time()
     print"Adding metadata for distributed processing..."
@@ -154,25 +164,31 @@ def partition_graph(oneGraph, shared_mem, num_hosts=None):
             v1_str = name_map[v1]
 
             # Add the external edge to v0
-            vobj0 = subgraphs[v0_where].vs.select(name_eq=v0_str)[0]
+            vobj0 = subgraphs[v0_where].vs[np.where(sg_name_map[v0_where] == v0_str)[0][0]]
             vobj0["state"] = "m"
             vobj0["in_edges"].append((v1_str, v0_str))
             subgraphs[v0_where].add_vertex(v1_str, state="p")
 
             # Add the external edge to v1
-            vobj1 = subgraphs[v1_where].vs.select(name_eq=v1_str)[0]
+            vobj1 = subgraphs[v1_where].vs[np.where(sg_name_map[v1_where] == v1_str)[0][0]]
             vobj1["state"] = "m"
             vobj1["in_edges"].append((v0_str, v1_str))
             subgraphs[v1_where].add_vertex(v0_str, state="p")
 
-            subgraphs[v0_where].add_edge(v0_str, v1_str)
-            subgraphs[v1_where].add_edge(v1_str, v0_str)
+            edge_storage[v0_where][(v0_str, v1_str)] = {}
+            edge_storage[v1_where][(v1_str, v0_str)] = {}
 
-            # Adding vertices to shared memory. (num_expected, totalrank[])
-            # Add v0
+            # Adding shared edges to shared memory
             for i in xrange(NUM_ITERATIONS):
-                shared_mem[v0_str, v1_str, i] = 0
-                shared_mem[v1_str, v0_str, i] = 0
+                temp_shared_mem[v0_str, v1_str, i] = 0
+                temp_shared_mem[v1_str, v0_str, i] = 0
+
+    # Try this for perf
+    for i in xrange(num_hosts):
+        subgraphs[i].add_edges(edge_storage[i].keys())
+
+    # Much faster
+    shared_mem.update(temp_shared_mem)
 
     print "Cuts:", num_cuts, num_external
     print "Partitioning complete. Took", time.time() - start_time, "s."
@@ -222,7 +238,7 @@ if __name__ == '__main__':
 
     hits = dict()
     ranks_dist = results[0][0] + results[1][0]
-    
+
     hits_dist = { k: results[0][1].get(k, 0) + results[1][1].get(k, 0) for k in set(results[0][1])}
 
     start_time = time.time()
