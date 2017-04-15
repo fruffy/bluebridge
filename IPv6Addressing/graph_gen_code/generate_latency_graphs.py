@@ -17,11 +17,10 @@ microbench = None
 
 class MicroBenchData:
     def __init__(self, alloc, read, write, free, conversion=1000.0):
-        self.alloc_latency = alloc #reject_outliers(np.array(alloc), .15)
-        self.read_latency = read #reject_outliers(np.array(read), .25)
-        self.write_latency = write #reject_outliers(np.array(write), .25)
-        self.free_latency = free #reject_outliers(np.array(free), 1)
-        import pdb; pdb.set_trace()
+        self.alloc_latency = alloc #reject_outliers(np.array(alloc), 3)
+        self.read_latency = read #reject_outliers(np.array(read), 3) 
+        self.write_latency = write #reject_outliers(np.array(write), 3)
+        self.free_latency = free #reject_outliers(np.array(free), 3) 
         self.conv = conversion
 
     def getMedian(self):
@@ -43,17 +42,20 @@ class MicroBenchData:
 class Data:
     def __init__(self, dtype, tl, enf, exf, h, r1, gd, conversion=1000.0):
         self.dtype = dtype
-        self.total_latency = tl
-        self.enter_fault = enf
-        self.exit_fault = exf
-        self.handler_latency = h
+        self.total_latency = tl # reject_outliers(np.array(tl), .1)
+        self.enter_fault = enf # reject_outliers(np.array(enf), .1)
+        self.exit_fault = exf # reject_outliers(np.array(exf), .1)
+        self.handler_latency = h # reject_outliers(np.array(h), .1)
         self.conv = conversion
 
         if dtype == 'local':
-            self.get_data = gd
+            self.get_data = gd # reject_outliers(np.array(gd), 1)
         else:
-            self.rtt1 = r1
-            self.rtt2 = gd
+            if np.count_nonzero(r1) > 0:
+                self.rtt1 = r1 # reject_outliers(np.array(r1), .1)
+            else:
+                self.rtt1 = np.array(r1)
+            self.get_data = gd # reject_outliers(np.array(gd), .1)
 
     def getMedian(self):
         if self.dtype == 'local':
@@ -68,13 +70,13 @@ class Data:
         else:
             total_latency_med = np.median(self.total_latency)/self.conv
             rtt1_med = np.median(self.rtt1)/self.conv
-            rtt2_med = np.median(self.rtt2)/self.conv
+            get_data_med = np.median(self.get_data)/self.conv
             enter_fault_med = np.median(self.enter_fault)/self.conv
             exit_fault_med = np.median(self.exit_fault)/self.conv
 
-            everything = rtt1_med+rtt2_med+enter_fault_med+exit_fault_med
+            everything = rtt1_med+get_data_med+enter_fault_med+exit_fault_med
 
-            return (total_latency_med, rtt1_med, rtt2_med, enter_fault_med, exit_fault_med, everything)
+            return (total_latency_med, rtt1_med, get_data_med, enter_fault_med, exit_fault_med, everything)
 
     def getPercentile(self, percentile):
         if self.dtype == 'local':
@@ -87,11 +89,11 @@ class Data:
         else:
             total = np.percentile(self.total_latency, percentile)/self.conv
             rtt1 = np.percentile(self.rtt1, percentile)/self.conv
-            rtt2 = np.percentile(self.rtt2, percentile)/self.conv
+            get_data = np.percentile(self.get_data, percentile)/self.conv
             enter_fault = np.percentile(self.enter_fault, percentile)/self.conv
             exit_fault = np.percentile(self.exit_fault, percentile)/self.conv
 
-            return (total, rtt1, rtt2, enter_fault, exit_fault)
+            return (total, rtt1, get_data, enter_fault, exit_fault)
 
 def getDataIndex(dtype, access_type, ds):
     if dtype == 'local':
@@ -112,7 +114,7 @@ def getDataIndex(dtype, access_type, ds):
                 return 4
 
 def reject_outliers(data, m=2):
-    return data[abs(data - np.median(data)) < m * np.std(data)]
+    return data[abs(data - np.mean(data)) < m * np.std(data)]
 
 def latexify(fig_width=None, fig_height=None, columns=1):
         """Set up matplotlib's RC params for LaTeX plotting.
@@ -242,7 +244,6 @@ def parse_input_folder(input_dir):
         print("Handler: ", handler)
         sys.exit()
 
-    # import pdb; pdb.set_trace()
 
     # Get breakdown categories from data
     for i in range(len(total)):
@@ -253,13 +254,12 @@ def parse_input_folder(input_dir):
         exit_fault.append(total[i][1] - handler[i][1])
         handler_latency.append(handler[i][1] - handler[i][0])
 
-    # import pdb; pdb.set_trace()
-    # TODO: figure out what graph it is
     folder_name = os.path.basename(input_dir)
     dtype, access_type, ds = parse_folder_name(folder_name)
 
+    print("Adding data for " + folder_name)
+
     all_data[getDataIndex(dtype, access_type, ds)] = Data(dtype, total_latency, enter_fault, exit_fault, handler_latency, rtt1, rtt2)
-    # import pdb; pdb.set_trace()
 
 def parse_folder_name(folder_name):
     splitname = folder_name.split('_')
@@ -283,7 +283,6 @@ def parse_microbench(folder_name):
 
     # Add to microbench data
     microbench = MicroBenchData(latencies[0], latencies[1], latencies[2], latencies[3])
-    # import pdb; pdb.set_trace()
 
 def parse_micro_file(file_name):
     with open(file_name) as f:
@@ -303,14 +302,13 @@ def getMicroIndex(name):
 
 def get_micro_errors():
     errors = []
-    top = microbench.getPercentile(99)
-    bottom = microbench.getPercentile(1)
+    top = microbench.getPercentile(95)
+    bottom = microbench.getPercentile(5)
     median = microbench.getMedian()
 
     for i in range(len(top)):
         errors.append([abs(median[i]-bottom[i]), abs(median[i] - top[i])])
 
-    import pdb; pdb.set_trace()
     return errors
 
 def display_microbench():
@@ -340,12 +338,13 @@ def display_breakdown(btype, values):
     patterns = ('---', 'xxx', '+++', '///', 'ooo', 'OOO', '...')
     ind = np.arange(3)
 
-    enterf, exitf, access, getdata, other = values
+    enterf, exitf, access, getdata, other, enterf_err, exitf_err, access_err, getdata_err = values
 
-    ax.bar(ind, enterf, width, color='White', hatch=patterns[0], label='Enter handler')
-    ax.bar(ind+width, exitf, width, color='White', hatch=patterns[1], label='Exit handler')
-    ax.bar(ind+2*width, access, width, color='White', hatch=patterns[2], label='Access DS')
-    ax.bar(ind+3*width, getdata, width, color='White', hatch=patterns[3], label='Get data')
+
+    ax.bar(ind, enterf, width, color='White', hatch=patterns[0], label='Enter handler', yerr=np.array(enterf_err).T, error_kw={'ecolor':'Black', 'linewidth':2})
+    ax.bar(ind+width, exitf, width, color='White', hatch=patterns[1], label='Exit handler', yerr=np.array(exitf_err).T, error_kw={'ecolor':'Black', 'linewidth':2})
+    ax.bar(ind+2*width, access, width, color='White', hatch=patterns[2], label='Access DS', yerr=np.array(access_err).T, error_kw={'ecolor':'Black', 'linewidth':2})
+    ax.bar(ind+3*width, getdata, width, color='White', hatch=patterns[3], label='Get data', yerr=np.array(getdata_err).T, error_kw={'ecolor':'Black', 'linewidth':2})
     ax.bar(ind+4*width, other, width, color='White', hatch=patterns[4], label='Other')
 
     ax.set_xticks(ind+2.5*width)
@@ -357,25 +356,46 @@ def display_breakdown(btype, values):
     format_axes(ax)
     plt.savefig("Latency_Breakdown_" + btype + ".pdf", bbox_extra_artists=(lgd,), bbox_inches='tight')
 
+def getDataError(data):
+    errors = []
+    top = data.getPercentile(95)
+    bottom = data.getPercentile(5)
+    median = data.getMedian()
+
+    for i in range(len(top)):
+        errors.append([abs(median[i]-bottom[i]), abs(median[i] - top[i])])
+
+
+    return median, errors
+
 def generate_breakdown(btype):
     global all_data
     #total_latency_med, rtt1_med, rtt2_med, enter_fault_med, exit_fault_med, everything
     if btype == 'read':
-        remote_ds = all_data[0].getMedian()
-        remote_nods = all_data[1].getMedian()
-        local = all_data[2].getMedian()
+        remote_ds, remote_ds_err = getDataError(all_data[0])
+        remote_nods, remote_nods_err = getDataError(all_data[1])
+        local, local_err = getDataError(all_data[2])
     else:
-        remote_ds = all_data[3].getMedian()
-        remote_nods = all_data[4].getMedian()
-        local = all_data[5].getMedian()
+        remote_ds, remote_ds_err = getDataError(all_data[3])
+        remote_nods, remote_nods_err = getDataError(all_data[4])
+        local, local_err = getDataError(all_data[5])
 
     enterf = [remote_ds[3], remote_nods[3], local[3]]
+    enterf_err = [remote_ds_err[3], remote_nods_err[3], local_err[3]]
+    
     exitf = [remote_ds[4], remote_nods[4], local[4]]
-    access = [remote_ds[1], remote_nods[1], local[1]]
-    getdata = [remote_ds[2], remote_nods[2], local[2]]
-    other = [remote_ds[0] - remote_ds[5], remote_nods[0] - remote_nods[5], local[0] - local[5]]
+    exitf_err = [remote_ds_err[4], remote_nods_err[4], local_err[4]]
 
-    return enterf, exitf, access, getdata, other
+    access = [remote_ds[1], remote_nods[1], local[1]]
+    access_err = [remote_ds_err[1], remote_nods_err[1], local_err[1]]
+
+    getdata = [remote_ds[2], remote_nods[2], local[2]]
+    getdata_err = [remote_ds_err[2], remote_nods_err[2], local_err[2]]
+
+    other = [remote_ds[0] - remote_ds[5], remote_nods[0] - remote_nods[5], local[0] - local[5]]
+    # other_err = [remote_ds[0] - remote_ds[5], remote_nods[0] - remote_nods[5], local[0] - local[5]]
+
+    return enterf, exitf, access, getdata, other, enterf_err, exitf_err, access_err, getdata_err, #other_err
 
 def display_total():
     fig, ax = plt.subplots()
@@ -384,11 +404,11 @@ def display_total():
     patterns = ('---', 'xxx', '+++', '///', 'ooo', 'OOO', '...')
     ind = np.arange(2)
 
-    remote_nods, remote_ds, local = get_latencies()
+    remote_nods, remote_ds, local, remote_nods_err, remote_ds_err, local_err = get_latencies()
 
-    ax.bar(ind, remote_ds, width, color='White', hatch=patterns[0], label='Remote w/ DS')
-    ax.bar(ind+width, remote_nods, width, color='White', hatch=patterns[1], label='Remote w/o DS')
-    ax.bar(ind+2*width, local, width, color='White', hatch=patterns[2], label='Local')
+    ax.bar(ind, remote_ds, width, color='White', hatch=patterns[0], label='Remote w/ DS', yerr=np.array(remote_ds_err).T, error_kw={'ecolor':'Black', 'linewidth':2})
+    ax.bar(ind+width, remote_nods, width, color='White', hatch=patterns[1], label='Remote w/o DS', yerr=np.array(remote_nods_err).T, error_kw={'ecolor':'Black', 'linewidth':2})
+    ax.bar(ind+2*width, local, width, color='White', hatch=patterns[2], label='Local', yerr=np.array(local_err).T, error_kw={'ecolor':'Black', 'linewidth':2})
 
     ax.set_xticks(ind+1.5*width)
     ax.set_xticklabels(['Read', 'Write'])
@@ -401,11 +421,23 @@ def display_total():
 
 def get_latencies():
     global all_data
-    remote_ds = [all_data[0].getMedian()[0], all_data[3].getMedian()[0]]
-    remote_nods = [all_data[1].getMedian()[0], all_data[4].getMedian()[0]]
-    local = [all_data[2].getMedian()[0], all_data[5].getMedian()[0]]
+    rr_ds_med, rr_ds_err = getDataError(all_data[0])
+    rr_nods_med, rr_nods_err = getDataError(all_data[1])
+    lr_med, lr_err = getDataError(all_data[2])
+    rw_ds_med, rw_ds_err = getDataError(all_data[3])
+    rw_nods_med, rw_nods_err = getDataError(all_data[4])
+    lw_med, lw_err = getDataError(all_data[5])
 
-    return remote_nods, remote_ds, local
+    remote_ds = [rr_ds_med[0], rw_ds_med[0]]
+    remote_ds_err = [rr_ds_err[0], rw_ds_err[0]]
+
+    remote_nods = [rr_nods_med[0], rw_nods_med[0]]
+    remote_nods_err = [rr_nods_err[0], rw_nods_err[0]]
+
+    local = [lr_med[0], lw_med[0]]
+    local_err = [lr_err[0], lw_err[0]]
+
+    return remote_nods, remote_ds, local, remote_nods_err, remote_ds_err, local_err
 
 
 if __name__ == '__main__':

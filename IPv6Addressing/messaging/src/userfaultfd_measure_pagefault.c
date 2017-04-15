@@ -20,7 +20,7 @@
 #include "./lib/538_utils.h"
 #include "./lib/debug.h"
 
-#define NUM_PAGES 5000
+#define NUM_PAGES 1500
 
 static volatile int stop;
 void *region;
@@ -294,7 +294,7 @@ static void *handler(void *arg)
                 struct in6_addr remoteMachine;
 
                 if (addr_map_in6[index] == NULL) {
-                    print_debug("Not IPv6\n");
+                    print_debug("Iteration %d\n", i);
                     first_rtt_start[i] = getns();
                     remoteMachine = getRemoteAddr(sockfd_server, p_server, addr_map_int[index]);
                     first_rtt_end[i] = getns();

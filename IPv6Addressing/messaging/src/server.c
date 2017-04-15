@@ -167,7 +167,7 @@ void handleClientRequests(int sock_fd,	struct addrinfo * p) {
 	struct in6_addr * ipv6Pointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
 
 	while (1) {
-		print_debug("Waiting for client message...\n");
+		printf("Waiting for client message...\n");
 		// Get the message
 
 		//TODO: Error handling (numbytes = -1)
