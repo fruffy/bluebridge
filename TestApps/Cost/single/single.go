@@ -3,10 +3,12 @@ package main
 import (
 	"bufio"
 	"encoding/gob"
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path"
+	"runtime"
 	"runtime/pprof"
 	"sort"
 	"strconv"
@@ -16,10 +18,12 @@ import (
 const DAMP = 0.85
 
 var (
-	itt         = 20
-	tests       = 1
-	profile     = false
-	updateCache = false
+	itt         = flag.Int("itt", 20, "PageRank itterations")
+	tests       = flag.Int("tests", 1, "Executions of entire pagerank algorithm")
+	graphFile   = flag.String("graphFile", "", "file containing the tab delimited edge graph")
+	cpuprofile  = flag.String("cpuprofile", "", "write cpu profile `file`")
+	updateCache = flag.Bool("updateCache", false, "parse file (slow) and update cache")
+	multiThread = flag.Bool("multiThread", false, "run page rank on multipul thread across all available cores")
 )
 
 type page struct {
@@ -64,18 +68,6 @@ func printPages() {
 	}
 }
 
-/*
-func (p Page2) String() string {
-	var s string
-	s += fmt.Sprintf("I-Rank: %f ", p.Incomming_rank)
-	s += "Edges: ["
-	for _, e := range p.edges {
-		s += fmt.Sprintf("%d,", e)
-	}
-	s += "] "
-	return s
-}*/
-
 func (p Page2) MemoryString() string {
 	var s string
 	s += fmt.Sprintf("---------page----------\n")
@@ -91,21 +83,29 @@ func (p Page2) MemoryString() string {
 	return s
 }
 
-var pages map[int]*page
-
-//apages is a memory map for vertex id's and is potentially sparse
-//index i of apages corresponds to the id of the vertex it represents
-//It is similar to a hash
-var apages []Page2
-var ids []int
-var edgenorm []float32
-var rank []float32
-var edges []int
+var (
+	//A temporary map structure for reading in edges
+	pages map[int]*page
+	//apages is a memory map for vertex id's and is potentially sparse
+	//index i of apages corresponds to the id of the vertex it represents
+	//It is similar to a hash
+	apages []Page2
+	//ids is an itterator mapper. ids[0] = first vertex id. Most of
+	//the time ids[0] = 0, and ids[n] = n but this is not always the
+	//case
+	ids []int
+	//cache for each pages edge norm
+	edgenorm []float32
+	//cache of each pages current rank
+	rank []float32
+	//all edges sequentially aligned
+	edges []int
+)
 
 func main() {
-	graphFile := os.Args[1]
-	if profile {
-		f, err := os.Create("cpu.prof")
+	flag.Parse()
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
 		if err != nil {
 			log.Fatal("could not create CPU profile: ", err)
 		}
@@ -114,101 +114,112 @@ func main() {
 		}
 		defer pprof.StopCPUProfile()
 	}
-	pages = make(map[int]*page, 0)
+	//Time reading in file
 	start := time.Now()
-	parseFile(graphFile)
+	parseFile(*graphFile)
 	dir := time.Now().Sub(start)
 	fmt.Printf("Parse Duration %f\n", dir.Seconds())
-	//parseFile("../tiny.txt")
-	//fmt.Println("parsed")
-	total := 0.0
-	for i := 0; i < tests; i++ {
+	total := 0.0 //total time
+	//run page rank
+	for i := 0; i < *tests; i++ {
+		//Time each page rank
 		start := time.Now()
-		//pageRank2(itt)
-		pageRank3(itt)
+		if *multiThread {
+			pageRankMulti(*itt)
+		} else {
+			pageRank3(*itt)
+		}
 		dir := time.Now().Sub(start)
-		fmt.Printf("Rounds %d Duration %f\n", itt, dir.Seconds())
+		fmt.Printf("Rounds %d Duration %f\n", *itt, dir.Seconds())
 		total += dir.Seconds()
 	}
-	fmt.Printf("Average time %f\n", total/float64(tests))
-
-	//for i := range pages {
-	//	fmt.Print((*pages[i]).String())
-	//}
+	fmt.Printf("Average time %f\n", total/float64(*tests))
 }
+
 func pageRank3(rounds int) {
+	fmt.Println("Single Threaded pagerank")
 	var outrank float32
 	var alpha = (1 - DAMP) / float32(len(pages))
-	//var count int64
 	for i := 0; i < rounds; i++ {
-		//printPages()
 		for j := 0; j < len(ids); j++ {
 			outrank = rank[j] / edgenorm[j]
-			//fmt.Printf("page %d\n", ids[j])
 			for k := 0; k < apages[ids[j]].Num_edges; k++ {
-				//send message to another page
 				apages[edges[apages[ids[j]].Edge_offset+k]].Incomming_rank += outrank
-				//fmt.Printf("page: %d edge %d\n", ids[j], edges[apages[ids[j]].Edge_offset+k])
-				//count++
 			}
 		}
-		//fmt.Println(count)
-		//count = 0
 		for j := 0; j < len(ids); j++ {
 			rank[j] = alpha + (DAMP * apages[ids[j]].Incomming_rank)
-			//apages[j].Incomming_rank[j] = 0.0
 		}
-		//printPages()
 	}
 }
 
-/*
-func pageRank2(rounds int) {
-	var outrank float32
-	var alpha = (1 - DAMP) * (1.0 / float32(len(pages)))
-	for i := 0; i < rounds; i++ {
-		for j := 0; j < len(ids); j++ {
-			outrank = rank[j] / edgenorm[j]
+const (
+	SENDMSG = iota
+	UPDATE
+)
 
-			for k := 0; k < len(apages[j].edges); k++ {
-				apages[apages[j].edges[k]].Incomming_rank += outrank
+func pageRankMulti(rounds int) {
+	commands := make([]chan int, runtime.NumCPU())
+	for i := range commands {
+		commands[i] = make(chan int, 1)
+	}
+	done := make(chan bool, runtime.NumCPU())
+	work := len(edges) / runtime.NumCPU()
+	i := 0
+	for i = 0; i < runtime.NumCPU()-1; i++ {
+		go pageRankWorker(commands[i], done, work*i, work*(i+1))
+	}
+	i++
+	go pageRankWorker(commands[i], done, work*i, len(edges))
+
+	for i = 0; i < rounds; i++ {
+		outstanding := 0
+		for j := range commands {
+			commands[j] <- SENDMSG
+			outstanding++
+		}
+		for outstanding > 0 {
+			<-done
+			outstanding--
+		}
+		outstanding = 0
+		for j := range commands {
+			commands[j] <- UPDATE
+			outstanding++
+		}
+		for outstanding > 0 {
+			<-done
+			outstanding--
+		}
+	}
+}
+
+func pageRankWorker(commandChan chan int, done chan bool, start, stop int) {
+	var outrank float32
+	var alpha = (1 - DAMP) / float32(len(pages))
+	for {
+		switch <-commandChan {
+		case SENDMSG:
+			for j := start; j < stop; j++ {
+				outrank = rank[j] / edgenorm[j]
+				for k := 0; k < apages[ids[j]].Num_edges; k++ {
+					apages[edges[apages[ids[j]].Edge_offset+k]].Incomming_rank += outrank
+				}
 			}
-		}
-		for j := 0; j < len(ids); j++ {
-			rank[j] = alpha + (DAMP * apages[j].Incomming_rank)
-		}
-	}
-}*/
-/*
-func pageRank(rounds int) {
-	for i := 0; i < rounds; i++ {
-		for j := 0; j < len(ids); j++ {
-			sendMessages(ids[j])
-		}
-		for j := 0; j < len(ids); j++ {
-			update(ids[j])
+			done <- true
+		case UPDATE:
+			for j := start; j < stop; j++ {
+				rank[j] = alpha + (DAMP * apages[ids[j]].Incomming_rank)
+			}
+			done <- true
 		}
 	}
-}
 
-func sendMessages(id int) {
-	var outrank float32
-	var p Page2
-	p = apages[id]
-	outrank = rank[id] / float32((p.Num_edges + 1))
-	for i := 0; i < p.Num_edges; i++ {
-		apages[p.edges[i]].Incomming_rank += outrank
-	}
 }
-
-func update(id int) {
-	apages[id].rank = (1-DAMP)*(1.0/float32(len(pages))) + (DAMP * apages[id].Incomming_rank)
-}
-*/
 
 func parseFile(filename string) {
 	base := path.Base(filename)
-	if !updateCache && fileCached(base) {
+	if !*updateCache && fileCached(base) {
 		readCache(base)
 		return
 	}
@@ -220,10 +231,13 @@ func parseFile(filename string) {
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
 
-	var i int
-	var buf string
-	var max int
-	var e int
+	var (
+		pages = make(map[int]*page, 0)
+		i     int //
+		buf   string
+		max   int
+		e     int
+	)
 	for scanner.Scan() {
 		buf = scanner.Text()
 		//fmt.Println(buf)
@@ -283,11 +297,6 @@ func parseFile(filename string) {
 	}
 
 	WriteToFiles(base)
-
-	//for i := range apages {
-	//	fmt.Println(apages[i].MemoryString())
-	//}
-
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
@@ -319,6 +328,7 @@ func writeFile(filename string, item interface{}) {
 	}
 	defer f.Close()
 	enc := gob.NewEncoder(f)
+	//enc := json.NewEncoder(f)
 	err = enc.Encode(item)
 	if err != nil {
 		log.Fatal(err)
@@ -348,26 +358,10 @@ func readCachefile(objectname string, object interface{}) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	//dec := json.NewDecoder(f)
 	dec := gob.NewDecoder(f)
 	err = dec.Decode(object)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
-
-/*
-type pageHash [][]*page
-
-func NewPageHash(size int) *pageHash {
-	p := make([][]*page, size)
-	logsize := math.Sqrt(float32(size))
-	for i := range p {
-		p[i] = make([]*page, int(logsize))
-	}
-	return *pageHash(p)
-}
-
-func (ph *pageHash) Put(id int) {
-	var l1 int
-	var l2 int
-*/
