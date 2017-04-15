@@ -3,20 +3,20 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The modern internet generates petabytes of data per day. Processing
-    vast amounts of data is an increasingly common task for both
+    vast amounts of data is an increasingly common task both for
     scientists and modestly experienced programmers. Often this data
-    is naturally represented as a graph, such as social media friends,
-    and requires clusters of machines to process. Concurrent trends in
-    data centre architecture suggest that the rack is the new server,
-    and shared memory is now a feasible interface between rack
-    collocated servers. These trends made us wonder \textit{How simple
-    can fast graph processing be on a rack of servers?}. We
-    investigated the tradeoffs of the conventional pregal style
+    is naturally represented as a graph, such as social media networks,
+    webpage links or city networks, and requires clusters of machines 
+    to process. Concurrent trends in data centre architecture suggest that 
+    the rack is the new server, and shared memory is now a feasible 
+    interface between collocated rack servers. These trends made us wonder: 
+    \textit{How simple can fast graph processing be on a rack of servers?}. We
+    investigated the tradeoffs of the conventional Pregel
     \textit{"think like a vertex"} programming model, and found its
-    performance unacceptable. In contrast we find that a
-    \textit{"Think like a sub-graph"} model respects locality in common
-    graphs, provides a more holistic programming interface, and runs
-    fast!
+    performance unacceptable. In contrast, we explored the merits of a 
+    \textit{"Think like a subgraph"} model, which respects graph locality 
+    in common graphs, provides a more holistic programming interface, and runs
+    faster! 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \end{abstract}

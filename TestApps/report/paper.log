@@ -1,15 +1,15 @@
-This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/Debian) (format=pdflatex 2015.6.4)  9 APR 2017 15:20
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/Debian) (format=pdflatex 2017.4.9)  14 APR 2017 20:02
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
 **paper.tex
 (./paper.tex
 LaTeX2e <2011/06/27>
-Babel <3.9h> and hyphenation patterns for 78 languages loaded.
-(/usr/share/texlive/texmf-dist/tex/latex/base/article.cls
-Document Class: article 2007/10/19 v1.4h Standard LaTeX document class
-(/usr/share/texlive/texmf-dist/tex/latex/base/size10.clo
-File: size10.clo 2007/10/19 v1.4h Standard LaTeX file (size option)
+Babel <3.9h> and hyphenation patterns for 2 languages loaded.
+(/home/cfung/texmf/tex/latex/base/article.cls
+Document Class: article 2014/09/29 v1.4h Standard LaTeX document class
+(/home/cfung/texmf/tex/latex/base/size10.clo
+File: size10.clo 2014/09/29 v1.4h Standard LaTeX file (size option)
 )
 \c@part=\count79
 \c@section=\count80
@@ -26,7 +26,7 @@ File: size10.clo 2007/10/19 v1.4h Standard LaTeX file (size option)
 (/usr/share/texlive/texmf-dist/tex/latex/psnfss/times.sty
 Package: times 2005/04/12 PSNFSS-v9.2a (SPQR) 
 )
-(/usr/share/texlive/texmf-dist/tex/latex/preprint/fullpage.sty
+(/home/cfung/texmf/tex/latex/preprint/fullpage.sty
 Package: fullpage 1999/02/23 1.1 (PWD)
 \FP@margin=\skip43
 )
@@ -50,7 +50,7 @@ Package: booktabs 2005/04/14 v1.61803 publication quality tables
 \@lastruleclass=\count90
 \@thisrulewidth=\dimen115
 )
-(/usr/share/texlive/texmf-dist/tex/latex/preprint/balance.sty
+(/home/cfung/texmf/tex/latex/preprint/balance.sty
 Package: balance 1999/02/23 4.3 (PWD)
 \oldvsize=\dimen116
 )
@@ -125,7 +125,7 @@ Package: tabularx 1999/01/07 v2.07 `tabularx' package (DPC)
 \TX@cols=\count92
 \TX@ftn=\toks17
 )
-(/usr/share/texlive/texmf-dist/tex/latex/framed/framed.sty
+(/home/cfung/texmf/tex/latex/framed/framed.sty
 Package: framed 2011/10/22 v 0.96: framed or shaded text with page breaks
 \OuterFrameSep=\skip47
 \fb@frw=\dimen126
@@ -133,64 +133,67 @@ Package: framed 2011/10/22 v 0.96: framed or shaded text with page breaks
 \FrameRule=\dimen128
 \FrameSep=\dimen129
 )
-(/usr/share/texlive/texmf-dist/tex/latex/algorithm2e/algorithm2e.sty
+(/home/cfung/texmf/tex/latex/algorithm2e/algorithm2e.sty
 Package: algorithm2e 2013/01/06 v5.00 algorithms environments
 \c@AlgoLine=\count93
 
-(/usr/share/texlive/texmf-dist/tex/latex/base/ifthen.sty
-Package: ifthen 2001/05/26 v1.1c Standard LaTeX ifthen package (DPC)
+(/home/cfung/texmf/tex/latex/base/ifthen.sty
+Package: ifthen 2014/09/29 v1.1c Standard LaTeX ifthen package (DPC)
 )
-(/usr/share/texlive/texmf-dist/tex/latex/relsize/relsize.sty
+\algocf@hangindent=\skip48
+
+(/home/cfung/texmf/tex/latex/relsize/relsize.sty
 Package: relsize 2013/03/29 ver 4.1
 )
 ********************************************************
-Package `algorithm2e' Release 5.0 -- january 06 2013 --
+Package `algorithm2e' Release 5.1 -- october 19 2015 --
 - algorithm2e-announce@lirmm.fr mailing list for announcement about releases
 - algorithm2e-discussion@lirmm.fr mailing list for discussion about package
 subscribe by emailing sympa@lirmm.fr with 'subscribe <list> <firstname name>'
-- Author: Christophe Fiorio (cfiorio@um2.fr)
+- Author: Christophe Fiorio (christophe.fiorio@umontpellier.fr)
 ********************************************************
-\skiptotal=\skip48
-\skiplinenumber=\skip49
-\skiprule=\skip50
-\skiphlne=\skip51
-\skiptext=\skip52
-\skiplength=\skip53
-\algomargin=\skip54
-\skipalgocfslide=\skip55
+\skiptotal=\skip49
+\skiplinenumber=\skip50
+\skiprule=\skip51
+\skiphlne=\skip52
+\skiptext=\skip53
+\skiplength=\skip54
+\algomargin=\skip55
+\skipalgocfslide=\skip56
 \algowidth=\dimen130
 \inoutsize=\dimen131
 \inoutindent=\dimen132
 \interspacetitleruled=\dimen133
 \interspacealgoruled=\dimen134
 \interspacetitleboxruled=\dimen135
+\algocf@ruledwidth=\skip57
 \algocf@inoutbox=\box26
 \algocf@inputbox=\box27
-\AlCapSkip=\skip56
-\AlCapHSkip=\skip57
-\algoskipindent=\skip58
+\AlCapSkip=\skip58
+\AlCapHSkip=\skip59
+\algoskipindent=\skip60
 \algocf@nlbox=\box28
 \algocf@hangingbox=\box29
 \algocf@untilbox=\box30
-\algocf@skipuntil=\skip59
+\algocf@skipuntil=\skip61
 \algocf@capbox=\box31
-\algoheightruledefault=\skip60
-\algoheightrule=\skip61
-\algotitleheightruledefault=\skip62
-\algotitleheightrule=\skip63
+\algoheightruledefault=\skip62
+\algoheightrule=\skip63
+\algotitleheightruledefault=\skip64
+\algotitleheightrule=\skip65
 \c@algocfline=\count94
 \c@algocfproc=\count95
 \c@algocf=\count96
 \algocf@algoframe=\box32
 \algocf@algobox=\box33
-) (/usr/share/texlive/texmf-dist/tex/latex/algorithms/algorithmic.sty
+) (/home/cfung/texmf/tex/latex/algorithms/algorithmic.sty
 Package: algorithmic 2009/08/24 v0.1 Document Style `algorithmic'
 \c@ALC@unique=\count97
 \c@ALC@line=\count98
 \c@ALC@rem=\count99
 \c@ALC@depth=\count100
-\ALC@tlm=\skip64
-\algorithmicindent=\skip65
+\ALC@tlm=\skip66
+\algorithmicindent=\skip67
 )
 (/usr/share/texlive/texmf-dist/tex/latex/listings/listings.sty
 \lst@mode=\count101
@@ -217,7 +220,7 @@ File: listings.cfg 2013/08/26 1.5b listings configuration
 ))
 Package: listings 2013/08/26 1.5b (Carsten Heinz)
 
-(/usr/share/texlive/texmf-dist/tex/latex/pbox/pbox.sty
+(/home/cfung/texmf/tex/latex/pbox/pbox.sty
 Package: pbox 2011/12/07 v1.2 Dynamic parboxes
 
 (/usr/share/texlive/texmf-dist/tex/latex/tools/calc.sty
@@ -226,18 +229,18 @@ Package: calc 2007/08/22 v4.3 Infix arithmetic (KKT,FJ)
 \calc@Bcount=\count110
 \calc@Adimen=\dimen140
 \calc@Bdimen=\dimen141
-\calc@Askip=\skip66
-\calc@Bskip=\skip67
+\calc@Askip=\skip68
+\calc@Bskip=\skip69
 LaTeX Info: Redefining \setlength on input line 76.
 LaTeX Info: Redefining \addtolength on input line 77.
 \calc@Ccount=\count111
-\calc@Cskip=\skip68
+\calc@Cskip=\skip70
 )
-\pb@xlen=\skip69
+\pb@xlen=\skip71
 )
-(/usr/share/texlive/texmf-dist/tex/latex/enumitem/enumitem.sty
+(/home/cfung/texmf/tex/latex/enumitem/enumitem.sty
 Package: enumitem 2011/09/28 v3.5.2 Customized lists
-\labelindent=\skip70
+\labelindent=\skip72
 \enit@outerparindent=\dimen142
 \enit@toks=\toks19
 \enit@inbox=\box36
@@ -270,7 +273,7 @@ Package caption Info: listings package is loaded.
 (./annotations.tex (/usr/share/texlive/texmf-dist/tex/generic/ulem/ulem.sty
 \UL@box=\box37
 \UL@hyphenbox=\box38
-\UL@skip=\skip71
+\UL@skip=\skip73
 \UL@hook=\toks20
 \UL@height=\dimen150
 \UL@pe=\count120
@@ -423,19 +426,22 @@ LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <14.4> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 2.
 )
 (./intro.tex
-LaTeX Font Info:    Try loading font information for OMS+ptm on input line 64.
- (/usr/share/texlive/texmf-dist/tex/latex/psnfss/omsptm.fd
+Underfull \hbox (badness 1043) in paragraph at lines 6--15
+\OT1/ptm/m/n/10 pe-ri-enced pro-gram-mers alike strug-gle with man-ag-ing
+ []
+
+LaTeX Font Info:    Try loading font information for OMS+ptm on input line 63.
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/omsptm.fd
 File: omsptm.fd 
 )
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <10> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 64.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 63.
+ [1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}
 
-[1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}
 
-
-]) (./related.tex)
-(./api.tex) (./partition.tex) (./evaluation.tex) (./discussion.tex)
-(./conclusion.tex) (./paper.bbl
+]) (./related.tex) (./api.tex)
+(./partition.tex) (./evaluation.tex) (./discussion.tex) (./conclusion.tex)
+(./paper.bbl
 Underfull \hbox (badness 10000) in paragraph at lines 7--8
 []\OT1/ptm/m/n/10 Hp the ma-chine,
  []
@@ -485,22 +491,26 @@ Underfull \hbox (badness 2050) in paragraph at lines 85--92
 []\OT1/ptm/m/n/10 C. Morin, R. Lot-ti-aux, G. Vallee, P. Gal-lard,
  []
 
-) [3] (./paper.aux) ) 
+) [3] (./paper.aux) )
+(\end occurred inside a group at level 1)
+
+### simple group (level 1) entered at line 1061 ({)
+### bottom level 
 Here is how much of TeX's memory you used:
- 7215 strings out of 493304
- 103855 string characters out of 6139872
- 206053 words of memory out of 5000000
- 10516 multiletter control sequences out of 15000+600000
+ 6774 strings out of 495028
+ 99125 string characters out of 6181498
+ 187558 words of memory out of 5000000
+ 9826 multiletter control sequences out of 15000+600000
  18119 words of font info for 49 fonts, out of 8000000 for 9000
- 957 hyphenation exceptions out of 8191
- 38i,9n,40p,269b,307s stack positions out of 5000i,500n,10000p,200000b,80000s
-{/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc
-}</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr
-/share/texlive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texliv
-e/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/fo
-nts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/t
-imes/utmri8a.pfb>
-Output written on paper.pdf (3 pages, 72286 bytes).
+ 14 hyphenation exceptions out of 8191
+ 38i,9n,40p,302b,4548s stack positions out of 5000i,500n,10000p,200000b,80000s
+{/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</us
+r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/shar
+e/texlive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texlive/tex
+mf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/t
+ype1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/
+utmri8a.pfb>
+Output written on paper.pdf (3 pages, 72374 bytes).
 PDF statistics:
  35 PDF objects out of 1000 (max. 8388607)
  24 compressed objects within 1 object stream
