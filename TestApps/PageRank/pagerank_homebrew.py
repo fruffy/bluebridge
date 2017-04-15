@@ -9,6 +9,7 @@ from threading import Event
 from multiprocessing import Pool, Manager
 from igraph import *
 
+NUM_ITERATIONS = 20
 
 def pagerank_distributed(args, d=0.9):
 
@@ -18,7 +19,7 @@ def pagerank_distributed(args, d=0.9):
     remote_hits_dict = dict()
 
     # This needs to change to shared mem
-    for t in range(20):
+    for t in range(NUM_ITERATIONS):
 
         remote_hits = 0
 
@@ -30,10 +31,7 @@ def pagerank_distributed(args, d=0.9):
             # Send a message to all neighbors
             for nextVertex in vertex.neighbors():
                 if (nextVertex["state"] == "p"):
-                    # print vertex["name"], "needs to send to",
-                    # nextVertex["name"], "at", t
-                    remote_hits = remote_hits + 1
-                    shared_mem[(nextVertex["name"], t)] = outrank
+                    shared_mem[(vertex["name"], nextVertex["name"], t)] = outrank
                 else:
                     nextVertex["message_queue"].append(outrank)
 
@@ -48,13 +46,21 @@ def pagerank_distributed(args, d=0.9):
             # For master vertices, block and wait for incoming rank
             if vertex["state"] == "m":
 
-                # TODO: blocking
-                while (vertex["name"], t) not in shared_mem:
-                    print "Waiting for", (vertex["name"], t), "quick sleep"
-                    time.sleep(0.01)
+                total_remote_in_rank = 0
 
-                in_rank = in_rank + shared_mem[(vertex["name"], t)]
-                #print vertex["name"], shared_mem[(vertex["name"], t)], "from", t
+                for in_edge in vertex["in_edges"]:
+
+                    query = in_edge + (t,)
+
+                    # TODO: blocking
+                    while shared_mem[query] == 0:
+                        #print "Waiting for", (vertex["name"], t), "quick sleep"
+                        time.sleep(0.005)
+
+                    remote_hits = remote_hits + 1
+                    total_remote_in_rank = total_remote_in_rank + shared_mem[query]
+
+                in_rank = in_rank + total_remote_in_rank
 
             rank_val = ((1 - d) * base_surfer_rank) + (d * in_rank)
             vertex["rank"] = rank_val
@@ -104,10 +110,11 @@ def load_graph(graphPath):
     myGraph.vs["rank"] = 1 / float(total_nodes)
     myGraph.vs["host"] = 0
     myGraph.vs["message_queue"] = [[] for _ in xrange(total_nodes)]
+    myGraph.vs["in_edges"] = [[] for _ in xrange(total_nodes)]
     return myGraph
 
 
-def partition_graph(oneGraph, num_hosts=None):
+def partition_graph(oneGraph, shared_mem, num_hosts=None):
 
     start_time = time.time()
 
@@ -124,14 +131,22 @@ def partition_graph(oneGraph, num_hosts=None):
 
             if (v1 not in vertices):
                 subgraph.vs.select(name_eq=str(v0))["state"] = "m"
+                subgraph.vs.select(name_eq=str(v0))[0]["in_edges"].append((str(v1), str(v0)))
                 subgraph.add_vertex(str(v1), state="p")
             elif (v0 not in vertices):
                 subgraph.vs.select(name_eq=str(v1))["state"] = "m"
+                subgraph.vs.select(name_eq=str(v1))[0]["in_edges"].append((str(v0), str(v1)))
                 subgraph.add_vertex(str(v0), state="p")
             else:
                 print "SOMETHING IS WRONG"
 
-            subgraph.add_edge(str(edge.tuple[0]), str(edge.tuple[1]))
+            subgraph.add_edge(str(v0), str(v1))
+
+            # Adding vertices to shared memory. (num_expected, totalrank[])
+            # Add v0
+            for i in xrange(NUM_ITERATIONS):
+                shared_mem[str(v0), str(v1), i] = 0
+                shared_mem[str(v1), str(v0), i] = 0
 
         subgraphs.append(subgraph)
 
@@ -182,22 +197,23 @@ if __name__ == '__main__':
     start_time = time.time()
 
     manager = Manager()
-    pool = Pool(2)
-    subgraphs = partition_graph(myGraph, num_hosts=2)
-
     shared_mem = manager.dict()
-    results = pool.map(pagerank_distributed,itertools.izip(subgraphs, itertools.repeat(shared_mem)))
+
+    subgraphs = partition_graph(myGraph, shared_mem, num_hosts=2)
+
+    pool = Pool(2)
+    results = pool.map(pagerank_distributed, itertools.izip(subgraphs, itertools.repeat(shared_mem)))
 
     print "Distributed PageRank complete. Took", (time.time() - start_time), "s."
 
     start_time = time.time()
-    
+
     hits = dict()
     ranks, hits = pagerank(myGraph)
     ranks_dist = results[0][0] + results[1][0]
 
     # Using the igraph pagerank
-    #ranks = myGraph.pagerank(directed=False, damping=0.9)
+    # ranks = myGraph.pagerank(directed=False, damping=0.9)
 
     sorted_ranks = sorted(
         enumerate(ranks_dist), key=operator.itemgetter(1), reverse=True)
@@ -211,4 +227,4 @@ if __name__ == '__main__':
     print "Top 30 Nodes..."
     print "--------------------"
 
-    print sorted_ranks[1:30]
+    print sorted_ranks[0:29]
