@@ -20,7 +20,7 @@
 #include "./lib/538_utils.h"
 #include "./lib/debug.h"
 
-#define NUM_PAGES 1000
+#define NUM_PAGES 5000
 
 static volatile int stop;
 void *region;

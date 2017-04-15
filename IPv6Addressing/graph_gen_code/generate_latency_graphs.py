@@ -17,10 +17,11 @@ microbench = None
 
 class MicroBenchData:
     def __init__(self, alloc, read, write, free, conversion=1000.0):
-        self.alloc_latency = alloc
-        self.read_latency = read
-        self.write_latency = write
-        self.free_latency = free
+        self.alloc_latency = alloc #reject_outliers(np.array(alloc), .15)
+        self.read_latency = read #reject_outliers(np.array(read), .25)
+        self.write_latency = write #reject_outliers(np.array(write), .25)
+        self.free_latency = free #reject_outliers(np.array(free), 1)
+        import pdb; pdb.set_trace()
         self.conv = conversion
 
     def getMedian(self):
@@ -109,6 +110,9 @@ def getDataIndex(dtype, access_type, ds):
                 return 3
             else:
                 return 4
+
+def reject_outliers(data, m=2):
+    return data[abs(data - np.median(data)) < m * np.std(data)]
 
 def latexify(fig_width=None, fig_height=None, columns=1):
         """Set up matplotlib's RC params for LaTeX plotting.
@@ -297,13 +301,27 @@ def getMicroIndex(name):
     elif "free" in name:
         return 3
 
+def get_micro_errors():
+    errors = []
+    top = microbench.getPercentile(99)
+    bottom = microbench.getPercentile(1)
+    median = microbench.getMedian()
+
+    for i in range(len(top)):
+        errors.append([abs(median[i]-bottom[i]), abs(median[i] - top[i])])
+
+    import pdb; pdb.set_trace()
+    return errors
+
 def display_microbench():
     fig, ax = plt.subplots()
 
     width = 0.25
     ind = np.arange(4)
 
-    ax.bar(ind, microbench.getMedian(), color='White')
+    errors = get_micro_errors()
+
+    ax.bar(ind, microbench.getMedian(), color='White', yerr=np.array(errors).T, error_kw={'ecolor':'Black', 'linewidth':2})
 
     ax.set_xticks(ind+1.5*width)
     ax.set_xticklabels(['Alloc', 'Read', 'Write', 'Free'])
