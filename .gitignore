@@ -54,7 +54,8 @@ TestApps/PageRank/lib
 TestApps/PageRank/local
 TestApps/PageRank/share
 
-
+# Cost
+TestApps/Cost/single/cache
 
 
 
