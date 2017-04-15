@@ -10,11 +10,11 @@ from igraph import *
 if __name__ == '__main__':
 
     # Need to read and write to disk
-    #reader = csv.reader(open('./twitter/twitter_rv.net', 'r'), delimiter='\t');
+    # reader = csv.reader(open('./twitter/twitter_rv.net', 'r'), delimiter='\t');
 
-    #reader = csv.reader(open('./web-Google.txt', 'r'), delimiter='\t');
+    # reader = csv.reader(open('./web-Google.txt', 'r'), delimiter='\t');
 
-    #reader = csv.reader(open('./inputs/simple_routes.txt', 'r'), delimiter=' ')
+    # reader = csv.reader(open('./inputs/simple_routes.txt', 'r'), delimiter=' ')
 
     inputFile = './inputs/web-Google.txt'
     NUM_NODES = 10
