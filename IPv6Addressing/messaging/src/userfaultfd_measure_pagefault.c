@@ -20,7 +20,7 @@
 #include "./lib/538_utils.h"
 #include "./lib/debug.h"
 
-#define NUM_PAGES 1000
+#define NUM_PAGES 10
 
 static volatile int stop;
 void *region;
@@ -302,21 +302,21 @@ static void *handler(void *arg)
                 struct in6_addr remoteMachine;
 
                 if (addr_map_in6[index] == NULL) {
-                    printf("Not IPv6\n");
+                    print_debug("Not IPv6\n");
                     first_rtt_start[i] = getns();
                     remoteMachine = getRemoteAddr(sockfd_server, p_server, addr_map_int[index]);
                     first_rtt_end[i] = getns();
 
                     char s[INET6_ADDRSTRLEN];
                     inet_ntop(AF_INET6, &remoteMachine, s, sizeof(s));
-                    fprintf(stdout, "Remote Machine is... %s\n", s);
+                    print_debug("Remote Machine is... %s\n", s);
                 } else {
-                    printf("IPv6\n");
+                    print_debug("IPv6\n");
                     remoteMachine = *addr_map_in6[index];
 
                     char s[INET6_ADDRSTRLEN];
                     inet_ntop(AF_INET6, &remoteMachine, s, sizeof(s));
-                    fprintf(stdout, "Remote Machine is... %s\n", s);
+                    print_debug("Remote Machine is... %s\n", s);
                 }
                 second_rtt_start[i] = getns();
                 char* val = getMemory(sockfd_server, p_server, &remoteMachine);
@@ -347,10 +347,12 @@ static void *handler(void *arg)
                     exit(1);
                 }
                 // char buf[page_size];
+                second_rtt_start[i] = getns();
                 if (fread(buf, page_size, 1, f) != 0) {
                     perror("fread");
                     exit(1);
                 }
+                second_rtt_end[i] = getns();
                 if (fclose(f)) {
                     perror("fclose");
                     exit(1);
@@ -394,7 +396,7 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
     char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 
     // Lines are for ndpproxy DO NOT REMOVE
-    struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
+    struct in6_addr * ipv6Pointer = gen_fixed_IPv6Target(1);
     memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
     p->ai_addrlen = sizeof(*ipv6Pointer);
     
@@ -437,12 +439,17 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 
 int main(int argc, char **argv)
 {
+    if (argc != 4) {
+        printf("ERROR: wrong number of arguments\n");
+        exit(1);
+    }
     int uffd;
     long page_size;
     pthread_t uffd_thread;
-    int measure_write = 1; // 1 = write, 0 = read
-    int remote = 1; // 0 = local, 1 = remote
-    int directService = 0; // 1 = directory service, 0 = no directory service
+    char* dummy;
+    int remote = strtol(argv[1], &dummy, 10); // 0 = local, 1 = remote
+    int measure_write = strtol(argv[2], &dummy, 10); // 1 = write, 0 = read
+    int directService = strtol(argv[3], &dummy, 10); // 1 = directory service, 0 = no directory service
 
     page_size = get_page_size();
 
@@ -615,39 +622,6 @@ int main(int argc, char **argv)
         fprintf(stderr, "ioctl unregister failure\n");
         return 1;
     }
-
-    // long double average, /*variance, std_deviation, */sum = 0/*, sum1 = 0*/;
-    // uint64_t min = UINT64_MAX, max = 0;
-
-    // for (i = 0; i < NUM_PAGES; i++) {
-    //     sum += (long double) total_latencies[i];
-    //     if (total_latencies[i] > max) {
-    //         max = total_latencies[i];
-    //     }
-
-    //     if (total_latencies[i] < min) {
-    //         min = total_latencies[i];
-    //     }
-    // }
-
-    // average = sum / (long double) NUM_PAGES;
-
-    /*  Compute  variance  and standard deviation  */
-
-    // for (i = 0; i < NUM_PAGES; i++) {
-    //     sum1 += ((long double) total_latencies[i] - average)*((long double) total_latencies[i] - average);
-    // }
-
-    // variance = sum1 / (long double)NUM_PAGES;
-
-    // std_deviation = sqrt(variance);
-
-    // Prints the total_latencies per page. Want just an average, median, min, max. 
-    // for (i = 0; i < NUM_PAGES; i++) {
-    //     fprintf(stdout, "%llu\n", (unsigned long long)total_latencies[i]);
-    // }
-    // fprintf(stdout, "Start: %"PRIx64"\n", (uint64_t) region);
-    // fprintf(stdout, "Mean: %Lf\nMinimum: %llu\nMaximum: %llu\n", average, (unsigned long long) min, (unsigned long long) max);
 
     FILE *f = fopen("total_times.csv", "w");
     if (f == NULL) {

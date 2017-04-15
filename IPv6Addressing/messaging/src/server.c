@@ -70,11 +70,12 @@ int sendAddr(int sock_fd, struct addrinfo * p, char* receiveBuffer) {
 
 	int size = 0;
 	uint64_t pointer = 0;
-	memcpy(&pointer, &receiveBuffer, POINTER_SIZE);
+	memcpy(&pointer, receiveBuffer, POINTER_SIZE);
+	printf("Input pointer: %p\n", (void *) pointer);
 
 	// printf("Pointer %" PRIx64 "\n", pointer);
 	// = getPointerFromString(pointerStr);
-	struct in6_addr ipv6Pointer = getIPv6FromPointer(pointer);
+	struct in6_addr ipv6Pointer = getIPv6FromPointer((uint64_t) &pointer);
 	memcpy(sendBuffer, "ACK:", sizeof("ACK:"));
 	size += sizeof("ACK:") - 1;
 	memcpy(sendBuffer+size, &ipv6Pointer, IPV6_SIZE); 
@@ -140,15 +141,18 @@ int getMem(int sock_fd, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
 	char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 	uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
 
-	printf("Content length %lu is currently stored at %p!\n", strlen((char *)pointer), (void*)pointer);
-	printf("Content preview (50 bytes): %.50s\n", (char *)pointer);
+	// printf("Content length %lu is currently stored at %p!\n", strlen((char *)pointer), (void*)pointer);
+	// printf("Content preview (50 bytes): %.50s\n", (char *)pointer);
 
+	printf("memcpy time");
 	memcpy(sendBuffer, (void *) pointer, BLOCK_SIZE);
 	// Send the sendBuffer (entire BLOCK_SIZE) to sock_fd
-	print_debug("Content length %lu will be delivered to client!\n", strlen((char *)pointer));
+	// print_debug("Content length %lu will be delivered to client!\n", strlen((char *)pointer));
+	printf("Send UDP time\n");
 	sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
-	free(sendBuffer);
 
+	printf("Freeing send buffer\n");
+	free(sendBuffer);
 	// TODO change to be meaningful, i.e., error message
 	return 0;
 }
@@ -183,8 +187,10 @@ void handleClientRequests(int sock_fd,	struct addrinfo * p) {
 		} else if (memcmp(receiveBuffer, GET_CMD,2) == 0) {
 			splitResponse = receiveBuffer+2;
 			printf("******GET DATA: ");
-			printNBytes((char *) ipv6Pointer,IPV6_SIZE);
+			// printNBytes((char *) ipv6Pointer,IPV6_SIZE);
+			printf("Calling get mem");
 			getMem(sock_fd, p, ipv6Pointer);
+			printf("done");
 		} else if (memcmp(receiveBuffer, FREE_CMD,2) == 0) {
 			splitResponse = receiveBuffer+2;
 			printf("******FREE DATA: ");

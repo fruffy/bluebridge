@@ -191,7 +191,7 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 	//init the root element
 	nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
 	nextPointer->AddrString = allocateMem(sockfd, p);
-	for (i = 0; i < 9; i++) {
+	for (i = 0; i < 999; i++) {
 		srand(time(NULL));
 
 		nextPointer = nextPointer->Pointer;
