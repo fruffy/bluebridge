@@ -130,6 +130,7 @@ def partition_graph(oneGraph, shared_mem, num_hosts=None):
     name_map = np.array(oneGraph.vs["name"])
     sg_name_map = dict()
     edge_storage = dict()
+    temp_shared_mem = dict()
 
     for i in xrange(num_hosts):
         
@@ -179,12 +180,15 @@ def partition_graph(oneGraph, shared_mem, num_hosts=None):
 
             # Adding shared edges to shared memory
             for i in xrange(NUM_ITERATIONS):
-                shared_mem[v0_str, v1_str, i] = 0
-                shared_mem[v1_str, v0_str, i] = 0
+                temp_shared_mem[v0_str, v1_str, i] = 0
+                temp_shared_mem[v1_str, v0_str, i] = 0
 
     # Try this for perf
     for i in xrange(num_hosts):
         subgraphs[i].add_edges(edge_storage[i].keys())
+
+    # Much faster
+    shared_mem.update(temp_shared_mem)
 
     print "Cuts:", num_cuts, num_external
     print "Partitioning complete. Took", time.time() - start_time, "s."
