@@ -164,13 +164,14 @@ func pageRankMulti(rounds int) {
 		commands[i] = make(chan int, 1)
 	}
 	done := make(chan bool, runtime.NumCPU())
-	work := len(edges) / runtime.NumCPU()
+	work := len(ids) / runtime.NumCPU()
 	i := 0
 	for i = 0; i < runtime.NumCPU()-1; i++ {
+		fmt.Printf("Start: %d Stop %d\n", work*i, work*(i+1))
 		go pageRankWorker(commands[i], done, work*i, work*(i+1))
 	}
-	i++
-	go pageRankWorker(commands[i], done, work*i, len(edges))
+	fmt.Printf("Start: %d Stop %d\n", work*i, len(ids))
+	go pageRankWorker(commands[i], done, work*i, len(ids))
 
 	for i = 0; i < rounds; i++ {
 		outstanding := 0
@@ -179,6 +180,7 @@ func pageRankMulti(rounds int) {
 			outstanding++
 		}
 		for outstanding > 0 {
+			//fmt.Println("waiting")
 			<-done
 			outstanding--
 		}
