@@ -7,6 +7,9 @@ import pdb
 from sklearn.cluster import KMeans
 from igraph import *
 
+def pagerank(myGraph):
+    return myGraph.pagerank()
+
 if __name__ == '__main__':
 
     # Need to read and write to disk

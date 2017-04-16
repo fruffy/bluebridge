@@ -34,7 +34,8 @@ def pagerank_distributed(args, d=0.9):
             # Send a message to all neighbors
             for nextVertex in vertex.neighbors():
                 if (nextVertex["state"] == "p"):
-                    shared_mem[(vertex["name"], nextVertex["name"], t)] = outrank
+                    shared_mem[
+                        (vertex["name"], nextVertex["name"], t)] = outrank
                 else:
                     nextVertex["message_queue"].append(outrank)
 
@@ -55,11 +56,13 @@ def pagerank_distributed(args, d=0.9):
 
                     # TODO: blocking
                     while shared_mem[query] == 0:
-                        #print "Waiting for", (vertex["name"], t), "quick sleep"
+                        # print "Waiting for", (vertex["name"], t), "quick
+                        # sleep"
                         time.sleep(0.005)
 
                     remote_hits = remote_hits + 1
-                    total_remote_in_rank = total_remote_in_rank + shared_mem[query]
+                    total_remote_in_rank = total_remote_in_rank + \
+                        shared_mem[query]
 
                 in_rank = in_rank + total_remote_in_rank
 
@@ -78,7 +81,7 @@ def pagerank(myGraph, d=0.9):
     remote_hits_dict = dict()
 
     # This needs to change to shared mem
-    for t in range(20):
+    for t in range(NUM_ITERATIONS):
 
         remote_hits = 0
 
@@ -98,7 +101,8 @@ def pagerank(myGraph, d=0.9):
         remote_hits_dict[t] = remote_hits
 
         for vertex in (myGraph.vs()):
-            rank_val = (1 - d) * (1 / float(myGraph["total_nodes"])) + d * sum(vertex["message_queue"])
+            rank_val = (
+                1 - d) * (1 / float(myGraph["total_nodes"])) + d * sum(vertex["message_queue"])
             vertex["rank"] = rank_val
             vertex["message_queue"] = []
 
@@ -117,14 +121,17 @@ def load_graph(graphPath):
     return myGraph
 
 
-def partition_graph(oneGraph, shared_mem, num_hosts=None):
+def partition_graph(oneGraph, shared_mem, strategy="smart", num_hosts=None):
 
     start_time = time.time()
 
     subgraphs = []
 
-    num_cuts, members = pymetis.part_graph(num_hosts, oneGraph.get_adjlist())
-    np_members = np.array(members)
+    if (strategy == "smart"):
+        _, members = pymetis.part_graph(num_hosts, oneGraph.get_adjlist())
+        np_members = np.array(members)
+    else:
+        np_members = np.random.randint(num_hosts, size=len(oneGraph.vs))
 
     # Get mapping of idx to name
     name_map = np.array(oneGraph.vs["name"])
@@ -133,9 +140,9 @@ def partition_graph(oneGraph, shared_mem, num_hosts=None):
     temp_shared_mem = dict()
 
     for i in xrange(num_hosts):
-        
+
         vertices = (np.where(np_members == i)[0]).tolist()
-        
+
         subgraph = oneGraph.subgraph(vertices)
         subgraph.vs["state"] = "l"
         subgraphs.append(subgraph)
@@ -143,15 +150,15 @@ def partition_graph(oneGraph, shared_mem, num_hosts=None):
         edge_storage[i] = {}
         sg_name_map[i] = np.array(subgraph.vs["name"])
 
-    print "Graph is cut.", num_cuts, "edges cut. Took", time.time() - start_time, "s."
+    print "Graph is cut. Took", time.time() - start_time, "s."
 
     num_external = 0
-
     start_time = time.time()
     print"Adding metadata for distributed processing..."
 
     for edge in oneGraph.es:
 
+        # From v0 to v1. Dst is master.
         (v0, v1) = edge.tuple
 
         # check if external edge
@@ -163,25 +170,23 @@ def partition_graph(oneGraph, shared_mem, num_hosts=None):
             v0_str = name_map[v0]
             v1_str = name_map[v1]
 
-            # Add the external edge to v0
-            vobj0 = subgraphs[v0_where].vs[np.where(sg_name_map[v0_where] == v0_str)[0][0]]
-            vobj0["state"] = "m"
-            vobj0["in_edges"].append((v1_str, v0_str))
+            # Add the proxy (mirror) v1 vertex to v0
             subgraphs[v0_where].add_vertex(v1_str, state="p")
 
-            # Add the external edge to v1
-            vobj1 = subgraphs[v1_where].vs[np.where(sg_name_map[v1_where] == v1_str)[0][0]]
+            # Add the external incoming edge to v1
+            vobj1 = subgraphs[v1_where].vs[
+                np.where(sg_name_map[v1_where] == v1_str)[0][0]]
             vobj1["state"] = "m"
             vobj1["in_edges"].append((v0_str, v1_str))
-            subgraphs[v1_where].add_vertex(v0_str, state="p")
+
+            if (v0_str, v1_str) in edge_storage[v0_where]:
+                print "Duplicate edge?"
 
             edge_storage[v0_where][(v0_str, v1_str)] = {}
-            edge_storage[v1_where][(v1_str, v0_str)] = {}
 
-            # Adding shared edges to shared memory
+            # Adding shared edge to shared memory
             for i in xrange(NUM_ITERATIONS):
                 temp_shared_mem[v0_str, v1_str, i] = 0
-                temp_shared_mem[v1_str, v0_str, i] = 0
 
     # Try this for perf
     for i in xrange(num_hosts):
@@ -190,8 +195,7 @@ def partition_graph(oneGraph, shared_mem, num_hosts=None):
     # Much faster
     shared_mem.update(temp_shared_mem)
 
-    print "Cuts:", num_cuts, num_external
-    print "Partitioning complete. Took", time.time() - start_time, "s."
+    print "Partitioning complete.", num_external, "external edges. Took", time.time() - start_time, "s."
     return subgraphs
 
 
@@ -200,14 +204,14 @@ if __name__ == '__main__':
     print sys.argv
 
     if len(sys.argv) < 3:
-        print "USAGE: python pagerank_homebrew.py DISTRIBUTION input_file (CLUSTERS)"
+        print "USAGE: python pagerank_homebrew.py input_file (CLUSTERS) (DISTRIBUTION)"
         exit()
 
     distribution = sys.argv[1]
     graph = sys.argv[2]
 
-    if distribution not in ['smart', 'hash']:
-        print "DISTRIBUTION must be one of: smart, hash"
+    if distribution not in ['smart', 'rand']:
+        print "DISTRIBUTION must be one of: smart, rand"
         exit()
 
     start_time = time.time()
@@ -227,23 +231,27 @@ if __name__ == '__main__':
 
     manager = Manager()
     shared_mem = manager.dict()
+    num_hosts = 2
 
-    subgraphs = partition_graph(myGraph, shared_mem, num_hosts=2)
+    subgraphs = partition_graph(myGraph, shared_mem,
+                                strategy=distribution, num_hosts=num_hosts)
 
-    pool = Pool(2)
+    pool = Pool(num_hosts)
 
     start_time = time.time()
-    results = pool.map(pagerank_distributed, itertools.izip(subgraphs, itertools.repeat(shared_mem)))
-    print "Distributed PageRank complete. Took", (time.time() - start_time), "s."
+    results = pool.map(pagerank_distributed, itertools.izip(
+        subgraphs, itertools.repeat(shared_mem)))
+    print "Distributed PR complete. Took", (time.time() - start_time), "s."
 
     hits = dict()
     ranks_dist = results[0][0] + results[1][0]
 
-    hits_dist = { k: results[0][1].get(k, 0) + results[1][1].get(k, 0) for k in set(results[0][1])}
+    hits_dist = {k: results[0][1].get(
+        k, 0) + results[1][1].get(k, 0) for k in set(results[0][1])}
 
     start_time = time.time()
     ranks, hits = pagerank(myGraph)
-    print "ST PageRank complete. Took", (time.time() - start_time), "s."
+    print "ST PR complete. Took", (time.time() - start_time), "s."
 
     # Using the igraph pagerank
     # ranks = myGraph.pagerank(directed=False, damping=0.9)
