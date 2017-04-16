@@ -10,6 +10,9 @@ Hp the machine, http://www.hpl.hp.com/research/systems-research/themachine/.
 Intel rsa.
   https://software.intel.com/en-us/articles/intel-performance-counter-monitoring.
 
+\bibitem{pymetis}
+Pymetis, https://mathema.tician.de/software/pymetis/.
+
 \bibitem{seamicro}
 Seamicro technology overview, http://seamicro.com/.
 
@@ -17,6 +20,18 @@ Seamicro technology overview, http://seamicro.com/.
 A.~Ching, S.~Edunov, M.~Kabiljo, D.~Logothetis, and S.~Muthukrishnan.
 \newblock One trillion edges: Graph processing at facebook-scale.
 \newblock {\em Proc. VLDB Endow.}, 8(12):1804--1815, Aug. 2015.
+
+\bibitem{Chen:2015:powerlyra}
+C.~et~al.
+\newblock From "think like a vertex" to "think like a graph".
+\newblock In {\em Proceedings of the Tenth European Conference on Computer
+  Systems}, EuroSys '15, 2015.
+
+\bibitem{Tian:2013:thinklikeagraph}
+T.~et~al.
+\newblock From "think like a vertex" to "think like a graph".
+\newblock In {\em Proceedings of the VLDB Endowment Volume 7 Issue 3}, VLDB
+  '14, pages 193--204, 2013.
 
 \bibitem{Gonzalez:2012:PDG:2387880.2387883}
 J.~E. Gonzalez, Y.~Low, H.~Gu, D.~Bickson, and C.~Guestrin.
@@ -66,6 +81,13 @@ A.~Kyrola, G.~Blelloch, and C.~Guestrin.
 \newblock In {\em Proceedings of the 10th USENIX Conference on Operating
   Systems Design and Implementation}, OSDI'12, pages 31--46, Berkeley, CA, USA,
   2012. USENIX Association.
+
+\bibitem{Lasalle:2013:metis}
+D.~Lasalle and G.~Karypis.
+\newblock Multi-threaded graph partitioning.
+\newblock In {\em Proceedings of the 2013 IEEE 27th International Symposium on
+  Parallel and Distributed Processing}, IPDPS '13, pages 225--236, Washington,
+  DC, USA, 2013. IEEE Computer Society.
 
 \bibitem{Low:2012:DGF:2212351.2212354}
 Y.~Low, D.~Bickson, J.~Gonzalez, C.~Guestrin, A.~Kyrola, and J.~M. Hellerstein.
@@ -124,6 +146,7 @@ M.~Zaharia, M.~Chowdhury, T.~Das, A.~Dave, J.~Ma, M.~McCauley, M.~J. Franklin,
 \newblock Resilient distributed datasets: A fault-tolerant abstraction for
   in-memory cluster computing.
 \newblock In {\em Proceedings of the 9th USENIX Conference on Networked Systems
-  Design and Implementation}.
+  Design and Implementation}, NSDI'12, pages 2--2, Berkeley, CA, USA, 2012.
+  USENIX Association.
 
 \end{thebibliography}
