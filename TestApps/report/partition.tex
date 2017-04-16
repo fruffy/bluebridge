@@ -2,3 +2,27 @@
 \section{Partitioning}
 \label{sec:partition}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Our partitioning algorithm aims to provide an optimal environment
+for the parallel processing of graphs. We leverage the METIS
+~\cite{Lasalle:2013:metis} library, an MPI implementation for parallel
+partitioning of large graphs, to determine an optimal partitioning for the system.
+Metis is built in and runs in C, and the corresponding Python binding, PyMetis ~\cite{pymetis}
+was used to determine the optimal graph partitioning it is read into memory.
+
+% Include performance of partitioning here?
+% web-Google 6.5548
+
+% Include against number of partitions?
+
+Naturally, partitioning a graph will cause edges in the graph to cross 
+partitions. Applying techniques seen in ~\cite{Tian:2013:thinklikeagraph} and 
+~\cite{Chen:2015:powerlyra}, we use a "mirroring" technique for storing edges
+between partitions. For each edge that crosses partitions, only vertices on 
+two separate partitions will be affected. The partition which contains the 
+destination vertex will be considered the master of the given edge. All edges 
+which connect to the master vertex from a different partition will create a
+"mirror" vertex. These edges are stored in shared memory, such that they can
+be written to and read from different machines.
+
+% TODO add diagram

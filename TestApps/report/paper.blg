@@ -3,55 +3,50 @@ Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
 The top-level auxiliary file: paper.aux
 The style file: abbrv.bst
 Database file #1: paper.bib
-I was expecting an "="---line 10531 of file paper.bib
- : 
- : 6h2Ut
-(Error may have been on previous line)
-I'm skipping whatever remains of this entry
 Warning--to sort, need author or key in facebook-rack
 Warning--to sort, need author or key in machine
 Warning--to sort, need author or key in intel-rsa
 Warning--to sort, need author or key in seamicro
-Warning--empty year in Zaharia:2012:RDD:2228298.2228301
-You've used 20 entries,
+Warning--to sort, need author or key in pymetis
+You've used 24 entries,
             2118 wiz_defined-function locations,
-            627 strings with 9073 characters,
-and the built_in function-call counts, 8939 in all, are:
-= -- 885
-> -- 502
-< -- 11
-+ -- 200
-- -- 180
-* -- 664
-:= -- 1380
-add.period$ -- 63
-call.type$ -- 20
-change.case$ -- 150
+            650 strings with 9664 characters,
+and the built_in function-call counts, 10333 in all, are:
+= -- 1039
+> -- 530
+< -- 14
++ -- 212
+- -- 188
+* -- 735
+:= -- 1572
+add.period$ -- 75
+call.type$ -- 24
+change.case$ -- 166
 chr.to.int$ -- 0
-cite$ -- 25
-duplicate$ -- 335
-empty$ -- 644
-format.name$ -- 180
-if$ -- 1939
+cite$ -- 29
+duplicate$ -- 407
+empty$ -- 780
+format.name$ -- 188
+if$ -- 2273
 int.to.chr$ -- 0
-int.to.str$ -- 20
-missing$ -- 16
-newline$ -- 95
-num.names$ -- 32
-pop$ -- 174
+int.to.str$ -- 24
+missing$ -- 19
+newline$ -- 113
+num.names$ -- 38
+pop$ -- 192
 preamble$ -- 1
-purify$ -- 130
+purify$ -- 142
 quote$ -- 0
-skip$ -- 276
+skip$ -- 342
 stack$ -- 0
-substring$ -- 487
-swap$ -- 115
-text.length$ -- 11
+substring$ -- 587
+swap$ -- 143
+text.length$ -- 14
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 80
+type$ -- 96
 warning$ -- 5
-while$ -- 69
-width$ -- 22
-write$ -- 228
-(There was 1 error message)
+while$ -- 84
+width$ -- 26
+write$ -- 275
+(There were 5 warnings)

@@ -44,6 +44,9 @@
 
 # For IPv6
 IPv6Addressing/messaging/bin/
+IPv6Addressing/tmp/
+*.csv
+IPv6Addressing/results/
 
 
 # For Python
@@ -56,11 +59,3 @@ TestApps/PageRank/share
 
 # Cost
 TestApps/Cost/single/cache
-
-
-
-
-
-
-
-*.csv
