@@ -1,16 +1,35 @@
 import time
 import operator
-import pdb
+
 import graph_generator as gg
 import numpy as np
 import itertools
 import pymetis
+
+import pdb
+import cProfile
 
 from threading import Event
 from multiprocessing import Pool, Manager
 from igraph import *
 
 NUM_ITERATIONS = 20
+
+
+def pagerank_profiler(args):
+
+    print "*****************"
+    print "WARNING: Using the profiler. Is this what you want?"
+    print "*****************"
+    prof = cProfile.Profile()
+    retval = prof.runcall(pagerank_distributed, args)
+
+    id_num = args[2]
+    prof.dump_stats('prof' + str(id_num) + '.prof')
+
+    #cProfile.runctx('pagerank_distributed(args)', globals(), locals(),  %id_num)
+
+    return retval
 
 
 def pagerank_distributed(args, d=0.9):
@@ -58,7 +77,7 @@ def pagerank_distributed(args, d=0.9):
                     while shared_mem[query] == 0:
                         # print "Waiting for", (vertex["name"], t), "quick
                         # sleep"
-                        time.sleep(0.005)
+                        time.sleep(0.001)
 
                     remote_hits = remote_hits + 1
                     total_remote_in_rank = total_remote_in_rank + \
@@ -92,10 +111,6 @@ def pagerank(myGraph, d=0.9):
 
             # Send a message to all neighbors
             for nextVertex in vertex.neighbors():
-
-                if nextVertex["host"] != vertex["host"]:
-                    remote_hits = remote_hits + 1
-
                 nextVertex["message_queue"].append(outrank)
 
         remote_hits_dict[t] = remote_hits
@@ -106,7 +121,7 @@ def pagerank(myGraph, d=0.9):
             vertex["rank"] = rank_val
             vertex["message_queue"] = []
 
-    return (myGraph.vs["rank"], remote_hits_dict)
+    return myGraph.vs["rank"]
 
 
 def load_graph(graphPath):
@@ -195,7 +210,8 @@ def partition_graph(oneGraph, shared_mem, strategy="smart", num_hosts=None):
     # Much faster
     shared_mem.update(temp_shared_mem)
 
-    print "Partitioning complete.", num_external, "external edges. Took", time.time() - start_time, "s."
+    print "Partitioning complete. Took", time.time() - start_time, "s."
+    print num_external, "external edges,", len(oneGraph.es), "internal."
     return subgraphs
 
 
@@ -216,10 +232,9 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-    if graph == "new":
+    if graph in ["best", "dense"]:
         cluster_size = int(sys.argv[3])
-        myGraph = gg.get_sample_graph(
-            cluster_size=cluster_size, distribution=distribution)
+        myGraph = gg.get_sample_graph(cluster_size=cluster_size, shape=graph)
     else:
         myGraph = load_graph(graph)
 
@@ -238,19 +253,24 @@ if __name__ == '__main__':
 
     pool = Pool(num_hosts)
 
+    # Change 'pagerank_profiler/pagerank_distributed'
     start_time = time.time()
     results = pool.map(pagerank_distributed, itertools.izip(
-        subgraphs, itertools.repeat(shared_mem)))
+        subgraphs, itertools.repeat(shared_mem), range(2)))
     print "Distributed PR complete. Took", (time.time() - start_time), "s."
 
-    hits = dict()
     ranks_dist = results[0][0] + results[1][0]
 
     hits_dist = {k: results[0][1].get(
         k, 0) + results[1][1].get(k, 0) for k in set(results[0][1])}
 
+    # Profiler code
+    # prof = cProfile.Profile()
+    # retval = prof.runcall(pagerank, myGraph)
+    # prof.dump_stats('prof_st.prof')
+
     start_time = time.time()
-    ranks, hits = pagerank(myGraph)
+    ranks = pagerank(myGraph)
     print "ST PR complete. Took", (time.time() - start_time), "s."
 
     # Using the igraph pagerank

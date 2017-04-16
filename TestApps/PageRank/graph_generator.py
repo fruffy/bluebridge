@@ -6,15 +6,23 @@ import sys
 from igraph import *
 
 
-def get_sample_graph(cluster_size=500):
+def get_sample_graph(cluster_size=500, shape="best"):
 
     start_time = time.time()
 
     # Make a best case graph!
-    g1 = Graph.Full(cluster_size)
-    g2 = Graph.Full(cluster_size)
+    if shape == "best":
+        
+        g1 = Graph.Full(cluster_size)
+        g2 = Graph.Full(cluster_size)
+        myGraph = g1.__add__(g2)
 
-    myGraph = g1.__add__(g2)
+        # Add 10 edges
+        for i in xrange(10):
+            myGraph.add_edge(i, cluster_size + 1)
+
+    elif shape == "dense":
+        myGraph = Graph.Full(cluster_size * 2)
 
     total_nodes = len(myGraph.vs())
     myGraph.vs["name"] = [format(x) for x in range(cluster_size * 2)]
@@ -23,10 +31,6 @@ def get_sample_graph(cluster_size=500):
 
     myGraph.vs["message_queue"] = [[] for _ in xrange(total_nodes)]
     myGraph.vs["in_edges"] = [[] for _ in xrange(total_nodes)]
-
-    # Add 10 edges
-    for i in xrange(10):
-        myGraph.add_edge(i, cluster_size + 1)
 
     print "Graph creation complete. Took", (time.time() - start_time), "s."
     return myGraph
