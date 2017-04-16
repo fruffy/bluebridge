@@ -49,7 +49,7 @@ def configureHosts(net):
     for host in hosts:
         print host
         switch.cmd('ip -6 route add local 0:0:01' +
-                   '{0:02x}'.format(hostNum) + '::/48 dev s1-eth' + str(hostNum))
+                    '{0:02x}'.format(hostNum) + '::/48 dev s1-eth' + str(hostNum))
         # switch to host.config later
         # ipstring = 'h' + str(hostNum) +'-eth0 inet6 add 0:0:01' + '{0:02x}'.format(hostNum) + '::/46'
         # host.config(ip=ipstring)
@@ -75,7 +75,7 @@ def configureHosts(net):
         # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"./messaging/launchProxy.sh -i h' + str(hostNum) +
         #               '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
         host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) +
-                      '\" -e \"./ndpproxy/ndppd -vvv -c ./tmp/config/ndp_conf.conf; bash\" &')
+                      '\" -e \"./ndpproxy/ndppd -c ./tmp/config/ndp_conf.conf; bash\" &')
         hostNum += 1
 
 

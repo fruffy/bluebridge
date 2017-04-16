@@ -147,6 +147,8 @@ int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo
 	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
 	print_debug("Inserting %u Pointer into packet header... %s:%d",p->ai_addrlen,s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );	
 	
+	/*printf("Sending...\n");
+	printNBytes(sendBuffer, 30);*/
 	socklen_t slen = sizeof(struct sockaddr_in6);
 	if (sendto(sockfd,sendBuffer,msgBlockSize,0, p->ai_addr, slen) < 0) {
 		perror("ERROR writing to socket");
