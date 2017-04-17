@@ -125,6 +125,12 @@ R.~Power and J.~Li.
   Design and Implementation}, OSDI'10, pages 293--306, Berkeley, CA, USA, 2010.
   USENIX Association.
 
+\bibitem{Shun:2013:ligra}
+J.~Shun and G.~Blelloch.
+\newblock Ligra: A lightweight graph processing framework for shared memory.
+\newblock In {\em Proceedings of the ACM SIGPLAN Symposium on Principles and
+  Practice of Parallel Programming}, PPoPP '13, pages 135--146, 2013.
+
 \bibitem{Vavilapalli:2013:AHY:2523616.2523633}
 V.~K. Vavilapalli, A.~C. Murthy, C.~Douglas, S.~Agarwal, M.~Konar, R.~Evans,
   T.~Graves, J.~Lowe, H.~Shah, S.~Seth, B.~Saha, C.~Curino, O.~O'Malley,

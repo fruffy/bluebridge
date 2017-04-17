@@ -8,45 +8,45 @@ Warning--to sort, need author or key in machine
 Warning--to sort, need author or key in intel-rsa
 Warning--to sort, need author or key in seamicro
 Warning--to sort, need author or key in pymetis
-You've used 24 entries,
+You've used 25 entries,
             2118 wiz_defined-function locations,
-            650 strings with 9664 characters,
-and the built_in function-call counts, 10333 in all, are:
-= -- 1039
-> -- 530
-< -- 14
-+ -- 212
-- -- 188
-* -- 735
-:= -- 1572
-add.period$ -- 75
-call.type$ -- 24
-change.case$ -- 166
+            656 strings with 9887 characters,
+and the built_in function-call counts, 10788 in all, are:
+= -- 1087
+> -- 543
+< -- 15
++ -- 217
+- -- 192
+* -- 760
+:= -- 1634
+add.period$ -- 78
+call.type$ -- 25
+change.case$ -- 171
 chr.to.int$ -- 0
-cite$ -- 29
-duplicate$ -- 407
-empty$ -- 780
-format.name$ -- 188
-if$ -- 2273
+cite$ -- 30
+duplicate$ -- 430
+empty$ -- 821
+format.name$ -- 192
+if$ -- 2380
 int.to.chr$ -- 0
-int.to.str$ -- 24
-missing$ -- 19
-newline$ -- 113
-num.names$ -- 38
-pop$ -- 192
+int.to.str$ -- 25
+missing$ -- 20
+newline$ -- 118
+num.names$ -- 40
+pop$ -- 198
 preamble$ -- 1
-purify$ -- 142
+purify$ -- 146
 quote$ -- 0
-skip$ -- 342
+skip$ -- 364
 stack$ -- 0
-substring$ -- 587
-swap$ -- 143
-text.length$ -- 14
+substring$ -- 624
+swap$ -- 154
+text.length$ -- 15
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 96
+type$ -- 100
 warning$ -- 5
-while$ -- 84
-width$ -- 26
-write$ -- 275
+while$ -- 89
+width$ -- 27
+write$ -- 287
 (There were 5 warnings)

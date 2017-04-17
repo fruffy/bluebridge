@@ -4,4 +4,13 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Distributed shared memory has been previously explored in several domains
+\subsection{Graph Processing}
+
+The concept of using DSM in processing graphs has been explored by Shun, who
+created Ligra: a graph processing framework for shared memory. ~\cite{Shun:2013:ligra} 
+GraphLab ~\cite{Low:2012:DGF:2212351.2212354} is another system for parallel
+processing of Graphs, that could also extend to a shared memory model.
+Both of the aforementioned systems use a vertex-centric level of consistency, 
+but fails to reason about the overall structure of the graph. Placement decisions can be made with a better view of graph structure. 
+
+\subsection{What about COST?}
