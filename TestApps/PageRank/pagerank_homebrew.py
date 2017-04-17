@@ -220,11 +220,12 @@ if __name__ == '__main__':
     print sys.argv
 
     if len(sys.argv) < 3:
-        print "USAGE: python pagerank_homebrew.py input_file (CLUSTERS) (DISTRIBUTION)"
+        print "USAGE: python pagerank_homebrew.py <distribution> <input_file/graph_type> <num_hosts> <cluster_size>"
         exit()
 
     distribution = sys.argv[1]
     graph = sys.argv[2]
+    num_hosts = int(sys.argv[3])
 
     if distribution not in ['smart', 'rand']:
         print "DISTRIBUTION must be one of: smart, rand"
@@ -233,7 +234,7 @@ if __name__ == '__main__':
     start_time = time.time()
 
     if graph in ["best", "dense"]:
-        cluster_size = int(sys.argv[3])
+        cluster_size = int(sys.argv[4])
         myGraph = gg.get_sample_graph(cluster_size=cluster_size, shape=graph)
     else:
         myGraph = load_graph(graph)
@@ -246,7 +247,6 @@ if __name__ == '__main__':
 
     manager = Manager()
     shared_mem = manager.dict()
-    num_hosts = 2
 
     subgraphs = partition_graph(myGraph, shared_mem,
                                 strategy=distribution, num_hosts=num_hosts)
