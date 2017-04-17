@@ -257,25 +257,6 @@ struct addrinfo* bindSocket(struct addrinfo* p, struct addrinfo* servinfo, int* 
 }
 
 /*
- * Accept a connection on sockfd
- */
-//TODO: Remove?
-int acceptConnections(int sockfd) {
-	// connector's address information
-	struct sockaddr_storage their_addr; 
-	char s[INET6_ADDRSTRLEN];
-	socklen_t sin_size = sizeof their_addr;
-	//wait for incoming connection
-	int temp_fd = accept(sockfd, (struct sockaddr*) &their_addr, &sin_size);
-	inet_ntop((&their_addr)->ss_family,
-			get_in_addr((struct sockaddr*) &their_addr), s, sizeof s);
-
-	printf("server: got connection from %s\n", s);
-
-	return temp_fd;
-}
-
-/*
  * Main workhorse method. Parses command args and does setup.
  * Blocks waiting for connections.
  */
