@@ -261,8 +261,8 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 	//init the root element
 	nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
 	nextPointer->AddrString = allocateMem(sockfd, p);
+	srand(time(NULL));
 	for (i = 0; i < num_iters; i++) {
-		srand(time(NULL));
 		nextPointer = nextPointer->Pointer;
 		nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
 
@@ -277,13 +277,13 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 	nextPointer->Pointer = NULL;
 	
 	i = 1;
+	srand(time(NULL));
 	while(rootPointer != NULL)	{
 
 		printf("Iteration %d\n", i);
 		struct in6_addr remoteMemory = rootPointer->AddrString;
 		print_debug("Using Pointer: %p\n", (void *) getPointerFromIPv6(rootPointer->AddrString));
 		print_debug("Creating payload");
-		srand(time(NULL));
 		char * payload = gen_rdm_bytestream(BLOCK_SIZE);
 
 		uint64_t wStart = getns();
@@ -339,6 +339,7 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 	
 	int active = 1;
 	while (active) {
+		srand(time(NULL));
 		memset(input, 0, len);
 		getLine("Please specify if you would like to (L)ist, (A)llocate, (F)ree, (W)rite, or (R)equest data.\nPress Q to quit the program.\n", input, sizeof(input));
 		if (strcmp("A", input) == 0) {
@@ -408,12 +409,10 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 						getLine("Please enter your data:\n", input, sizeof(input));
 						if (strcmp("", input) == 0) {
 							printf("Writing random bytes\n");
-							srand(time(NULL));
 							char * payload = gen_rdm_bytestream(BLOCK_SIZE);
 							writeToMemory(sockfd, p, payload, &remotePointers[i]);
 						} else {
 							printf("Writing: %s\n", input);
-							srand(time(NULL));
 							writeToMemory(sockfd, p, input, &remotePointers[i]);	
 						}
 					}
@@ -429,12 +428,10 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 				getLine("Please enter your data:\n", input, sizeof(input));
 				if (strcmp("", input) == 0) {
 					printf("Writing random bytes\n");
-					srand(time(NULL));
 					char * payload = gen_rdm_bytestream(BLOCK_SIZE);
 					writeToMemory(sockfd, p, payload, &remotePointers[i]);
 				} else {
 					printf("Writing: %s\n", input);
-					srand(time(NULL));
 					writeToMemory(sockfd, p, input, &remotePointers[i]);	
 				}
 			}

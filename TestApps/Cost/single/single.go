@@ -100,6 +100,8 @@ var (
 	rank []float32
 	//all edges sequentially aligned
 	edges []int
+	//rank updates for each edge (keeps cache from throttling)
+	edgeRank []float32
 )
 
 func main() {
@@ -168,10 +170,12 @@ func pageRankMulti(rounds int) {
 	i := 0
 	for i = 0; i < runtime.NumCPU()-1; i++ {
 		fmt.Printf("Start: %d Stop %d\n", work*i, work*(i+1))
-		go pageRankWorker(commands[i], done, work*i, work*(i+1))
+		//go pageRankWorker(commands[i], done, work*i, work*(i+1))
+		go pageRankWorker2(commands[i], done, work*i, work*(i+1))
 	}
 	fmt.Printf("Start: %d Stop %d\n", work*i, len(ids))
-	go pageRankWorker(commands[i], done, work*i, len(ids))
+	//go pageRankWorker(commands[i], done, work*i, len(ids))
+	go pageRankWorker2(commands[i], done, work*i, len(ids))
 
 	for i = 0; i < rounds; i++ {
 		outstanding := 0
@@ -212,6 +216,35 @@ func pageRankWorker(commandChan chan int, done chan bool, start, stop int) {
 		case UPDATE:
 			for j := start; j < stop; j++ {
 				rank[j] = alpha + (DAMP * apages[ids[j]].Incomming_rank)
+			}
+			done <- true
+		}
+	}
+
+}
+
+func pageRankWorker2(commandChan chan int, done chan bool, start, stop int) {
+	var outrank float32
+	var edgeSum float32
+	var alpha = (1 - DAMP) / float32(len(pages))
+	for {
+		switch <-commandChan {
+		case SENDMSG:
+			for j := start; j < stop; j++ {
+				outrank = rank[j] / edgenorm[j]
+				for k := 0; k < apages[ids[j]].Num_edges; k++ {
+					//apages[edges[apages[ids[j]].Edge_offset+k]].Incomming_rank += outrank
+					edgeRank[apages[ids[j]].Edge_offset+k] = outrank
+				}
+			}
+			done <- true
+		case UPDATE:
+			for j := start; j < stop; j++ {
+				edgeSum = 0.0
+				for k := 0; k < apages[ids[j]].Num_edges; k++ {
+					edgeSum += edgeRank[apages[ids[j]].Edge_offset+k]
+				}
+				rank[j] = alpha + (DAMP * edgeSum)
 			}
 			done <- true
 		}
@@ -276,6 +309,7 @@ func parseFile(filename string) {
 	//apages and edges are the main structures
 	apages = make([]Page2, max+1)
 	edges = make([]int, e)
+	edgeRank = make([]float32, e)
 	//edgenorm and rank are optimizations
 	edgenorm = make([]float32, len(pages))
 	rank = make([]float32, len(pages))
@@ -294,6 +328,7 @@ func parseFile(filename string) {
 		apages[id].Edge_offset = k
 		for l := range pages[id].edges {
 			edges[k] = pages[id].edges[l]
+			edgeRank[k] = 1.0
 			k++
 		}
 	}
@@ -321,6 +356,7 @@ func WriteToFiles(filename string) {
 	writeFile(dir+"ids", ids)
 	writeFile(dir+"rank", rank)
 	writeFile(dir+"edges", edges)
+	writeFile(dir+"edgeRank", edgeRank)
 }
 
 func writeFile(filename string, item interface{}) {
@@ -353,6 +389,7 @@ func readCache(filename string) {
 	readCachefile(dir+"ids", &ids)
 	readCachefile(dir+"rank", &rank)
 	readCachefile(dir+"edges", &edges)
+	readCachefile(dir+"edgeRank", &edgeRank)
 }
 
 func readCachefile(objectname string, object interface{}) {
