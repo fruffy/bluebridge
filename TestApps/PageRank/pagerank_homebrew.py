@@ -38,14 +38,19 @@ def pagerank_distributed(args, d=0.9):
     shared_mem = args[1]
 
     remote_hits_dict = dict()
-    local_vs = myGraph.vs.select(state_ne="p")
+    real_vs = myGraph.vs.select(state_ne="p")
+
+    local_vs = myGraph.vs.select(state_eq="l")
+    master_vs = myGraph.vs.select(state_eq="m")
+
+    base_surfer_rank = (1 / float(myGraph["total_nodes"]))
 
     # This needs to change to shared mem
     for t in range(NUM_ITERATIONS):
 
         remote_hits = 0
 
-        for vertex in local_vs:
+        for vertex in real_vs:
 
             outrank = vertex["rank"] / (len(vertex.neighbors()) + 1)
             vertex["message_queue"].append(outrank)
@@ -59,31 +64,28 @@ def pagerank_distributed(args, d=0.9):
                     nextVertex["message_queue"].append(outrank)
 
         for vertex in local_vs:
+            
+            in_rank = sum(vertex["message_queue"])
+            rank_val = ((1 - d) * base_surfer_rank) + (d * in_rank)
+            vertex["rank"] = rank_val
+            vertex["message_queue"] = []
 
-            # Default amount from the random jump
-            base_surfer_rank = (1 / float(myGraph["total_nodes"]))
+        for vertex in master_vs:
+
             in_rank = sum(vertex["message_queue"])
 
-            # For master vertices, block and wait for incoming rank
-            if vertex["state"] == "m":
+            for in_edge in vertex["in_edges"]:
 
-                total_remote_in_rank = 0
+                query = in_edge + (t,)
 
-                for in_edge in vertex["in_edges"]:
+                # TODO: blocking
+                while shared_mem[query] == 0:
+                    # print "Waiting for", (vertex["name"], t), "quick
+                    # sleep"
+                    time.sleep(0.001)
 
-                    query = in_edge + (t,)
-
-                    # TODO: blocking
-                    while shared_mem[query] == 0:
-                        # print "Waiting for", (vertex["name"], t), "quick
-                        # sleep"
-                        time.sleep(0.001)
-
-                    remote_hits = remote_hits + 1
-                    total_remote_in_rank = total_remote_in_rank + \
-                        shared_mem[query]
-
-                in_rank = in_rank + total_remote_in_rank
+                remote_hits = remote_hits + 1
+                in_rank = in_rank + shared_mem[query]
 
             rank_val = ((1 - d) * base_surfer_rank) + (d * in_rank)
             vertex["rank"] = rank_val
@@ -92,7 +94,7 @@ def pagerank_distributed(args, d=0.9):
         remote_hits_dict[t] = remote_hits
 
     # Return only the non proxy vertices
-    return (local_vs["rank"], remote_hits_dict)
+    return (real_vs["rank"], remote_hits_dict)
 
 
 def pagerank(myGraph, d=0.9):
@@ -259,7 +261,9 @@ if __name__ == '__main__':
         subgraphs, itertools.repeat(shared_mem), range(2)))
     print "Distributed PR complete. Took", (time.time() - start_time), "s."
 
-    ranks_dist = results[0][0] + results[1][0]
+    ranks_dist = []
+    for i in xrange(2):
+        ranks_dist = ranks_dist + results[i][0]
 
     hits_dist = {k: results[0][1].get(
         k, 0) + results[1][1].get(k, 0) for k in set(results[0][1])}
