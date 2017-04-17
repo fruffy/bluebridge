@@ -5,6 +5,13 @@
 #include "./lib/538_utils.h"
 #include "./lib/debug.h"
 
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //	1. Check correctness of pointer on server side, it should never segfault.
@@ -238,7 +245,7 @@ void print_times( uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* wri
 }
 
 int basicOperations( int sockfd, struct addrinfo * p) {
-	int num_iters = 10;
+	int num_iters = 100;
 	uint64_t *alloc_latency = malloc(sizeof(uint64_t) * num_iters);
     assert(alloc_latency);
     memset(alloc_latency, 0, sizeof(uint64_t) * num_iters);
@@ -394,7 +401,11 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 				inet_ntop(p->ai_family,(struct sockaddr *) &pointer.s6_addr, s, sizeof s);
 				printf("Reading from this pointer%s\n", s);
 				localData = getMemory(sockfd, p, &pointer);
-				printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
+				printf(ANSI_COLOR_CYAN "Retrieved Data (first 80 bytes):\n");
+				printf("****************************************\n");
+				printf("\t%.*s\t\n",80, localData);
+				printf("****************************************\n");
+				printf(ANSI_COLOR_RESET);
 			}
 		} else if (strcmp("W", input) == 0) {
 			memset(input, 0, len);
@@ -412,7 +423,11 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 							char * payload = gen_rdm_bytestream(BLOCK_SIZE);
 							writeToMemory(sockfd, p, payload, &remotePointers[i]);
 						} else {
-							printf("Writing: %s\n", input);
+							printf(ANSI_COLOR_MAGENTA "Writing:\n");
+							printf("****************************************\n");
+							printf("\t%.*s\t\n",80, input);
+							printf("****************************************\n");
+							printf(ANSI_COLOR_RESET);
 							writeToMemory(sockfd, p, input, &remotePointers[i]);	
 						}
 					}
