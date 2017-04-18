@@ -257,12 +257,12 @@ if __name__ == '__main__':
 
     # Change 'pagerank_profiler/pagerank_distributed'
     start_time = time.time()
-    results = pool.map(pagerank_distributed, itertools.izip(
-        subgraphs, itertools.repeat(shared_mem), range(2)))
+    results = pool.map(pagerank_profiler, itertools.izip(
+        subgraphs, itertools.repeat(shared_mem), range(num_hosts)))
     print "Distributed PR complete. Took", (time.time() - start_time), "s."
 
     ranks_dist = []
-    for i in xrange(2):
+    for i in xrange(num_hosts):
         ranks_dist = ranks_dist + results[i][0]
 
     hits_dist = {k: results[0][1].get(
