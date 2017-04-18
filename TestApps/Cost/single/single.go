@@ -138,7 +138,7 @@ func main() {
 	fmt.Printf("Average time %f\n", total/float64(*tests))
 }
 
-func pageRank3(rounds int) {
+func pageRank2(rounds int) {
 	fmt.Println("Single Threaded pagerank")
 	var outrank float32
 	var alpha = (1 - DAMP) / float32(len(pages))
@@ -168,34 +168,25 @@ func pageRankMulti(rounds int) {
 	done := make(chan bool, runtime.NumCPU())
 	work := len(ids) / runtime.NumCPU()
 	i := 0
+	//launch threads
 	for i = 0; i < runtime.NumCPU()-1; i++ {
-		fmt.Printf("Start: %d Stop %d\n", work*i, work*(i+1))
-		//go pageRankWorker(commands[i], done, work*i, work*(i+1))
 		go pageRankWorker2(commands[i], done, work*i, work*(i+1))
 	}
-	fmt.Printf("Start: %d Stop %d\n", work*i, len(ids))
-	//go pageRankWorker(commands[i], done, work*i, len(ids))
 	go pageRankWorker2(commands[i], done, work*i, len(ids))
-
+	//control super steps
 	for i = 0; i < rounds; i++ {
 		outstanding := 0
 		for j := range commands {
 			commands[j] <- SENDMSG
-			outstanding++
 		}
-		for outstanding > 0 {
-			//fmt.Println("waiting")
+		for outstanding = runtime.Num.CPU; outstanding > 0;outstanding-- {
 			<-done
-			outstanding--
 		}
-		outstanding = 0
 		for j := range commands {
 			commands[j] <- UPDATE
-			outstanding++
 		}
 		for outstanding > 0 {
 			<-done
-			outstanding--
 		}
 	}
 }
@@ -220,7 +211,6 @@ func pageRankWorker(commandChan chan int, done chan bool, start, stop int) {
 			done <- true
 		}
 	}
-
 }
 
 func pageRankWorker2(commandChan chan int, done chan bool, start, stop int) {
@@ -235,6 +225,8 @@ func pageRankWorker2(commandChan chan int, done chan bool, start, stop int) {
 				for k := 0; k < apages[ids[j]].Num_edges; k++ {
 					//apages[edges[apages[ids[j]].Edge_offset+k]].Incomming_rank += outrank
 					edgeRank[apages[ids[j]].Edge_offset+k] = outrank
+					edgeSum = outrank
+
 				}
 			}
 			done <- true
@@ -332,7 +324,6 @@ func parseFile(filename string) {
 			k++
 		}
 	}
-
 	WriteToFiles(base)
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
