@@ -161,59 +161,47 @@ int getMem(int sock_fd, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
  * Request handler for socket sock_fd
  * TODO: get message format
  */
-void handleClientRequests(int sock_fd,	struct addrinfo * p) {
-	char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
+void handleClientRequests(int sock_fd, char * receiveBuffer, struct in6_addr * ipv6Pointer,	struct addrinfo * p) {
 	char * splitResponse;
-	struct in6_addr * ipv6Pointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-
-	while (1) {
-		print_debug("Waiting for client message...\n");
-		// Get the message
-
-		//TODO: Error handling (numbytes = -1)
-		receiveUDPIPv6(sock_fd, receiveBuffer, BLOCK_SIZE, p, ipv6Pointer);
-
-
-		// Switch on the client command
-		if (memcmp(receiveBuffer, ALLOC_CMD,2) == 0) {
-			print_debug("******ALLOCATE******\n");
-			splitResponse = receiveBuffer+2;
-			providePointer(sock_fd, p);
-		} else if (memcmp(receiveBuffer, WRITE_CMD,2) == 0) {
-			splitResponse = receiveBuffer+2;
-			if (DEBUG) {
-				printf("******WRITE DATA: ");
-				printNBytes((char *) ipv6Pointer, IPV6_SIZE);
-			}
-			writeMem(sock_fd, splitResponse, p, ipv6Pointer);
-		} else if (memcmp(receiveBuffer, GET_CMD,2) == 0) {
-			splitResponse = receiveBuffer+2;
-			print_debug("******GET DATA: ");
+	// Switch on the client command
+	if (memcmp(receiveBuffer, ALLOC_CMD,2) == 0) {
+		print_debug("******ALLOCATE******\n");
+		splitResponse = receiveBuffer+2;
+		providePointer(sock_fd, p);
+	} else if (memcmp(receiveBuffer, WRITE_CMD,2) == 0) {
+		splitResponse = receiveBuffer+2;
+		if (DEBUG) {
+			printf("******WRITE DATA: ");
+			printNBytes((char *) ipv6Pointer, IPV6_SIZE);
+		}
+		writeMem(sock_fd, splitResponse, p, ipv6Pointer);
+	} else if (memcmp(receiveBuffer, GET_CMD,2) == 0) {
+		splitResponse = receiveBuffer+2;
+		print_debug("******GET DATA: ");
+		// printNBytes((char *) ipv6Pointer,IPV6_SIZE);
+		getMem(sock_fd, p, ipv6Pointer);
+	} else if (memcmp(receiveBuffer, FREE_CMD,2) == 0) {
+		splitResponse = receiveBuffer+2;
+		if (DEBUG) {
+			printf("******FREE DATA: ");
+			printNBytes((char *) ipv6Pointer,IPV6_SIZE);
+		}
+		freeMem(sock_fd, p, ipv6Pointer);
+	} else if (memcmp(receiveBuffer, GET_ADDR_CMD,2) == 0) {
+		splitResponse = receiveBuffer+2;
+		print_debug("******GET ADDRESS: \n");
+		
+		if (DEBUG) {
+			printf("Calling send address\n");
 			// printNBytes((char *) ipv6Pointer,IPV6_SIZE);
-			getMem(sock_fd, p, ipv6Pointer);
-		} else if (memcmp(receiveBuffer, FREE_CMD,2) == 0) {
-			splitResponse = receiveBuffer+2;
-			if (DEBUG) {
-				printf("******FREE DATA: ");
-				printNBytes((char *) ipv6Pointer,IPV6_SIZE);
-			}
-			freeMem(sock_fd, p, ipv6Pointer);
-		} else if (memcmp(receiveBuffer, GET_ADDR_CMD,2) == 0) {
-			splitResponse = receiveBuffer+2;
-			print_debug("******GET ADDRESS: \n");
-			
-			if (DEBUG) {
-				printf("Calling send address\n");
-				// printNBytes((char *) ipv6Pointer,IPV6_SIZE);
-				printNBytes(splitResponse, POINTER_SIZE);
-			}
-			sendAddr(sock_fd, p, splitResponse);
-		} else {
-			printf("Cannot match command!\n");
-			if (sendUDP(sock_fd, "Hello, world!", 13, p) == -1) {
-				perror("ERROR writing to socket");
-				exit(1);
-			}
+			printNBytes(splitResponse, POINTER_SIZE);
+		}
+		sendAddr(sock_fd, p, splitResponse);
+	} else {
+		printf("Cannot match command!\n");
+		if (sendUDP(sock_fd, "Hello, world!", 13, p) == -1) {
+			perror("ERROR writing to socket");
+			exit(1);
 		}
 	}
 }
@@ -254,25 +242,6 @@ struct addrinfo* bindSocket(struct addrinfo* p, struct addrinfo* servinfo, int* 
 	}
 
 	return p;
-}
-
-/*
- * Accept a connection on sockfd
- */
-//TODO: Remove?
-int acceptConnections(int sockfd) {
-	// connector's address information
-	struct sockaddr_storage their_addr; 
-	char s[INET6_ADDRSTRLEN];
-	socklen_t sin_size = sizeof their_addr;
-	//wait for incoming connection
-	int temp_fd = accept(sockfd, (struct sockaddr*) &their_addr, &sin_size);
-	inet_ntop((&their_addr)->ss_family,
-			get_in_addr((struct sockaddr*) &their_addr), s, sizeof s);
-
-	printf("server: got connection from %s\n", s);
-
-	return temp_fd;
 }
 
 /*
@@ -329,23 +298,13 @@ int main(int argc, char *argv[]) {
 	}*/
 
 
-
 	// Start waiting for connections
 	while (1) {
-
-		//int sock_fd = acceptConnections(sockfd);
-		/*if (sock_fd == -1) {
-			perror("accept");
-			exit(1);
-		}*/
-		//if (!fork()) {
-			// fork the process
-		//	close(sockfd); // child doesn't need the listener
-
-		handleClientRequests(sockfd, p);
-		//}
-
-		//close(sock_fd); // parent doesn't need this
+		char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
+		struct in6_addr * ipv6Pointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
+		//TODO: Error handling (numbytes = -1)
+		receiveUDPIPv6(sockfd, receiveBuffer, BLOCK_SIZE, p, ipv6Pointer);
+		handleClientRequests(sockfd, receiveBuffer, ipv6Pointer, p);
 	}
 	freeaddrinfo(p);
 	close(sockfd);

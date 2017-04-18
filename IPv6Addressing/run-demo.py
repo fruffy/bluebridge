@@ -1,11 +1,4 @@
-"""Custom topology example
-
-One switch and 16 hosts:
-
-   host --- switch --- switch --- host
-
-Adding the 'topos' dict with a key/value pair to generate our newly defined
-topology enables one to pass in '--topo=mytopo' from the command line.
+"""Custom topology for BlueBridge
 """
 from mininet.node import CPULimitedHost
 from mininet.topo import Topo
@@ -44,12 +37,9 @@ topos = {'BlueBridge': (lambda: BlueBridge())}
 def configureHosts(net):
     hostNum = 1
     hosts = net.hosts
-    switch = net.switch(name=('s1'))
 
     for host in hosts:
         print host
-        switch.cmd('ip -6 route add local 0:0:01' +
-                    '{0:02x}'.format(hostNum) + '::/48 dev s1-eth' + str(hostNum))
         # switch to host.config later
         # ipstring = 'h' + str(hostNum) +'-eth0 inet6 add 0:0:01' + '{0:02x}'.format(hostNum) + '::/46'
         # host.config(ip=ipstring)
@@ -57,10 +47,9 @@ def configureHosts(net):
         # ip -6 neigh add proxy 2001:0DB8:A::2 dev eth0
         # host.cmdPrint('ip -6 route add 0:0:0100::/40  via '+ host.IP)
         # xterm -e bash -c
-        testString = "\"proxy h" + str(hostNum) + "-eth0 { ttl 5000 router no rule 0:0:01" + '{0:02x}'.format(
+        testString = "\"proxy h" + str(hostNum) + "-eth0 { ttl 1 router no rule 0:0:01" + '{0:02x}'.format(
             hostNum) + "::/48 { static } }\" > ./tmp/config/ndp_conf.conf"
         print testString
-
         host.cmdPrint('echo ' + testString)
         host.cmdPrint('ip address change dev h' + str(hostNum) +
                       '-eth0 scope global 0:0:01' + '{0:02x}'.format(hostNum) + '::/48')
@@ -70,12 +59,21 @@ def configureHosts(net):
                       '{0:02x}'.format(hostNum) + '::/48 dev lo')
         host.cmdPrint('xterm  -T \"server' + str(hostNum) +
                       '\" -e \"./messaging/bin/server; bash\" &')
+        # host.cmdPrint('sysctl net.ipv6.neigh.default.gc_interval=1')
+        # host.cmdPrint('sysctl -w net.ipv6.conf.h' + str(hostNum) +
+        #               '-eth0.autoconf=0')
+        # host.cmdPrint('sysctl -w net.ipv6.conf.h' + str(hostNum) +
+        #               '-eth0.accept_ra=0')
+        # host.cmdPrint('sysctl -w net.ipv6.conf.h' + str(hostNum) +
+        #               '-eth0.forwarding=1')
+        # host.cmdPrint('ifconfig h' + str(hostNum) +'-eth0 mtu 5000')
+
         # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"valgrind ./messaging/bin/ndpproxy -i h' + str(hostNum) +
         #                '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
         # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"./messaging/launchProxy.sh -i h' + str(hostNum) +
         #               '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
         host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) +
-                      '\" -e \"./ndpproxy/ndppd -c ./tmp/config/ndp_conf.conf; bash\" &')
+                      '\" -e \"./ndpproxy/ndppd -vvv -c ./tmp/config/ndp_conf.conf; bash\" &')
         hostNum += 1
 
 
@@ -98,9 +96,24 @@ def run():
     info('Private Directories:', directories, '\n')
     configureHosts(net)
     net.startTerms()
-    CLI(net)
+    # switch = net.switch(name=('s1'))
+    # switch.cmdPrint('ifconfig s1 mtu 5000')
+    # switch.cmdPrint('ifconfig -a')
+    # switch = net.switch(name=('s1'))
+    # switch.cmdPrint('ip -6 route add local 0:0:01' +
+    #                 '{0:02x}'.format(hostNum) + '::/48 dev s1-eth' + str(hostNum))
+    # switch.cmdPrint('ifconfig s1-eth' + str(hostNum) +' mtu 5000')
+    # hosts = net.hosts
+    # hostNum = 1
+    # time.sleep(15)
+    # for host in hosts:
+    #     host.cmdPrint('xterm  -T \"client' + str(hostNum) +
+    #                   '\" -e \"./messaging/bin/client; bash\" &')
+    #     hostNum += 1
 
+    CLI(net)
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel('info')

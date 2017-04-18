@@ -5,6 +5,13 @@
 #include "./lib/538_utils.h"
 #include "./lib/debug.h"
 
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //	1. Check correctness of pointer on server side, it should never segfault.
@@ -238,7 +245,7 @@ void print_times( uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* wri
 }
 
 int basicOperations( int sockfd, struct addrinfo * p) {
-	int num_iters = 10;
+	int num_iters = 100;
 	uint64_t *alloc_latency = malloc(sizeof(uint64_t) * num_iters);
     assert(alloc_latency);
     memset(alloc_latency, 0, sizeof(uint64_t) * num_iters);
@@ -261,8 +268,8 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 	//init the root element
 	nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
 	nextPointer->AddrString = allocateMem(sockfd, p);
+	srand(time(NULL));
 	for (i = 0; i < num_iters; i++) {
-		srand(time(NULL));
 		nextPointer = nextPointer->Pointer;
 		nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
 
@@ -277,13 +284,13 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 	nextPointer->Pointer = NULL;
 	
 	i = 1;
+	srand(time(NULL));
 	while(rootPointer != NULL)	{
 
 		printf("Iteration %d\n", i);
 		struct in6_addr remoteMemory = rootPointer->AddrString;
 		print_debug("Using Pointer: %p\n", (void *) getPointerFromIPv6(rootPointer->AddrString));
 		print_debug("Creating payload");
-		srand(time(NULL));
 		char * payload = gen_rdm_bytestream(BLOCK_SIZE);
 
 		uint64_t wStart = getns();
@@ -339,6 +346,7 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 	
 	int active = 1;
 	while (active) {
+		srand(time(NULL));
 		memset(input, 0, len);
 		getLine("Please specify if you would like to (L)ist, (A)llocate, (F)ree, (W)rite, or (R)equest data.\nPress Q to quit the program.\n", input, sizeof(input));
 		if (strcmp("A", input) == 0) {
@@ -393,7 +401,11 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 				inet_ntop(p->ai_family,(struct sockaddr *) &pointer.s6_addr, s, sizeof s);
 				printf("Reading from this pointer%s\n", s);
 				localData = getMemory(sockfd, p, &pointer);
-				printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
+				printf(ANSI_COLOR_CYAN "Retrieved Data (first 80 bytes):\n");
+				printf("****************************************\n");
+				printf("\t%.*s\t\n",80, localData);
+				printf("****************************************\n");
+				printf(ANSI_COLOR_RESET);
 			}
 		} else if (strcmp("W", input) == 0) {
 			memset(input, 0, len);
@@ -408,12 +420,14 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 						getLine("Please enter your data:\n", input, sizeof(input));
 						if (strcmp("", input) == 0) {
 							printf("Writing random bytes\n");
-							srand(time(NULL));
 							char * payload = gen_rdm_bytestream(BLOCK_SIZE);
 							writeToMemory(sockfd, p, payload, &remotePointers[i]);
 						} else {
-							printf("Writing: %s\n", input);
-							srand(time(NULL));
+							printf(ANSI_COLOR_MAGENTA "Writing:\n");
+							printf("****************************************\n");
+							printf("\t%.*s\t\n",80, input);
+							printf("****************************************\n");
+							printf(ANSI_COLOR_RESET);
 							writeToMemory(sockfd, p, input, &remotePointers[i]);	
 						}
 					}
@@ -429,12 +443,10 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 				getLine("Please enter your data:\n", input, sizeof(input));
 				if (strcmp("", input) == 0) {
 					printf("Writing random bytes\n");
-					srand(time(NULL));
 					char * payload = gen_rdm_bytestream(BLOCK_SIZE);
 					writeToMemory(sockfd, p, payload, &remotePointers[i]);
 				} else {
 					printf("Writing: %s\n", input);
-					srand(time(NULL));
 					writeToMemory(sockfd, p, input, &remotePointers[i]);	
 				}
 			}
