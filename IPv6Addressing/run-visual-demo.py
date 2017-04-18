@@ -2926,6 +2926,9 @@ class MiniEdit( Frame ):
                 newHost = self.net.get(name)
                 opts = self.hostOpts[name]
                 configureHost(newHost, opts['nodeNum'])
+                os.system("ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=0:0:10" + str(opts['nodeNum']) +
+                 "::/48,priority=1,actions=output:" + str(opts['nodeNum']))
+
                 # Attach vlan interfaces
                 if 'vlanInterfaces' in opts:
                     for vlanInterface in opts['vlanInterfaces']:
@@ -2941,6 +2944,7 @@ class MiniEdit( Frame ):
                 if 'startCommand' in opts:
                     newNode.cmdPrint(opts['startCommand'])
 
+        os.system("ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=ff02::1:ff00:0,priority=1,actions=output:flood")
 
         # Configure NetFlow
         nflowValues = self.appPrefs['netflow']
@@ -3358,7 +3362,6 @@ def configureHost(host, hostNum):
                   '\" -e \"./messaging/bin/server; bash\" &')
     host.cmd('xterm  -T \"ndpproxy' + str(hostNum) +
                   '\" -e \"./ndpproxy/ndppd -vvv -c ./tmp/config/ndp_conf.conf; bash\" &')
-
 
 def miniEditImages():
     "Create and return images for MiniEdit."

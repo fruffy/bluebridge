@@ -21,7 +21,7 @@
 #define GET_CMD			"03"
 #define FREE_CMD		"04"
 #define GET_ADDR_CMD	"05"
-
+const int NUM_HOSTS;
 
 void *get_in_addr(struct sockaddr *sa);
 

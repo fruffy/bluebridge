@@ -8,7 +8,7 @@ from mininet.node import RemoteController
 from mininet.cli import CLI
 from mininet.link import TCLink
 from mininet.topolib import TreeNet
-
+import os
 import time
 from mininet.node import Host
 from functools import partial
@@ -86,7 +86,7 @@ def run():
     topo = BlueBridge()
 
     # controller is used by s1-s3
-    net = Mininet(topo=topo, host=host, build=False)
+    net = Mininet(topo=topo, host=host, build=False, controller=None)
     # net = TreeNet(depth=1, fanout=3, host=host, controller=RemoteController)
     # net.addController(c)
     net.build()
@@ -110,6 +110,14 @@ def run():
     #     host.cmdPrint('xterm  -T \"client' + str(hostNum) +
     #                   '\" -e \"./messaging/bin/client; bash\" &')
     #     hostNum += 1
+    
+    # Our current "switch"
+    hostNum = 3
+    i = 1
+    while i <= hostNum:
+        os.system("ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=0:0:10" + str(i) + "::/48,priority=1,actions=output:" + str(i))
+        i=i + 1
+    os.system("ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=ff02::1:ff00:0,priority=1,actions=output:flood")
 
     CLI(net)
     net.stop()
