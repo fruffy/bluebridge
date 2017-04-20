@@ -2,3 +2,35 @@
 \section{Future Work}
 \label{sec:future}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Implementing DSM}
+
+BlueBridge serves as a proof of concept for DSM, and has shown the potential
+merits of a DSM system for graph processing. Given the results shown in this
+analysis, BlueBridge should be implemented on an actual cluster, leveraging
+the potential of DSM. In order to do this, pages of memory in the DSM system
+would contain both local pages of memory, and shared global pages of memory.
+BlueBridge would load the external edges of the graph onto these shared global
+pages, and synchronization of these pages between iterations would be done
+by a shared state manager. One proposed implementation of this system is shown
+in Figure \ref{fig:dsm}, in which outgoing external edge values are stored on
+shared pages and requested by other machines for their remote pages.
+
+\begin{figure}[h]
+\includegraphics[width=\linewidth]{"fig/dsm_implementation"}
+\caption{A proposed implementation of BlueBridge on distributed shared memory.}
+\label{fig:dsm}
+\end{figure}
+
+\subsection{Offloading work from Python}
+
+The present state of the BlueBridge prototype comes with many performance
+concerns. While Python provides a simple interface for the access of shared
+memory, use of Python's \textit{Manager} library for access and control of
+shared state was unacceptable from a performance perspective. \textit{cProfile},
+the Python profiler, was used to investigate the performance of this library
+and it was found that up to 80-90\% of the total runtime was spent in
+\textit{Manager} library communication primitives, such as \textit{send()} and
+\textit{recv()}. We believe that writing a custom shared state manager to handle
+memory access in C would provide enormous performance benefits over the current
+BlueBridge prototype.
