@@ -2,8 +2,8 @@
 set -x
 git submodule update --init --recursive
 
-# Ubuntu 16.10
-# sudo apt-get install ndppd
+# Ubuntu 16.04
+# sudo apt-get install -y ndppd
 
 #if [ $? > 0 ]
 #then
@@ -18,14 +18,14 @@ git submodule update --init --recursive
 	sudo make -C ndpproxy/ install && make -C ndpproxy/ all
 #fi
 
-# Ubuntu 16.10
-sudo apt-get install mininet
+# Ubuntu 16.04
+sudo apt-get install -y mininet
 if [ $? > 0 ]
 then
 	# Ubuntu 14.04
 	./mininet/util/install.sh -nfv
 fi
-
+sudo apt-get install -y libpcap-dev
 make -C messaging/
 sudo python run-demo.py
 
