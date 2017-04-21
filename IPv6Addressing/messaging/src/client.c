@@ -24,6 +24,7 @@
 //	4. Implement IP subnet state awareness
 //		(server allocates memory address related to its assignment)
 //	5. Remove unneeded code and print statements
+//		Move all buffers to stack instead of heap.
 //	6. Fix interactive mode and usability bugs
 //	7. Switch to raw socket packets (hope is to get rid of NDP requests)
 //	http://stackoverflow.com/questions/15702601/kernel-bypass-for-udp-and-tcp-on-linux-what-does-it-involve
