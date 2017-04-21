@@ -209,6 +209,7 @@ void handleClientRequests(int sock_fd, char * receiveBuffer, struct in6_addr * i
 /*
  * TODO: explain
  * Binds to the next available address?
+ * Need to bind to INADDR_ANY instead
  */
 struct addrinfo* bindSocket(struct addrinfo* p, struct addrinfo* servinfo, int* sockfd) {
 	int blocking = 0;

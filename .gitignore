@@ -59,3 +59,15 @@ TestApps/PageRank/share
 
 # Cost
 TestApps/Cost/single/cache
+
+IPv6Addressing/pox/
+
+IPv6Addressing/oftest/
+
+IPv6Addressing/openflow/
+
+IPv6Addressing/ltmain\.sh
+
+IPv6Addressing/oflops/
+
+IPv6Addressing/0

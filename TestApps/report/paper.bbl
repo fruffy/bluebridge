@@ -89,6 +89,11 @@ D.~Lasalle and G.~Karypis.
   Parallel and Distributed Processing}, IPDPS '13, pages 225--236, Washington,
   DC, USA, 2013. IEEE Computer Society.
 
+\bibitem{snapnets}
+J.~Leskovec and A.~Krevl.
+\newblock {SNAP Datasets}: {Stanford} large network dataset collection.
+\newblock \url{http://snap.stanford.edu/data}, June 2014.
+
 \bibitem{Low:2012:DGF:2212351.2212354}
 Y.~Low, D.~Bickson, J.~Gonzalez, C.~Guestrin, A.~Kyrola, and J.~M. Hellerstein.
 \newblock Distributed graphlab: A framework for machine learning and data
