@@ -28,6 +28,9 @@
 //	7. Switch to raw socket packets (hope is to get rid of NDP requests)
 //	http://stackoverflow.com/questions/15702601/kernel-bypass-for-udp-and-tcp-on-linux-what-does-it-involve
 //	https://austinmarton.wordpress.com/2011/09/14/sending-raw-ethernet-packets-from-a-specific-interface-in-c-on-linux/
+//	8. Integrate Mihir's asynchronous code and use raw linux threading:
+//		http://nullprogram.com/blog/2015/05/15/
+//	9. Test INADDR_ANY to see if socket will accept any incoming destination IP address
 ///////////////////////////////////////////////////////////////////////////////
 //To add the current correct route
 //sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo
