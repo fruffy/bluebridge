@@ -33,6 +33,6 @@ python pagerank_homebrew.py smart inputs/ca-GrQc.txt 2
 
 python pagerank_homebrew.py <PARTITION> <INPUT> <NUM_CORES>  
 
-PARTITION corresponds to either 'best' for ParMetis, or 'rand' for random assignment.
-INPUT is either a path to the input edgelist file, or 'best' for a generated best case graph, 'dense' for a worst case fully connected graph.
-NUM_CORES is the numer of parallel processes to use.
+PARTITION corresponds to either 'best' for ParMetis, or 'rand' for random assignment.   
+INPUT is either a path to the input edgelist file, or 'best' for a generated best case graph, 'dense' for a worst case fully connected graph.   
+NUM_CORES is the number of parallel processes to use.  
