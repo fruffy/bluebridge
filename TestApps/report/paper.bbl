@@ -45,6 +45,10 @@ I.~F. Haddad and E.~Paquin.
 \newblock Mosix: A cluster load-balancing solution for linux.
 \newblock {\em Linux J.}, 2001(85es), May 2001.
 
+\bibitem{Hadoop09}
+Hadoop.
+\newblock \url{http://hadoop.apache.org}, 2009.
+
 \bibitem{Han:2013:NSR:2535771.2535778}
 S.~Han, N.~Egi, A.~Panda, S.~Ratnasamy, G.~Shi, and S.~Shenker.
 \newblock Network support for resource disaggregation in next-generation
