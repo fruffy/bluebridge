@@ -10,13 +10,14 @@ The modern internet generates petabytes of data per day. Processing
     to process. Concurrent trends in data centre architecture suggest that 
     the rack is the new server, and shared memory is now a feasible 
     interface between collocated rack servers. These trends made us wonder: 
-    \textit{How simple can fast graph processing be on a rack of servers?}. We
-    investigated the tradeoffs of the conventional Pregel
-    \textit{"think like a vertex"} programming model, and found its
-    performance unacceptable. In contrast, we explored the merits of a 
-    \textit{"Think like a subgraph"} model, which respects graph locality 
-    in common graphs, provides a more holistic programming interface, and runs
-    faster! 
+    \textit{How simple can fast graph processing be on a rack of servers?}. 
+    
+    We investigate high performance single threaded applications, the
+    effort required to muti-thread them, and their usefullness as a
+    benchmark for scalable applications. In addition we propose a DSM
+    framework for seemlessly scaling multithreaded applications to
+    clusters of machines.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \end{abstract}

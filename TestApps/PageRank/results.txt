@@ -1,0 +1,190 @@
+
+%%%%% caCondMat %%%%%%
+smart 2
+Graph is cut. Took 0.150942087173 s.
+Partitioning complete. Took 1.84017896652 s.
+12260 external edges, 186936 internal.
+Distributed PR complete. Took 16.5474081039 s, 4.272 without send/recv
+ST PR complete. Took 2.88270497322 s.
+
+smart 4
+Graph is cut. Took 0.15055513382 s.
+Partitioning complete. Took 2.39263296127 s.
+25008 external edges, 186936 internal.
+Distributed PR complete. Took 30.168776989 s, 11.014 without send/recv
+
+smart 8
+Graph is cut. Took 0.156065940857 s.
+Partitioning complete. Took 2.5779531002 s.
+34930 external edges, 186936 internal.
+Distributed PR complete. Took 33.9902780056 s, 13.249 without send/recv
+
+rand 2
+Graph is cut. Took 0.0463709831238 s.
+Partitioning complete. Took 13.5130038261 s.
+93324 external edges, 186936 internal.
+Distributed PR complete. Took 95.8608248234 s, 9.8 without send/recv
+
+rand 4
+Graph is cut. Took 0.0404431819916 s.
+Partitioning complete. Took 15.3614280224 s.
+140216 external edges, 186936 internal.
+Distributed PR complete. Took 134.466742992 s, 12.967 without send/recv
+
+rand 8
+Graph is cut. Took 0.0424420833588 s.
+Adding metadata for distributed processing...
+Partitioning complete. Took 15.9980289936 s.
+163402 external edges, 186936 internal
+Distributed PR complete. Took 148.980583906 s, 9.35 without send/recv
+ST PR complete. Took 4.81903100014 s.
+
+
+
+
+%%%%% ca-GrGc %%%%%%
+smart 2
+Graph is cut. Took 0.0253598690033 s.
+Partitioning complete. Took 0.0820190906525 s.
+980 external edges, 28980 internal.
+Distributed PR complete. Took 1.44818615913 s, 0.440 without send/recv
+ST PR complete. Took 0.45932507515 s.
+
+smart 4
+Graph is cut. Took 0.0277020931244 s.
+Partitioning complete. Took 0.0865528583527 s.
+1474 external edges, 28980 internal.
+Distributed PR complete. Took 1.99076294899 s, 0.435 without send/recv
+ST PR complete. Took 0.507229089737 s.
+
+smart 8
+Graph is cut. Took 0.0295209884644 s.
+Adding metadata for distributed processing...
+Partitioning complete. Took 0.120770215988 s.
+2086 external edges, 28980 internal.
+Distributed PR complete. Took 2.227 s, 0.297 without send/recv
+
+rand 2
+Graph is cut. Took 0.00718998908997 s.
+Partitioning complete. Took 1.04326486588 s.
+14520 external edges, 28980 internal.
+Distributed PR complete. Took 14.3813869953 s, 1.539 without
+
+rand 4
+Graph is cut. Took 0.00669598579407 s.
+Adding metadata for distributed processing...
+Partitioning complete. Took 1.29599285126 s.
+21642 external edges, 28980 internal.
+Distributed PR complete. Took 20.5449509621 s, 2.205 without
+
+rand 8
+Graph is cut. Took 0.00493407249451 s.
+Partitioning complete. Took 1.41525697708 s.
+25292 external edges, 28980 internal.
+Distributed PR complete. Took 21.7206389904 s, 2.859 without
+
+
+
+
+%%%% wiki-Vote %%%%%
+smart 2
+Graph is cut. Took 0.0586168766022 s.
+Partitioning complete. Took 2.18123698235 s.
+26391 external edges, 103689 internal.
+Distributed PR complete. Took 33.7953090668 s, 3.638 without
+ST PR complete. Took 1.08331012726 s.
+
+smart 4
+Graph is cut. Took 0.0674960613251 s.
+Partitioning complete. Took 3.22096705437 s.
+51896 external edges, 103689 internal.
+Distributed PR complete. Took 50.5747840405 s, 4.445 without
+ST PR complete. Took 1.12081003189 s.
+
+smart 8
+Graph is cut. Took 0.0780560970306 s.
+Partitioning complete. Took 3.79867696762 s.
+67185 external edges, 103689 internal.
+Distributed PR complete. Took 65.1291561127 s, 13.464 without
+ST PR complete. Took 1.24037289619 s.
+
+rand 2
+Graph is cut. Took 0.0198049545288 s.
+Partitioning complete. Took 4.23096203804 s.
+51994 external edges, 103689 internal.
+Distributed PR complete. Took 55.8806428909 s, 5.375 without
+
+rand 4
+Graph is cut. Took 0.0101261138916 s.
+Partitioning complete. Took 5.14004898071 s.
+77641 external edges, 103689 internal.
+Distributed PR complete. Took 70.758605957 s, 7.693 without
+
+rand 8
+Graph is cut. Took 0.00768685340881 s.
+Partitioning complete. Took 5.53241705894 s.
+90691 external edges, 103689 internal.
+Distributed PR complete. Took 79.983645916 s. 4.696 without
+
+%%%%% dense 500 %%%%%%%
+smart 2 
+Graph is cut. Took 0.185328960419 s.
+Partitioning complete. Took 14.9628810883 s.
+249999 external edges, 499500 internal.
+Distributed PR complete. Took 280.962095022 s. 19.54
+Profiler: 242.546 on send/recv, 12.171 on blocking, 6.7 on manager
+ST PR complete. Took 3.63110494614 s.
+
+smart 4
+Graph is cut. Took 0.196692943573 s.
+Partitioning complete. Took 22.0496640205 s.
+374995 external edges, 499500 internal.
+Distributed PR complete. Took 348.3 - 218.062 - 94.238 - 7.47 = 28.53
+
+rand 2
+Graph is cut. Took 0.0590448379517 s.
+Partitioning complete. Took 15.6645121574 s.
+249711 external edges, 499500 internal.
+Distributed PR complete. Took 253.230595827 s.
+
+%%%%% best 500 %%%%%%%%
+smart 2
+Graph is cut. Took 0.122573137283 s.
+Partitioning complete. Took 0.125744819641 s.
+10 external edges, 249510 internal.
+Distributed PR complete. Took 1.41454720497 s.
+ST PR complete. Took 1.58256292343 s.
+
+rand 2
+Graph is cut. Took 0.0427901744843 s.
+Partitioning complete. Took 7.56257820129 s.
+124875 external edges, 249510 internal.
+Distributed PR complete. Took 129.988174915 s.
+
+%%%% web-Google %%%%
+smart 2
+Graph is cut. Took 6.73439908028 s.
+Partitioning complete. Took 1363.82022905 s.
+272049 external edges, 5105039 internal.
+Distributed PR complete. Took 900.022192955 s.
+ST PR complete. Took 178.310107946 s.
+
+smart 4
+Graph is cut. Took 8.23439288139 s.
+Partitioning complete. Took 1230.42063808 s.
+478618 external edges, 5105039 internal.
+Distributed PR complete. Took 943.848085165 s.
+
+smart 8
+Graph is cut. Took 8.56457805634 s
+Partitioning complete. Took 900.35219121 s.
+670515 external edges, 5105039 internal.
+Distributed PR complete. Took 1246.465904 s.
+
+rand 2
+Graph is cut. Took 1.49600100517 s.
+Partitioning complete. Took 12775.3376391 s.
+2553008 external edges, 5105039 internal.
+Distributed PR complete. Took 6486.74863696 s.
+
+rand 4

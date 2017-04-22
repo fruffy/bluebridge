@@ -5,6 +5,13 @@
 #include "./lib/538_utils.h"
 #include "./lib/debug.h"
 
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //	1. Check correctness of pointer on server side, it should never segfault.
@@ -17,14 +24,18 @@
 //	4. Implement IP subnet state awareness
 //		(server allocates memory address related to its assignment)
 //	5. Remove unneeded code and print statements
+//		Move all buffers to stack instead of heap.
 //	6. Fix interactive mode and usability bugs
 //	7. Switch to raw socket packets (hope is to get rid of NDP requests)
 //	http://stackoverflow.com/questions/15702601/kernel-bypass-for-udp-and-tcp-on-linux-what-does-it-involve
 //	https://austinmarton.wordpress.com/2011/09/14/sending-raw-ethernet-packets-from-a-specific-interface-in-c-on-linux/
+//	8. Integrate Mihir's asynchronous code and use raw linux threading:
+//		http://nullprogram.com/blog/2015/05/15/
+//	9. Test INADDR_ANY to see if socket will accept any incoming destination IP address
 ///////////////////////////////////////////////////////////////////////////////
 //To add the current correct route
 //sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo
-
+//ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dest=0:0:01ff:0:ffff:ffff:0:0,actions=output:2
 struct LinkedPointer {
 	struct in6_addr AddrString;
 	struct LinkedPointer * Pointer;
@@ -188,10 +199,37 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 	print_debug("Now waiting")
 	receiveUDP(sockfd, receiveBuffer,BLOCK_SIZE, p);
 
-
 	free(sendBuffer);
 
 	return receiveBuffer;
+}
+
+/*
+ * Reads the remote memory
+ */
+int migrate(int sockfd, struct addrinfo * p, struct in6_addr * toPointer, int machineID) {
+	char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
+	char * receiveBuffer;
+	// Allocates storage
+	char * ovs_cmd = (char*)malloc(100 * sizeof(char));
+	char s[INET6_ADDRSTRLEN];
+	inet_ntop(p->ai_family,(struct sockaddr *) toPointer->s6_addr, s, sizeof s);
+
+
+	printf("Getting pointer\n");
+	receiveBuffer = getMemory(sockfd, p, toPointer);
+	printf("Freeing pointer\n");
+
+	releaseMemory(sockfd, p, toPointer);
+	printf("Writing pointer\n");
+	sprintf(ovs_cmd, "ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=%s,priority=65535,actions=output:%d", s, machineID);
+	int status = system(ovs_cmd);
+	printf("%d\t%s\n", status, ovs_cmd);
+
+	writeToMemory(sockfd, p, receiveBuffer, toPointer);
+	free(sendBuffer);
+	free(ovs_cmd);
+	return 0;
 }
 
 void print_times( uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* write_latency, uint64_t* free_latency, int num_iters){
@@ -261,8 +299,8 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 	//init the root element
 	nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
 	nextPointer->AddrString = allocateMem(sockfd, p);
+	srand(time(NULL));
 	for (i = 0; i < num_iters; i++) {
-		srand(time(NULL));
 		nextPointer = nextPointer->Pointer;
 		nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
 
@@ -277,13 +315,13 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 	nextPointer->Pointer = NULL;
 	
 	i = 1;
+	srand(time(NULL));
 	while(rootPointer != NULL)	{
 
 		printf("Iteration %d\n", i);
 		struct in6_addr remoteMemory = rootPointer->AddrString;
 		print_debug("Using Pointer: %p\n", (void *) getPointerFromIPv6(rootPointer->AddrString));
 		print_debug("Creating payload");
-		srand(time(NULL));
 		char * payload = gen_rdm_bytestream(BLOCK_SIZE);
 
 		uint64_t wStart = getns();
@@ -339,6 +377,7 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 	
 	int active = 1;
 	while (active) {
+		srand(time(NULL));
 		memset(input, 0, len);
 		getLine("Please specify if you would like to (L)ist, (A)llocate, (F)ree, (W)rite, or (R)equest data.\nPress Q to quit the program.\n", input, sizeof(input));
 		if (strcmp("A", input) == 0) {
@@ -391,9 +430,13 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 				struct in6_addr pointer;
 				inet_pton(AF_INET6, input, &pointer);
 				inet_ntop(p->ai_family,(struct sockaddr *) &pointer.s6_addr, s, sizeof s);
-				printf("Reading from this pointer%s\n", s);
+				printf("Reading from this pointer %s\n", s);
 				localData = getMemory(sockfd, p, &pointer);
-				printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
+				printf(ANSI_COLOR_CYAN "Retrieved Data (first 80 bytes):\n");
+				printf("****************************************\n");
+				printf("\t%.*s\t\n",80, localData);
+				printf("****************************************\n");
+				printf(ANSI_COLOR_RESET);
 			}
 		} else if (strcmp("W", input) == 0) {
 			memset(input, 0, len);
@@ -408,12 +451,14 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 						getLine("Please enter your data:\n", input, sizeof(input));
 						if (strcmp("", input) == 0) {
 							printf("Writing random bytes\n");
-							srand(time(NULL));
 							char * payload = gen_rdm_bytestream(BLOCK_SIZE);
 							writeToMemory(sockfd, p, payload, &remotePointers[i]);
 						} else {
-							printf("Writing: %s\n", input);
-							srand(time(NULL));
+							printf(ANSI_COLOR_MAGENTA "Writing:\n");
+							printf("****************************************\n");
+							printf("\t%.*s\t\n",80, input);
+							printf("****************************************\n");
+							printf(ANSI_COLOR_RESET);
 							writeToMemory(sockfd, p, input, &remotePointers[i]);	
 						}
 					}
@@ -429,13 +474,46 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 				getLine("Please enter your data:\n", input, sizeof(input));
 				if (strcmp("", input) == 0) {
 					printf("Writing random bytes\n");
-					srand(time(NULL));
 					char * payload = gen_rdm_bytestream(BLOCK_SIZE);
 					writeToMemory(sockfd, p, payload, &remotePointers[i]);
 				} else {
 					printf("Writing: %s\n", input);
-					srand(time(NULL));
 					writeToMemory(sockfd, p, input, &remotePointers[i]);	
+				}
+			}
+		} else if (strcmp("M", input) == 0) {
+			memset(input, 0, len);
+			getLine("Enter C to free a custom memory address. A to migrate all pointers.\n", input, sizeof(input));
+			
+			if (strcmp("A", input) == 0) {
+				for (i = 0; i < 100; i++) {
+					if (memcmp(&remotePointers[i].s6_addr, lazyZero, IPV6_SIZE) != 0) {
+						inet_ntop(p->ai_family,(struct sockaddr *) &remotePointers[i].s6_addr, s, sizeof s);					
+						memset(input, 0, len);
+						printf("Migrating pointer %s\n", s);
+						getLine("Please enter your migration machine:\n", input, sizeof(input));
+						if (atoi(input) <= NUM_HOSTS) {
+							printf("Migrating\n");
+							migrate(sockfd, p, &remotePointers[i], atoi(input));
+						} else {
+							printf("FAILED\n");	
+						}
+					}
+				}
+			} else if (strcmp("C", input) == 0) {
+				memset(input, 0, len);
+				getLine("Please specify the target pointer:\n", input, sizeof(input));
+				struct in6_addr pointer;
+				inet_pton(AF_INET6, input, &pointer);
+				inet_ntop(p->ai_family,(struct sockaddr *) pointer.s6_addr, s, sizeof s);
+				printf("Migrating pointer %s\n", s);
+				memset(input, 0, len);
+				getLine("Please enter your migration machine:\n", input, sizeof(input));
+				if (atoi(input) <= NUM_HOSTS) {
+					printf("Migrating\n");
+					migrate(sockfd, p, &pointer, atoi(input));
+				} else {
+					printf("FAILED\n");	
 				}
 			}
 		} else if (strcmp("F", input) == 0) {

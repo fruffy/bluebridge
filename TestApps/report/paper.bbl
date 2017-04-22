@@ -89,6 +89,11 @@ D.~Lasalle and G.~Karypis.
   Parallel and Distributed Processing}, IPDPS '13, pages 225--236, Washington,
   DC, USA, 2013. IEEE Computer Society.
 
+\bibitem{snapnets}
+J.~Leskovec and A.~Krevl.
+\newblock {SNAP Datasets}: {Stanford} large network dataset collection.
+\newblock \url{http://snap.stanford.edu/data}, June 2014.
+
 \bibitem{Low:2012:DGF:2212351.2212354}
 Y.~Low, D.~Bickson, J.~Gonzalez, C.~Guestrin, A.~Kyrola, and J.~M. Hellerstein.
 \newblock Distributed graphlab: A framework for machine learning and data
@@ -102,6 +107,12 @@ G.~Malewicz, M.~H. Austern, A.~J. Bik, J.~C. Dehnert, I.~Horn, N.~Leiser, and
 \newblock In {\em Proceedings of the 2010 ACM SIGMOD International Conference
   on Management of Data}, SIGMOD '10, pages 135--146, New York, NY, USA, 2010.
   ACM.
+
+\bibitem{189908}
+F.~McSherry, M.~Isard, and D.~G. Murray.
+\newblock Scalability! but at what cost?
+\newblock In {\em 15th Workshop on Hot Topics in Operating Systems (HotOS XV)},
+  Kartause Ittingen, Switzerland, 2015. USENIX Association.
 
 \bibitem{Morin:2004:KDP:1111682.1111729}
 C.~Morin, R.~Lottiaux, G.~Vallee, P.~Gallard, D.~Margery, J.-Y. Berthou, and
@@ -118,12 +129,22 @@ D.~G. Murray, F.~McSherry, R.~Isaacs, M.~Isard, P.~Barham, and M.~Abadi.
 \newblock In {\em Proceedings of the Twenty-Fourth ACM Symposium on Operating
   Systems Principles}, SOSP '13, pages 439--455, New York, NY, USA, 2013. ACM.
 
+\bibitem{Page98thepagerank}
+L.~Page, S.~Brin, R.~Motwani, and T.~Winograd.
+\newblock The pagerank citation ranking: Bringing order to the web, 1998.
+
 \bibitem{Power:2010:PBF:1924943.1924964}
 R.~Power and J.~Li.
 \newblock Piccolo: Building fast, distributed programs with partitioned tables.
 \newblock In {\em Proceedings of the 9th USENIX Conference on Operating Systems
   Design and Implementation}, OSDI'10, pages 293--306, Berkeley, CA, USA, 2010.
   USENIX Association.
+
+\bibitem{Shun:2013:ligra}
+J.~Shun and G.~Blelloch.
+\newblock Ligra: A lightweight graph processing framework for shared memory.
+\newblock In {\em Proceedings of the ACM SIGPLAN Symposium on Principles and
+  Practice of Parallel Programming}, PPoPP '13, pages 135--146, 2013.
 
 \bibitem{Vavilapalli:2013:AHY:2523616.2523633}
 V.~K. Vavilapalli, A.~C. Murthy, C.~Douglas, S.~Agarwal, M.~Konar, R.~Evans,
