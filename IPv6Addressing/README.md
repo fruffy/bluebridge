@@ -1,4 +1,4 @@
-#Install and Run Instructions
+# Install and Run Instructions
 
 After pulling down the latest master, run `install.sh` from the IPv6Addressing folder. This will install the following packages, make the code, and run `run-demo.py`.
   - libnl-3-200
@@ -10,18 +10,20 @@ After pulling down the latest master, run `install.sh` from the IPv6Addressing f
   - mininet
   - libpcap-dev
   
-#Compile Instructions
+# Compile Instructions
 If you wish to compile the program manually, run `make -C messaging/` from the IPv6Addressing directory.
 
-#Run Instructions
-##Demo
+# Run Instructions
+
+## Demo
 To run the demo call `sudo python run-demo.py`.
-##Client and Server
+
+## Client and Server
 To run the client: `./messaging/bin/client -i`
 To run the server: `./messaging/bin/server`
 
 The `-i` option runs the program in interactive mode. 
 
-##Userfaultfd and Server
+## Userfaultfd and Server
 To run the userfaultfd program: `./messaging/bin/userfaultfd_measure_pagefault`
 Run the server as specified above.
