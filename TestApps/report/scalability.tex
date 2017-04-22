@@ -1,4 +1,131 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Scalability}
+\section{Scalability Measure}
 \label{sec:scalability}
+
+%%need for a measurement tool
+Before we could investigate advantages of any particular scalable
+framework we required a tool for measuring benefits gained from
+scalability. COST~\cite{189908} proposed that the scalable benefits of
+any framework can be measured by comparing their performance to a
+single threaded program which perform an identical computational task.
+We began by attempting to duplicate COST's single threaded results to
+provide ourselves with a benchmark when scaling to multiple threads.
+
+%% Technical spec
+To obtain a baseline we ran COST's open source single threaded page
+rank on our own infrastructure. All of our experiments were run on a
+60 core server composed of 4 Intel(R) Xeon(R) CPU E7-4870 v2 @ 2.30GHz
+NUMA nodes, and 128GB of DIMM DDR3 1600 MHz memory. Costs PageRank had
+an average runtime of 350s on our machine, most likely due to 2014 mac
+books having a higher averted clock speed of 3.5GHz.
+
+%%Inital Failure
+Using simplicity as our guide we implemented single threaded
+PageRank~\cite{Page98thepagerank} and processed the popular
+twitter\_rv graph. We implemented PageRank in Go, and used it's built
+in map (key-value store) to store and iterate over edges in vertex
+order. We computed 20 iterations of PageRank on the 1.4 trillion edge
+graph in 374854s, approximately 4 days. These initial results were
+troubling as COST boasted 300s processing using the same
+approach, a speedup of nearly 1071x.
+
+%%Road to victory
+To achieve higher performance in our single threaded application we
+carefully analyzed our data structures and data access path. Go's maps
+are unordered resulting in poor locality. To improve locality, we
+placed edges, and vertices in separate sequential arrays, and used a
+third array as a mapper between vertex id's and edge locations. Go's
+garbage collection, and runtime composed a large portion of our
+initial runtime. We minimized garbage collection by performing
+minimal memory allocations. These modification were non-trivial
+requiring a working knowledge of Go's runtime, and machine
+architecture.  Post modification, our program executed in 1148.87s,
+3.2x that of~\cite{189908}. While we were unable to match the results
+of COST we consider our single threaded application a reasonable
+baseline for measuring scalability.
+
+%%Multi-Threaded model
+The page rank algorithm consists of two fundamental steps. First the
+rank of a vertex is divided onto it's outgoing edges, and propagated to
+other vertices, second vertices sum up propagated ranks on their
+incoming edges to calculate their rank for a given step. As values
+from previous iterations are used to generate the next, there is a
+dependency between iterations. Any asynchronous approach to page rank
+must prevent out of order data access or modification for correctness.
+
+%%How we did it
+Arguably the simplest approach to synchronizing data access and update
+is to use a barrier. In which all threads complete edge updates before
+calculating their incoming rank. For the sake of simplicity will
+implemented such a barrier as a synchronization mechanism for
+multi-threaded page rank. We copied the design of map reduce for
+managing our threads. First $n$ worker threads are allocated. Edges
+are allocated to threads in continuous chunks of $num_edges / n$. A
+master iterativly issues either \emph{update edges} or
+\emph{calculate rank} commands to threads. Upon receiving commands
+threads perform work on their range of edges, and finally signal back
+to the master. Multi threading our single threaded page rank
+application increased it's LOC from 20 to 48. Almost all of which was
+coordinator code.
+
+%%Performance
+Based on our own best effort single threaded application, our
+multi-threaded framework has a COST of 0. That is, we achieve faster
+than single threaded performance upon introducing a second thread.
+Figure~\ref{fig:page-rank-performance} shows our PageRank runtime vs
+coarse used. While we attained a cost of 0 using our own single
+threaded application, we required 14 to match the the processing
+performance of COST. An interesting aspect of our runtime, is a steady
+decrease in runtime after each thread has been allotted a CPU. We
+speculate that this increase is due to some threads blocking when
+updating edges, causing the OS scheduler to execute a collocated thread.
+
+\begin{figure}[h]
+\includegraphics[width=\linewidth]{"fig/page_rank_performance"}
+\caption{Page-Rank performance per core. COST benchmark reached at 14.}
+\label{fig:page-rank-perfomance}
+\end{figure}
+
+We measured the scalability of our multi-threaded page-rank by
+calculating the $speedup / core$ against our single threaded
+implementation. Figure~\ref{scalability} shows a near linear speedup
+to 60 cores.
+
+\begin{figure}[h]
+\includegraphics[width=\linewidth]{"fig/scale"}
+\caption{Scalability up to 60 cores}
+\label{fig:scalability}
+\end{figure}
+
+
+We compared our performance with frameworks analyzed by COST.
+Figure~\ref{fig:page-rank-compairison} plots the performance of each
+framework against our own for 20 iterations of PageRank. In all cases
+where our program was provisioned with the same number of cores as the
+framework (we were not able to run on 128 cores) our program
+outperformed the frameworks by nearly an order of magnitude.
+
+\begin{figure}[h]
+\includegraphics[width=\linewidth]{"fig/page_rank_compairison"}
+\caption{Page-Rank performance comparison against other frameworks. Closer to the red line is better. Our numbers past 60 core are an under approximation of runtime}
+\label{fig:page-rank-compairison}
+\end{figure}
+
+It would be an extreme act of hubris to assume that our bench marking
+application endowed with a simple muti-thread manager are an order of
+magnitude better than existing graph frameworks. Instead we reflected on
+the differences between COST's single threaded application, our
+scalable application, and the graph processing frameworks. Both COST
+and our application are highly tuned for page-rank, and page-rank
+only. Specifically our highly tuned memory layout is designed for page
+rank memory access. This level of optimization is unavailable to
+frameworks which must have the expressiveness for the general space of
+graph computation. Based on this observation we anecdotal propose an
+additional requirement for the cost metric: Single threaded benchmarks
+and frameworks must implement an identical API. This addition would
+prevent any benefits gained from highly specific tuning, and only
+measure the overhead synchronization, and communication cost incurred
+by scalable frameworks.
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
