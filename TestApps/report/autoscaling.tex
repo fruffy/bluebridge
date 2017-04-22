@@ -95,14 +95,6 @@ vector. METIS is built in and runs in C, and the corresponding Python binding,
 PyMetis \cite{pymetis} was used to determine the optimal graph partitioning once
 it is read into memory. 
 
-The three graphs explained previously all exhibit varying degrees of 
-connectivity. GrQc can be split into 2,4 or 8 partitions with a relatively low
-degree of cutting, while wikiVote is much more difficult to cut. The degree of
-cutting for all three graphs can be observed in Table \ref{table:cutting}. 
-The performance of the graph partitioning step was also measured and shown in,
-\ref{table:part_time} and it was found that the time to partition the graph is
-several orders of magnitude less than the total PageRank processing time.
-
 \begin{table}[h]
 \begin{tabularx}{\linewidth}{|X|X|X|X|}
 \hline
@@ -111,8 +103,8 @@ GrQc & 3.38\% & 4.93\% & 7.20\% \\ \hline
 condMat & 6.56\% & 13.38\% & 18.69\% \\ \hline
 wikiVote & 25.45\% & 50.05\% & 64.79\% \\ \hline
 \end{tabularx}
-\label{table:cutting}
 \caption{Percentage of edges cut when splitting into 2,4 or 8 partitions.}
+\label{tab:cutting}
 \end{table}
 
 \begin{table}[h]
@@ -123,10 +115,17 @@ GrQc & 0.027s \\ \hline
 condMat & 0.151s \\ \hline
 wikiVote & 0.050s \\ \hline
 \end{tabularx}
-\label{table:part_time}
 \caption{Time taken to partition graph with PyMetis}
+\label{tab:part_time}
 \end{table}
 
+The three graphs explained previously all exhibit varying degrees of 
+connectivity. GrQc can be split into 2,4 or 8 partitions with a relatively low
+degree of cutting, while wikiVote is much more difficult to cut. The degree of
+cutting for all three graphs can be observed in Table \ref{tab:cutting}. 
+The performance of the graph partitioning step was also measured and shown in
+Table \ref{tab:part_time} and it was found that the time to partition the graph
+is several orders of magnitude less than the total PageRank processing time.
 
 Applying techniques seen in \cite{Chen:2015:powerlyra}
 and \cite{Tian:2013:thinklikeagraph}, we use a "mirroring" technique for storing

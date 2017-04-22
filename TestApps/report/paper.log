@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/Debian) (format=pdflatex 2017.4.9)  21 APR 2017 19:59
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/Debian) (format=pdflatex 2017.4.9)  21 APR 2017 20:06
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -442,14 +442,6 @@ File: omsptm.fd
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <10> not available
 (Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 71.
 ) (./scalability.tex
-LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 75.
-
-
-LaTeX Warning: Reference `fig:page-rank-performance' on page 2 undefined on inp
-ut line 75.
-
-
 Underfull \vbox (badness 1769) has occurred while \output is active []
 
  [2]
@@ -460,10 +452,8 @@ File: "fig/page_rank_performance".pdf Graphic file (type pdf)
 Package pdftex.def Info: "fig/page_rank_performance".pdf used on input line 84.
 
 (pdftex.def)             Requested size: 229.8775pt x 137.92755pt.
-
-
-LaTeX Warning: Reference `scalability' on page 3 undefined on input line 91.
-
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 85.
 
 Underfull \hbox (badness 1033) in paragraph at lines 89--93
 []\OT1/ptm/m/n/10 We mea-sured the scal-a-bil-ity of our multi-threaded
@@ -503,39 +493,20 @@ Underfull \hbox (badness 1292) in paragraph at lines 64--66
  []
 
 
-Package caption Warning: \label without proper \caption on input line 114.
-See the caption package documentation for explanation.
-
-
-LaTeX Warning: Reference `table:cutting' on page 4 undefined on input line 101.
-
-
-
-Package caption Warning: \label without proper \caption on input line 126.
-See the caption package documentation for explanation.
-
-
-LaTeX Warning: Reference `table:part_time' on page 4 undefined on input line 10
-3.
-
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 [4] <"fig/partition_example".png, id=47, 1298.8525pt x 678.535pt>
 File: "fig/partition_example".png Graphic file (type png)
 
 <use "fig/partition_example".png>
-Package pdftex.def Info: "fig/partition_example".png used on input line 144.
+Package pdftex.def Info: "fig/partition_example".png used on input line 143.
 (pdftex.def)             Requested size: 229.8775pt x 120.08101pt.
 
 <"fig/smart_vs_rand".png, id=48, 588.1975pt x 360.34625pt>
 File: "fig/smart_vs_rand".png Graphic file (type png)
 
 <use "fig/smart_vs_rand".png>
-Package pdftex.def Info: "fig/smart_vs_rand".png used on input line 158.
+Package pdftex.def Info: "fig/smart_vs_rand".png used on input line 157.
 (pdftex.def)             Requested size: 229.8775pt x 140.83138pt.
 
 
@@ -545,11 +516,15 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 File: "fig/rdd_vs_ss".png Graphic file (type png)
 
 <use "fig/rdd_vs_ss".png>
-Package pdftex.def Info: "fig/rdd_vs_ss".png used on input line 184.
+Package pdftex.def Info: "fig/rdd_vs_ss".png used on input line 183.
 (pdftex.def)             Requested size: 229.8775pt x 137.84927pt.
-) (./related.tex [5 <./fig/partition_example.png> <./fig/smart_vs_rand.png> <./
-fig/rdd_vs_ss.png>]) (./future.tex
-Underfull \vbox (badness 6775) has occurred while \output is active []
+) (./related.tex
+Underfull \vbox (badness 1997) has occurred while \output is active []
+
+ [5 <./fig/partition_example.png> <./fig/smart_vs_rand.png> <./fig/rdd_vs_ss.pn
+g>])
+(./future.tex
+Underfull \vbox (badness 2189) has occurred while \output is active []
 
 
 <"fig/dsm_implementation".png, id=53, 904.37875pt x 476.78125pt>
@@ -587,7 +562,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 17--18
  []
 
 
-Underfull \hbox (badness 1577) in paragraph at lines 56--61
+Underfull \hbox (badness 1577) in paragraph at lines 60--65
 \OT1/ptm/m/n/10 al-lel com-put-ing.  In \OT1/ptm/m/it/10 DSM WORK-SHOP 2006,
  []
 
@@ -596,23 +571,23 @@ Package balance Warning: You have called \balance in second column
 (balance)                Columns might not be balanced.
 
 [7]
-Underfull \hbox (badness 5008) in paragraph at lines 71--77
+Underfull \hbox (badness 5008) in paragraph at lines 75--81
 []\OT1/ptm/m/n/10 P. Kele-her, A. L. Cox, S. Dwarkadas, and
  []
 
 
-Underfull \hbox (badness 1024) in paragraph at lines 71--77
+Underfull \hbox (badness 1024) in paragraph at lines 75--81
 \OT1/ptm/m/n/10 sys-tems.  In \OT1/ptm/m/it/10 Pro-ceed-ings of the USENIX Win-
 
  []
 
 
-Underfull \hbox (badness 1194) in paragraph at lines 98--102
+Underfull \hbox (badness 1194) in paragraph at lines 102--106
 \OT1/ptm/m/n/10 A. Ky-rola, and J. M. Heller-stein.  Dis-tributed
  []
 
 
-Underfull \hbox (badness 2050) in paragraph at lines 118--125
+Underfull \hbox (badness 2050) in paragraph at lines 122--129
 []\OT1/ptm/m/n/10 C. Morin, R. Lot-ti-aux, G. Vallee, P. Gal-lard,
  []
 
@@ -620,23 +595,19 @@ Underfull \hbox (badness 2050) in paragraph at lines 118--125
 Overfull \vbox (8.55748pt too high) has occurred while \output is active []
 
 
-[8] (./paper.aux)
-
-LaTeX Warning: There were undefined references.
-
- )
+[8] (./paper.aux) )
 (\end occurred inside a group at level 1)
 
 ### simple group (level 1) entered at line 1061 ({)
 ### bottom level 
 Here is how much of TeX's memory you used:
- 6856 strings out of 495028
- 100701 string characters out of 6181498
- 195757 words of memory out of 5000000
- 9895 multiletter control sequences out of 15000+600000
+ 6855 strings out of 495028
+ 100668 string characters out of 6181498
+ 195689 words of memory out of 5000000
+ 9894 multiletter control sequences out of 15000+600000
  24226 words of font info for 66 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 38i,11n,40p,302b,4548s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 38i,11n,40p,302b,4568s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</us
 r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/shar
 e/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texli
@@ -644,7 +615,7 @@ ve/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/tex
 mf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/fonts
 /type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/time
 s/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on paper.pdf (8 pages, 285019 bytes).
+Output written on paper.pdf (8 pages, 284245 bytes).
 PDF statistics:
  89 PDF objects out of 1000 (max. 8388607)
  58 compressed objects within 1 object stream
