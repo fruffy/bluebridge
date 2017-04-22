@@ -39,3 +39,10 @@ If you had the twitter_rv graph in the current directory runnint
 Will run 60 tests each one with one more thread on a single core, on a 60 core machine this takes roughly 4 hours.
 
 ## Performance
+Single threaded pagerank is a contender against many distributed computational platforms, but is not strictly higher performance. Multi threaded PageRank has a cost of 0 against its single threaded implementation. The following graph shows how Multi threaded PageRank compaires to popular graph processing frameworks, and against the original cost threads on a 60 core server
+![Performance Comparison](./plot/threaded2.pdf)
+
+## Scalability
+Multi Page Rank scales almost linearly
+![Performance Comparison](./plot/scale.pdf)
+
