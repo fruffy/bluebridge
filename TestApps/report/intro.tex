@@ -23,6 +23,14 @@ processing~\cite{Vavilapalli:2013:AHY:2523616.2523633,Zaharia:2012:RDD:2228298.2
 These frameworks vary in their complexity, but none are
 \textit{"accessible"} for programmers that lack relevant experience.
 
+By definition all programmers must be able to produce single threaded
+programs. Some researchers have argued and demonstrated that single
+threaded applications can outperform scalable distributed frameworks
+with little effort~\cite{189908}, and that such applications should be
+used as benchmarks for scalability. We evaluate these claims and
+propose a simple framework for multi-threading optimal single threaded
+applications.
+
 With the exception of~\cite{Kyrola:2012:GLG:2387880.2387884}, the
 aforementioned systems suffer a common pitfall to accessibility; they
 expose the complexity of a distributed message passing system to the
@@ -60,7 +68,9 @@ efficient graph processing interface for DSM. Specifically we make the
 following contributions.
 
 \begin{itemize}
-        \item A simple graph processing API for DSM
+        \item An evaluation of single threaded applications as a baseline for scalability
+        \item A simple framework for scaling single threaded applications
+        \item A graph processing API for DSM
         \item A graph partitioning scheme optimal for DSM
         \item An evaluation of processing performance between partitioned DSM processing, and Pregel-style graph processing
 \end{itemize}
@@ -71,7 +81,3 @@ scalability. In Section~\ref{sec:autoscaling} we methodology for
 automatically scaling up graph processing. Section~\ref{sec:related} 
 describes other systems similar to ours, Section ~\ref{sec:future} discusses
 future work, and Section~\ref{sec:conclusion} concludes the paper.
-
-
-
-

@@ -108,6 +108,12 @@ G.~Malewicz, M.~H. Austern, A.~J. Bik, J.~C. Dehnert, I.~Horn, N.~Leiser, and
   on Management of Data}, SIGMOD '10, pages 135--146, New York, NY, USA, 2010.
   ACM.
 
+\bibitem{189908}
+F.~McSherry, M.~Isard, and D.~G. Murray.
+\newblock Scalability! but at what cost?
+\newblock In {\em 15th Workshop on Hot Topics in Operating Systems (HotOS XV)},
+  Kartause Ittingen, Switzerland, 2015. USENIX Association.
+
 \bibitem{Morin:2004:KDP:1111682.1111729}
 C.~Morin, R.~Lottiaux, G.~Vallee, P.~Gallard, D.~Margery, J.-Y. Berthou, and
   I.~D. Scherson.
@@ -122,6 +128,10 @@ D.~G. Murray, F.~McSherry, R.~Isaacs, M.~Isard, P.~Barham, and M.~Abadi.
 \newblock Naiad: A timely dataflow system.
 \newblock In {\em Proceedings of the Twenty-Fourth ACM Symposium on Operating
   Systems Principles}, SOSP '13, pages 439--455, New York, NY, USA, 2013. ACM.
+
+\bibitem{Page98thepagerank}
+L.~Page, S.~Brin, R.~Motwani, and T.~Winograd.
+\newblock The pagerank citation ranking: Bringing order to the web, 1998.
 
 \bibitem{Power:2010:PBF:1924943.1924964}
 R.~Power and J.~Li.
