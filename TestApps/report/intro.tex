@@ -3,22 +3,22 @@
 \label{sec:intro}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Big data processing is complicated. Scientists and experienced 
-programmers alike struggle with managing and configuring
-clusters of machines to processes large amounts of data. Frameworks
-like Hadoop and Pregel have significantly eased the difficulty of big
-data processing, but they remain intimidating for the layman. We
-noticed a trend in scientists and researchers, finding that they
-wanted to \textit{"Just write python code that ran on a bunch of
-computers"}. For the benefit of science we investigated how to make
-this dream a reality.
+Big data processing is complicated. Scientists and experienced
+programmers alike struggle with managing and configuring clusters of
+machines to processes large amounts of data. Frameworks like Hadoop
+and Pregel~\cite{Hadoop09,Malewicz:2010:PSL:1807167.1807184} have
+significantly eased the difficulty of big data processing, but they
+remain intimidating for the layman. We noticed a trend in scientists
+and researchers, finding that they wanted to \textit{"Just write
+python code that ran on a bunch of computers"}. We investigated how to
+make this dream a reality.
 
-Running all Python code on clusters of machines is impractical would lead to sluggish un-optimal code, due to immense network overhead. Instead,
-we concentrated our efforts on a common but difficult big data
-processing task: graph processing. Many frameworks exist for
-distributed graph
+Running all Python code on clusters of machines would lead to sluggish
+un-optimal code, due to immense network overhead.  Instead, we
+concentrated our efforts on a common but difficult big data processing
+task: graph processing. Many frameworks exist for distributed graph
 processing~\cite{Malewicz:2010:PSL:1807167.1807184,Ching:2015:OTE:2824032.2824077,Kyrola:2012:GLG:2387880.2387884,Low:2012:DGF:2212351.2212354,Xin:2013:GRD:2484425.2484427,Gonzalez:2012:PDG:2387880.2387883},
-and many general frameworks exist which are used for graph
+and many general frameworks exist that are used for graph
 processing~\cite{Vavilapalli:2013:AHY:2523616.2523633,Zaharia:2012:RDD:2228298.2228301,Isard:2007:DDD:1272996.1273005,Murray:2013:NTD:2517349.2522738}.
 These frameworks vary in their complexity, but none are
 \textit{"accessible"} for programmers that lack relevant experience.
