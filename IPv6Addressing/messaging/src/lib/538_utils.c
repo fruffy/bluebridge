@@ -123,7 +123,6 @@ int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p
 	char s[INET6_ADDRSTRLEN];
 	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
 	print_debug("Sending to %s:%d", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
-	printNBytes(sendBuffer,20);
 	cookUDP(sockfd, sendBuffer, msgBlockSize, p, 5000);	
 /*	socklen_t slen = sizeof(struct sockaddr_in6);
 	if (sendto(sockfd,sendBuffer,msgBlockSize,0, p->ai_addr, slen) < 0) {
@@ -151,8 +150,7 @@ int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo
 	
 	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
 	print_debug("Inserting %u Pointer into packet header... %s:%d",p->ai_addrlen,s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );	
-	printf("Sending...\n");
-	printNBytes(sendBuffer, 30);
+	//printf("Sending...\n");
 /*	socklen_t slen = sizeof(struct sockaddr_in6);
 	if (sendto(sockfd,sendBuffer,msgBlockSize,0, p->ai_addr, slen) < 0) {
 		perror("ERROR writing to socket");
@@ -210,7 +208,7 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 
 	inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
 	print_debug("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
-	printNBytes(receiveBuffer, 50);
+	//printNBytes(receiveBuffer, 50);
 	return numbytes;
 }
 
@@ -222,12 +220,12 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 
 	int numbytes = 0;
 	socklen_t slen = sizeof(struct sockaddr_in6);
-	struct sockaddr_in6 sin;
+/*	struct sockaddr_in6 sin;
 	socklen_t len = sizeof(sin);
 		if (getsockname(sockfd, (struct sockaddr_in6 *)&sin, &len) == -1)
 		perror("getsockname");
 	else
-		printf("receiving on port number %d\n", ntohs(sin.sin6_port));
+		printf("receiving on port number %d\n", ntohs(sin.sin6_port));*/
 
 	memset(receiveBuffer, 0, msgBlockSize);
 	print_debug("Waiting for response...\n");

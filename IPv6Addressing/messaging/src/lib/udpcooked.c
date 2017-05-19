@@ -19,6 +19,7 @@
 // Includes some UDP data.
 #include "udpcooked.h"
 #include "538_utils.h"
+#include "debug.h"
 
 
 
@@ -37,7 +38,7 @@ int cookUDP (int sockfd, char * data, int datalen, struct addrinfo * p, int tmp_
       sa = (struct sockaddr_in6 *) ifa->ifa_addr;
       getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in6), addr,
       sizeof(addr), NULL, 0, NI_NUMERICHOST);
-      printf("Interface: %s\tAddress: %s\n", ifa->ifa_name, addr);
+      print_debug("Interface: %s\tAddress: %s\n", ifa->ifa_name, addr);
     }
   }
   char s[INET6_ADDRSTRLEN];
@@ -67,10 +68,15 @@ int cookUDP (int sockfd, char * data, int datalen, struct addrinfo * p, int tmp_
   dst_mac = allocate_ustrmem (6);
   ether_frame = allocate_ustrmem (IP_MAXPACKET);
 
-  interface = ifa->ifa_name;
+
   target = s;
   src_ip = addr;
-
+  //TODO: Hideousssssss, find better solution for local accesses.
+  if ((memcmp(((struct sockaddr_in6 *)p->ai_addr)->sin6_addr.s6_addr, sa->sin6_addr.s6_addr,6) == 0)) {
+    interface = "lo";
+  } else {
+    interface = ifa->ifa_name;
+  }
   dst_port = ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port);
   if (dst_port == 0 ) {
     dst_port = tmp_dst_port;
@@ -85,10 +91,10 @@ int cookUDP (int sockfd, char * data, int datalen, struct addrinfo * p, int tmp_
     if (ntohs(sin.sin6_port) != 0) {
       src_port = ntohs(sin.sin6_port);
     }
-    printf("port number %d\n", ntohs(sin.sin6_port));
+    print_debug("port number %d\n", ntohs(sin.sin6_port));
   }
 
-  printf("Interface %s, Destination IP %s, Source IP %s, Size %d\n", interface,target,src_ip, datalen);
+  print_debug("Interface %s, Destination IP %s, Source IP %s, Size %d\n", interface, target, src_ip, datalen);
 
   // Submit request for a socket descriptor to look up interface.
   if ((sd = socket (AF_INET6, SOCK_RAW, IPPROTO_RAW)) < 0) {
@@ -109,11 +115,11 @@ int cookUDP (int sockfd, char * data, int datalen, struct addrinfo * p, int tmp_
   memcpy (src_mac, ifr.ifr_hwaddr.sa_data, 6 * sizeof (uint8_t));
 
   // Report source MAC address to stdout.
-  printf ("MAC address for interface %s is ", interface);
-  for (i=0; i<5; i++) {
+  print_debug ("MAC address for interface %s is ", interface);
+/*  for (i=0; i<5; i++) {
     printf ("%02x:", src_mac[i]);
-  }
-  printf ("%02x\n", src_mac[5]);
+  }*/
+  print_debug ("%02x\n", src_mac[5]);
 
   // Find interface index from interface name and store index in
   // struct sockaddr_ll device, which will be used as an argument of sendto().
@@ -122,7 +128,7 @@ int cookUDP (int sockfd, char * data, int datalen, struct addrinfo * p, int tmp_
     perror ("if_nametoindex() failed to obtain interface index ");
     exit (EXIT_FAILURE);
   }
-  printf ("Index for interface %s is %i\n", interface, device.sll_ifindex);
+  print_debug("Index for interface %s is %i\n", interface, device.sll_ifindex);
 
   // Set destination MAC address: you need to fill this out
   dst_mac[0] = 0xff;

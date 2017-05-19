@@ -276,7 +276,7 @@ void print_times( uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* wri
 }
 
 int basicOperations( int sockfd, struct addrinfo * p) {
-	int num_iters = 1;
+	int num_iters = 100000;
 	uint64_t *alloc_latency = malloc(sizeof(uint64_t) * num_iters);
     assert(alloc_latency);
     memset(alloc_latency, 0, sizeof(uint64_t) * num_iters);

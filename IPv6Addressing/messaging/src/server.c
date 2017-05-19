@@ -165,32 +165,31 @@ void handleClientRequests(int sock_fd, char * receiveBuffer, struct in6_addr * i
 	char * splitResponse;
 	// Switch on the client command
 	if (memcmp(receiveBuffer, ALLOC_CMD,2) == 0) {
-		print_debug("******ALLOCATE******\n");
+		printf("******ALLOCATE******\n");
 		splitResponse = receiveBuffer+2;
 		providePointer(sock_fd, p);
 	} else if (memcmp(receiveBuffer, WRITE_CMD,2) == 0) {
 		splitResponse = receiveBuffer+2;
+		printf("******WRITE DATA: ");
 		if (DEBUG) {
-			printf("******WRITE DATA: ");
 			printNBytes((char *) ipv6Pointer, IPV6_SIZE);
 		}
 		writeMem(sock_fd, splitResponse, p, ipv6Pointer);
 	} else if (memcmp(receiveBuffer, GET_CMD,2) == 0) {
 		splitResponse = receiveBuffer+2;
-		print_debug("******GET DATA: ");
+		printf("******GET DATA: ");
 		// printNBytes((char *) ipv6Pointer,IPV6_SIZE);
 		getMem(sock_fd, p, ipv6Pointer);
 	} else if (memcmp(receiveBuffer, FREE_CMD,2) == 0) {
 		splitResponse = receiveBuffer+2;
+		printf("******FREE DATA: ");
 		if (DEBUG) {
-			printf("******FREE DATA: ");
 			printNBytes((char *) ipv6Pointer,IPV6_SIZE);
 		}
 		freeMem(sock_fd, p, ipv6Pointer);
 	} else if (memcmp(receiveBuffer, GET_ADDR_CMD,2) == 0) {
 		splitResponse = receiveBuffer+2;
-		print_debug("******GET ADDRESS: \n");
-		
+		printf("******GET ADDRESS: \n");
 		if (DEBUG) {
 			printf("Calling send address\n");
 			// printNBytes((char *) ipv6Pointer,IPV6_SIZE);
