@@ -25,6 +25,7 @@
 //		(server allocates memory address related to its assignment)
 //	5. Remove unneeded code and print statements
 //		Move all buffers to stack instead of heap.
+//		Check memory leaks
 //	6. Fix interactive mode and usability bugs
 //	7. Switch to raw socket packets (hope is to get rid of NDP requests)
 //	http://stackoverflow.com/questions/15702601/kernel-bypass-for-udp-and-tcp-on-linux-what-does-it-involve
@@ -276,7 +277,7 @@ void print_times( uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* wri
 }
 
 int basicOperations( int sockfd, struct addrinfo * p) {
-	int num_iters = 10;
+	int num_iters = 1;
 	uint64_t *alloc_latency = malloc(sizeof(uint64_t) * num_iters);
     assert(alloc_latency);
     memset(alloc_latency, 0, sizeof(uint64_t) * num_iters);
@@ -592,7 +593,7 @@ int main(int argc, char *argv[]) {
 	hints.ai_family = AF_INET6;
 	hints.ai_socktype = SOCK_DGRAM;
 
-	if ((rv = getaddrinfo(NULL, argv[2], &hints, &servinfo)) != 0) {
+	if ((rv = getaddrinfo(NULL, "0", &hints, &servinfo)) != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 		return 1;
 	}
@@ -607,9 +608,16 @@ int main(int argc, char *argv[]) {
 		setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
 		setsockopt(sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on));
 		setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
+
+		if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+			close(sockfd);
+			perror("client: bind");
+			continue;
+		}
 		break;
 	}
-
+	struct sockaddr_in6 *temp = (struct sockaddr_in6 *) p->ai_addr;
+	temp->sin6_port = htons(5000);
 	if(isAutoMode) {
 		basicOperations(sockfd, p);
 	} else {

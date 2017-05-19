@@ -72,8 +72,8 @@ def configureHosts(net):
         #                '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
         # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"./messaging/launchProxy.sh -i h' + str(hostNum) +
         #               '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
-        host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) +
-                      '\" -e \"./ndpproxy/ndppd -vvv -c ./tmp/config/ndp_conf.conf; bash\" &')
+        # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) +
+        #               '\" -e \"./ndpproxy/ndppd -vvv -c ./tmp/config/ndp_conf.conf; bash\" &')
         hostNum += 1
 
 
