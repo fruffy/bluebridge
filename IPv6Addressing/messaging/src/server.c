@@ -206,44 +206,6 @@ void handleClientRequests(int sock_fd, char * receiveBuffer, struct in6_addr * i
 	}
 }
 
-/*
- * TODO: explain
- * Binds to the next available address?
- * Need to bind to INADDR_ANY instead
- */
-struct addrinfo* bindSocket(struct addrinfo* p, struct addrinfo* servinfo, int* sockfd) {
-	int blocking = 0;
-	//Socket operator variables
-	const int on=1, off=0;
-
-	// loop through all the results and bind to the first we can
-	for (p = servinfo; p != NULL; p = p->ai_next) {
-		if ((*sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol))
-				== -1) {
-			perror("server: socket");
-			continue;
-		}
-
-		if (setsockopt(*sockfd, SOL_SOCKET, SO_REUSEADDR, &blocking, sizeof(int))
-				== -1) {
-			perror("setsockopt");
-			exit(1);
-		}
-		setsockopt(*sockfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
-		setsockopt(*sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on));
-		setsockopt(*sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
-
-		if (bind(*sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-			close(*sockfd);
-			perror("server: bind");
-			continue;
-		}
-
-		break;
-	}
-
-	return p;
-}
 
 /*
  * Main workhorse method. Parses command args and does setup.
@@ -274,30 +236,10 @@ int main(int argc, char *argv[]) {
 	// loop through all the results and bind to the first we can
 	p = bindSocket(p, servinfo, &sockfd);
 
-/*		if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-			close(sockfd);
-			perror("client: connect");
-			continue;
-		}
-*/
-
-	// Frees the memory allocated for servinfo (list of possible sockets)
-	//freeaddrinfo(servinfo);
-
-	// TODO: should free hints as well?
-	// -> not a pointer
-
-	// Check to make sure the server was able to bind
 	if (p == NULL) {
 		fprintf(stderr, "server: failed to bind\n");
 		exit(1);
 	}
-	// Listen on the socket with a queue size of BACKLOG
-/*	if (listen(sockfd, BACKLOG) == -1) {
-		perror("listen");
-		exit(1);
-	}*/
-
 
 	// Start waiting for connections
 	while (1) {

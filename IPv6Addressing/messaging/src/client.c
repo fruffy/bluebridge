@@ -12,7 +12,6 @@
 #define ANSI_COLOR_MAGENTA "\x1b[35m"
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
-
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //	1. Check correctness of pointer on server side, it should never segfault.
 //		(Ignore illegal operations)
@@ -586,14 +585,14 @@ int main(int argc, char *argv[]) {
 	if (argc <= 2) {
 		printf("Defaulting to standard values...\n");
 		argv[1] = "::1";
-		argv[2] = "5000";
+		argv[2] = "0";
 	}
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET6;
 	hints.ai_socktype = SOCK_DGRAM;
 
-	if ((rv = getaddrinfo(NULL, "0", &hints, &servinfo)) != 0) {
+	if ((rv = getaddrinfo(NULL, argv[2], &hints, &servinfo)) != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 		return 1;
 	}
@@ -607,17 +606,11 @@ int main(int argc, char *argv[]) {
 		}
 		setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
 		setsockopt(sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on));
-		setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
-
-		if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-			close(sockfd);
-			perror("client: bind");
-			continue;
-		}
 		break;
 	}
-	struct sockaddr_in6 *temp = (struct sockaddr_in6 *) p->ai_addr;
-	temp->sin6_port = htons(5000);
+	p = bindSocket(p, servinfo, &sockfd);
+/*	struct sockaddr_in6 *temp = (struct sockaddr_in6 *) p->ai_addr;
+	temp->sin6_port = htons(5001);*/
 	if(isAutoMode) {
 		basicOperations(sockfd, p);
 	} else {

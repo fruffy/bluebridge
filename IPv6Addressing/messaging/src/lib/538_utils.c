@@ -121,11 +121,10 @@ struct in6_addr * gen_fixed_IPv6Target(uint8_t rndHost) {
 int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p) {
 
 	char s[INET6_ADDRSTRLEN];
-
 	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
 	print_debug("Sending to %s:%d", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
 	printNBytes(sendBuffer,20);
-	cookUDP(sockfd, sendBuffer, msgBlockSize, p);	
+	cookUDP(sockfd, sendBuffer, msgBlockSize, p, 5000);	
 /*	socklen_t slen = sizeof(struct sockaddr_in6);
 	if (sendto(sockfd,sendBuffer,msgBlockSize,0, p->ai_addr, slen) < 0) {
 		perror("ERROR writing to socket");
@@ -159,7 +158,7 @@ int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo
 		perror("ERROR writing to socket");
 		return EXIT_FAILURE;
 	}*/
-	cookUDP(sockfd, sendBuffer, msgBlockSize, p);
+	cookUDP(sockfd, sendBuffer, msgBlockSize, p, 5000);
 	memset(sendBuffer, 0, msgBlockSize);
 	return EXIT_SUCCESS;
 }
@@ -223,10 +222,15 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 
 	int numbytes = 0;
 	socklen_t slen = sizeof(struct sockaddr_in6);
+	struct sockaddr_in6 sin;
+	socklen_t len = sizeof(sin);
+		if (getsockname(sockfd, (struct sockaddr_in6 *)&sin, &len) == -1)
+		perror("getsockname");
+	else
+		printf("receiving on port number %d\n", ntohs(sin.sin6_port));
 
 	memset(receiveBuffer, 0, msgBlockSize);
 	print_debug("Waiting for response...\n");
-
 	if ((numbytes = recvfrom(sockfd,receiveBuffer, msgBlockSize, 0, p->ai_addr,&slen)) == -1) {
 		perror("ERROR reading from socket");
 		exit(1);
@@ -262,4 +266,44 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
 	inet_ntop(AF_INET6,newAddr, s, sizeof s);
 	print_debug("IPv6 Pointer %s",s);
 	return *newAddr;
+}
+
+/*
+ * TODO: explain
+ * Binds to the next available address?
+ * Need to bind to INADDR_ANY instead
+ */
+struct addrinfo* bindSocket(struct addrinfo* p, struct addrinfo* servinfo, int* sockfd) {
+	int blocking = 0;
+	//Socket operator variables
+	const int on=1, off=0;
+
+	// loop through all the results and bind to the first we can
+	for (p = servinfo; p != NULL; p = p->ai_next) {
+		if ((*sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol))
+				== -1) {
+			perror("server: socket");
+			continue;
+		}
+
+		if (setsockopt(*sockfd, SOL_SOCKET, SO_REUSEADDR, &blocking, sizeof(int))
+				== -1) {
+			perror("setsockopt");
+			exit(1);
+		}
+		setsockopt(*sockfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
+		setsockopt(*sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on));
+		setsockopt(*sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
+		struct sockaddr_in6 *tempi = (struct sockaddr_in6 *) p->ai_addr;
+		 tempi->sin6_addr = in6addr_any;
+		if (bind(*sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+			close(*sockfd);
+			perror("server: bind");
+			continue;
+		}
+
+		break;
+	}
+
+	return p;
 }

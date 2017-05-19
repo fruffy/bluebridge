@@ -23,7 +23,7 @@
 
 
 
-int cookUDP (int sockfd, char * data, int datalen, struct addrinfo * p) {
+int cookUDP (int sockfd, char * data, int datalen, struct addrinfo * p, int tmp_dst_port) {
    
   struct ifaddrs *ifap, *ifa;
   struct sockaddr_in6 *sa;
@@ -72,15 +72,21 @@ int cookUDP (int sockfd, char * data, int datalen, struct addrinfo * p) {
   src_ip = addr;
 
   dst_port = ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port);
+  if (dst_port == 0 ) {
+    dst_port = tmp_dst_port;
+  }
   srand(time(NULL));
   //port_src = 5001 + (rand() % 60535);
   struct sockaddr_in6 sin;
   socklen_t len = sizeof(sin);
   if (getsockname(sockfd, (struct sockaddr_in6 *)&sin, &len) == -1)
       perror("getsockname");
-  else
+  else {
+    if (ntohs(sin.sin6_port) != 0) {
+      src_port = ntohs(sin.sin6_port);
+    }
     printf("port number %d\n", ntohs(sin.sin6_port));
-    src_port = ntohs(sin.sin6_port);
+  }
 
   printf("Interface %s, Destination IP %s, Source IP %s, Size %d\n", interface,target,src_ip, datalen);
 
@@ -130,7 +136,7 @@ int cookUDP (int sockfd, char * data, int datalen, struct addrinfo * p) {
   // Fill out hints for getaddrinfo().
   memset (&hints, 0, sizeof (hints));
   hints.ai_family = AF_INET6;
-  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_socktype = SOCK_DGRAM;
   hints.ai_flags = hints.ai_flags | AI_CANONNAME;
 
   // Resolve target using getaddrinfo().

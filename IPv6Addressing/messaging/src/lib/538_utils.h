@@ -12,7 +12,7 @@
 #include <assert.h>
 
 
-#define BLOCK_SIZE 1400 // max number of bytes we can get at once
+#define BLOCK_SIZE 1450 // max number of bytes we can get at once
 #define POINTER_SIZE sizeof(void*)
 #define IPV6_SIZE 16
 
@@ -42,6 +42,12 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 
 uint64_t getPointerFromIPv6(struct in6_addr addr);
 struct in6_addr getIPv6FromPointer(uint64_t pointer);
+/*
+ * TODO: explain
+ * Binds to the next available address?
+ * Need to bind to INADDR_ANY instead
+ */
+struct addrinfo* bindSocket(struct addrinfo* p, struct addrinfo* servinfo, int* sockfd);
 
 static inline uint64_t getns(void)
 {
