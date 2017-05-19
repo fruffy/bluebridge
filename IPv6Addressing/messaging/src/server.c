@@ -52,7 +52,7 @@ int providePointer(int sock_fd, struct addrinfo * p) {
 	memcpy(sendBuffer, "ACK:", sizeof("ACK:"));
 	size += sizeof("ACK:") - 1;
 	memcpy(sendBuffer+size, &ipv6Pointer, IPV6_SIZE); 
-	sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
+	sendUDPRaw(sock_fd, sendBuffer, BLOCK_SIZE, p);
 
 	print_debug("Allocated Pointer: %p -> %s\n",allocated, allocated);
 	free(sendBuffer);
@@ -80,7 +80,7 @@ int sendAddr(int sock_fd, struct addrinfo * p, char* receiveBuffer) {
 	size += sizeof("ACK:") - 1;
 	memcpy(sendBuffer+size, &ipv6Pointer, IPV6_SIZE); 
 
-	sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
+	sendUDPRaw(sock_fd, sendBuffer, BLOCK_SIZE, p);
 
 	free(sendBuffer);
 
@@ -109,7 +109,7 @@ int writeMem(int sock_fd, char * receiveBuffer, struct addrinfo * p, struct in6_
 	print_debug("Content preview (50 bytes): %.50s\n", (char *)pointer);
 	
 	memcpy(sendBuffer, "ACK", sizeof("ACK"));
-	sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
+	sendUDPRaw(sock_fd, sendBuffer, BLOCK_SIZE, p);
 	free(sendBuffer);
 
 	// TODO change to be meaningful, i.e., error message
@@ -128,7 +128,7 @@ int freeMem(int sock_fd, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
 	
 	free((void *) pointer);
 	memcpy(sendBuffer, "ACK", sizeof("ACK"));
-	sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
+	sendUDPRaw(sock_fd, sendBuffer, BLOCK_SIZE, p);
 	free(sendBuffer);
 	// TODO change to be meaningful, i.e., error message
 	return 0;
@@ -149,7 +149,7 @@ int getMem(int sock_fd, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
 	// Send the sendBuffer (entire BLOCK_SIZE) to sock_fd
 	// print_debug("Content length %lu will be delivered to client!\n", strlen((char *)pointer));
 	print_debug("Send UDP time\n");
-	sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
+	sendUDPRaw(sock_fd, sendBuffer, BLOCK_SIZE, p);
 
 	print_debug("Freeing send buffer\n");
 	free(sendBuffer);
@@ -198,7 +198,7 @@ void handleClientRequests(int sock_fd, char * receiveBuffer, struct in6_addr * i
 		sendAddr(sock_fd, p, splitResponse);
 	} else {
 		printf("Cannot match command!\n");
-		if (sendUDP(sock_fd, "Hello, world!", 13, p) == -1) {
+		if (sendUDPRaw(sock_fd, "Hello, world!", 13, p) == -1) {
 			perror("ERROR writing to socket");
 			exit(1);
 		}

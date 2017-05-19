@@ -123,13 +123,11 @@ int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p
 	char s[INET6_ADDRSTRLEN];
 	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
 	print_debug("Sending to %s:%d", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
-	cookUDP(sockfd, sendBuffer, msgBlockSize, p, 5000);	
-/*	socklen_t slen = sizeof(struct sockaddr_in6);
+	socklen_t slen = sizeof(struct sockaddr_in6);
 	if (sendto(sockfd,sendBuffer,msgBlockSize,0, p->ai_addr, slen) < 0) {
 		perror("ERROR writing to socket");
 		return EXIT_FAILURE;
-	}*/
-	
+	}	
 	memset(sendBuffer, 0, msgBlockSize);
 	return EXIT_SUCCESS;
 }
@@ -141,26 +139,52 @@ int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p
 int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr remotePointer) {
 	
 	char s[INET6_ADDRSTRLEN];
-	/*
-	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
-	print_debug("Previous pointer... %s:%d",s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );*/
-	
 	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), &remotePointer, sizeof(remotePointer));
 	p->ai_addrlen = sizeof(remotePointer);
-	
 	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
-	print_debug("Inserting %u Pointer into packet header... %s:%d",p->ai_addrlen,s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );	
-	//printf("Sending...\n");
-/*	socklen_t slen = sizeof(struct sockaddr_in6);
+	print_debug("Inserting %u Pointer, sending to... %s:%d",p->ai_addrlen,s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );	
+	socklen_t slen = sizeof(struct sockaddr_in6);
 	if (sendto(sockfd,sendBuffer,msgBlockSize,0, p->ai_addr, slen) < 0) {
 		perror("ERROR writing to socket");
 		return EXIT_FAILURE;
-	}*/
-	cookUDP(sockfd, sendBuffer, msgBlockSize, p, 5000);
+	}
 	memset(sendBuffer, 0, msgBlockSize);
 	return EXIT_SUCCESS;
 }
 
+/*
+ * Sends message to specified socket
+ * RAW version, we craft our own packet.
+ */
+int sendUDPRaw(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p) {
+
+	char dst_ip[INET6_ADDRSTRLEN];
+	int dst_port = ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port);
+	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), dst_ip, sizeof dst_ip);
+	print_debug("Sending to %s:%d", dst_ip,dst_port);
+	cookUDP(sockfd, (struct sockaddr_in6*) p->ai_addr, dst_port, sendBuffer, msgBlockSize);
+	memset(sendBuffer, 0, msgBlockSize);
+	return EXIT_SUCCESS;
+}
+
+/*
+ * Sends message to specified socket
+ * RAW version, we craft our own packet.
+ */
+//TODO Evaluate what variables and structures are actually needed here
+//TODO: Error handling
+int sendUDPIPv6Raw(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr remotePointer) {
+	
+	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), &remotePointer, sizeof(remotePointer));
+	p->ai_addrlen = sizeof(remotePointer);
+	char dst_ip[INET6_ADDRSTRLEN];
+	int dst_port = ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port);
+	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), dst_ip, sizeof dst_ip);
+	print_debug("Sending to %s:%d", dst_ip,dst_port);
+	cookUDP(sockfd, (struct sockaddr_in6*) p->ai_addr, dst_port, sendBuffer, msgBlockSize);
+	memset(sendBuffer, 0, msgBlockSize);
+	return EXIT_SUCCESS;
+}
 
 /*
  * Receives message from socket and also store the destination ip of the incoming packet

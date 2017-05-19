@@ -18,83 +18,61 @@
 // Need to specify destination MAC address.
 // Includes some UDP data.
 #include "udpcooked.h"
-#include "538_utils.h"
 #include "debug.h"
 
 
 
 
-int cookUDP (int sockfd, char * data, int datalen, struct addrinfo * p, int tmp_dst_port) {
+int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * data, int datalen) {
    
-  struct ifaddrs *ifap, *ifa;
-  struct sockaddr_in6 *sa;
-  char addr[INET6_ADDRSTRLEN];
 
-  getifaddrs (&ifap);
-  int i = 0;
-  for (ifa = ifap; i<2; ifa = ifa->ifa_next) {
-    if (ifa->ifa_addr->sa_family==AF_INET6) {
-      i++;
-      sa = (struct sockaddr_in6 *) ifa->ifa_addr;
-      getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in6), addr,
-      sizeof(addr), NULL, 0, NI_NUMERICHOST);
-      print_debug("Interface: %s\tAddress: %s\n", ifa->ifa_name, addr);
-    }
-  }
-  char s[INET6_ADDRSTRLEN];
-  inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
-  
-
-  // Interface to send packet through.
-  //strcpy (interface, "h2-eth0");
-  // Source IPv6 address: you need to fill this out
-  //strcpy (src_ip, "::1");
-
-  // Destination URL or IPv6 address: you need to fill this out
-  //strcpy (target, "0:0:0101:1234::");
   int status, frame_length, sd, bytes;
   struct ip6_hdr iphdr;
   struct udphdr udphdr;
   uint8_t *src_mac, *dst_mac, *ether_frame;
-  struct addrinfo hints, *res;
-  struct sockaddr_in6 *ipv6;
+  struct addrinfo hints;
   struct sockaddr_ll device;
   struct ifreq ifr;
-  void *tmp;
-  char *interface, *target, *src_ip;
-  int dst_port, src_port; 
+  char *interface;
+  char src_ip[INET6_ADDRSTRLEN];
+  char dst_ip[INET6_ADDRSTRLEN];
+
+  int src_port;
   // Allocate memory for various arrays.
   src_mac = allocate_ustrmem (6);
   dst_mac = allocate_ustrmem (6);
   ether_frame = allocate_ustrmem (IP_MAXPACKET);
-
-
-  target = s;
-  src_ip = addr;
-  //TODO: Hideousssssss, find better solution for local accesses.
-  if ((memcmp(((struct sockaddr_in6 *)p->ai_addr)->sin6_addr.s6_addr, sa->sin6_addr.s6_addr,6) == 0)) {
+  
+  struct ifaddrs *ifap, *ifa; 
+  struct sockaddr_in6 *sa; 
+ 
+  getifaddrs (&ifap); 
+  int i = 0; 
+  for (ifa = ifap; i<2; ifa = ifa->ifa_next) { 
+    if (ifa->ifa_addr->sa_family==AF_INET6) { 
+      i++; 
+      sa = (struct sockaddr_in6 *) ifa->ifa_addr; 
+      getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in6), src_ip, 
+      sizeof(src_ip), NULL, 0, NI_NUMERICHOST); 
+      print_debug("Interface: %s\tAddress: %s\n", ifa->ifa_name, src_ip); 
+    } 
+  } 
+  struct sockaddr_in6 sin;
+  socklen_t len = sizeof(sin);
+  if (getsockname(sockfd, (struct sockaddr *)&sin, &len) == -1) {
+    perror("getsockname");
+    return EXIT_FAILURE;
+  } else {
+    src_port = ntohs(sin.sin6_port);
+  }
+  if ((memcmp(dst_addr->sin6_addr.s6_addr, sa->sin6_addr.s6_addr,6) == 0)) {
     interface = "lo";
   } else {
     interface = ifa->ifa_name;
   }
-  dst_port = ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port);
-  if (dst_port == 0 ) {
-    dst_port = tmp_dst_port;
-  }
-  srand(time(NULL));
-  //port_src = 5001 + (rand() % 60535);
-  struct sockaddr_in6 sin;
-  socklen_t len = sizeof(sin);
-  if (getsockname(sockfd, (struct sockaddr_in6 *)&sin, &len) == -1)
-      perror("getsockname");
-  else {
-    if (ntohs(sin.sin6_port) != 0) {
-      src_port = ntohs(sin.sin6_port);
-    }
-    print_debug("port number %d\n", ntohs(sin.sin6_port));
-  }
+  inet_ntop(AF_INET6, dst_addr->sin6_addr.s6_addr, dst_ip, sizeof dst_ip);
 
-  print_debug("Interface %s, Destination IP %s, Source IP %s, Size %d\n", interface, target, src_ip, datalen);
+  print_debug("Interface %s, Source IP %s, Source Port %d, Destination IP %s, Destination Port %d, Size %d", interface, src_ip, src_port, dst_ip, dst_port, datalen);
 
   // Submit request for a socket descriptor to look up interface.
   if ((sd = socket (AF_INET6, SOCK_RAW, IPPROTO_RAW)) < 0) {
@@ -145,20 +123,6 @@ int cookUDP (int sockfd, char * data, int datalen, struct addrinfo * p, int tmp_
   hints.ai_socktype = SOCK_DGRAM;
   hints.ai_flags = hints.ai_flags | AI_CANONNAME;
 
-  // Resolve target using getaddrinfo().
-  if ((status = getaddrinfo (target, NULL, &hints, &res)) != 0) {
-    fprintf (stderr, "getaddrinfo() failed: %s\n", gai_strerror (status));
-    exit (EXIT_FAILURE);
-  }
-  ipv6 = (struct sockaddr_in6 *) res->ai_addr;
-  tmp = &(ipv6->sin6_addr);
-  if (inet_ntop (AF_INET6, tmp, target, INET6_ADDRSTRLEN) == NULL) {
-    status = errno;
-    fprintf (stderr, "inet_ntop() failed.\nError message: %s", strerror (status));
-    exit (EXIT_FAILURE);
-  }
-  freeaddrinfo (res);
-
   // Fill out sockaddr_ll.
   device.sll_family = AF_PACKET;
   memcpy (device.sll_addr, src_mac, 6 * sizeof (uint8_t));
@@ -185,7 +149,7 @@ int cookUDP (int sockfd, char * data, int datalen, struct addrinfo * p, int tmp_
   }
 
   // Destination IPv6 address (128 bits)
-  if ((status = inet_pton (AF_INET6, target, &(iphdr.ip6_dst))) != 1) {
+  if ((status = inet_pton (AF_INET6, dst_ip, &(iphdr.ip6_dst))) != 1) {
     fprintf (stderr, "inet_pton() failed.\nError message: %s", strerror (status));
     exit (EXIT_FAILURE);
   }
@@ -202,7 +166,7 @@ int cookUDP (int sockfd, char * data, int datalen, struct addrinfo * p, int tmp_
   udphdr.len = htons (UDP_HDRLEN + datalen);
 
   // UDP checksum (16 bits)
-  udphdr.check = udp6_checksum (iphdr, udphdr, data, datalen);
+  udphdr.check = udp6_checksum (iphdr, udphdr, (uint8_t *) data, datalen);
 
   // Fill out ethernet frame header.
 
@@ -244,15 +208,13 @@ int cookUDP (int sockfd, char * data, int datalen, struct addrinfo * p, int tmp_
   close (sd);
 
   // Free allocated memory.
-/*  free (src_mac);
+  free (src_mac);
   free (dst_mac);
-  free (data);
   free (ether_frame);
+  /*free (src_ip);
   free (interface);
-  free (target);
-  free (src_ip);*/
-  //free (dst_ip);
-
+  free (data);
+  free (dst_ip);*/
   return (EXIT_SUCCESS);
 }
 

@@ -57,7 +57,7 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 	
 	memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
 
-	sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
+	sendUDPRaw(sockfd, sendBuffer,BLOCK_SIZE, p);
 	// Wait to receive a message from the server
 	int numbytes = receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
 	// print_debug("Extracted: %p from server", (void *)(*ipv6Pointer).s6_addr); // DO NOT REMOVE NEEDED FOR NDPPROXY
@@ -90,7 +90,7 @@ struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
 		// Not successful so we send another message?
 		memcpy(sendBuffer, "What's up?", sizeof("What's up?"));
 		//sendMsg(sockfd, sendBuffer, sizeof("What's up?"));
-		sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
+		sendUDPRaw(sockfd, sendBuffer,BLOCK_SIZE, p);
 
 
 		// TODO: why do we return 0? Isn't there a better number 
@@ -131,7 +131,7 @@ int writeToMemory(int sockfd, struct addrinfo * p, char * payload,  struct in6_a
 		printNBytes((char*) toPointer->s6_addr, IPV6_SIZE);
 	}
 
-	sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
+	sendUDPIPv6Raw(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
 	receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
 	free(sendBuffer);
 	free(receiveBuffer);
@@ -161,7 +161,7 @@ int releaseMemory(int sockfd, struct addrinfo * p,  struct in6_addr * toPointer)
 	}
 
 	// Send message
-	sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
+	sendUDPIPv6Raw(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
 
 	// Receive response
 	receiveUDP(sockfd, receiveBuffer,BLOCK_SIZE, p);
@@ -194,7 +194,7 @@ char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 	}
 
 	// Send message
-	sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
+	sendUDPIPv6Raw(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
 	// Receive response
 	print_debug("Now waiting")
 	receiveUDP(sockfd, receiveBuffer,BLOCK_SIZE, p);
@@ -276,7 +276,7 @@ void print_times( uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* wri
 }
 
 int basicOperations( int sockfd, struct addrinfo * p) {
-	int num_iters = 100000;
+	int num_iters = 10;
 	uint64_t *alloc_latency = malloc(sizeof(uint64_t) * num_iters);
     assert(alloc_latency);
     memset(alloc_latency, 0, sizeof(uint64_t) * num_iters);
@@ -585,14 +585,14 @@ int main(int argc, char *argv[]) {
 	if (argc <= 2) {
 		printf("Defaulting to standard values...\n");
 		argv[1] = "::1";
-		argv[2] = "0";
+		argv[2] = "5000";
 	}
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET6;
 	hints.ai_socktype = SOCK_DGRAM;
 
-	if ((rv = getaddrinfo(NULL, argv[2], &hints, &servinfo)) != 0) {
+	if ((rv = getaddrinfo(NULL, "0", &hints, &servinfo)) != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 		return 1;
 	}
@@ -609,8 +609,9 @@ int main(int argc, char *argv[]) {
 		break;
 	}
 	p = bindSocket(p, servinfo, &sockfd);
-/*	struct sockaddr_in6 *temp = (struct sockaddr_in6 *) p->ai_addr;
-	temp->sin6_port = htons(5001);*/
+	struct sockaddr_in6 *temp = (struct sockaddr_in6 *) p->ai_addr;
+	temp->sin6_port = htons(strtol(argv[2], (char **)NULL, 10));
+	printf("%d\n",ntohs(temp->sin6_port));
 	if(isAutoMode) {
 		basicOperations(sockfd, p);
 	} else {
