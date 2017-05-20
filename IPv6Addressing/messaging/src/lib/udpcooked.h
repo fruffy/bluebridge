@@ -38,7 +38,6 @@
 #include <linux/if_packet.h>  // struct sockaddr_ll (see man 7 packet)
 #include <net/ethernet.h>
 #include <ifaddrs.h>
-
 #include <errno.h>            // errno, perror()
 
 // Define some constants.

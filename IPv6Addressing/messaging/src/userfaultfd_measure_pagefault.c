@@ -93,7 +93,7 @@ struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer) 
     return retVal;
 }
 
-char * getMemory(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
+char * getMemoryMod(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
     char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
     char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 
@@ -290,7 +290,7 @@ static void *handler(void *arg)
                 //      a. Prepare packet, send to DS, receive IPv6 address back
 
                 // 2. Get stuff from the remote server
-                //      a. getMemory() from client.c
+                //      a. getMemoryMod() from client.c
                 struct in6_addr remoteMachine;
 
                 if (addr_map_in6[index] == NULL) {
@@ -311,7 +311,7 @@ static void *handler(void *arg)
                     print_debug("Remote Machine is... %s\n", s);
                 }
                 second_rtt_start[i] = getns();
-                char* val = getMemory(sockfd_server, p_server, &remoteMachine);
+                char* val = getMemoryMod(sockfd_server, p_server, &remoteMachine);
                 second_rtt_end[i] = getns();
                 
                 struct uffdio_copy copy;
@@ -383,7 +383,7 @@ EXIT:
     return NULL;
 }
 
-struct in6_addr allocateMem(int sockfd, struct addrinfo * p) {
+struct in6_addr allocateMemMod(int sockfd, struct addrinfo * p) {
     char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
     char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 
@@ -532,10 +532,10 @@ int main(int argc, char **argv)
         if (remote) {
             // Allocate remote memory
             if (directService) {
-                addr_map_int[i] = getPointerFromIPv6(allocateMem(sockfd_server, p_server));
+                addr_map_int[i] = getPointerFromIPv6(allocateMemMod(sockfd_server, p_server));
             } else {
                 struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-                struct in6_addr temp = allocateMem(sockfd_server, p_server);
+                struct in6_addr temp = allocateMemMod(sockfd_server, p_server);
 
                 memcpy(remotePointer, &temp, IPV6_SIZE);
                 addr_map_in6[i] = remotePointer;

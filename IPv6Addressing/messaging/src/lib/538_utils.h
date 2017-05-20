@@ -12,7 +12,7 @@
 #include <assert.h>
 
 
-#define BLOCK_SIZE 1450 // max number of bytes we can get at once
+#define BLOCK_SIZE 4096 // max number of bytes we can get at once
 #define POINTER_SIZE sizeof(void*)
 #define IPV6_SIZE 16
 

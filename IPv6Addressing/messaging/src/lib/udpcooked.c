@@ -26,26 +26,27 @@
 int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * data, int datalen) {
    
 
-  int status, frame_length, sd, bytes;
+  int status, frame_length, sd;
   struct ip6_hdr iphdr;
   struct udphdr udphdr;
   uint8_t *src_mac, *dst_mac, *ether_frame;
   struct addrinfo hints;
   struct sockaddr_ll device;
   struct ifreq ifr;
-  char *interface;
+  struct ifaddrs *ifap, *ifa = NULL; 
+  struct sockaddr_in6 *sa; 
   char src_ip[INET6_ADDRSTRLEN];
   char dst_ip[INET6_ADDRSTRLEN];
+  char * interface = malloc(50);
+
 
   int src_port;
   // Allocate memory for various arrays.
   src_mac = allocate_ustrmem (6);
   dst_mac = allocate_ustrmem (6);
   ether_frame = allocate_ustrmem (IP_MAXPACKET);
-  
-  struct ifaddrs *ifap, *ifa; 
-  struct sockaddr_in6 *sa; 
  
+  //TODO: Use config file instead. Avoid memory leaks
   getifaddrs (&ifap); 
   int i = 0; 
   for (ifa = ifap; i<2; ifa = ifa->ifa_next) { 
@@ -54,26 +55,27 @@ int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * dat
       sa = (struct sockaddr_in6 *) ifa->ifa_addr; 
       getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in6), src_ip, 
       sizeof(src_ip), NULL, 0, NI_NUMERICHOST); 
-      print_debug("Interface: %s\tAddress: %s\n", ifa->ifa_name, src_ip); 
+      print_debug("Interface: %s\tAddress: %s", ifa->ifa_name, src_ip); 
     } 
-  } 
+  }
+  if ((memcmp(dst_addr->sin6_addr.s6_addr, sa->sin6_addr.s6_addr,6) == 0)) {
+    strcpy(interface,"lo");
+  } else {
+    strcpy(interface,ifa->ifa_name);
+  }
+
   struct sockaddr_in6 sin;
   socklen_t len = sizeof(sin);
   if (getsockname(sockfd, (struct sockaddr *)&sin, &len) == -1) {
     perror("getsockname");
+    free(interface);
     return EXIT_FAILURE;
   } else {
     src_port = ntohs(sin.sin6_port);
   }
-  if ((memcmp(dst_addr->sin6_addr.s6_addr, sa->sin6_addr.s6_addr,6) == 0)) {
-    interface = "lo";
-  } else {
-    interface = ifa->ifa_name;
-  }
   inet_ntop(AF_INET6, dst_addr->sin6_addr.s6_addr, dst_ip, sizeof dst_ip);
 
   print_debug("Interface %s, Source IP %s, Source Port %d, Destination IP %s, Destination Port %d, Size %d", interface, src_ip, src_port, dst_ip, dst_port, datalen);
-
   // Submit request for a socket descriptor to look up interface.
   if ((sd = socket (AF_INET6, SOCK_RAW, IPPROTO_RAW)) < 0) {
     perror ("socket() failed to get socket descriptor for using ioctl() ");
@@ -93,11 +95,13 @@ int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * dat
   memcpy (src_mac, ifr.ifr_hwaddr.sa_data, 6 * sizeof (uint8_t));
 
   // Report source MAC address to stdout.
-  print_debug ("MAC address for interface %s is ", interface);
-/*  for (i=0; i<5; i++) {
+  if (DEBUG) {
+    printf ("[DEBUG] MAC address for interface %s is ", interface);
+    for (i=0; i<5; i++) {
     printf ("%02x:", src_mac[i]);
-  }*/
-  print_debug ("%02x\n", src_mac[5]);
+    }
+    printf ("%02x\n", src_mac[5]);
+  }
 
   // Find interface index from interface name and store index in
   // struct sockaddr_ll device, which will be used as an argument of sendto().
@@ -106,16 +110,16 @@ int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * dat
     perror ("if_nametoindex() failed to obtain interface index ");
     exit (EXIT_FAILURE);
   }
-  print_debug("Index for interface %s is %i\n", interface, device.sll_ifindex);
+  print_debug("Index for interface %s is %i", interface, device.sll_ifindex);
 
   // Set destination MAC address: you need to fill this out
-  dst_mac[0] = 0xff;
+/*  dst_mac[0] = 0xff;
   dst_mac[1] = 0xff;
   dst_mac[2] = 0xff;
   dst_mac[3] = 0xff;
   dst_mac[4] = 0xff;
-  dst_mac[5] = 0xff;
-
+  dst_mac[5] = 0xff;*/
+  memset(dst_mac, 15, 6);
 
   // Fill out hints for getaddrinfo().
   memset (&hints, 0, sizeof (hints));
@@ -200,7 +204,7 @@ int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * dat
   }
 
   // Send ethernet frame to socket.
-  if ((bytes = sendto (sd, ether_frame, frame_length, 0, (struct sockaddr *) &device, sizeof (device))) <= 0) {
+  if ((sendto (sd, ether_frame, frame_length, 0, (struct sockaddr *) &device, sizeof (device))) <= 0) {
     perror ("sendto() failed");
     exit (EXIT_FAILURE);
   }
@@ -211,18 +215,16 @@ int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * dat
   free (src_mac);
   free (dst_mac);
   free (ether_frame);
-  /*free (src_ip);
-  free (interface);
-  free (data);
-  free (dst_ip);*/
+  free(interface);
+/*  free (ifap); 
+  free(ifa); 
+  free(sa);*/
   return (EXIT_SUCCESS);
 }
 
 // Computing the internet checksum (RFC 1071).
 // Note that the internet checksum does not preclude collisions.
-uint16_t
-checksum (uint16_t *addr, int len)
-{
+uint16_t checksum (uint16_t *addr, int len) {
   int count = len;
   register uint32_t sum = 0;
   uint16_t answer = 0;
@@ -252,9 +254,7 @@ checksum (uint16_t *addr, int len)
 }
 
 // Build IPv6 UDP pseudo-header and call checksum function (Section 8.1 of RFC 2460).
-uint16_t
-udp6_checksum (struct ip6_hdr iphdr, struct udphdr udphdr, uint8_t *payload, int payloadlen)
-{
+uint16_t udp6_checksum (struct ip6_hdr iphdr, struct udphdr udphdr, uint8_t *payload, int payloadlen) {
   char buf[IP_MAXPACKET];
   char *ptr;
   int chksumlen = 0;

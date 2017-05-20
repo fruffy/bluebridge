@@ -212,7 +212,7 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 	msg.msg_controllen = sizeof(msg_control);
 	msg.msg_flags = 0;
 
-	print_debug("Waiting for response...\n");
+	print_debug("Waiting for response...");
 	memset(receiveBuffer, 0, msgBlockSize);
 	numbytes = recvmsg(sockfd, &msg, 0);
 	struct in6_pktinfo * in6_pktinfo;
@@ -231,7 +231,7 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 	}
 
 	inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
-	print_debug("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
+	print_debug("Got message from %s:%d", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
 	//printNBytes(receiveBuffer, 50);
 	return numbytes;
 }
@@ -244,22 +244,15 @@ int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrin
 
 	int numbytes = 0;
 	socklen_t slen = sizeof(struct sockaddr_in6);
-/*	struct sockaddr_in6 sin;
-	socklen_t len = sizeof(sin);
-		if (getsockname(sockfd, (struct sockaddr_in6 *)&sin, &len) == -1)
-		perror("getsockname");
-	else
-		printf("receiving on port number %d\n", ntohs(sin.sin6_port));*/
-
 	memset(receiveBuffer, 0, msgBlockSize);
-	print_debug("Waiting for response...\n");
+	print_debug("Waiting for response...");
 	if ((numbytes = recvfrom(sockfd,receiveBuffer, msgBlockSize, 0, p->ai_addr,&slen)) == -1) {
 		perror("ERROR reading from socket");
 		exit(1);
 	}
 	char s[INET6_ADDRSTRLEN];
 	inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
-	print_debug("Got message from %s:%d \n", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
+	print_debug("Got message from %s:%d", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
 
 	return numbytes;
 }

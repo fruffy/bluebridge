@@ -3,12 +3,12 @@ srcDir = src
 objDir = obj
 binDir = bin
 libDir = lib
-app := client server userfaultfd_measure_pagefault
+app := server userfaultfd_measure_pagefault testing
 
 
 CC = gcc
 #CFlags += -c -Wextra -Werror -Wall -g3
-CFlags += -c -Wextra -Wall -g3
+CFlags += -c -Wextra -Wall -g3 -std=gnu11
 LDFlags := -lpcap -pthread -lm
 
 sources := $(shell find "$(srcDir)/$(libDir)" -name '*.$(srcExt)')

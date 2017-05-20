@@ -66,7 +66,7 @@ def configureHosts(net):
         #               '-eth0.accept_ra=0')
         # host.cmdPrint('sysctl -w net.ipv6.conf.h' + str(hostNum) +
         #               '-eth0.forwarding=1')
-        # host.cmdPrint('ifconfig h' + str(hostNum) +'-eth0 mtu 5000')
+        host.cmdPrint('ifconfig h' + str(hostNum) + '-eth0 mtu 9000')
 
         # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"valgrind ./messaging/bin/ndpproxy -i h' + str(hostNum) +
         #                '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
@@ -96,8 +96,7 @@ def run():
     info('Private Directories:', directories, '\n')
     configureHosts(net)
     net.startTerms()
-    # switch = net.switch(name=('s1'))
-    # switch.cmdPrint('ifconfig s1 mtu 5000')
+   
     # switch.cmdPrint('ifconfig -a')
     # switch = net.switch(name=('s1'))
     # switch.cmdPrint('ip -6 route add local 0:0:01' +
@@ -114,8 +113,10 @@ def run():
     # Our current "switch"
     hostNum = 3
     i = 1
+    switch = net.switch(name=('s1'))
     while i <= hostNum:
         os.system("ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=0:0:10" + str(i) + "::/48,priority=1,actions=output:" + str(i))
+        os.system('ifconfig s1-eth' + str(i) + ' mtu 9000')
         i=i + 1
     os.system("ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=ff02::1:ff00:0,priority=1,actions=output:flood")
 
