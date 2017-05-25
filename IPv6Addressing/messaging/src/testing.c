@@ -8,7 +8,7 @@
 #define ANSI_COLOR_MAGENTA "\x1b[35m"
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
-const int NUM_ITERATIONS = 10;
+const int NUM_ITERATIONS = 1000;
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //	1. Check correctness of pointer on server side, it should never segfault.
@@ -17,19 +17,14 @@ const int NUM_ITERATIONS = 10;
 //		-> Should be very efficient
 //		-> Judy array insert and delete or hashtable?
 //	2. Implement userfaultd on the client side
-//	3. Integrate functional ndp proxy server into the server program
+//  3. We have nasty memory leaks that are extremely low level ()
 //	4. Implement IP subnet state awareness
 //		(server allocates memory address related to its assignment)
 //	5. Remove unneeded code and print statements
 //		Move all buffers to stack instead of heap.
 //		Check memory leaks
-//	6. Fix interactive mode and usability bugs
-//	7. Switch to raw socket packets (hope is to get rid of NDP requests)
-//	http://stackoverflow.com/questions/15702601/kernel-bypass-for-udp-and-tcp-on-linux-what-does-it-involve
-//	https://austinmarton.wordpress.com/2011/09/14/sending-raw-ethernet-packets-from-a-specific-interface-in-c-on-linux/
 //	8. Integrate Mihir's asynchronous code and use raw linux threading:
 //		http://nullprogram.com/blog/2015/05/15/
-//	9. Test INADDR_ANY to see if socket will accept any incoming destination IP address
 ///////////////////////////////////////////////////////////////////////////////
 //To add the current correct route
 //sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo
@@ -41,7 +36,7 @@ struct LinkedPointer {
 
 
 
-int basicOperations( int sockfd, struct addrinfo * p) {
+void basicOperations( int sockfd, struct addrinfo * p) {
 	uint64_t *alloc_latency = malloc(sizeof(uint64_t) * NUM_ITERATIONS);
     assert(alloc_latency);
     memset(alloc_latency, 0, sizeof(uint64_t) * NUM_ITERATIONS);
@@ -63,14 +58,14 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 	struct LinkedPointer * nextPointer = rootPointer;
 	//init the root element
 	nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
-	nextPointer->AddrString = allocateMem(sockfd, p);
+	nextPointer->AddrString = allocateRemoteMem(sockfd, p);
 	srand(time(NULL));
 	for (i = 0; i < NUM_ITERATIONS; i++) {
 		nextPointer = nextPointer->Pointer;
 		nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
 
 		uint64_t start = getns();
-		nextPointer->AddrString = allocateMem(sockfd, p);
+		nextPointer->AddrString = allocateRemoteMem(sockfd, p);
 		alloc_latency[i] = getns() - start;
 	}
 	// don't point to garbage
@@ -86,22 +81,22 @@ int basicOperations( int sockfd, struct addrinfo * p) {
 		struct in6_addr remoteMemory = nextPointer->AddrString;
 		print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
 		print_debug("Creating payload");
-		char * payload = gen_rdm_bytestream(BLOCK_SIZE);
+		unsigned char * payload = gen_rdm_bytestream(BLOCK_SIZE);
 
 		uint64_t wStart = getns();
-		writeToMemory(sockfd, p, payload, &remoteMemory);
+		writeRemoteMem(sockfd, p, (char *) payload, &remoteMemory);
 		write_latency[i - 1] = getns() - wStart;
 		free(payload);
 		uint64_t rStart = getns();
-		char * test = getMemory(sockfd, p, &remoteMemory);
+		char * test = getRemoteMem(sockfd, p, &remoteMemory);
 		read_latency[i - 1] = getns() - rStart;
 
 		print_debug("Results of memory store: %.50s", test);
 		
 		uint64_t fStart = getns();
-		releaseMemory(sockfd, p, &remoteMemory);
+		freeRemoteMem(sockfd, p, &remoteMemory);
 		free_latency[i-1] = getns() - fStart;
-
+		free(payload);
 		free(test);
 		nextPointer = nextPointer->Pointer;
 		i++;
@@ -128,7 +123,7 @@ struct PointerMap {
 /*
  * Interactive structure for debugging purposes
  */
-int interactiveMode( int sockfd,  struct addrinfo * p) {
+void interactiveMode( int sockfd,  struct addrinfo * p) {
 	long unsigned int len = 200;
 	char input[len];
 	char * localData;
@@ -153,8 +148,8 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 			getLine("Specify a number of address or press enter for one.\n", input, sizeof(input));
 
 			if (strcmp("", input) == 0) {
-				printf("Calling allocateMem\n");				
-				struct in6_addr remoteMemory = allocateMem(sockfd, p);
+				printf("Calling allocateRemoteMem\n");				
+				struct in6_addr remoteMemory = allocateRemoteMem(sockfd, p);
 				inet_ntop(p->ai_family,(struct sockaddr *) &remoteMemory.s6_addr, s, sizeof s);
 				printf("Got this pointer from call%s\n", s);
 				memcpy(&remotePointers[count++], &remoteMemory, sizeof(remoteMemory));
@@ -163,8 +158,8 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 				printf("Received %d as input\n", num);
 				int j; 
 				for (j = 0; j < num; j++) {
-					printf("Calling allocateMem\n");
-					struct in6_addr remoteMemory = allocateMem(sockfd, p);					
+					printf("Calling allocateRemoteMem\n");
+					struct in6_addr remoteMemory = allocateRemoteMem(sockfd, p);					
 					inet_ntop(p->ai_family,(struct sockaddr *) &remoteMemory.s6_addr, s, sizeof s);
 					printf("Got this pointer from call%s\n", s);
 					printf("Creating pointer to remote memory address\n");
@@ -188,7 +183,7 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 					if (memcmp(&remotePointers[i].s6_addr, lazyZero, IPV6_SIZE) != 0) {
 						inet_ntop(p->ai_family,(struct sockaddr *) &remotePointers[i].s6_addr, s, sizeof s);
 						printf("Using pointer %s to read\n", s);
-						localData = getMemory(sockfd, p, &remotePointers[i]);
+						localData = getRemoteMem(sockfd, p, &remotePointers[i]);
 						printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
 					}
 				}
@@ -199,7 +194,7 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 				inet_pton(AF_INET6, input, &pointer);
 				inet_ntop(p->ai_family,(struct sockaddr *) &pointer.s6_addr, s, sizeof s);
 				printf("Reading from this pointer %s\n", s);
-				localData = getMemory(sockfd, p, &pointer);
+				localData = getRemoteMem(sockfd, p, &pointer);
 				printf(ANSI_COLOR_CYAN "Retrieved Data (first 80 bytes):\n");
 				printf("****************************************\n");
 				printf("\t%.*s\t\n",80, localData);
@@ -219,15 +214,15 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 						getLine("Please enter your data:\n", input, sizeof(input));
 						if (strcmp("", input) == 0) {
 							printf("Writing random bytes\n");
-							char * payload = gen_rdm_bytestream(BLOCK_SIZE);
-							writeToMemory(sockfd, p, payload, &remotePointers[i]);
+							unsigned char * payload = gen_rdm_bytestream(BLOCK_SIZE);
+							writeRemoteMem(sockfd, p, (char*) payload, &remotePointers[i]);
 						} else {
 							printf(ANSI_COLOR_MAGENTA "Writing:\n");
 							printf("****************************************\n");
 							printf("\t%.*s\t\n",80, input);
 							printf("****************************************\n");
 							printf(ANSI_COLOR_RESET);
-							writeToMemory(sockfd, p, input, &remotePointers[i]);	
+							writeRemoteMem(sockfd, p, input, &remotePointers[i]);	
 						}
 					}
 				}
@@ -242,11 +237,11 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 				getLine("Please enter your data:\n", input, sizeof(input));
 				if (strcmp("", input) == 0) {
 					printf("Writing random bytes\n");
-					char * payload = gen_rdm_bytestream(BLOCK_SIZE);
-					writeToMemory(sockfd, p, payload, &remotePointers[i]);
+					unsigned char * payload = gen_rdm_bytestream(BLOCK_SIZE);
+					writeRemoteMem(sockfd, p, (char*) payload, &remotePointers[i]);
 				} else {
 					printf("Writing: %s\n", input);
-					writeToMemory(sockfd, p, input, &remotePointers[i]);	
+					writeRemoteMem(sockfd, p, input, &remotePointers[i]);	
 				}
 			}
 		} else if (strcmp("M", input) == 0) {
@@ -262,7 +257,7 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 						getLine("Please enter your migration machine:\n", input, sizeof(input));
 						if (atoi(input) <= NUM_HOSTS) {
 							printf("Migrating\n");
-							migrate(sockfd, p, &remotePointers[i], atoi(input));
+							migrateRemoteMem(sockfd, p, &remotePointers[i], atoi(input));
 						} else {
 							printf("FAILED\n");	
 						}
@@ -279,7 +274,7 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 				getLine("Please enter your migration machine:\n", input, sizeof(input));
 				if (atoi(input) <= NUM_HOSTS) {
 					printf("Migrating\n");
-					migrate(sockfd, p, &pointer, atoi(input));
+					migrateRemoteMem(sockfd, p, &pointer, atoi(input));
 				} else {
 					printf("FAILED\n");	
 				}
@@ -293,7 +288,7 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 					if (memcmp(&remotePointers[i].s6_addr, lazyZero, IPV6_SIZE) != 0) {
 						inet_ntop(p->ai_family,(struct sockaddr *) &remotePointers[i].s6_addr, s, sizeof s);
 						printf("Freeing pointer %s\n", s);
-						releaseMemory(sockfd, p, &remotePointers[i]);
+						freeRemoteMem(sockfd, p, &remotePointers[i]);
 						memset(remotePointers[i].s6_addr,0, IPV6_SIZE);
 					}
 				}	
@@ -303,7 +298,7 @@ int interactiveMode( int sockfd,  struct addrinfo * p) {
 				struct in6_addr pointer;
 				inet_pton(AF_INET6, input, &pointer);
 				inet_ntop(p->ai_family,(struct sockaddr *) &pointer.s6_addr, s, sizeof s);
-				printf("Freeing pointer%s\n", s);				releaseMemory(sockfd, p, &pointer);
+				printf("Freeing pointer%s\n", s);				freeRemoteMem(sockfd, p, &pointer);
 				for (i = 0; i < 100; i++) {
 					if (memcmp(&remotePointers[i].s6_addr, lazyZero, IPV6_SIZE) != 0) {
 						memset(remotePointers[i].s6_addr,0, IPV6_SIZE);
