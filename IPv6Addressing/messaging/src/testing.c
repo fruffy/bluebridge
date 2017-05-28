@@ -8,7 +8,7 @@
 #define ANSI_COLOR_MAGENTA "\x1b[35m"
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
-const int NUM_ITERATIONS = 1000;
+const int NUM_ITERATIONS = 10000;
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //	1. Check correctness of pointer on server side, it should never segfault.
@@ -86,7 +86,6 @@ void basicOperations( int sockfd, struct addrinfo * p) {
 		uint64_t wStart = getns();
 		writeRemoteMem(sockfd, p, (char *) payload, &remoteMemory);
 		write_latency[i - 1] = getns() - wStart;
-		free(payload);
 		uint64_t rStart = getns();
 		char * test = getRemoteMem(sockfd, p, &remoteMemory);
 		read_latency[i - 1] = getns() - rStart;
