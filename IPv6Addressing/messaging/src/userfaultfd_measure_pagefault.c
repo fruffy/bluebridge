@@ -359,6 +359,12 @@ EXIT:
     return NULL;
 }
 
+/* 
+ * A hack so the centralized directory service test will work.
+ * I need to know the machine number in order to send the getRemoteAddr
+ * message. Currently only grabs one byte so it won't work with 
+ * more than 9 servers. 
+ */
 int getMachineFromIPv6(struct in6_addr addr) {
     int machine = 0;
     memcpy(&machine, addr.s6_addr+5, 1);
