@@ -1,14 +1,16 @@
 /*
- ** client.c -- a stream socket client demo
+ ** client_lib.c -- 
  */
+
+// TODO: Add a get remote machine method (needs to get the remote machine which holds a specific address.)
 
 #include "client_lib.h"
 
 /*
  * Allocate memory from a remote machine.
  */
-//TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
-//TODO: Especially for all send and receive calls
+// TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
+// TODO: Especially for all send and receive calls
 struct in6_addr allocateRemoteMem(int sockfd, struct addrinfo * p) {
 	char  sendBuffer[BLOCK_SIZE];
 	char  receiveBuffer[BLOCK_SIZE];
@@ -53,7 +55,7 @@ struct in6_addr allocateRemoteMem(int sockfd, struct addrinfo * p) {
 /*
  * Sends a write command to the server based on toPointer
  */
-// TODO Implement meaningful return types and error messages
+// TODO: Implement meaningful return types and error messages
 int writeRemoteMem(int sockfd, struct addrinfo * p, char * payload,  struct in6_addr * toPointer) {
 	
 	//TODO: Error handling
@@ -78,14 +80,14 @@ int writeRemoteMem(int sockfd, struct addrinfo * p, char * payload,  struct in6_
 	sendUDPIPv6Raw(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
 	receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
 
-	// TODO change to be meaningful, i.e., error message
+	// TODO: change to be meaningful, i.e., error message
 	return 0;
 }
 
 /*
  * Releases the remote memory based on toPointer
  */
-// TODO Implement meaningful return types and error messages
+// TODO: Implement meaningful return types and error messages
 int freeRemoteMem(int sockfd, struct addrinfo * p,  struct in6_addr * toPointer) {
 	char  sendBuffer[BLOCK_SIZE];
 	char  receiveBuffer[BLOCK_SIZE];
@@ -112,7 +114,7 @@ int freeRemoteMem(int sockfd, struct addrinfo * p,  struct in6_addr * toPointer)
 /*
  * Reads the remote memory based on toPointer
  */
-// TODO Implement meaningful return types and error messages
+// TODO: Implement meaningful return types and error messages
 char * getRemoteMem(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
 	char  sendBuffer[BLOCK_SIZE];
 	char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
@@ -136,7 +138,7 @@ char * getRemoteMem(int sockfd, struct addrinfo * p, struct in6_addr * toPointer
 }
 
 /*
- * Reads the remote memory
+ * Mirgrates? the remote memory
  */
 int migrateRemoteMem(int sockfd, struct addrinfo * p, struct in6_addr * toPointer, int machineID) {
 	char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));

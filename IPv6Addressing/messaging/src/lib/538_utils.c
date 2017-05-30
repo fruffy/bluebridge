@@ -171,8 +171,8 @@ int sendUDPRaw(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo 
  * Sends message to specified socket
  * RAW version, we craft our own packet.
  */
-//TODO Evaluate what variables and structures are actually needed here
-//TODO: Error handling
+// TODO: Evaluate what variables and structures are actually needed here
+// TODO: Error handling
 int sendUDPIPv6Raw(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr remotePointer) {
 	
 	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), &remotePointer, sizeof(remotePointer));

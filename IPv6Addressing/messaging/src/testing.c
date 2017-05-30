@@ -8,7 +8,7 @@
 #define ANSI_COLOR_MAGENTA "\x1b[35m"
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
-const int NUM_ITERATIONS = 1000;
+const int NUM_ITERATIONS = 10000;
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //	1. Check correctness of pointer on server side, it should never segfault.
@@ -26,6 +26,7 @@ const int NUM_ITERATIONS = 1000;
 //	8. Integrate Mihir's asynchronous code and use raw linux threading:
 //		http://nullprogram.com/blog/2015/05/15/
 ///////////////////////////////////////////////////////////////////////////////
+
 //To add the current correct route
 //sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo
 //ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dest=0:0:01ff:0:ffff:ffff:0:0,actions=output:2
@@ -86,7 +87,7 @@ void basicOperations( int sockfd, struct addrinfo * p) {
 		uint64_t wStart = getns();
 		writeRemoteMem(sockfd, p, (char *) payload, &remoteMemory);
 		write_latency[i - 1] = getns() - wStart;
-		free(payload);
+		
 		uint64_t rStart = getns();
 		char * test = getRemoteMem(sockfd, p, &remoteMemory);
 		read_latency[i - 1] = getns() - rStart;

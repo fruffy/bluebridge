@@ -17,10 +17,17 @@
 #include <math.h>
 #include <inttypes.h>
 
-#include "./lib/538_utils.h"
-#include "./lib/debug.h"
+#include "./lib/client_lib.h"
 
 #define NUM_PAGES 1500
+
+/////////////////////////////////// TO DOs ////////////////////////////////////
+//  1. Convert getRemoteAddr() to raw sockets and add to client_lib.c
+//  2. Add usage
+//  3. Clean up all memory leaks (use GOTOs instead of just returning or exit())
+//  4. Plan integration of this code and testing.c
+//  5. Make method comments
+///////////////////////////////////////////////////////////////////////////////
 
 static volatile int stop;
 void *region;
@@ -31,6 +38,7 @@ struct params {
 };
 
 static uint64_t addr_map_int[NUM_PAGES];
+static int addr_map_machine[NUM_PAGES];
 static struct in6_addr* addr_map_in6[NUM_PAGES];
 
 static long get_page_size(void)
@@ -44,7 +52,7 @@ static long get_page_size(void)
     return ret;
 }
 
-struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer) {
+struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer, int machine) {
     char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
     char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 
@@ -53,16 +61,18 @@ struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer) 
     memcpy(sendBuffer, GET_ADDR_CMD, sizeof(GET_ADDR_CMD));
     size += sizeof(GET_ADDR_CMD) - 1; // Should be 4
     memcpy(sendBuffer+size, &pointer, POINTER_SIZE);
-    size += POINTER_SIZE; // Should be 8, total 12
-    // Lines are for ndpproxy DO NOT REMOVE
-    struct in6_addr * ipv6Pointer = gen_fixed_IPv6Target(1);
+    // size += POINTER_SIZE; // Should be 8, total 12, size isn't use after this
+    
+    // These lines get a specific IPv6 server to send a message to.
+    struct in6_addr * ipv6Pointer = gen_fixed_IPv6Target(machine);
     memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
     p->ai_addrlen = sizeof(*ipv6Pointer);
-    
+
     // printf("Retrieving address for pointer: %" PRIx64 "\n", pointer);
 
     // Send message
-    sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
+    print_debug("Sending raw packet with args: %d, %s, %d", sockfd, sendBuffer, BLOCK_SIZE);
+    sendUDPRaw(sockfd, sendBuffer,BLOCK_SIZE, p);
     // Receive response
     receiveUDP(sockfd, receiveBuffer,BLOCK_SIZE, p);
 
@@ -84,6 +94,7 @@ struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer) 
 
         retVal = *remotePointer;
     } else {
+        // TODO: change to continue looping through possible servers
         fprintf(stderr, "PANIC\n");
     }
 
@@ -91,29 +102,6 @@ struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer) 
 
     // Parse receive buffer
     return retVal;
-}
-
-char * getMemoryMod(int sockfd, struct addrinfo * p, struct in6_addr * toPointer) {
-    char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
-    char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
-
-    int size = 0;
-
-    // Prep message
-    memcpy(sendBuffer, GET_CMD, sizeof(GET_CMD));
-    size += sizeof(GET_CMD) - 1; // Should be 4
-    memcpy(sendBuffer+size,toPointer->s6_addr,IPV6_SIZE);
-    size += IPV6_SIZE; // Should be 8, total 12
-
-    // Send message
-    sendUDPIPv6(sockfd, sendBuffer,BLOCK_SIZE, p,*toPointer);
-    // Receive response
-    receiveUDP(sockfd, receiveBuffer,BLOCK_SIZE, p);
-
-
-    free(sendBuffer);
-
-    return receiveBuffer;
 }
 
 void print_times(uint64_t* first_rtt_start, uint64_t* first_rtt_end, uint64_t* second_rtt_start, uint64_t* second_rtt_end, uint64_t* handler_start, uint64_t* handler_end) {
@@ -151,11 +139,15 @@ void print_times(uint64_t* first_rtt_start, uint64_t* first_rtt_end, uint64_t* s
     fclose(f3);
 }
 
+// TODO: Change such that it always goto EXIT even on error (have a return val for the method)
 static void *handler(void *arg)
 {
     struct params *param = arg;
     long page_size = param->page_size;
-///*
+
+    // TODO: this needs to be changed so you don't redo what's done in main. Should be global (not sure if it's a good idea to be global)
+    //       currently it works.
+
     // Setup network connections to server and directory server.
     int sockfd_server;
     struct addrinfo hints, *servinfo_server, *p_server;
@@ -164,36 +156,20 @@ static void *handler(void *arg)
     //Socket operator variables
     const int on=1, off=0;
 
-    //Routing configuration
-    // This is a temporary solution to enable the forwarding of unknown ipv6 subnets
-    //printf("%d\n",system("sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo"));
-    //ip -6 route add local ::3131:0:0:0:0/64  dev h1-eth0
-    //ip -6 route add local ::3131:0:0:0:0/64  dev h2-eth0
-    // Tells the getaddrinfo to only return sockets
-    // which fit these params.
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET6;
     hints.ai_socktype = SOCK_DGRAM;
 
-    if ((rv = getaddrinfo(NULL, "5000", &hints, &servinfo_server)) != 0) {
+    if ((rv = getaddrinfo(NULL, "0", &hints, &servinfo_server)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         exit(1);
     }
 
-    // loop through all the results and connect to the first we can
-    for (p_server = servinfo_server; p_server != NULL; p_server = p_server->ai_next) {
-        if ((sockfd_server = socket(p_server->ai_family, p_server->ai_socktype, p_server->ai_protocol))
-                == -1) {
-            perror("client: socket");
-            continue;
-        }
-        setsockopt(sockfd_server, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
-        setsockopt(sockfd_server, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on));
-        setsockopt(sockfd_server, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
-        break;
-    }
-//*/
+    p_server = bindSocket(p_server, servinfo_server, &sockfd_server);
+    struct sockaddr_in6 *temp = (struct sockaddr_in6 *) p_server->ai_addr;
+    temp->sin6_port = htons(strtol("5000", (char **)NULL, 10));
 
+    // Set up timing arrays
     uint64_t *first_rtt_start = malloc(sizeof(uint64_t) * NUM_PAGES);
     assert(first_rtt_start);
     memset(first_rtt_start, 0, sizeof(uint64_t) * NUM_PAGES);
@@ -218,6 +194,7 @@ static void *handler(void *arg)
     assert(handler_end);
     memset(handler_end, 0, sizeof(uint64_t) * NUM_PAGES);
 
+    // Start handler
     int i = 0;
 
     for (;;) {
@@ -272,10 +249,6 @@ static void *handler(void *arg)
 
         // handle the page fault by copying a page worth of bytes
         if (msg.event & UFFD_EVENT_PAGEFAULT) {
-            // TODO: Add dictionary or array of remote addresses. 
-            //       Check to see if the pagefault is remote or local
-            //       If remote, do the get memory call. 
-            //       If local, do this...
             long long addr = msg.arg.pagefault.address;
 
             // fprintf(stdout, "Address: %"PRIx64"\n", (uint64_t) msg.arg.pagefault.address);
@@ -285,18 +258,19 @@ static void *handler(void *arg)
             // fprintf(stdout, "Address: %"PRIx64", index: %d\n", (uint64_t) msg.arg.pagefault.address, index);
 
             if (addr_map_int[index] > 0 || addr_map_in6[index] != NULL) {
-                // Do remote things
-                // 1. Get machine from the remote directory service server
+                // Do remote things, based on if we're simulating a centralized directory service or not.
+                // 1. Get machine from the remote directory service server (Centralized directory service)
                 //      a. Prepare packet, send to DS, receive IPv6 address back
 
-                // 2. Get stuff from the remote server
-                //      a. getMemoryMod() from client.c
+                // 2. Get stuff from the remote server (SDN directory service)
+                //      a. getRemoteMem() from client_lib.c
                 struct in6_addr remoteMachine;
 
                 if (addr_map_in6[index] == NULL) {
                     print_debug("Iteration %d\n", i);
                     first_rtt_start[i] = getns();
-                    remoteMachine = getRemoteAddr(sockfd_server, p_server, addr_map_int[index]);
+                    // TODO: this needs to be implemented with raw sockets, look at client_lib.c
+                    remoteMachine = getRemoteAddr(sockfd_server, p_server, addr_map_int[index], addr_map_machine[index]);
                     first_rtt_end[i] = getns();
 
                     char s[INET6_ADDRSTRLEN];
@@ -311,7 +285,7 @@ static void *handler(void *arg)
                     print_debug("Remote Machine is... %s\n", s);
                 }
                 second_rtt_start[i] = getns();
-                char* val = getMemoryMod(sockfd_server, p_server, &remoteMachine);
+                char* val = getRemoteMem(sockfd_server, p_server, &remoteMachine);
                 second_rtt_end[i] = getns();
                 
                 struct uffdio_copy copy;
@@ -326,25 +300,27 @@ static void *handler(void *arg)
 
                 handler_end[i] = getns();
                 i++;
+
                 // printf("Results of memory store: %.50s\n", val);
+
+                free(val);
             } else {
-                // handler_start[i] = getns();
+                // TODO: fix buffer cache issue
 
                 FILE *f;
-                // char cmdname[8192];
-                // snprintf(cmdname, sizeof(cmdname), "zcat tmp%d.gz", 1);
                 f = fopen("temp.txt", "r");
                 if (f == NULL) {
                     perror("open temp.txt");
                     exit(1);
                 }
-                // char buf[page_size];
+
                 second_rtt_start[i] = getns();
                 if (fread(buf, page_size, 1, f) != 0) {
                     perror("fread");
                     exit(1);
                 }
                 second_rtt_end[i] = getns();
+
                 if (fclose(f)) {
                     perror("fclose");
                     exit(1);
@@ -383,54 +359,17 @@ EXIT:
     return NULL;
 }
 
-struct in6_addr allocateMemMod(int sockfd, struct addrinfo * p) {
-    char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
-    char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
-
-    // Lines are for ndpproxy DO NOT REMOVE
-    struct in6_addr * ipv6Pointer = gen_fixed_IPv6Target(1);
-    memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-    p->ai_addrlen = sizeof(*ipv6Pointer);
-    
-    memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
-
-    sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
-    // Wait to receive a message from the server
-    int numbytes = receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
-    print_debug("Received %d bytes", numbytes);
-    // Parse the response
-
-    struct in6_addr retVal;
-
-    if (memcmp(receiveBuffer,"ACK",3) == 0) {
-        print_debug("Response was ACK");
-        // If the message is ACK --> successful
-        struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-        // Copy the returned pointer
-        memcpy(remotePointer, receiveBuffer+4, IPV6_SIZE);
-        // Insert information about the source host (black magic)
-        //00 00 00 00 01 02 00 00 00 00 00 00 00 00 00 00
-        //            ^  ^ these two bytes are stored (subnet and host ID)
-        memcpy(remotePointer->s6_addr+4, get_in_addr(p->ai_addr)+4, 2);
-        print_debug("Got: %p from server", (void *)remotePointer);
-        retVal = *remotePointer;
-    } else {
-        print_debug("Response was not successful");
-        // Not successful so we send another message?
-        memcpy(sendBuffer, "What's up?", sizeof("What's up?"));
-        sendUDP(sockfd, sendBuffer,BLOCK_SIZE, p);
-
-        print_debug("Keeping return value as 0");
-    }
-
-    free(sendBuffer);
-    free(receiveBuffer);
-
-    return retVal;
+int getMachineFromIPv6(struct in6_addr addr) {
+    int machine = 0;
+    memcpy(&machine, addr.s6_addr+5, 1);
+    printf("Machine: %d\n", machine);
+    return machine;
 }
+
 
 int main(int argc, char **argv)
 {
+    // TODO: add usage
     if (argc != 4) {
         printf("ERROR: wrong number of arguments\n");
         exit(1);
@@ -477,8 +416,6 @@ int main(int argc, char **argv)
     }
 
     // register the pages in the region for missing callbacks
-    // TODO: need to modify this such that it registers half the pages
-    //       to the server (i.e. creates remote pointers for half the pages)
     struct uffdio_register uffdio_register;
     uffdio_register.range.start = (uint64_t)region;
     uffdio_register.range.len = page_size * NUM_PAGES;
@@ -496,35 +433,18 @@ int main(int argc, char **argv)
     //Socket operator variables
     const int on=1, off=0;
 
-    //Routing configuration
-    // This is a temporary solution to enable the forwarding of unknown ipv6 subnets
-    //printf("%d\n",system("sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo"));
-    //ip -6 route add local ::3131:0:0:0:0/64  dev h1-eth0
-    //ip -6 route add local ::3131:0:0:0:0/64  dev h2-eth0
-    // Tells the getaddrinfo to only return sockets
-    // which fit these params.
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET6;
     hints.ai_socktype = SOCK_DGRAM;
 
-    if ((rv = getaddrinfo(NULL, "5000", &hints, &servinfo_server)) != 0) {
+    if ((rv = getaddrinfo(NULL, "0", &hints, &servinfo_server)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         return 1;
     }
 
-    // loop through all the results and connect to the first we can
-    for (p_server = servinfo_server; p_server != NULL; p_server = p_server->ai_next) {
-        if ((sockfd_server = socket(p_server->ai_family, p_server->ai_socktype, p_server->ai_protocol))
-                == -1) {
-            perror("client: socket");
-            continue;
-        }
-        setsockopt(sockfd_server, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
-        setsockopt(sockfd_server, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on));
-        setsockopt(sockfd_server, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
-        break;
-    }
-
+    p_server = bindSocket(p_server, servinfo_server, &sockfd_server);
+    struct sockaddr_in6 *temp = (struct sockaddr_in6 *) p_server->ai_addr;
+    temp->sin6_port = htons(strtol("5000", (char **)NULL, 10));
     // Make every x regions remote
     long i;
     char *cur = region;
@@ -532,10 +452,12 @@ int main(int argc, char **argv)
         if (remote) {
             // Allocate remote memory
             if (directService) {
-                addr_map_int[i] = getPointerFromIPv6(allocateMemMod(sockfd_server, p_server));
+                struct in6_addr temp = allocateRemoteMem(sockfd_server, p_server);
+                addr_map_int[i] = getPointerFromIPv6(temp);
+                addr_map_machine[i] = getMachineFromIPv6(temp);
             } else {
                 struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-                struct in6_addr temp = allocateMemMod(sockfd_server, p_server);
+                struct in6_addr temp = allocateRemoteMem(sockfd_server, p_server);
 
                 memcpy(remotePointer, &temp, IPV6_SIZE);
                 addr_map_in6[i] = remotePointer;
@@ -612,12 +534,14 @@ int main(int argc, char **argv)
 
     if (ioctl(uffd, UFFDIO_UNREGISTER, &uffdio_register.range)) {
         fprintf(stderr, "ioctl unregister failure\n");
+        // TODO: add a "goto" exit label which frees everything and returns the correct code
         return 1;
     }
 
     FILE *f = fopen("total_times.csv", "w");
     if (f == NULL) {
         printf("Error opening file!\n");
+        // TODO: add a "goto" exit label which frees everything and returns the correct code
         exit(1);
     }
 
@@ -629,7 +553,9 @@ int main(int argc, char **argv)
 
     free(total_start);
     free(total_end);
+    fclose(f);
     munmap(region, page_size * NUM_PAGES);
 
+    // TODO: add a "goto" exit label which frees everything and returns the correct code
     return 0;
 }
