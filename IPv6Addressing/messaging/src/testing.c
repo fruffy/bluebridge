@@ -87,7 +87,7 @@ void basicOperations( int sockfd, struct addrinfo * p) {
 		uint64_t wStart = getns();
 		writeRemoteMem(sockfd, p, (char *) payload, &remoteMemory);
 		write_latency[i - 1] = getns() - wStart;
-		
+
 		uint64_t rStart = getns();
 		char * test = getRemoteMem(sockfd, p, &remoteMemory);
 		read_latency[i - 1] = getns() - rStart;
