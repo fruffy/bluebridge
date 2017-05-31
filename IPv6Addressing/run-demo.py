@@ -26,7 +26,7 @@ class BlueBridge(Topo):
         switch = self.addSwitch('s1')
         # Create a network topology of a single switch
         # connected to three nodes.
-        for hostNum in range(1, 4): # TODO: change back to 1, 4
+        for hostNum in range(1, 4):  # TODO: change back to 1, 4
             # Add hosts and switches
             host = self.addHost('h' + str(hostNum))
             self.addLink(host, switch)
@@ -39,12 +39,12 @@ def configureHosts(net):
     hostNum = 1
     hosts = net.hosts
     for host in hosts:
-        print host
+        print(host)
 
         # Insert NDP configuration (deprecated)
         testString = "\"proxy h" + str(hostNum) + "-eth0 { ttl 1 router no rule 0:0:01" + '{0:02x}'.format(
             hostNum) + "::/48 { static } }\" > ./tmp/config/ndp_conf.conf"
-        print testString
+        print(testString)
         host.cmdPrint('echo ' + testString)
 
         # Configure the interface and respective routing
@@ -58,7 +58,7 @@ def configureHosts(net):
         host.cmdPrint('ifconfig h' + str(hostNum) + '-eth0 mtu 9000')
         # Run the server
         host.cmdPrint('xterm  -T \"server' + str(hostNum) +
-                      '\" -e \"valgrind --tool=callgrind ./messaging/bin/server; bash\" &')
+                      '\" -e \"./messaging/bin/server; bash\" &')
 
         # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"./messaging/launchProxy.sh -i h' + str(hostNum) +
         #               '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
@@ -93,7 +93,7 @@ def run():
     #                 '{0:02x}'.format(hostNum) + '::/48 dev s1-eth' + str(hostNum))
     # switch.cmdPrint('ifconfig s1-eth' + str(hostNum) +' mtu 5000')
     # Our current "switch"
-    hostNum = 3 # TODO: change back to 3
+    hostNum = 3  # TODO: change back to 3
     i = 1
     while i <= hostNum:
         # Routing entries per port
