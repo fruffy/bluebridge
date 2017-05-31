@@ -94,7 +94,6 @@ struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer, 
 
         retVal = *remotePointer;
     } else {
-        // TODO: change to continue looping through possible servers
         fprintf(stderr, "PANIC\n");
     }
 
@@ -305,7 +304,13 @@ static void *handler(void *arg)
 
                 free(val);
             } else {
-                // TODO: fix buffer cache issue
+                // Clear caches:
+                /*char* data = "3";
+
+                sync();
+                fd = open("/proc/sys/vm/drop_caches", O_WRONLY);
+                write(fd, data, sizeof(char));
+                close(fd);*/
 
                 FILE *f;
                 f = fopen("temp.txt", "r");
@@ -368,25 +373,53 @@ EXIT:
 int getMachineFromIPv6(struct in6_addr addr) {
     int machine = 0;
     memcpy(&machine, addr.s6_addr+5, 1);
-    printf("Machine: %d\n", machine);
+    print_debug("Machine: %d\n", machine);
     return machine;
 }
 
+void usage() {
+    printf("USAGE: ./userfaultfd_measure_pagefault [-l | -w | -d]\n");
+    printf("\tWhere l, w, and d are optional flags:\n");
+    printf("\t\tl: pages to local memory. If this flag isn't used, it will page to remote memory.\n");
+    printf("\t\tw: writes page. If this flag isn't used, it will read the page.\n");
+    printf("\t\td: simulates a centralized directory service. If this flag isn't used, it assumes the network is the directory service (i.e., SDN).\n");
+}
 
 int main(int argc, char **argv)
 {
     // TODO: add usage
-    if (argc != 4) {
+    if (argc > 4) {
         printf("ERROR: wrong number of arguments\n");
+        usage();
         exit(1);
     }
     int uffd;
     long page_size;
     pthread_t uffd_thread;
-    char* dummy;
-    int remote = strtol(argv[1], &dummy, 10); // 0 = local, 1 = remote
-    int measure_write = strtol(argv[2], &dummy, 10); // 1 = write, 0 = read
-    int directService = strtol(argv[3], &dummy, 10); // 1 = directory service, 0 = no directory service
+    int local = 0, measure_write = 0, directService = 0;
+    int c;
+    opterr = 0; 
+
+    while ((c = getopt(argc, argv, "lwd?")) != -1) {
+        switch(c) {
+            case 'l':
+                local = 1;
+                break;
+            case 'w':
+                measure_write = 1;
+                break;
+            case 'd':
+                directService = 1;
+                break;
+            case '?':
+                usage();
+                break;
+            default:
+                printf("ERROR: unknown argument %c", c);
+                usage();
+                return -1;
+        }
+    }
 
     page_size = get_page_size();
 
@@ -455,7 +488,7 @@ int main(int argc, char **argv)
     long i;
     char *cur = region;
     for (i = 0; i < NUM_PAGES; i++) {
-        if (remote) {
+        if (!local) {
             // Allocate remote memory
             if (directService) {
                 struct in6_addr temp = allocateRemoteMem(sockfd_server, p_server);

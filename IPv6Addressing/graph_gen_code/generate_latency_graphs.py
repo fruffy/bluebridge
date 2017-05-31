@@ -415,12 +415,13 @@ def display_total():
 
     ax.set_ylabel("Latency ($\micro$s)")
     lgd = ax.legend(bbox_to_anchor=(0.135, 0.99), loc='upper left')
-    plt.tight_layout()
+    # plt.tight_layout()
     format_axes(ax)
     plt.savefig("Latency_Total_Comparison.pdf", bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 def get_latencies():
     global all_data
+    # import pdb; pdb.set_trace()
     rr_ds_med, rr_ds_err = getDataError(all_data[0])
     rr_nods_med, rr_nods_err = getDataError(all_data[1])
     lr_med, lr_err = getDataError(all_data[2])

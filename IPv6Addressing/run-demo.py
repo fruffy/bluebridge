@@ -26,7 +26,7 @@ class BlueBridge(Topo):
         switch = self.addSwitch('s1')
         # Create a network topology of a single switch
         # connected to three nodes.
-        for hostNum in range(1, 4):
+        for hostNum in range(1, 4): # TODO: change back to 1, 4
             # Add hosts and switches
             host = self.addHost('h' + str(hostNum))
             self.addLink(host, switch)
@@ -93,7 +93,7 @@ def run():
     #                 '{0:02x}'.format(hostNum) + '::/48 dev s1-eth' + str(hostNum))
     # switch.cmdPrint('ifconfig s1-eth' + str(hostNum) +' mtu 5000')
     # Our current "switch"
-    hostNum = 3
+    hostNum = 3 # TODO: change back to 3
     i = 1
     while i <= hostNum:
         # Routing entries per port

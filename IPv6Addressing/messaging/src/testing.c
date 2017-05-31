@@ -8,7 +8,7 @@
 #define ANSI_COLOR_MAGENTA "\x1b[35m"
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
-const int NUM_ITERATIONS = 10000;
+const int NUM_ITERATIONS = 500;
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //	1. Check correctness of pointer on server side, it should never segfault.
@@ -36,6 +36,49 @@ struct LinkedPointer {
 };
 
 
+void print_times( uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* write_latency, uint64_t* free_latency){
+	FILE *allocF = fopen("alloc_latency.csv", "w");
+    if (allocF == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+
+    FILE *readF = fopen("read_latency.csv", "w");
+    if (readF == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+
+    FILE *writeF = fopen("write_latency.csv", "w");
+    if (writeF == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+
+    FILE *freeF = fopen("free_latency.csv", "w");
+    if (freeF == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+
+    fprintf(allocF, "latency (ns)\n");
+    fprintf(readF, "latency (ns)\n");
+    fprintf(writeF, "latency (ns)\n");
+    fprintf(freeF, "latency (ns)\n");
+
+    int i;
+    for (i = 0; i < NUM_ITERATIONS; i++) {
+        fprintf(allocF, "%llu\n", (unsigned long long) alloc_latency[i]);
+        fprintf(readF, "%llu\n", (unsigned long long) read_latency[i]);
+        fprintf(writeF, "%llu\n", (unsigned long long) write_latency[i]);
+        fprintf(freeF, "%llu\n", (unsigned long long) free_latency[i]);
+    }
+
+    fclose(allocF);
+    fclose(readF);
+    fclose(writeF);
+    fclose(freeF);
+}
 
 void basicOperations( int sockfd, struct addrinfo * p) {
 	uint64_t *alloc_latency = malloc(sizeof(uint64_t) * NUM_ITERATIONS);
@@ -108,7 +151,7 @@ void basicOperations( int sockfd, struct addrinfo * p) {
 	    nextPointer = nextPointer->Pointer;
 	    free (rootPointer);
 	}
-	//print_times(alloc_latency, read_latency, write_latency, free_latency, num_iters);
+	print_times(alloc_latency, read_latency, write_latency, free_latency);
 
 	free(alloc_latency);
 	free(write_latency);

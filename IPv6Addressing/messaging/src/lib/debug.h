@@ -3,7 +3,7 @@
 
 
 
-#define DEBUG 1
+#define DEBUG 0
 
 #define print_debug(format, args...); \
 	if (DEBUG) {					 \
