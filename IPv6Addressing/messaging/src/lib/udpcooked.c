@@ -52,7 +52,7 @@ int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * dat
             sa = (struct sockaddr_in6 *) ifa->ifa_addr; 
             getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in6), src_ip, 
             sizeof(src_ip), NULL, 0, NI_NUMERICHOST); 
-            print_debug("Interface: %s\tAddress: %s", ifa->ifa_name, src_ip); 
+            //print_debug("Interface: %s\tAddress: %s", ifa->ifa_name, src_ip); 
         } 
     }
     if ((memcmp(dst_addr->sin6_addr.s6_addr, sa->sin6_addr.s6_addr,6) == 0)) {
@@ -69,8 +69,7 @@ int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * dat
     socklen_t len = sizeof(sin);
     if (getsockname(sockfd, (struct sockaddr *)&sin, &len) == -1) {
         perror("getsockname");
-        free(interface);
-        return EXIT_FAILURE;
+        exit (EXIT_FAILURE);
     } else {
         src_port = ntohs(sin.sin6_port);
     }
@@ -79,7 +78,7 @@ int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * dat
     // TODO: remove HACK
     // memcpy(src_ip, dst_ip, sizeof dst_ip);
 
-    print_debug("Interface %s, Source IP %s, Source Port %d, Destination IP %s, Destination Port %d, Size %d", interface, src_ip, src_port, dst_ip, dst_port, datalen);
+    //print_debug("Interface %s, Source IP %s, Source Port %d, Destination IP %s, Destination Port %d, Size %d", interface, src_ip, src_port, dst_ip, dst_port, datalen);
     // Submit request for a socket descriptor to look up interface.
     if ((sd = socket (AF_INET6, SOCK_RAW, IPPROTO_RAW)) < 0) {
         perror ("socket() failed to get socket descriptor for using ioctl() ");
@@ -91,7 +90,7 @@ int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * dat
     snprintf (ifr.ifr_name, sizeof (ifr.ifr_name), "%s", interface);
     if (ioctl (sd, SIOCGIFHWADDR, &ifr) < 0) {
         perror ("ioctl() failed to get source MAC address ");
-        return (EXIT_FAILURE);
+        exit (EXIT_FAILURE);
     }
     close (sd);
 
@@ -114,7 +113,7 @@ int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * dat
         perror ("if_nametoindex() failed to obtain interface index ");
         exit (EXIT_FAILURE);
     }
-    print_debug("Index for interface %s is %i", interface, device.sll_ifindex);
+    //print_debug("Index for interface %s is %i", interface, device.sll_ifindex);
 
     // Set destination MAC address: you need to fill this out
 /*  dst_mac[0] = 0xff;
@@ -260,7 +259,7 @@ uint16_t checksum (uint16_t *addr, int len) {
 
     // TODO: remove this is a check.
     // answer = 50;
-    print_debug("Checksum: %d\n", answer);
+    //print_debug("Checksum: %d\n", answer);
 
     return (answer);
 }
