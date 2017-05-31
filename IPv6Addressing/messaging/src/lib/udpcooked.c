@@ -77,7 +77,7 @@ int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * dat
     inet_ntop(AF_INET6, dst_addr->sin6_addr.s6_addr, dst_ip, sizeof dst_ip);
 
     // TODO: remove HACK
-    memcpy(src_ip, dst_ip, sizeof dst_ip);
+    // memcpy(src_ip, dst_ip, sizeof dst_ip);
 
     print_debug("Interface %s, Source IP %s, Source Port %d, Destination IP %s, Destination Port %d, Size %d", interface, src_ip, src_port, dst_ip, dst_port, datalen);
     // Submit request for a socket descriptor to look up interface.
