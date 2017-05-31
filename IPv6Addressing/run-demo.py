@@ -58,7 +58,7 @@ def configureHosts(net):
         host.cmdPrint('ifconfig h' + str(hostNum) + '-eth0 mtu 9000')
         # Run the server
         host.cmdPrint('xterm  -T \"server' + str(hostNum) +
-                      '\" -e \"./messaging/bin/server; bash\" &')
+                      '\" -e \"valgrind --tool=callgrind ./messaging/bin/server; bash\" &')
 
         # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"./messaging/launchProxy.sh -i h' + str(hostNum) +
         #               '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')

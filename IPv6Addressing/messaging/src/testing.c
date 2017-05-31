@@ -125,7 +125,7 @@ void basicOperations( int sockfd, struct addrinfo * p) {
 		struct in6_addr remoteMemory = nextPointer->AddrString;
 		print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
 		print_debug("Creating payload");
-		unsigned char * payload = gen_rdm_bytestream(BLOCK_SIZE);
+		char * payload = "hello world";// gen_rdm_bytestream(BLOCK_SIZE);
 
 		uint64_t wStart = getns();
 		writeRemoteMem(sockfd, p, (char *) payload, &remoteMemory);
@@ -140,7 +140,7 @@ void basicOperations( int sockfd, struct addrinfo * p) {
 		uint64_t fStart = getns();
 		freeRemoteMem(sockfd, p, &remoteMemory);
 		free_latency[i-1] = getns() - fStart;
-		free(payload);
+		// free(payload);
 		free(test);
 		nextPointer = nextPointer->Pointer;
 		i++;

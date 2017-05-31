@@ -39,9 +39,9 @@ int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * dat
 
     int src_port;
     // Allocate memory for various arrays.
-    src_mac = allocate_ustrmem (6);
-    dst_mac = allocate_ustrmem (6);
-    ether_frame = allocate_ustrmem (IP_MAXPACKET);
+    src_mac = (uint8_t *) malloc (6 * sizeof (uint8_t));//allocate_ustrmem (6);
+    dst_mac = (uint8_t *) malloc (6 * sizeof (uint8_t));//allocate_ustrmem (6);
+    ether_frame = (uint8_t *) malloc (IP_MAXPACKET * sizeof (uint8_t));//allocate_ustrmem (IP_MAXPACKET);
  
     //TODO: Use config file instead. Avoid memory leaks
     getifaddrs(&ifap); 
