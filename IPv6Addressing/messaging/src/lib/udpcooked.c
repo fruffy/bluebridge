@@ -79,11 +79,12 @@ struct udppacket* genPacketInfo (int sockfd) {
         perror ("if_nametoindex() failed to obtain interface index ");
         exit (EXIT_FAILURE);
     }*/
+
     //TODO: Hardcorded hack, remove
     packetinfo.device.sll_ifindex = 2;
     //print_debug("Index for interface %s is %i", packetinfo.interface, packetinfo.device.sll_ifindex);
 
-    // Set destination MAC address: you need to fill this out
+    // Set source/destination MAC address:
     memset(dst_mac, 255, 6);
     memset(src_mac, 255, 6);
 
@@ -115,10 +116,9 @@ struct udppacket* genPacketInfo (int sockfd) {
     return &packetinfo;
 }
 
-int cookUDP (int sockfd,  struct sockaddr_in6* dst_addr, int dst_port, char* data, int datalen) {
-
-    gettimeofday(&st,NULL);
-
+int cookUDP (struct sockaddr_in6* dst_addr, int dst_port, char* data, int datalen) {
+    //struct timeval st, et;
+    //gettimeofday(&st,NULL);
     int frame_length, sd;
 
     //Set destination IP
@@ -142,8 +142,9 @@ int cookUDP (int sockfd,  struct sockaddr_in6* dst_addr, int dst_port, char* dat
     // Length of UDP datagram (16 bits): UDP header + UDP data
     packetinfo.udphdr.len = htons (UDP_HDRLEN + datalen);
     // UDP checksum (16 bits)
+
     packetinfo.udphdr.check = udp6_checksum (packetinfo.iphdr, packetinfo.udphdr, (uint8_t *) data, datalen);
-   
+
     // Fill out ethernet frame header.
     // IPv6 header
     memcpy (packetinfo.ether_frame + ETH_HDRLEN, &packetinfo.iphdr, IP6_HDRLEN * sizeof (uint8_t));
@@ -160,14 +161,19 @@ int cookUDP (int sockfd,  struct sockaddr_in6* dst_addr, int dst_port, char* dat
         perror ("socket() failed ");
         exit (EXIT_FAILURE);
     }
+
     // Send ethernet frame to socket.
     if ((sendto (sd, packetinfo.ether_frame, frame_length, 0, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device))) <= 0) {
         perror ("sendto() failed");
         exit (EXIT_FAILURE);
     }
-
+    /*gettimeofday(&et,NULL);
+    int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
+    printf("Raw socket send: %d micro seconds\n",elapsed);*/
     // Close socket descriptor.
     close (sd);
+
+
 
     return (EXIT_SUCCESS);
 }
@@ -282,119 +288,4 @@ uint16_t udp6_checksum (struct ip6_hdr iphdr, struct udphdr udphdr, uint8_t *pay
 
    //return checksum ((const char *) buf, chksumlen);
   return checksum ((uint16_t *) buf, chksumlen);
-}
-
-// Allocate memory for an array of chars.
-char *
-allocate_strmem (int len)
-{
-    void *tmp;
-
-    if (len <= 0) {
-        fprintf (stderr, "ERROR: Cannot allocate memory because len = %i in allocate_strmem().\n", len);
-        exit (EXIT_FAILURE);
-    }
-
-    tmp = (char *) malloc (len * sizeof (char));
-    if (tmp != NULL) {
-        memset (tmp, 0, len * sizeof (char));
-        return (tmp);
-    } else {
-        fprintf (stderr, "ERROR: Cannot allocate memory for array allocate_strmem().\n");
-        exit (EXIT_FAILURE);
-    }
-}
-
-// Allocate memory for an array of unsigned chars.
-uint8_t *
-allocate_ustrmem (int len)
-{
-    void *tmp;
-
-    if (len <= 0) {
-        fprintf (stderr, "ERROR: Cannot allocate memory because len = %i in allocate_ustrmem().\n", len);
-        exit (EXIT_FAILURE);
-    }
-
-    tmp = (uint8_t *) malloc (len * sizeof (uint8_t));
-    if (tmp != NULL) {
-        memset (tmp, 0, len * sizeof (uint8_t));
-        return (tmp);
-    } else {
-        fprintf (stderr, "ERROR: Cannot allocate memory for array allocate_ustrmem().\n");
-        exit (EXIT_FAILURE);
-    }
-}
-u_int32_t   checksum2(unsigned char *, unsigned, u_int32_t);
-u_int32_t   wrapsum(u_int32_t);
-
-u_int32_t
-checksum2(unsigned char *buf, unsigned nbytes, u_int32_t sum)
-{
-    uint i;
-
-    /* Checksum all the pairs of bytes first... */
-    for (i = 0; i < (nbytes & ~1U); i += 2) {
-        sum += (u_int16_t)ntohs(*((u_int16_t *)(buf + i)));
-        if (sum > 0xFFFF)
-            sum -= 0xFFFF;
-    }
-
-    /*
-     * If there's a single byte left over, checksum it, too.
-     * Network byte order is big-endian, so the remaining byte is
-     * the high byte.
-     */
-    if (i < nbytes) {
-        sum += buf[i] << 8;
-        if (sum > 0xFFFF)
-            sum -= 0xFFFF;
-    }
-
-    return (sum);
-}
-
-u_int32_t
-wrapsum(u_int32_t sum)
-{
-    sum = ~sum & 0xFFFF;
-    return (htons(sum));
-}
-
-
-void
-assemble_udp_ip_header(unsigned char *buf, int *bufix, u_int32_t from,
-    u_int32_t to, unsigned int sport,  unsigned int dport, unsigned char *data, int len)
-{
-    struct ip ip;
-    struct udphdr udp;
-
-    ip.ip_v = 4;
-    ip.ip_hl = 5;
-    ip.ip_tos = IPTOS_LOWDELAY;
-    ip.ip_len = htons(sizeof(ip) + sizeof(udp) + len);
-    ip.ip_id = 0;
-    ip.ip_off = 0;
-    ip.ip_ttl = 16;
-    ip.ip_p = IPPROTO_UDP;
-    ip.ip_sum = 0;
-    ip.ip_src.s_addr = from;
-    ip.ip_dst.s_addr = to;
-
-    ip.ip_sum = wrapsum(checksum2((unsigned char *)&ip, sizeof(ip), 0));
-    memcpy(&buf[*bufix], &ip, sizeof(ip));
-    *bufix += sizeof(ip);
-
-    udp.uh_sport = htons(sport);   /* XXX */
-    udp.uh_dport = htons(dport);            /* XXX */
-    udp.uh_ulen = htons(sizeof(udp) + len);
-    memset(&udp.uh_sum, 0, sizeof(udp.uh_sum));
-
-    udp.uh_sum = wrapsum(checksum2((unsigned char *)&udp, sizeof(udp),
-        checksum2(data, len, checksum2((unsigned char *)&ip.ip_src,
-        2 * sizeof(ip.ip_src),
-        IPPROTO_UDP + (u_int32_t)ntohs(udp.uh_ulen)))));
-
-    memcpy(&buf[*bufix], &udp, sizeof(udp));
-    *bufix += sizeof(udp);
 }

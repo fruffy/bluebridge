@@ -107,19 +107,13 @@ void basicOperations( int sockfd, struct addrinfo * p) {
 	for (i = 0; i < NUM_ITERATIONS; i++) {
 		nextPointer = nextPointer->Pointer;
 		nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
-
-		gettimeofday(&st,NULL);
+		uint64_t start = getns(); 
 		nextPointer->AddrString = allocateRemoteMem(sockfd, p);
-		gettimeofday(&et,NULL);
-		int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
-		printf("Alloc time: %d micro seconds\n",elapsed);
-		nextPointer->AddrString = allocateRemoteMem(sockfd, p);
-
+		alloc_latency[i] = getns() - start; 
 	}
 	// don't point to garbage
 	// temp fix
 	nextPointer->Pointer = NULL;
-	
 	i = 1;
 	srand(time(NULL));
 	nextPointer = rootPointer;
@@ -129,10 +123,10 @@ void basicOperations( int sockfd, struct addrinfo * p) {
 		struct in6_addr remoteMemory = nextPointer->AddrString;
 		print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
 		print_debug("Creating payload");
-		char * payload = "hello world";// gen_rdm_bytestream(BLOCK_SIZE);
+		char payload[50] = "hello world";// gen_rdm_bytestream(BLOCK_SIZE);
 
 		uint64_t wStart = getns();
-		writeRemoteMem(sockfd, p, (char *) payload, &remoteMemory);
+		writeRemoteMem(sockfd, p, (char *) &payload, &remoteMemory);
 		write_latency[i - 1] = getns() - wStart;
 
 		uint64_t rStart = getns();
@@ -407,27 +401,23 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-/*	// loop through all the results and connect to the first we can
-	for (p = servinfo; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol))
-				== -1) {
-			perror("client: socket");
-			continue;
-		}
-		const int on=1;
-		setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
-		setsockopt(sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on));
-		break;
-	}*/
+	//Total Time: 1244274 micro seconds
+	//Total Time: 71665474 micro seconds
+
 	p = bindSocket(p, servinfo, &sockfd);
 	struct sockaddr_in6 *temp = (struct sockaddr_in6 *) p->ai_addr;
 	temp->sin6_port = htons(strtol(argv[2], (char **)NULL, 10));
 	genPacketInfo(sockfd);
+	struct timeval st, et;
+	gettimeofday(&st,NULL);
 	if(isAutoMode) {
 		basicOperations(sockfd, p);
 	} else {
 		interactiveMode(sockfd, p);
 	}
+	gettimeofday(&et,NULL);
+	int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
+	printf("Total Time: %d micro seconds\n",elapsed);
 	printf(ANSI_COLOR_RED "Finished\n");
 	printf(ANSI_COLOR_RESET);
 	freeaddrinfo(servinfo); // all done with this structure

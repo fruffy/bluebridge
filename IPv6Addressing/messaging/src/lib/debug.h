@@ -25,6 +25,5 @@ int printBytes(char * receiveBuffer);
 int printNBytes(char * receiveBuffer, int num);
 
 int print_addrInfo(struct addrinfo *result);
-struct timeval st, et;
 
 #endif

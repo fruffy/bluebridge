@@ -52,7 +52,9 @@ int providePointer(int sock_fd, struct addrinfo * p) {
 	memcpy(sendBuffer, "ACK:", sizeof("ACK:"));
 	size += sizeof("ACK:") - 1;
 	memcpy(sendBuffer+size, &ipv6Pointer, IPV6_SIZE); 
-	sendUDPRaw(sock_fd, sendBuffer, BLOCK_SIZE, p);
+	//sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
+	sendUDPRaw(sendBuffer, BLOCK_SIZE, p);
+
 
 	print_debug("Allocated Pointer: %p -> %s",allocated, allocated);
 	free(sendBuffer);
@@ -72,7 +74,9 @@ int sendAddr(int sock_fd, struct addrinfo * p, char* receiveBuffer) {
 	memcpy(sendBuffer, "ACK:", sizeof("ACK:"));
 	size += sizeof("ACK:") - 1;
 	memcpy(sendBuffer+size, &ipv6Pointer, IPV6_SIZE); 
-	sendUDPRaw(sock_fd, sendBuffer, BLOCK_SIZE, p);
+	//sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
+	sendUDPRaw(sendBuffer, BLOCK_SIZE, p);
+
 	free(sendBuffer);
 
 	// TODO change to be meaningful, i.e., error message
@@ -100,7 +104,9 @@ int writeMem(int sock_fd, char * receiveBuffer, struct addrinfo * p, struct in6_
 	print_debug("Content preview (50 bytes): %.50s", (char *)pointer);
 	
 	memcpy(sendBuffer, "ACK", sizeof("ACK"));
-	sendUDPRaw(sock_fd, sendBuffer, BLOCK_SIZE, p);
+	//sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
+	sendUDPRaw(sendBuffer, BLOCK_SIZE, p);
+
 	free(sendBuffer);
 
 	// TODO change to be meaningful, i.e., error message
@@ -119,7 +125,9 @@ int freeMem(int sock_fd, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
 	
 	free((void *) pointer);
 	memcpy(sendBuffer, "ACK", sizeof("ACK"));
-	sendUDPRaw(sock_fd, sendBuffer, BLOCK_SIZE, p);
+	//sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
+	sendUDPRaw(sendBuffer, BLOCK_SIZE, p);
+
 	free(sendBuffer);
 	// TODO change to be meaningful, i.e., error message
 	return 0;
@@ -138,7 +146,9 @@ int getMem(int sock_fd, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
 	memcpy(sendBuffer, (void *) pointer, BLOCK_SIZE);
 	// Send the sendBuffer (entire BLOCK_SIZE) to sock_fd
 	// print_debug("Content length %lu will be delivered to client!", strlen((char *)pointer));
-	sendUDPRaw(sock_fd, sendBuffer, BLOCK_SIZE, p);
+	//sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
+	sendUDPRaw(sendBuffer, BLOCK_SIZE, p);
+
 	free(sendBuffer);
 	// TODO change to be meaningful, i.e., error message
 	return 0;
@@ -185,7 +195,11 @@ void handleClientRequests(int sock_fd, char * receiveBuffer, struct in6_addr * i
 		sendAddr(sock_fd, p, splitResponse);
 	} else {
 		printf("Cannot match command!\n");
-		if (sendUDPRaw(sock_fd, "Hello, world!", 13, p) == -1) {
+/*		if (sendUDP(sock_fd, "Hello, world!", 13, p) == -1) {
+			perror("ERROR writing to socket");
+			exit(1);
+		}*/
+		if (sendUDPRaw("Hello, world!", 13, p) == -1) {
 			perror("ERROR writing to socket");
 			exit(1);
 		}

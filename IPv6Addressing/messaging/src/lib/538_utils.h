@@ -35,8 +35,8 @@ struct in6_addr * gen_fixed_IPv6Target(uint8_t rndHost);
 
 int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p);
 int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr  ipv6Pointer);
-int sendUDPRaw(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p);
-int sendUDPIPv6Raw(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr  ipv6Pointer);
+int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct addrinfo * p);
+int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr  ipv6Pointer);
 
 int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p);
 int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr * ipv6Pointer);

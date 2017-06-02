@@ -159,19 +159,13 @@ int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo
  * Sends message to specified socket
  * RAW version, we craft our own packet.
  */
-int sendUDPRaw(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p) {
+int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct addrinfo * p) {
 
 /*  char dst_ip[INET6_ADDRSTRLEN];
 	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), dst_ip, sizeof dst_ip);
 	print_debug("Sending to %s:%d", dst_ip,dst_port);*/
 	int dst_port = ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port);
-	
-	gettimeofday(&st,NULL);
-	cookUDP(sockfd, (struct sockaddr_in6*) p->ai_addr, dst_port, sendBuffer, msgBlockSize);
-	gettimeofday(&et,NULL);
-	int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
-	printf("Cook time: %d micro seconds\n",elapsed);
-	
+	cookUDP((struct sockaddr_in6*) p->ai_addr, dst_port, sendBuffer, msgBlockSize);
 	memset(sendBuffer, 0, msgBlockSize);
 	return EXIT_SUCCESS;
 }
@@ -182,7 +176,7 @@ int sendUDPRaw(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo 
  */
 // TODO: Evaluate what variables and structures are actually needed here
 // TODO: Error handling
-int sendUDPIPv6Raw(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr remotePointer) {
+int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr remotePointer) {
 	
 	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), &remotePointer, sizeof(remotePointer));
 	p->ai_addrlen = sizeof(remotePointer);
@@ -190,13 +184,7 @@ int sendUDPIPv6Raw(int sockfd, char * sendBuffer, int msgBlockSize, struct addri
 	int dst_port = ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port);
 	//inet_ntop(p->ai_family,get_in_addr(p->ai_addr), dst_ip, sizeof dst_ip);
 	//print_debug("Sending to %s:%d", dst_ip,dst_port);
-	//clock_t start = clock() ;
-	gettimeofday(&st,NULL);
-	cookUDP(sockfd, (struct sockaddr_in6*) p->ai_addr, dst_port, sendBuffer, msgBlockSize);
-	gettimeofday(&et,NULL);
-	int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
-	printf("Cook time: %d micro seconds\n",elapsed);
-	//clock_t end = clock() ;
+	cookUDP((struct sockaddr_in6*) p->ai_addr, dst_port, sendBuffer, msgBlockSize);
 	memset(sendBuffer, 0, msgBlockSize);
 	return EXIT_SUCCESS;
 }
