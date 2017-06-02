@@ -4,6 +4,7 @@
 
 #include "538_utils.h"
 #include "debug.h"
+#include <sys/time.h>
 
 struct in6_addr allocateRemoteMem(int sockfd, struct addrinfo * p);
 int writeRemoteMem(int sockfd, struct addrinfo * p, char * payload,  struct in6_addr * toPointer);

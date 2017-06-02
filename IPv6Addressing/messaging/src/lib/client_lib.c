@@ -23,8 +23,13 @@ struct in6_addr allocateRemoteMem(int sockfd, struct addrinfo * p) {
 	free(ipv6Pointer);
 	// Send the command to the target host and wait for response
 	memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
+	 gettimeofday(&st,NULL);
 	sendUDPRaw(sockfd, sendBuffer,BLOCK_SIZE, p);
+	gettimeofday(&et,NULL);
+    int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
+    printf("Send Total time: %d micro seconds\n",elapsed);
 	receiveUDP(sockfd, receiveBuffer, BLOCK_SIZE, p);
+
 
 	struct in6_addr retVal;
 	if (memcmp(receiveBuffer,"ACK", 3) == 0) {

@@ -9,6 +9,9 @@ const int SUBNET_ID = 1;// 16 bits for subnet id
 const int GLOBAL_ID = 33022;// 16 bits for link local id
 
 const int NUM_HOSTS = 3; // number of hosts in the rack
+
+
+
 /* 
  * get sockaddr, IPv4 or IPv6:
  */
@@ -158,11 +161,17 @@ int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo
  */
 int sendUDPRaw(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p) {
 
-	char dst_ip[INET6_ADDRSTRLEN];
-	int dst_port = ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port);
+/*  char dst_ip[INET6_ADDRSTRLEN];
 	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), dst_ip, sizeof dst_ip);
-	print_debug("Sending to %s:%d", dst_ip,dst_port);
+	print_debug("Sending to %s:%d", dst_ip,dst_port);*/
+	int dst_port = ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port);
+	
+	gettimeofday(&st,NULL);
 	cookUDP(sockfd, (struct sockaddr_in6*) p->ai_addr, dst_port, sendBuffer, msgBlockSize);
+	gettimeofday(&et,NULL);
+	int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
+	printf("Cook time: %d micro seconds\n",elapsed);
+	
 	memset(sendBuffer, 0, msgBlockSize);
 	return EXIT_SUCCESS;
 }
@@ -177,11 +186,17 @@ int sendUDPIPv6Raw(int sockfd, char * sendBuffer, int msgBlockSize, struct addri
 	
 	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), &remotePointer, sizeof(remotePointer));
 	p->ai_addrlen = sizeof(remotePointer);
-	char dst_ip[INET6_ADDRSTRLEN];
+	//char dst_ip[INET6_ADDRSTRLEN];
 	int dst_port = ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port);
-	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), dst_ip, sizeof dst_ip);
-	print_debug("Sending to %s:%d", dst_ip,dst_port);
+	//inet_ntop(p->ai_family,get_in_addr(p->ai_addr), dst_ip, sizeof dst_ip);
+	//print_debug("Sending to %s:%d", dst_ip,dst_port);
+	//clock_t start = clock() ;
+	gettimeofday(&st,NULL);
 	cookUDP(sockfd, (struct sockaddr_in6*) p->ai_addr, dst_port, sendBuffer, msgBlockSize);
+	gettimeofday(&et,NULL);
+	int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
+	printf("Cook time: %d micro seconds\n",elapsed);
+	//clock_t end = clock() ;
 	memset(sendBuffer, 0, msgBlockSize);
 	return EXIT_SUCCESS;
 }

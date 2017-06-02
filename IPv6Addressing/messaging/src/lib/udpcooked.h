@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <unistd.h>           // close()
 #include <string.h>           // strcpy, memset(), and memcpy()
-
 #include <netdb.h>            // struct addrinfo
 #include <sys/types.h>        // needed for socket(), uint8_t, uint16_t
 #include <sys/socket.h>       // needed for socket()
@@ -47,8 +46,9 @@
 
 // Function prototypes
 uint16_t checksum (uint16_t *, int);
+
 uint16_t udp6_checksum (struct ip6_hdr, struct udphdr, uint8_t *, int);
 char *allocate_strmem (int);
 uint8_t *allocate_ustrmem (int);
-
-int cookUDP (int sockfd, struct sockaddr_in6* dst_ip, int dst_port, char * data, int datalen);
+int cookUDP (int sockfd,  struct sockaddr_in6* dst_addr, int dst_port, char* data, int datalen);
+struct udppacket* genPacketInfo (int sockfd);

@@ -19,30 +19,27 @@
 // Includes some UDP data.
 #include "udpcooked.h"
 #include "debug.h"
-
-int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * data, int datalen) {
-     
-
-    int status, frame_length, sd;
+struct udppacket {
     struct ip6_hdr iphdr;
     struct udphdr udphdr;
-    uint8_t *src_mac, *dst_mac, *ether_frame;
-    struct addrinfo hints;
     struct sockaddr_ll device;
-    struct ifreq ifr;
+    uint8_t ether_frame[IP_MAXPACKET];
+    char interface[20];
+};
+
+struct udppacket packetinfo;
+
+struct udppacket* genPacketInfo (int sockfd) {
+     
+
     struct ifaddrs *ifap, *ifa = NULL; 
     struct sockaddr_in6 *sa; 
     char src_ip[INET6_ADDRSTRLEN];
-    char dst_ip[INET6_ADDRSTRLEN];
-    char * interface = malloc(50);
 
-
-    int src_port;
     // Allocate memory for various arrays.
-    src_mac = (uint8_t *) malloc (6 * sizeof (uint8_t));//allocate_ustrmem (6);
-    dst_mac = (uint8_t *) malloc (6 * sizeof (uint8_t));//allocate_ustrmem (6);
-    ether_frame = (uint8_t *) malloc (IP_MAXPACKET * sizeof (uint8_t));//allocate_ustrmem (IP_MAXPACKET);
- 
+    uint8_t src_mac[6];
+    uint8_t dst_mac[6];
+
     //TODO: Use config file instead. Avoid memory leaks
     getifaddrs(&ifap); 
     int i = 0; 
@@ -52,20 +49,20 @@ int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * dat
             sa = (struct sockaddr_in6 *) ifa->ifa_addr; 
             getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in6), src_ip, 
             sizeof(src_ip), NULL, 0, NI_NUMERICHOST); 
-            //print_debug("Interface: %s\tAddress: %s", ifa->ifa_name, src_ip); 
+            print_debug("Interface: %s\tAddress: %s", ifa->ifa_name, src_ip); 
         } 
     }
-    if ((memcmp(dst_addr->sin6_addr.s6_addr, sa->sin6_addr.s6_addr,6) == 0)) {
-        strcpy(interface,"lo");
-    } else {
-        strcpy(interface,ifa->ifa_name);
-    }
-
-    // TODO: TEST HACK
-    // strcpy(interface,"lo");
-
+    packetinfo.iphdr.ip6_src = sa->sin6_addr; 
+    strcpy(packetinfo.interface,ifa->ifa_name);
+    //print_debug("Interface %s, Source IP %s, Source Port %d, Destination IP %s, Destination Port %d, Size %d", interface, src_ip, src_port, dst_ip, dst_port, datalen);
+    // Submit request for a socket descriptor to look up interface.
+/*    if ((sd = socket (AF_INET6, SOCK_RAW, IPPROTO_RAW)) < 0) {
+        perror ("socket() failed to get socket descriptor for using ioctl() ");
+        exit (EXIT_FAILURE);
+    }*/
 
     struct sockaddr_in6 sin;
+    int src_port;
     socklen_t len = sizeof(sin);
     if (getsockname(sockfd, (struct sockaddr *)&sin, &len) == -1) {
         perror("getsockname");
@@ -73,155 +70,105 @@ int cookUDP (int sockfd, struct sockaddr_in6* dst_addr, int dst_port, char * dat
     } else {
         src_port = ntohs(sin.sin6_port);
     }
-    inet_ntop(AF_INET6, dst_addr->sin6_addr.s6_addr, dst_ip, sizeof dst_ip);
-
-    // TODO: remove HACK
-    // memcpy(src_ip, dst_ip, sizeof dst_ip);
-
-    //print_debug("Interface %s, Source IP %s, Source Port %d, Destination IP %s, Destination Port %d, Size %d", interface, src_ip, src_port, dst_ip, dst_port, datalen);
-    // Submit request for a socket descriptor to look up interface.
-    if ((sd = socket (AF_INET6, SOCK_RAW, IPPROTO_RAW)) < 0) {
-        perror ("socket() failed to get socket descriptor for using ioctl() ");
-        exit (EXIT_FAILURE);
-    }
-
-    // Use ioctl() to look up interface name and get its MAC address.
-    memset (&ifr, 0, sizeof (ifr));
-    snprintf (ifr.ifr_name, sizeof (ifr.ifr_name), "%s", interface);
-    if (ioctl (sd, SIOCGIFHWADDR, &ifr) < 0) {
-        perror ("ioctl() failed to get source MAC address ");
-        exit (EXIT_FAILURE);
-    }
-    close (sd);
-
-    // Copy source MAC address.
-    memcpy (src_mac, ifr.ifr_hwaddr.sa_data, 6 * sizeof (uint8_t));
-
-    // Report source MAC address to stdout.
-    if (DEBUG) {
-        printf ("[DEBUG] MAC address for interface %s is ", interface);
-        for (i=0; i<5; i++) {
-        printf ("%02x:", src_mac[i]);
-        }
-        printf ("%02x\n", src_mac[5]);
-    }
-
+    // Source port number (16 bits): pick a number
+    packetinfo.udphdr.source = htons (src_port);
     // Find interface index from interface name and store index in
     // struct sockaddr_ll device, which will be used as an argument of sendto().
-    memset (&device, 0, sizeof (device));
-    if ((device.sll_ifindex = if_nametoindex (interface)) == 0) {
+/*    memset (&packetinfo.device, 0, sizeof (packetinfo.device));
+    if ((packetinfo.device.sll_ifindex = if_nametoindex (packetinfo.interface)) == 0) {
         perror ("if_nametoindex() failed to obtain interface index ");
         exit (EXIT_FAILURE);
-    }
-    //print_debug("Index for interface %s is %i", interface, device.sll_ifindex);
+    }*/
+    //TODO: Hardcorded hack, remove
+    packetinfo.device.sll_ifindex = 2;
+    //print_debug("Index for interface %s is %i", packetinfo.interface, packetinfo.device.sll_ifindex);
 
     // Set destination MAC address: you need to fill this out
-/*  dst_mac[0] = 0xff;
-    dst_mac[1] = 0xff;
-    dst_mac[2] = 0xff;
-    dst_mac[3] = 0xff;
-    dst_mac[4] = 0xff;
-    dst_mac[5] = 0xff;*/
-    memset(dst_mac, 15, 6);
+    memset(dst_mac, 255, 6);
+    memset(src_mac, 255, 6);
 
-    // Fill out hints for getaddrinfo().
-    memset (&hints, 0, sizeof (hints));
-    hints.ai_family = AF_INET6;
-    hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_flags = hints.ai_flags | AI_CANONNAME;
+
 
     // Fill out sockaddr_ll.
-    device.sll_family = AF_PACKET;
-    memcpy (device.sll_addr, src_mac, 6 * sizeof (uint8_t));
-    device.sll_halen = 6;
+    packetinfo.device.sll_family = AF_PACKET;
+    memcpy (packetinfo.device.sll_addr, src_mac, 6 * sizeof (uint8_t));
+    packetinfo.device.sll_halen = 6;
 
     // IPv6 header
-
     // IPv6 version (4 bits), Traffic class (8 bits), Flow label (20 bits)
-    iphdr.ip6_flow = htonl ((6 << 28) | (0 << 20) | 0);
-
-    // Payload length (16 bits): UDP header + UDP data
-    iphdr.ip6_plen = htons (UDP_HDRLEN + datalen);
+    packetinfo.iphdr.ip6_flow = htonl ((6 << 28) | (0 << 20) | 0);
 
     // Next header (8 bits): 17 for UDP
-    iphdr.ip6_nxt = IPPROTO_UDP;
+    packetinfo.iphdr.ip6_nxt = IPPROTO_UDP;
 
     // Hop limit (8 bits): default to maximum value
-    iphdr.ip6_hops = 255;
+    packetinfo.iphdr.ip6_hops = 255;
 
-    // Source IPv6 address (128 bits)
-    if ((status = inet_pton (AF_INET6, src_ip, &(iphdr.ip6_src))) != 1) {
-        fprintf (stderr, "inet_pton() failed.\nError message: %s", strerror (status));
-        exit (EXIT_FAILURE);
+    // Destination and Source MAC addresses
+    memcpy (packetinfo.ether_frame, &dst_mac, 6 * sizeof (uint8_t));
+    memcpy (packetinfo.ether_frame + 6, &src_mac, 6 * sizeof (uint8_t));
+    // Next is ethernet type code (ETH_P_IPV6 for IPv6).
+    // http://www.iana.org/assignments/ethernet-numbers
+    packetinfo.ether_frame[12] = ETH_P_IPV6 / 256;
+    packetinfo.ether_frame[13] = ETH_P_IPV6 % 256;
+
+    return &packetinfo;
+}
+
+int cookUDP (int sockfd,  struct sockaddr_in6* dst_addr, int dst_port, char* data, int datalen) {
+
+    gettimeofday(&st,NULL);
+
+    int frame_length, sd;
+
+    //Set destination IP
+    packetinfo.iphdr.ip6_dst = dst_addr->sin6_addr;
+
+
+    if (memcmp(&packetinfo.iphdr.ip6_dst, &packetinfo.iphdr.ip6_src, 6) == 0 ) {
+        //TODO: Hardcorded hack, remove
+        packetinfo.device.sll_ifindex = 1;
+    } else {
+        packetinfo.device.sll_ifindex = 2;
+
     }
 
-    // Destination IPv6 address (128 bits)
-    if ((status = inet_pton (AF_INET6, dst_ip, &(iphdr.ip6_dst))) != 1) {
-        fprintf (stderr, "inet_pton() failed.\nError message: %s", strerror (status));
-        exit (EXIT_FAILURE);
-    }
-
+    // Payload length (16 bits): UDP header + UDP data
+    packetinfo.iphdr.ip6_plen = htons (UDP_HDRLEN + datalen);
     // UDP header
 
-    // Source port number (16 bits): pick a number
-    udphdr.source = htons (src_port);
-
     // Destination port number (16 bits): pick a number
-    udphdr.dest = htons (dst_port);
-
+    packetinfo.udphdr.dest = htons (dst_port);
     // Length of UDP datagram (16 bits): UDP header + UDP data
-    udphdr.len = htons (UDP_HDRLEN + datalen);
-
+    packetinfo.udphdr.len = htons (UDP_HDRLEN + datalen);
     // UDP checksum (16 bits)
-    udphdr.check = udp6_checksum (iphdr, udphdr, (uint8_t *) data, datalen);
-
+    packetinfo.udphdr.check = udp6_checksum (packetinfo.iphdr, packetinfo.udphdr, (uint8_t *) data, datalen);
+   
     // Fill out ethernet frame header.
+    // IPv6 header
+    memcpy (packetinfo.ether_frame + ETH_HDRLEN, &packetinfo.iphdr, IP6_HDRLEN * sizeof (uint8_t));
+    // UDP header
+    memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN, &packetinfo.udphdr, UDP_HDRLEN * sizeof (uint8_t));
+    // UDP data
+    memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, data, datalen * sizeof (uint8_t));
 
     // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
     frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + datalen;
-
-    // Destination and Source MAC addresses
-    memcpy (ether_frame, dst_mac, 6 * sizeof (uint8_t));
-    memcpy (ether_frame + 6, src_mac, 6 * sizeof (uint8_t));
-
-    // Next is ethernet type code (ETH_P_IPV6 for IPv6).
-    // http://www.iana.org/assignments/ethernet-numbers
-    ether_frame[12] = ETH_P_IPV6 / 256;
-    ether_frame[13] = ETH_P_IPV6 % 256;
-
-    // Next is ethernet frame data (IPv6 header + UDP header + UDP data).
-
-    // IPv6 header
-    memcpy (ether_frame + ETH_HDRLEN, &iphdr, IP6_HDRLEN * sizeof (uint8_t));
-
-    // UDP header
-    memcpy (ether_frame + ETH_HDRLEN + IP6_HDRLEN, &udphdr, UDP_HDRLEN * sizeof (uint8_t));
-
-    // UDP data
-    memcpy (ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, data, datalen * sizeof (uint8_t));
 
     // Submit request for a raw socket descriptor.
     if ((sd = socket (PF_PACKET, SOCK_RAW, htons (ETH_P_ALL))) < 0) {
         perror ("socket() failed ");
         exit (EXIT_FAILURE);
     }
-
     // Send ethernet frame to socket.
-    if ((sendto (sd, ether_frame, frame_length, 0, (struct sockaddr *) &device, sizeof (device))) <= 0) {
+    if ((sendto (sd, packetinfo.ether_frame, frame_length, 0, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device))) <= 0) {
         perror ("sendto() failed");
         exit (EXIT_FAILURE);
     }
+
     // Close socket descriptor.
     close (sd);
 
-    // Free allocated memory.
-    free (src_mac);
-    free (dst_mac);
-    free (ether_frame);
-    free(interface);
-/*  free (ifap); 
-    free(ifa); 
-    free(sa);*/
     return (EXIT_SUCCESS);
 }
 
@@ -263,61 +210,8 @@ uint16_t checksum (uint16_t *addr, int len) {
 
     return (answer);
 }
-//TODO: Adapt to IPv6
-unsigned short checksum2(const char *buf, unsigned size)
-{
-    unsigned long long sum = 0;
-    const unsigned long long *b = (unsigned long long *) buf;
 
-    unsigned t1, t2;
-    unsigned short t3, t4;
 
-    /* Main loop - 8 bytes at a time */
-    while (size >= sizeof(unsigned long long))
-    {
-        unsigned long long s = *b++;
-        sum += s;
-        if (sum < s) sum++;
-        size -= 8;
-    }
-
-    /* Handle tail less than 8-bytes long */
-    buf = (const char *) b;
-    if (size & 4)
-    {
-        unsigned s = *(unsigned *)buf;
-        sum += s;
-        if (sum < s) sum++;
-        buf += 4;
-    }
-
-    if (size & 2)
-    {
-        unsigned short s = *(unsigned short *) buf;
-        sum += s;
-        if (sum < s) sum++;
-        buf += 2;
-    }
-
-    if (size)
-    {
-        unsigned char s = *(unsigned char *) buf;
-        sum += s;
-        if (sum < s) sum++;
-    }
-
-    /* Fold down to 16 bits */
-    t1 = sum;
-    t2 = sum >> 32;
-    t1 += t2;
-    if (t1 < t2) t1++;
-    t3 = t1;
-    t4 = t1 >> 16;
-    t3 += t4;
-    if (t3 < t4) t3++;
-
-    return ~t3;
-}
 // Build IPv6 UDP pseudo-header and call checksum function (Section 8.1 of RFC 2460).
 uint16_t udp6_checksum (struct ip6_hdr iphdr, struct udphdr udphdr, uint8_t *payload, int payloadlen) {
     char buf[IP_MAXPACKET];
@@ -386,8 +280,8 @@ uint16_t udp6_checksum (struct ip6_hdr iphdr, struct udphdr udphdr, uint8_t *pay
         chksumlen++;
     }
 
- //   return checksum2 ((const char *) buf, chksumlen);
-    return checksum ((uint16_t *) buf, chksumlen);
+   //return checksum ((const char *) buf, chksumlen);
+  return checksum ((uint16_t *) buf, chksumlen);
 }
 
 // Allocate memory for an array of chars.
@@ -430,4 +324,77 @@ allocate_ustrmem (int len)
         fprintf (stderr, "ERROR: Cannot allocate memory for array allocate_ustrmem().\n");
         exit (EXIT_FAILURE);
     }
+}
+u_int32_t   checksum2(unsigned char *, unsigned, u_int32_t);
+u_int32_t   wrapsum(u_int32_t);
+
+u_int32_t
+checksum2(unsigned char *buf, unsigned nbytes, u_int32_t sum)
+{
+    uint i;
+
+    /* Checksum all the pairs of bytes first... */
+    for (i = 0; i < (nbytes & ~1U); i += 2) {
+        sum += (u_int16_t)ntohs(*((u_int16_t *)(buf + i)));
+        if (sum > 0xFFFF)
+            sum -= 0xFFFF;
+    }
+
+    /*
+     * If there's a single byte left over, checksum it, too.
+     * Network byte order is big-endian, so the remaining byte is
+     * the high byte.
+     */
+    if (i < nbytes) {
+        sum += buf[i] << 8;
+        if (sum > 0xFFFF)
+            sum -= 0xFFFF;
+    }
+
+    return (sum);
+}
+
+u_int32_t
+wrapsum(u_int32_t sum)
+{
+    sum = ~sum & 0xFFFF;
+    return (htons(sum));
+}
+
+
+void
+assemble_udp_ip_header(unsigned char *buf, int *bufix, u_int32_t from,
+    u_int32_t to, unsigned int sport,  unsigned int dport, unsigned char *data, int len)
+{
+    struct ip ip;
+    struct udphdr udp;
+
+    ip.ip_v = 4;
+    ip.ip_hl = 5;
+    ip.ip_tos = IPTOS_LOWDELAY;
+    ip.ip_len = htons(sizeof(ip) + sizeof(udp) + len);
+    ip.ip_id = 0;
+    ip.ip_off = 0;
+    ip.ip_ttl = 16;
+    ip.ip_p = IPPROTO_UDP;
+    ip.ip_sum = 0;
+    ip.ip_src.s_addr = from;
+    ip.ip_dst.s_addr = to;
+
+    ip.ip_sum = wrapsum(checksum2((unsigned char *)&ip, sizeof(ip), 0));
+    memcpy(&buf[*bufix], &ip, sizeof(ip));
+    *bufix += sizeof(ip);
+
+    udp.uh_sport = htons(sport);   /* XXX */
+    udp.uh_dport = htons(dport);            /* XXX */
+    udp.uh_ulen = htons(sizeof(udp) + len);
+    memset(&udp.uh_sum, 0, sizeof(udp.uh_sum));
+
+    udp.uh_sum = wrapsum(checksum2((unsigned char *)&udp, sizeof(udp),
+        checksum2(data, len, checksum2((unsigned char *)&ip.ip_src,
+        2 * sizeof(ip.ip_src),
+        IPPROTO_UDP + (u_int32_t)ntohs(udp.uh_ulen)))));
+
+    memcpy(&buf[*bufix], &udp, sizeof(udp));
+    *bufix += sizeof(udp);
 }

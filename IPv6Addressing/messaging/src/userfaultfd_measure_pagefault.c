@@ -18,6 +18,7 @@
 #include <inttypes.h>
 
 #include "./lib/client_lib.h"
+#include "./lib/udpcooked.h"
 
 #define NUM_PAGES 1500
 
@@ -167,6 +168,7 @@ static void *handler(void *arg)
     p_server = bindSocket(p_server, servinfo_server, &sockfd_server);
     struct sockaddr_in6 *temp = (struct sockaddr_in6 *) p_server->ai_addr;
     temp->sin6_port = htons(strtol("5000", (char **)NULL, 10));
+    genPacketInfo(sockfd_server);
 
     // Set up timing arrays
     uint64_t *first_rtt_start = malloc(sizeof(uint64_t) * NUM_PAGES);
@@ -484,6 +486,8 @@ int main(int argc, char **argv)
     p_server = bindSocket(p_server, servinfo_server, &sockfd_server);
     struct sockaddr_in6 *temp = (struct sockaddr_in6 *) p_server->ai_addr;
     temp->sin6_port = htons(strtol("5000", (char **)NULL, 10));
+    genPacketInfo(sockfd_server);
+
     // Make every x regions remote
     long i;
     char *cur = region;

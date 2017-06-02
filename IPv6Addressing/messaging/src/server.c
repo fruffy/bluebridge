@@ -4,7 +4,7 @@
 
 #include "./lib/538_utils.h"
 #include "./lib/debug.h"
-
+#include "./lib/udpcooked.h"
 #define BACKLOG 10     // how many pending connections queue will hold
 
 char *varadr_char[1000];
@@ -225,6 +225,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "server: failed to bind\n");
 		exit(1);
 	}
+	genPacketInfo(sockfd);
 
 	// Start waiting for connections
 	while (1) {

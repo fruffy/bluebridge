@@ -1,5 +1,5 @@
 #include "./lib/client_lib.h"
-
+#include "./lib/udpcooked.h"
 
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"
@@ -8,7 +8,7 @@
 #define ANSI_COLOR_MAGENTA "\x1b[35m"
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
-const int NUM_ITERATIONS = 500;
+const int NUM_ITERATIONS = 1000;
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //	1. Check correctness of pointer on server side, it should never segfault.
@@ -108,9 +108,13 @@ void basicOperations( int sockfd, struct addrinfo * p) {
 		nextPointer = nextPointer->Pointer;
 		nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
 
-		uint64_t start = getns();
+		gettimeofday(&st,NULL);
 		nextPointer->AddrString = allocateRemoteMem(sockfd, p);
-		alloc_latency[i] = getns() - start;
+		gettimeofday(&et,NULL);
+		int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
+		printf("Alloc time: %d micro seconds\n",elapsed);
+		nextPointer->AddrString = allocateRemoteMem(sockfd, p);
+
 	}
 	// don't point to garbage
 	// temp fix
@@ -418,6 +422,7 @@ int main(int argc, char *argv[]) {
 	p = bindSocket(p, servinfo, &sockfd);
 	struct sockaddr_in6 *temp = (struct sockaddr_in6 *) p->ai_addr;
 	temp->sin6_port = htons(strtol(argv[2], (char **)NULL, 10));
+	genPacketInfo(sockfd);
 	if(isAutoMode) {
 		basicOperations(sockfd, p);
 	} else {
