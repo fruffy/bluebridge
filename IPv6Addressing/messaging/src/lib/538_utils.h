@@ -11,6 +11,29 @@
 #include <unistd.h>
 #include <assert.h>
 
+#include <netinet/ip.h>       // IP_MAXPACKET (which is 65535)
+#include <netinet/ip6.h>      // struct ip6_hdr
+#include <netinet/udp.h>      // struct udphdr
+#include <sys/ioctl.h>        // macro ioctl is defined
+#include <linux/if_packet.h>  // struct sockaddr_ll (see man 7 packet)
+#include <net/ethernet.h>
+#include <ifaddrs.h>
+
+// Define some constants.
+#define ETH_HDRLEN 14  // Ethernet header length
+#define IP6_HDRLEN 40  // IPv6 header length
+#define UDP_HDRLEN  8  // UDP header length, excludes data
+
+// Function prototypes
+uint16_t checksum (uint16_t *, int);
+uint16_t udp6_checksum (struct ip6_hdr, struct udphdr, uint8_t *, int);
+
+int cookUDP (struct sockaddr_in6* dst_addr, int dst_port, char* data, int datalen);
+struct udppacket* genPacketInfo (int sockfd);
+
+
+
+
 
 #define BLOCK_SIZE 4096 // max number of bytes we can get at once
 #define POINTER_SIZE sizeof(void*)

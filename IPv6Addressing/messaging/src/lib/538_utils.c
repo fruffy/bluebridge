@@ -127,7 +127,7 @@ int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p
 	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
 	print_debug("Sending to %s:%d", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
 	socklen_t slen = sizeof(struct sockaddr_in6);
-	if (sendto(sockfd,sendBuffer,msgBlockSize,0, p->ai_addr, slen) < 0) {
+	if (sendto(sockfd,sendBuffer,msgBlockSize, MSG_DONTROUTE | MSG_DONTWAIT, p->ai_addr, slen) < 0) {
 		perror("ERROR writing to socket");
 		return EXIT_FAILURE;
 	}	
@@ -147,7 +147,7 @@ int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo
 	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
 	print_debug("Inserting %u Pointer, sending to... %s:%d",p->ai_addrlen,s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );	
 	socklen_t slen = sizeof(struct sockaddr_in6);
-	if (sendto(sockfd,sendBuffer,msgBlockSize,0, p->ai_addr, slen) < 0) {
+	if (sendto(sockfd,sendBuffer,msgBlockSize, MSG_DONTROUTE | MSG_DONTWAIT, p->ai_addr, slen) < 0) {
 		perror("ERROR writing to socket");
 		return EXIT_FAILURE;
 	}

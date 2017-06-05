@@ -8,7 +8,7 @@
 #define ANSI_COLOR_MAGENTA "\x1b[35m"
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
-const int NUM_ITERATIONS = 1000;
+const int NUM_ITERATIONS = 10000;
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //	1. Check correctness of pointer on server side, it should never segfault.
@@ -123,10 +123,11 @@ void basicOperations( int sockfd, struct addrinfo * p) {
 		struct in6_addr remoteMemory = nextPointer->AddrString;
 		print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
 		print_debug("Creating payload");
-		char payload[50] = "hello world";// gen_rdm_bytestream(BLOCK_SIZE);
+		char *payload= malloc(50);
+		memcpy(payload,"hello world", 10);// gen_rdm_bytestream(BLOCK_SIZE);
 
 		uint64_t wStart = getns();
-		writeRemoteMem(sockfd, p, (char *) &payload, &remoteMemory);
+		writeRemoteMem(sockfd, p, payload, &remoteMemory);
 		write_latency[i - 1] = getns() - wStart;
 
 		uint64_t rStart = getns();
@@ -138,7 +139,7 @@ void basicOperations( int sockfd, struct addrinfo * p) {
 		uint64_t fStart = getns();
 		freeRemoteMem(sockfd, p, &remoteMemory);
 		free_latency[i-1] = getns() - fStart;
-		// free(payload);
+		free(payload);
 		free(test);
 		nextPointer = nextPointer->Pointer;
 		i++;
@@ -407,9 +408,11 @@ int main(int argc, char *argv[]) {
 	p = bindSocket(p, servinfo, &sockfd);
 	struct sockaddr_in6 *temp = (struct sockaddr_in6 *) p->ai_addr;
 	temp->sin6_port = htons(strtol(argv[2], (char **)NULL, 10));
+
 	genPacketInfo(sockfd);
 	struct timeval st, et;
 	gettimeofday(&st,NULL);
+
 	if(isAutoMode) {
 		basicOperations(sockfd, p);
 	} else {

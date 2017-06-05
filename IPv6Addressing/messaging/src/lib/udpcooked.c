@@ -27,8 +27,8 @@ struct udppacket {
     char interface[20];
 };
 
-struct udppacket packetinfo;
-
+static struct udppacket packetinfo;
+static int sd;
 struct udppacket* genPacketInfo (int sockfd) {
      
 
@@ -112,15 +112,18 @@ struct udppacket* genPacketInfo (int sockfd) {
     // http://www.iana.org/assignments/ethernet-numbers
     packetinfo.ether_frame[12] = ETH_P_IPV6 / 256;
     packetinfo.ether_frame[13] = ETH_P_IPV6 % 256;
-
+    // Submit request for a raw socket descriptor.
+    if ((sd = socket (PF_PACKET, SOCK_RAW, htons (ETH_P_ALL))) < 0) {
+        perror ("socket() failed ");
+        exit (EXIT_FAILURE);
+    }
     return &packetinfo;
 }
 
 int cookUDP (struct sockaddr_in6* dst_addr, int dst_port, char* data, int datalen) {
-    //struct timeval st, et;
-    //gettimeofday(&st,NULL);
-    int frame_length, sd;
-
+    struct timeval st, et;
+    gettimeofday(&st,NULL);
+    int frame_length;
     //Set destination IP
     packetinfo.iphdr.ip6_dst = dst_addr->sin6_addr;
 
@@ -156,22 +159,17 @@ int cookUDP (struct sockaddr_in6* dst_addr, int dst_port, char* data, int datale
     // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
     frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + datalen;
 
-    // Submit request for a raw socket descriptor.
-    if ((sd = socket (PF_PACKET, SOCK_RAW, htons (ETH_P_ALL))) < 0) {
-        perror ("socket() failed ");
-        exit (EXIT_FAILURE);
-    }
 
     // Send ethernet frame to socket.
     if ((sendto (sd, packetinfo.ether_frame, frame_length, 0, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device))) <= 0) {
         perror ("sendto() failed");
         exit (EXIT_FAILURE);
     }
-    /*gettimeofday(&et,NULL);
+    gettimeofday(&et,NULL);
     int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
-    printf("Raw socket send: %d micro seconds\n",elapsed);*/
+    printf("Raw socket send: %d micro seconds\n",elapsed);
     // Close socket descriptor.
-    close (sd);
+    //close (sd);
 
 
 
