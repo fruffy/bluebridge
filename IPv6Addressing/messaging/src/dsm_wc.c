@@ -18,11 +18,12 @@
 #include <errno.h>
 #include <math.h>
 #include <inttypes.h>
+#include <ctype.h>
 
 #include "./lib/client_lib.h"
 #include "./lib/udpcooked.h"
 
-#define NUM_PAGES 1500
+#define NUM_PAGES 464208 // Specific to hound_of_baskerville file (size / 4096)
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //  2. Add usage
@@ -217,7 +218,6 @@ static void *handler(void *arg)
                 // 2. Get stuff from the remote server (SDN directory service)
                 //      a. getRemoteMem() from client_lib.c
                 struct in6_addr remoteMachine;
-                print_debug("IPv6\n");
                 remoteMachine = *addr_map_in6[index];
 
                 char s[INET6_ADDRSTRLEN];
@@ -228,50 +228,7 @@ static void *handler(void *arg)
                 buf = getRemoteMem(sockfd_server, p_server, &remoteMachine);
                 second_rtt_end[i] = getns();
             } else {
-                struct stat fstat;
-                stat("temp.txt", &fstat);
-                int blocksize = (int) fstat.st_blksize;
-
-                char *buf = (char*) aligned_alloc(blocksize, page_size);
-
-                if (buf == NULL) {
-                    printf("Null buffer");
-                    exit(1);
-                }
-
-                FILE *f;
-                int fd = open("temp.txt", O_DIRECT | O_SYNC);
-                if (fd < 1) {
-                    perror("fd");
-                }
-
-                f = fdopen(fd, "r");
-                if (f == NULL) {
-                    perror("open temp.txt");
-                    exit(1);
-                }
-
-                int size = (int) fstat.st_size;
-
-                double myRand = rand()/(1.0 + RAND_MAX);
-                int range = size - 0 + 1;
-                int rand_off = ((int) ((myRand * range)/blocksize))*blocksize;
-
-                if (fseek(f, rand_off, SEEK_SET) != 0) {
-                    perror("fseek offset");
-                }
-
-                second_rtt_start[i] = getns();
-                if (fread(buf, blocksize, 1, f) <= 0) {
-                    perror("fread");
-                    exit(1);
-                }
-                second_rtt_end[i] = getns();
-
-                if (fclose(f)) {
-                    perror("fclose");
-                    exit(1);
-                }
+                perror("ERROR: not a remote address");
             }
 
             struct uffdio_copy copy;
@@ -307,6 +264,10 @@ EXIT:
     free(handler_end);
 
     return NULL;
+}
+
+int isWord(char prev, char cur) {
+    return isspace(cur) && isgraph(prev);
 }
 
 void usage() {
@@ -419,23 +380,64 @@ int main(int argc, char **argv)
     genPacketInfo(sockfd_server);
 
     // Make every x regions remote
+    // TODO: add line which writes a page full to the shared memory
     long i;
     char *cur = region;
     for (i = 0; i < NUM_PAGES; i++) {
-        if (!local) {
-            struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-            struct in6_addr temp = allocateRemoteMem(sockfd_server, p_server);
+        struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
+        struct in6_addr temp = allocateRemoteMem(sockfd_server, p_server);
 
-            memcpy(remotePointer, &temp, IPV6_SIZE);
-            addr_map_in6[i] = remotePointer;
-        } else {
-            addr_map_in6[i] = NULL;
-        }
+        memcpy(remotePointer, &temp, IPV6_SIZE);
+        addr_map_in6[i] = remotePointer;
     }
 
     if ((uffdio_register.ioctls & UFFD_API_RANGE_IOCTLS) !=
             UFFD_API_RANGE_IOCTLS) {
         fprintf(stderr, "unexpected userfaultfd ioctl set\n");
+        exit(1);
+    }
+
+    struct stat fstat;
+    stat("hound_of_baskerville.txt", &fstat);
+    int blocksize = (int) fstat.st_blksize;
+
+    char *buf = (char*) aligned_alloc(blocksize, page_size);
+
+    if (buf == NULL) {
+        printf("Null buffer");
+        exit(1);
+    }
+
+    FILE *f;
+    int fd = open("hound_of_baskerville.txt", O_DIRECT | O_SYNC);
+    if (fd < 1) {
+        perror("fd");
+    }
+
+    f = fdopen(fd, "r");
+    if (f == NULL) {
+        perror("open hound_of_baskerville.txt");
+        exit(1);
+    }
+
+    int size = (int) fstat.st_size;
+
+    // Write the story into the remote memory
+    for (i = 0; i < NUM_PAGES; i++) {
+        struct in6_addr remotePointer = *addr_map_in6[i];
+        if (fseek(f, i*page_size, SEEK_SET) != 0) {
+            perror("fseek offset");
+        }
+
+        if (fread(buf, blocksize, 1, f) <= 0) {
+            perror("fread");
+            exit(1);
+        }
+        writeRemoteMem(sockfd_server, p_server, buf, &remotePointer);
+    }
+
+    if (fclose(f)) {
+        perror("fclose");
         exit(1);
     }
 
@@ -463,14 +465,21 @@ int main(int argc, char **argv)
     cur = region;
 
     int count = 0, index;
+    char prev = ' ';
 
     // TODO: change to be WC. 
-    for (index = 0; cur[index] != '\0'; index++) {
-        if (cur[index] == ' ') {
-            printf("It's a word!\n");
+    for (index = 0; index < size; index++) {
+        // TODO: Should also handle \n (i.e. any whitespace)
+        //       should also ensure that it's only a word if
+        //       there was a non white space character before it.
+        if (isWord(prev, cur[index])) {
+            printf("It's a word! prev: %c, cur: %d\n", prev, cur[index]);
             count++;
         }
+        prev = cur[index];
     }
+
+    printf("Word count: %d\n", count);
 
 
     stop = 1;
@@ -482,22 +491,22 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    FILE *f = fopen("total_times.csv", "w");
-    if (f == NULL) {
+    FILE *f_stat = fopen("total_times.csv", "w");
+    if (f_stat == NULL) {
         printf("Error opening file!\n");
         // TODO: add a "goto" exit label which frees everything and returns the correct code
         exit(1);
     }
 
-    fprintf(f, "start (ns),end (ns)\n");
+    fprintf(f_stat, "start (ns),end (ns)\n");
 
     for (i = 0; i < NUM_PAGES; i++) {
-        fprintf(f, "%llu,%llu\n", (unsigned long long) total_start[i], (unsigned long long) total_end[i]);
+        fprintf(f_stat, "%llu,%llu\n", (unsigned long long) total_start[i], (unsigned long long) total_end[i]);
     }
 
     free(total_start);
     free(total_end);
-    fclose(f);
+    fclose(f_stat);
     munmap(region, page_size * NUM_PAGES);
 
     // TODO: add a "goto" exit label which frees everything and returns the correct code
