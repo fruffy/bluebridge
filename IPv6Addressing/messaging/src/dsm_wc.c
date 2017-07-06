@@ -23,7 +23,7 @@
 #include "./lib/client_lib.h"
 #include "./lib/udpcooked.h"
 
-#define NUM_PAGES 464208 // Specific to hound_of_baskerville file (size / 4096)
+#define NUM_PAGES 78 // Specific to hound_of_baskerville_small file (size / 4096)
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //  2. Add usage
@@ -398,7 +398,7 @@ int main(int argc, char **argv)
     }
 
     struct stat fstat;
-    stat("hound_of_baskerville.txt", &fstat);
+    stat("hound_of_baskerville_small.txt", &fstat);
     int blocksize = (int) fstat.st_blksize;
 
     char *buf = (char*) aligned_alloc(blocksize, page_size);
@@ -409,14 +409,14 @@ int main(int argc, char **argv)
     }
 
     FILE *f;
-    int fd = open("hound_of_baskerville.txt", O_DIRECT | O_SYNC);
+    int fd = open("hound_of_baskerville_small.txt", O_DIRECT | O_SYNC);
     if (fd < 1) {
         perror("fd");
     }
 
     f = fdopen(fd, "r");
     if (f == NULL) {
-        perror("open hound_of_baskerville.txt");
+        perror("open hound_of_baskerville_small.txt");
         exit(1);
     }
 
