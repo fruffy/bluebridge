@@ -3,7 +3,7 @@ srcDir = src
 objDir = obj
 binDir = bin
 libDir = lib
-app := server userfaultfd_measure_pagefault testing
+app := server userfaultfd_measure_pagefault testing dsm_wc
 
 
 CC = gcc

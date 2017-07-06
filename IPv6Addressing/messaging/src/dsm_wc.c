@@ -462,42 +462,13 @@ int main(int argc, char **argv)
     // touch each page in the region
     cur = region;
 
-    // char* data = "1";
+    int count = 0, index;
 
-    if (measure_write) {
-        char val = 0x21; // Start at 21, stop at 0x7E
-        // Write value --> faults b/c page not in memory
-        for (i = 0; i < NUM_PAGES; i++) {
-            // sync();
-            // int fd = open("/proc/sys/vm/drop_caches", O_WRONLY);
-            // write(fd, data, sizeof(char));
-            // close(fd);
-
-            total_start[i] = getns();
-            // int v = *((int*)cur);
-            *cur = val; // Writes the letter C, TODO: figure out how to make it do a full string
-            total_end[i] = getns();
-            // printf("Total start %d: %lu microseconds\n", i, total_start[i]/1000); //(total_end[i] - total_start[i])/1000);
-            cur += page_size;
-            val++;
-            if (val > 0x7E) {
-                val = 0x21;
-            }
-        }
-    } else {
-        cur = region;
-        int value = 0;
-        for (i = 0; i < NUM_PAGES; i++) {
-            // sync();
-            // int fd = open("/proc/sys/vm/drop_caches", O_WRONLY);
-            // write(fd, data, sizeof(char));
-            // close(fd);
-
-            total_start[i] = getns();
-            char v = *cur; // Get the current value as a char
-            total_end[i] = getns();
-            value += (int)v;
-            cur += page_size;
+    // TODO: change to be WC. 
+    for (index = 0; cur[index] != '\0'; index++) {
+        if (cur[index] == ' ') {
+            printf("It's a word!\n");
+            count++;
         }
     }
 
