@@ -121,8 +121,8 @@ struct udppacket* genPacketInfo (int sockfd) {
 }
 
 int cookUDP (struct sockaddr_in6* dst_addr, int dst_port, char* data, int datalen) {
-    struct timeval st, et;
-    gettimeofday(&st,NULL);
+    // struct timeval st, et;
+    // gettimeofday(&st,NULL);
     int frame_length;
     //Set destination IP
     packetinfo.iphdr.ip6_dst = dst_addr->sin6_addr;
@@ -165,9 +165,9 @@ int cookUDP (struct sockaddr_in6* dst_addr, int dst_port, char* data, int datale
         perror ("sendto() failed");
         exit (EXIT_FAILURE);
     }
-    gettimeofday(&et,NULL);
-    int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
-    printf("Raw socket send: %d micro seconds\n",elapsed);
+    // gettimeofday(&et,NULL);
+    // int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
+    // printf("Raw socket send: %d micro seconds\n",elapsed);
     // Close socket descriptor.
     //close (sd);
 

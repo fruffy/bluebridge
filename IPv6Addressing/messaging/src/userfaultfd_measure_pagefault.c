@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <linux/userfaultfd.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
@@ -199,7 +201,6 @@ static void *handler(void *arg)
     int i = 0;
 
     for (;;) {
-        handler_start[i] = getns();
         struct uffd_msg msg;
         char buf[page_size];
 
@@ -250,6 +251,8 @@ static void *handler(void *arg)
 
         // handle the page fault by copying a page worth of bytes
         if (msg.event & UFFD_EVENT_PAGEFAULT) {
+            handler_start[i] = getns();
+            // printf("Handler start %d: %ld microseconds\n", i, handler_start[i]/1000);
             long long addr = msg.arg.pagefault.address;
 
             // fprintf(stdout, "Address: %"PRIx64"\n", (uint64_t) msg.arg.pagefault.address);
@@ -306,23 +309,41 @@ static void *handler(void *arg)
 
                 free(val);
             } else {
-                // Clear caches:
-                /*char* data = "3";
+                struct stat fstat;
+                stat("temp.txt", &fstat);
+                int blocksize = (int) fstat.st_blksize;
 
-                sync();
-                fd = open("/proc/sys/vm/drop_caches", O_WRONLY);
-                write(fd, data, sizeof(char));
-                close(fd);*/
+                char *buf = (char*) aligned_alloc(blocksize, page_size);
 
-                FILE *f;
-                f = fopen("temp.txt", "r");
-                if (f == NULL) {
-                    perror("open temp.txt");
+                if (buf == NULL) {
+                    printf("Null buffer");
                     exit(1);
                 }
 
+                FILE *f;
+                int fd = open("1g_garbage_file.txt", O_DIRECT | O_SYNC);
+                if (fd < 1) {
+                    perror("fd");
+                }
+
+                f = fdopen(fd, "r");
+                if (f == NULL) {
+                    perror("open 1g_garbage_file.txt");
+                    exit(1);
+                }
+
+                int size = (int) fstat.st_size;
+
+                double myRand = rand()/(1.0 + RAND_MAX);
+                int range = size - 0 + 1;
+                int rand_off = ((int) ((myRand * range)/blocksize))*blocksize;
+
+                if (fseek(f, rand_off, SEEK_SET) != 0) {
+                    perror("fseek offset");
+                }
+
                 second_rtt_start[i] = getns();
-                if (fread(buf, page_size, 1, f) != 0) {
+                if (fread(buf, blocksize, 1, f) <= 0) {
                     perror("fread");
                     exit(1);
                 }
@@ -340,8 +361,11 @@ static void *handler(void *arg)
                 copy.mode = 0;
                 if (ioctl(param->uffd, UFFDIO_COPY, &copy) == -1) {
                     perror("ioctl/copy");
+                    free(buf);
                     exit(1);
                 }
+
+                free(buf);
 
                 handler_end[i] = getns();
                 i++;
@@ -543,15 +567,22 @@ int main(int argc, char **argv)
     // touch each page in the region
     cur = region;
 
+    // char* data = "1";
+
     if (measure_write) {
         char val = 0x21; // Start at 21, stop at 0x7E
-
         // Write value --> faults b/c page not in memory
         for (i = 0; i < NUM_PAGES; i++) {
+            // sync();
+            // int fd = open("/proc/sys/vm/drop_caches", O_WRONLY);
+            // write(fd, data, sizeof(char));
+            // close(fd);
+
             total_start[i] = getns();
             // int v = *((int*)cur);
             *cur = val; // Writes the letter C, TODO: figure out how to make it do a full string
             total_end[i] = getns();
+            // printf("Total start %d: %lu microseconds\n", i, total_start[i]/1000); //(total_end[i] - total_start[i])/1000);
             cur += page_size;
             val++;
             if (val > 0x7E) {
@@ -559,10 +590,14 @@ int main(int argc, char **argv)
             }
         }
     } else {
-        // Read value --> doesn't fault b/c page in memory from write
         cur = region;
         int value = 0;
         for (i = 0; i < NUM_PAGES; i++) {
+            // sync();
+            // int fd = open("/proc/sys/vm/drop_caches", O_WRONLY);
+            // write(fd, data, sizeof(char));
+            // close(fd);
+
             total_start[i] = getns();
             char v = *cur; // Get the current value as a char
             total_end[i] = getns();

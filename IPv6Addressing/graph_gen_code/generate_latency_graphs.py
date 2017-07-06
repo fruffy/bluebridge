@@ -250,7 +250,7 @@ def parse_input_folder(input_dir):
         total_latency.append(total[i][1] - total[i][0])
         rtt1.append(first_rtt[i][1] - first_rtt[i][0])
         rtt2.append(second_rtt[i][1] - second_rtt[i][0])
-        enter_fault.append(total[i][0] - handler[i][0]) 
+        enter_fault.append(handler[i][0] - total[i][0]) 
         exit_fault.append(total[i][1] - handler[i][1])
         handler_latency.append(handler[i][1] - handler[i][0])
 
@@ -351,7 +351,7 @@ def display_breakdown(btype, values):
     ax.set_xticklabels(['Remote\_DS', 'Remote\_NoDS', 'Local'])
 
     ax.set_ylabel("Latency ($\micro$s)")
-    lgd = ax.legend(loc='upper right')
+    lgd = ax.legend(loc='upper left', ncol=2)
     plt.tight_layout()
     format_axes(ax)
     plt.savefig("Latency_Breakdown_" + btype + ".pdf", bbox_extra_artists=(lgd,), bbox_inches='tight')
@@ -414,7 +414,7 @@ def display_total():
     ax.set_xticklabels(['Read', 'Write'])
 
     ax.set_ylabel("Latency ($\micro$s)")
-    lgd = ax.legend(bbox_to_anchor=(0.135, 0.99), loc='upper left')
+    lgd = ax.legend(bbox_to_anchor=(.84, 1), loc='upper right')
     # plt.tight_layout()
     format_axes(ax)
     plt.savefig("Latency_Total_Comparison.pdf", bbox_extra_artists=(lgd,), bbox_inches='tight')
