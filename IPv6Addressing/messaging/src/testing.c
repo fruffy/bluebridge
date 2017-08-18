@@ -8,7 +8,7 @@
 #define ANSI_COLOR_MAGENTA "\x1b[35m"
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
-const int NUM_ITERATIONS = 10000;
+const int NUM_ITERATIONS = 10;
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //	1. Check correctness of pointer on server side, it should never segfault.
@@ -124,15 +124,16 @@ void basicOperations( int sockfd, struct addrinfo * p) {
 		print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
 		print_debug("Creating payload");
 		char *payload= malloc(50);
-		memcpy(payload,"hello world", 10);// gen_rdm_bytestream(BLOCK_SIZE);
+		memcpy(payload,"Hello World!", 10);
 
 		uint64_t wStart = getns();
 		writeRemoteMem(sockfd, p, payload, &remoteMemory);
 		write_latency[i - 1] = getns() - wStart;
-
+		printf("Raw socket write: %lu micro seconds\n", write_latency[i - 1]/1000);
 		uint64_t rStart = getns();
 		char * test = getRemoteMem(sockfd, p, &remoteMemory);
 		read_latency[i - 1] = getns() - rStart;
+		printf("Raw socket read: %lu micro seconds\n", read_latency[i - 1]/1000);
 
 		print_debug("Results of memory store: %.50s", test);
 		
@@ -410,6 +411,7 @@ int main(int argc, char *argv[]) {
 	temp->sin6_port = htons(strtol(argv[2], (char **)NULL, 10));
 
 	genPacketInfo(sockfd);
+	openRawSocket();
 	struct timeval st, et;
 	gettimeofday(&st,NULL);
 
@@ -427,6 +429,7 @@ int main(int argc, char *argv[]) {
 
 	// TODO: send close message so the server exits
 	close(sockfd);
+	closeRawSocket();
 
 	return 0;
 }

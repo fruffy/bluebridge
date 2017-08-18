@@ -171,7 +171,7 @@ static void *handler(void *arg)
     struct sockaddr_in6 *temp = (struct sockaddr_in6 *) p_server->ai_addr;
     temp->sin6_port = htons(strtol("5000", (char **)NULL, 10));
     genPacketInfo(sockfd_server);
-
+    openRawSocket();
     // Set up timing arrays
     uint64_t *first_rtt_start = malloc(sizeof(uint64_t) * NUM_PAGES);
     assert(first_rtt_start);
@@ -380,6 +380,7 @@ EXIT:
 
     freeaddrinfo(servinfo_server);
     close(sockfd_server);
+    closeRawSocket();
     free(first_rtt_start);
     free(second_rtt_start);
     free(first_rtt_end);

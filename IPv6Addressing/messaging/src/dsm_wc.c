@@ -91,8 +91,7 @@ void print_times(uint64_t* first_rtt_start, uint64_t* first_rtt_end, uint64_t* s
 }
 
 // TODO: Change such that it always goto EXIT even on error (have a return val for the method)
-static void *handler(void *arg)
-{
+static void *handler(void *arg) {
     struct params *param = arg;
     long page_size = param->page_size;
 
@@ -120,6 +119,7 @@ static void *handler(void *arg)
     struct sockaddr_in6 *temp = (struct sockaddr_in6 *) p_server->ai_addr;
     temp->sin6_port = htons(strtol("5000", (char **)NULL, 10));
     genPacketInfo(sockfd_server);
+    openRawSocket();
 
     // Set up timing arrays
     uint64_t *first_rtt_start = malloc(sizeof(uint64_t) * NUM_PAGES);
@@ -256,6 +256,7 @@ EXIT:
 
     freeaddrinfo(servinfo_server);
     close(sockfd_server);
+    closeRawSocket();
     free(first_rtt_start);
     free(second_rtt_start);
     free(first_rtt_end);
@@ -386,7 +387,6 @@ int main(int argc, char **argv)
     for (i = 0; i < NUM_PAGES; i++) {
         struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
         struct in6_addr temp = allocateRemoteMem(sockfd_server, p_server);
-
         memcpy(remotePointer, &temp, IPV6_SIZE);
         addr_map_in6[i] = remotePointer;
     }

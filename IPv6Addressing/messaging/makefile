@@ -3,13 +3,13 @@ srcDir = src
 objDir = obj
 binDir = bin
 libDir = lib
-app := server userfaultfd_measure_pagefault testing dsm_wc
+app := server userfaultfd_measure_pagefault testing dsm_wc test_rmem
 
 
-CC = gcc
-#CFlags += -c -Wextra -Werror -Wall -g3
-CFlags += -c -Wextra -Wall -g3 -std=gnu11
-LDFlags := -lpcap -pthread -lm
+# CC = gcc
+# #CFlags += -c -Wextra -Werror -Wall -g3
+# CFLAGS += -c -Wextra -Wall -g3 -std=gnu11
+# LDFLAGS := -lpcap -pthread -lm
 
 sources := $(shell find "$(srcDir)/$(libDir)" -name '*.$(srcExt)')
 srcDirs := $(shell find . -name '*.$(srcExt)' -exec dirname {} \; | uniq)
@@ -22,11 +22,11 @@ $(app):  % : $(binDir)/%
 $(binDir)/%: buildrepo $(objects)
 	@mkdir -p `dirname $@`
 	@$(eval appObject = $(@:bin/%=%))
-	@$(CC) $(srcDir)/$(appObject).c $(objects) $(LDFlags) -o $@ `pkg-config --cflags --libs glib-2.0`
+	@$(CC) $(srcDir)/$(appObject).c $(objects) $(LDFLAGS) -o $@ `pkg-config --cflags --libs glib-2.0`
 
 $(objDir)/%.o: %.$(srcExt)
 	@echo "Building $@ ... "
-	@$(CC) $(CFlags) $< -o $@
+	@$(CC) $(CFLAGS) $< -o $@
 
 clean:
 	@echo "Cleaning..."

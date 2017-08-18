@@ -9,12 +9,12 @@
 #include <sys/time.h>
 
 
-#define DEBUG 1
+#define DEBUG 0
 
-#define print_debug(format, args...); \
+#define print_debug(...); \
 	if (DEBUG) {					 \
 		printf("[DEBUG]: ");		 \
-		printf(format, ## args);	 \
+		printf(__VA_ARGS__);	 \
 		printf("\n");				 \
 	}								 \
 

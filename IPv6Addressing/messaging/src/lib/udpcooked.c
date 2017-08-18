@@ -30,15 +30,14 @@ struct udppacket {
 static struct udppacket packetinfo;
 static int sd;
 struct udppacket* genPacketInfo (int sockfd) {
-     
-
     struct ifaddrs *ifap, *ifa = NULL; 
     struct sockaddr_in6 *sa; 
     char src_ip[INET6_ADDRSTRLEN];
 
     // Allocate memory for various arrays.
-    uint8_t src_mac[6];
-    uint8_t dst_mac[6];
+    // Set source/destination MAC address to filler values.
+    uint8_t src_mac[6] = { 2 };
+    uint8_t dst_mac[6] = { 3 };
 
     //TODO: Use config file instead. Avoid memory leaks
     getifaddrs(&ifap); 
@@ -56,10 +55,10 @@ struct udppacket* genPacketInfo (int sockfd) {
     strcpy(packetinfo.interface,ifa->ifa_name);
     //print_debug("Interface %s, Source IP %s, Source Port %d, Destination IP %s, Destination Port %d, Size %d", interface, src_ip, src_port, dst_ip, dst_port, datalen);
     // Submit request for a socket descriptor to look up interface.
-/*    if ((sd = socket (AF_INET6, SOCK_RAW, IPPROTO_RAW)) < 0) {
+    if ((sd = socket (AF_INET6, SOCK_RAW, IPPROTO_RAW)) < 0) {
         perror ("socket() failed to get socket descriptor for using ioctl() ");
         exit (EXIT_FAILURE);
-    }*/
+    }
 
     struct sockaddr_in6 sin;
     int src_port;
@@ -74,21 +73,11 @@ struct udppacket* genPacketInfo (int sockfd) {
     packetinfo.udphdr.source = htons (src_port);
     // Find interface index from interface name and store index in
     // struct sockaddr_ll device, which will be used as an argument of sendto().
-/*    memset (&packetinfo.device, 0, sizeof (packetinfo.device));
+    memset (&packetinfo.device, 0, sizeof (packetinfo.device));
     if ((packetinfo.device.sll_ifindex = if_nametoindex (packetinfo.interface)) == 0) {
         perror ("if_nametoindex() failed to obtain interface index ");
         exit (EXIT_FAILURE);
-    }*/
-
-    //TODO: Hardcorded hack, remove
-    packetinfo.device.sll_ifindex = 2;
-    //print_debug("Index for interface %s is %i", packetinfo.interface, packetinfo.device.sll_ifindex);
-
-    // Set source/destination MAC address:
-    memset(dst_mac, 255, 6);
-    memset(src_mac, 255, 6);
-
-
+    }
 
     // Fill out sockaddr_ll.
     packetinfo.device.sll_family = AF_PACKET;
@@ -113,23 +102,29 @@ struct udppacket* genPacketInfo (int sockfd) {
     packetinfo.ether_frame[12] = ETH_P_IPV6 / 256;
     packetinfo.ether_frame[13] = ETH_P_IPV6 % 256;
     // Submit request for a raw socket descriptor.
+    return &packetinfo;
+}
+
+int openRawSocket() {
     if ((sd = socket (PF_PACKET, SOCK_RAW, htons (ETH_P_ALL))) < 0) {
         perror ("socket() failed ");
         exit (EXIT_FAILURE);
     }
-    return &packetinfo;
+    return EXIT_SUCCESS;
+}
+
+void closeRawSocket() {
+    close(sd);
 }
 
 int cookUDP (struct sockaddr_in6* dst_addr, int dst_port, char* data, int datalen) {
-    // struct timeval st, et;
-    // gettimeofday(&st,NULL);
+
     int frame_length;
     //Set destination IP
     packetinfo.iphdr.ip6_dst = dst_addr->sin6_addr;
 
-
+    //TODO: Hardcorded hack, remove
     if (memcmp(&packetinfo.iphdr.ip6_dst, &packetinfo.iphdr.ip6_src, 6) == 0 ) {
-        //TODO: Hardcorded hack, remove
         packetinfo.device.sll_ifindex = 1;
     } else {
         packetinfo.device.sll_ifindex = 2;
@@ -139,7 +134,6 @@ int cookUDP (struct sockaddr_in6* dst_addr, int dst_port, char* data, int datale
     // Payload length (16 bits): UDP header + UDP data
     packetinfo.iphdr.ip6_plen = htons (UDP_HDRLEN + datalen);
     // UDP header
-
     // Destination port number (16 bits): pick a number
     packetinfo.udphdr.dest = htons (dst_port);
     // Length of UDP datagram (16 bits): UDP header + UDP data
@@ -159,20 +153,11 @@ int cookUDP (struct sockaddr_in6* dst_addr, int dst_port, char* data, int datale
     // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
     frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + datalen;
 
-
     // Send ethernet frame to socket.
     if ((sendto (sd, packetinfo.ether_frame, frame_length, 0, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device))) <= 0) {
         perror ("sendto() failed");
         exit (EXIT_FAILURE);
     }
-    // gettimeofday(&et,NULL);
-    // int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
-    // printf("Raw socket send: %d micro seconds\n",elapsed);
-    // Close socket descriptor.
-    //close (sd);
-
-
-
     return (EXIT_SUCCESS);
 }
 
@@ -207,10 +192,6 @@ uint16_t checksum (uint16_t *addr, int len) {
     if (answer == 0) {
         answer = 0xffff;
     }
-
-    // TODO: remove this is a check.
-    // answer = 50;
-    //print_debug("Checksum: %d\n", answer);
 
     return (answer);
 }
@@ -284,6 +265,5 @@ uint16_t udp6_checksum (struct ip6_hdr iphdr, struct udphdr udphdr, uint8_t *pay
         chksumlen++;
     }
 
-   //return checksum ((const char *) buf, chksumlen);
   return checksum ((uint16_t *) buf, chksumlen);
 }
