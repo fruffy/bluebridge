@@ -20,7 +20,6 @@
 #include <inttypes.h>
 
 #include "../lib/client_lib.h"
-#include "../lib/udpcooked.h"
 
 #define NUM_PAGES 1500
 

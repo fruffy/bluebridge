@@ -21,7 +21,6 @@
 #include <ctype.h>
 
 #include "../lib/client_lib.h"
-#include "../lib/udpcooked.h"
 
 #define NUM_PAGES 78 // Specific to hound_of_baskerville_small file (size / 4096)
 

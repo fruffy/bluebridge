@@ -4,7 +4,6 @@
 
 #include "../lib/538_utils.h"
 #include "../lib/debug.h"
-#include "../lib/udpcooked.h"
 #define BACKLOG 10     // how many pending connections queue will hold
 
 char *varadr_char[1000];
@@ -199,7 +198,6 @@ void handleClientRequests(int sock_fd, char * receiveBuffer, struct in6_addr * i
         }
     }
 }
-
 
 /*
  * Main workhorse method. Parses command args and does setup.
