@@ -1,0 +1,71 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Background}
+\label{sec:background}
+% \ugh{ASSIGNED TO: Amanda}\\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \ac{Outline:
+% \begin{itemize}
+%     \item Discuss high level stuff about DSM, particularly the management
+%     \item Discuss high level stuff about SDN
+%     \item Put the two together in the motivation section $\rightarrow$ reduced complexity for DSM programming, which is helpful for science people, \hl{Not sure if this part is necessary}
+% \end{itemize}}
+% \ugh{BlueBridge combines distributed shared memory management with software defined networking by implementing memory pointers as IPv6 addresses.} 
+To provide context for our design, we describe how traditional DSM management, particularly the directory service, works with references to related work and a brief overview of software defined networking and how it has been used in similar work. 
+% \fr{I would merge Background and Related Work, both chapters on their own are kinda small and it makes sense to combine the two sections into a Background chapter} \\ac{Merged}
+\subsection{Distributed Shared Memory Management}
+% \ac{Outline:
+% \begin{itemize}
+%     \item Briefly define DSM
+%     \item talk about different management techniques and the trade-offs
+% \end{itemize}}
+Distributed shared memory is a system which comprises of multiple nodes with local memory and ``global'' memory which other nodes can access, thus providing a global address space for the entire distributed system~\cite{treadmarks, Protic1996, Nitzberg1991}. The key difference between DSM implementations is how the memory is managed. One common theme in implementations, is the use of some sort of directory service, which is a way to determine where global memory resides. Protic et al. describe this as the directory storage and organization, one of the most important components to design~\cite{Protic1996}. 
+
+There are two general ways DSMs implement directory services: centralized and decentralized~\cite{Nitzberg1991}. The centralized implementation has a directory server, the node can query the directory server to determine where a piece of memory is. This implementation tends to not scale well and have poor performance. To improve performance, the node can cache the responses from the directory server, but there needs to be logic surrounding how to update the locations if memory migrates, thus increasing complexity. In the decentralized implementation, each node maintains its own directory of where memory resides. If memory migrates, and the node attempts to retrieve memory from the wrong machine, there needs to be protocols in place to rectify the wrong directory entry. This implementation scales better than the centralized approach, but can have horrible worst case performance depending on directory miss protocol.~\cite{Nitzberg1991}
+
+There are many variations of these two general directory service implementations, each attempting to either reduce complexity at the cost of performance or improve performance at the cost of complexity. Our solution attempts to provide performance and reduce the complexity of management by making the network control management instead of the distributed shared memory application.
+
+\subsubsection{Distributed Shared Memory} 
+% \ac{Should include modern solutions $\rightarrow$ FARM}
+% What solutions have been done and proposed in this space? Why is ours supposed to work better than theirs? 
+Distributed shared memory has been explored extensively in previous decades~\cite{treadmarks, gms, Protic1996, Nitzberg1991, grappa, farm}. Our solution is similar to traditional distributed shared memory implementations but differs fundamentally in the management strategy. Therefore, we restrict our discussion of related works to the management components of distributed shared memory systems.
+
+Two of the most recent systems are FaRM from Microsoft\cite{farm} and Grappa from University of Washington~\cite{grappa}. Both are similar to the traditional approaches described in~\cite{Protic1996, Nitzberg1991} but differ in the hardware used and design decisions. Both Grappa and FaRM take a more decentralized approach to their directory services. Each node is required to contact the ``owner'' of the memory in order to get routing information or to send requests~\cite{grappa, farm}. This solution tends to avoid the performance overheads from a centralized solution, but can perform poorly when memory migrates. Our solution differs as the memory address is the IPv6 location of the memory. The switch will map that IPv6 address to the correct machine which owns that piece of memory. In the case of memory migration, the controller will update the switch with new rules, thus re-routing the same IPv6 address to the new owner.
+
+% Grappa has a similar approach as FaRM, where their management is decentralized and relies on ownership. All requests must go through the owner of the memory. 
+
+% FARM - RDMA based shared memory space, uses consistent hashing to determine which machine has what data. Needs to query that machine to build the RDMA request. Cluster membership is handled by Zookeeper. We differ because we move the directory service on to the route path. The request must go through the switch anyways, so might as well have the directory look up be at the switch.
+
+% Grappa - decentralized management approach
+
+\subsubsection{Remote Paging}
+% \ac{Make a point to say most of this work is not \textbf{shared}. Different implementation of directory service (moved fully into the network).}
+Remote paging works almost identically to typical operating system paging, except instead of going to disk, it fetches the data from a remote memory source. A lot of work has been done exploring this area, generally, it is found that remote paging tends to be faster than disk accesses when a workload's data cannot fit entirely on its local RAM~\cite{infiniswap}. Two remote paging solutions similar to ours leverage the network~\cite{infiniswap, Liang2005} to improve performance. Infiniswap uses RDMA and Infiniband and achieves better performance on a set of unmodified applications using decentralized placement and eviction. Our solution differs from Infiniswap in two ways: 1) the memory we handle is \textit{shared} as well as remote, and 2) we not only leverage the network, but integrate with it. We do not rely on a fast network to achieve good performance numbers, rather we reduce complexity of the distributed shared memory management by moving that management into the network. 
+
+% How are we different from infiniswap? How does RDMA relate to our work?\\
+% \ac{TODO: Find other remote paging papers.
+% \begin{itemize}
+%     \item \url{http://www.cs.mtu.edu/~zlwang/papers/iwvt08.pdf}
+%     \item \url{http://protocols.netlab.uky.edu/~griff/papers/usenix90.pdf}
+%     \item \url{http://ieeexplore.ieee.org/document/6546090/?reload=true}
+%     \item \url{http://mvapich.cse.ohio-state.edu/static/media/publications/slide/liang-cluster05.pdf}
+%     \item \url{http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.31.2300&rep=rep1&type=pdf}
+%     \item \url{https://link.springer.com/article/10.1023\%2FA\%3A1019051330479}
+% \end{itemize}
+% }
+
+
+
+\subsection{Software-Defined Networking}
+The fundamental concept behind BlueBridge is possible due to recent extensive research in the programmable networks domain. Software-defined networking (SDN) in particular forms a core component in our shared memory design. Spearheaded by the publication of the OpenFlow protocol~\cite{openflow}, SDN decouples the fast forwarding fabric and the slow decision-making processor of a single switch into two separate entities. Switches form a single-purpose transport layer (data plane), while all forwarding and networking logic is moved into the central and globally aware controller (control plane). Network transport does not consist of individual elements maintaining their custom routing entries, but of a single forwarding stream (flow) orchestrated by the control plane.
+
+This abstraction allows for simple dynamic reconfiguration and supervision, as the controller is capable of removing and installing fine-grained forwarding entries on the switch while monitoring all network events.
+Since controllers are primarily composed of a set of script libraries interfacing with OpenFlow-capable switches, they offer the possibility to integrate with any other central managing unit in a framework. 
+Merging control and knowledge over the network with client and memory management provides a considerably more comprehensive and flexible platform. A controller can adapt table entries to the platform it is integrated with and thus perfectly optimize communication.
+In the case of distributed shared memory systems, this may be a central directory service or master node. Instead of having to query a separate directory service and maintaining information about remaining nodes in the system, clients can simply forward their requests into the network as the controller will install and handle the correct routing entries.
+
+\subsubsection{Software-Defined Networking for Storage/Memory.}
+In the past years, several systems have utilised SDN to shift traditional host-based management into the network. SwitchKV~\cite{switchkv} uses programmability to implement cache look-up directly on the the switch. The controller places table entries containing information whether data is present in the cache node. If not, requests will be routed accordingly and subsequently cached on the node as well as the switch table.
+Mirador~\cite{mirador} is another system which relies on software-defined networking for storage management. Mirador is a data placement service which automatically uses the programmable switch to re-route clients when a flow needs to be migrated.
+Our use of software-defined networking is similar to both systems as we leverage the global knowledge benefits of the control plane. However, we do not only re-route packets, but incorporate any form of management directly in the networking layer. This may also include validation, fault tolerance, and coherence.
+
+Ports et al., 2015~\cite{mom} also postulate closer integration of network and applications. Mom's principle is to use switches to provide ``mostly" correct ordering for multicast messages in the hope to gain performance. A control plane script implements topology-aware routing on all switches of the Clos network and forwards all multicast messages to a root switch. The switch serializes the packets via the default queueing mechanism and sends a mostly-correct ordering to the specified node. This approach is similar to our proposal, as traditionally host-based functions (here: message ordering) are now managed by network entities. In the same vein, we plan to reduce complexity on the client side and investigate the benefits of such design choices.

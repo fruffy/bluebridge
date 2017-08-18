@@ -42,10 +42,10 @@ def configureHosts(net):
         print(host)
 
         # Insert NDP configuration (deprecated)
-        testString = "\"proxy h" + str(hostNum) + "-eth0 { ttl 1 router no rule 0:0:01" + '{0:02x}'.format(
-            hostNum) + "::/48 { static } }\" > ./tmp/config/ndp_conf.conf"
-        print(testString)
-        host.cmdPrint('echo ' + testString)
+        # testString = "\"proxy h" + str(hostNum) + "-eth0 { ttl 1 router no rule 0:0:01" + '{0:02x}'.format(
+        #     hostNum) + "::/48 { static } }\" > ./tmp/config/ndp_conf.conf"
+        # print(testString)
+        # host.cmdPrint('echo ' + testString)
 
         # Configure the interface and respective routing
         host.cmdPrint('ip address change dev h' + str(hostNum) +
@@ -58,7 +58,7 @@ def configureHosts(net):
         host.cmdPrint('ifconfig h' + str(hostNum) + '-eth0 mtu 9000')
         # Run the server
         host.cmdPrint('xterm  -T \"server' + str(hostNum) +
-                      '\" -e \"./messaging/bin/server; bash\" &')
+                      '\" -e \"./applications/bin/server; bash\" &')
 
         # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"./messaging/launchProxy.sh -i h' + str(hostNum) +
         #               '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')

@@ -1,0 +1,192 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Auto-Scaling}
+\label{sec:autoscaling}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Why Distributed Shared Memory?}
+
+Given the results from the scalability analysis, we aim to build a system that
+transparently scales for practitioners that desire performance, yet want minimal
+changes to their single-threaded interface.
+
+What options exist for this setting? Implementing a full MPI-style system would
+allow for the highest potential gains in performance, but is not generalizable
+and would alter the programmer's interface. One could also opt for a system such
+as Naiad ~\cite{Murray:2013:NTD:2517349.2522738} or Hadoop
+~\cite{Vavilapalli:2013:AHY:2523616.2523633}. While simplier to reason about, 
+this also requires significant setup and is still requires a large change in the 
+programming interface. 
+
+Instead, we turn to the next-simplest abstraction: distributed shared memory (DSM).
+DSM comes with the advantage that its programming model is similar to the
+single machine through a key value interface, ~\cite{Power:2010:PBF:1924943.1924964}, 
+and hides the complexities of the network from the developer. DSM seems like an
+ideal solution for the problem presented, but has traditionally been shown to lack
+the required performance, and gives the developer little control over locality. 
+
+Thus, we propose BlueBridge, a locality aware DSM system. BlueBridge includes
+an API for access and placement of distributed shared memory, which aims to
+alleviate the concerns previously posed by DSM. With current trends in rack
+scale datacenters, disaggregated datacenters are evolving into dense memory
+systems with terabit-level internal bandwidth. These environments support the 
+conceptual idea of DSM, in which a rack scale system poses as a single machine. 
+
+\subsection{BlueBridge Design}
+
+BlueBridge is designed for a simple interface, that hides the complexity of
+shared memory from the developer. The intended users of BlueBridge are those who
+have a need to process large datasets, but do not want to reason about the
+complexities of distributed shared memory. We choose to provide an interface
+to BlueBridge through Python, using a shared dictionary interface. This API
+provides ability to perform \textit{put(key, value)} and \textit{get(value)}
+on a Python dictionary, while having all the required consistency and messaging
+capabilities hidden.
+
+We simulate a DSM system by using Python 2.7, and its built-in \textit{Manager}
+library. The \textit{Manager} library allows for simple management of shared
+state between processes by providing interfaces to shared arrays, dictionaries
+and easy locking semantics. 
+
+Extending the theme from our COST investigation, we choose to target graph
+processing as an example use case for BlueBridge. We also use iGraph 0.6, which
+includes a flexible interface for graph processing in Python. iGraph performs
+its computation in C and is interfaced with Python, so it came to be a natural 
+choice given the design constraints.
+
+\subsection{Experimental Setup}
+
+To evaluate the parallel graph processing of BlueBridge, we computed PageRank
+on three graphs, collected from the Stanford Large Network Dataset Collection.
+~\cite{snapnets} These graphs will be referred to as:
+
+\begin{itemize}
+	\item wikiVote: A Wikipedia voter network, with 7115 vertices and 103689 edges
+	\item GrQc: A citation network of General Relativity/Quantum Cosmology papers,
+	 with 5242 vertices and 124496 edges
+	\item condMat: A citation network of Condensed Matter papers, with 23133 nodes
+	 and 93497 edges
+\end{itemize}
+
+In all cases, we executed 20 iterations of PageRank on these three graphs, subject
+to a variety of programming models.
+
+\subsection{Partitioning}
+
+When processing graphs in distributed shared memory, portions of the graph are
+assigned to different machines, in order to balance workload and storage between
+machines. Pregel uses a hash of the vertex ID to assign vertices to machines,
+~\cite{Malewicz:2010:PSL:1807167.1807184} which does not consider the graph
+structure. Given the performance and locality constraints concerning DSM,
+we believe that a locality-aware assignment of vertices to machines provides the
+opportunity for speedup, as it limits the number of network calls that must
+be performed during computation.
+
+Graph partitioning occurs as a pre-processing step when performing
+graph processing on DSM in BlueBrodge. In order to respect locality within 
+DSM, our partitioning algorithm aims to provide an optimal environment for the
+parallel processing of graphs. We define an optimal partitioning scheme as one
+in which the number of vertices are roughly equal for each partition, while the
+number of edges that cross partitions is minimized. We leverage the METIS
+~\cite{Lasalle:2013:metis} library, an MPI implementation for parallel
+partitioning of large graphs, to determine an optimal partitioning for the
+system. METIS simply accepts an adjacency list, which can be built using iGraph
+library funcitons, and outputs the the graph partitioning scheme as a membership
+vector. METIS is built in and runs in C, and the corresponding Python binding,
+PyMetis \cite{pymetis} was used to determine the optimal graph partitioning once
+it is read into memory. 
+
+\begin{table}[h]
+\begin{tabularx}{\linewidth}{|X|X|X|X|}
+\hline
+Graph & 2 part. & 4 part. & 8 part. \\ \hline \hline
+GrQc & 3.38\% & 4.93\% & 7.20\% \\ \hline
+condMat & 6.56\% & 13.38\% & 18.69\% \\ \hline
+wikiVote & 25.45\% & 50.05\% & 64.79\% \\ \hline
+\end{tabularx}
+\caption{Percentage of edges cut when splitting into 2,4 or 8 partitions.}
+\label{tab:cutting}
+\end{table}
+
+\begin{table}[h]
+\begin{tabularx}{\linewidth}{|X|X|}
+\hline
+Graph & Time To Partition (avg.) \\ \hline \hline
+GrQc & 0.027s \\ \hline
+condMat & 0.151s \\ \hline
+wikiVote & 0.050s \\ \hline
+\end{tabularx}
+\caption{Time taken to partition graph with PyMetis}
+\label{tab:part_time}
+\end{table}
+
+The three graphs explained previously all exhibit varying degrees of 
+connectivity. GrQc can be split into 2,4 or 8 partitions with a relatively low
+degree of cutting, while wikiVote is much more difficult to cut. The degree of
+cutting for all three graphs can be observed in Table \ref{tab:cutting}. 
+The performance of the graph partitioning step was also measured and shown in
+Table \ref{tab:part_time} and it was found that the time to partition the graph
+is several orders of magnitude less than the total PageRank processing time.
+
+Applying techniques seen in \cite{Chen:2015:powerlyra}
+and \cite{Tian:2013:thinklikeagraph}, we use a "mirroring" technique for storing
+edges between partitions. For each edge that crosses partitions, only vertices
+on two separate partitions will be affected. The partition which contains the 
+destination vertex will be considered the owner of the given edge. In the
+partition not containing the owner vertex, edges which connect to the owner
+vertex will instead connect to a proxy "mirror" vertex. The edges that connect
+to "mirrors" will be stored in shared memory, such that they can be written to
+and read from different machines. Owner vertices requires weights from all
+incoming edges and thus maintains references to the shared edges on which they
+depend. The partitioning procedure is shown in Figure \ref{fig:partition}.
+
+\begin{figure}[h]
+\includegraphics[width=\linewidth]{"fig/partition_example"}
+\caption{An example of the partitioning procedure. Shared edges are loaded into
+shared memory.}
+\label{fig:partition}
+\end{figure}
+
+PageRank was evaluated on BlueBridge, both with the partitioning scheme
+described above, and a uniform random assignment of nodes, which models the
+partitioning scheme of Pregel. In a DSM environment, leveraging locality can
+lead to significant speedups. GrQc, which was the most easily partitioned graph,
+demonstrated a 10x speedup, while the wikiVote graph only showed speedups
+between 1-2x. These results are shown in Figure \ref{fig:smart_rand}.
+
+\begin{figure}[h]
+\includegraphics[width=\linewidth]{"fig/smart_vs_rand"}
+\caption{Speedups attained by using optimal partitioning. Speedups are relative
+to the performance of their corresponding random partitioning scheme.}
+\label{fig:smart_rand}
+\end{figure}
+
+\subsection{RDDs over Supersteps}
+
+Some graph processing algorithms rely on a "superstep" mechanic, where for
+each iteration, all vertices are synchronized together before proceeding to the
+next iteration. When only a small subset of the edges in a partitioned graph 
+are placed in distributed shared memory, creating a persistent record of edge
+weights on previous iterations becomes more feasible. This was explored by
+allocating additional addresses in the simulated shared memory for previous 
+iterations, and storing them like resilient distributed datasets (RDDs). Access
+to this shared memory was performed in a publish and subscibe pattern of access.
+Thus, when performing a pagerank iteration, blocking only occurred on a read
+operation if the edge weight was not yet updated for the desired iteration.
+
+We tackle the performance concerns of DSM by implementing this mechanism
+in BlueBridge. Speedups of approximately 1.5 - 2.1x wer observed, for both smart
+and random partitioning, varying degrees of graph partitioning, and different
+numbers of processes. The results of this experiment can be seen in Figure
+\ref{fig:rdds}.
+
+\begin{figure}[h]
+\includegraphics[width=\linewidth]{"fig/rdd_vs_ss"}
+\caption{Speedups attained by using an RDD style of storage, instead of
+ traditional supersteps.}
+\label{fig:rdds}
+\end{figure}
+
+Also not explored in this setting, the use of RDDs for shared memory implies the
+potential for resilience in the face of machine failures. Failed instances of
+BlueBridge could potentially restart and pull its dependent values from the
+globally shared memory, preventing redundant computation.

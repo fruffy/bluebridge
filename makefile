@@ -1,6 +1,6 @@
 MAKE_DIR = $(PWD)
 
-MSG_DIR    := $(MAKE_DIR)/IPv6Addressing/messaging/
+MSG_DIR    := $(MAKE_DIR)/IPv6Addressing/
 
 
 CC = gcc
