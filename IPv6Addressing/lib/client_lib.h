@@ -2,9 +2,8 @@
  ** client.c -- a stream socket client demo
  */
 
-#include "538_utils.h"
-#include "debug.h"
-#include <sys/time.h>
+#include "network.h"
+#include <netdb.h>            // struct addrinfo
 
 struct in6_addr allocateRemoteMem(int sockfd, struct sockaddr_in6 * targetIP);
 int writeRemoteMem(int sockfd, struct sockaddr_in6 * targetIP, char * payload,  struct in6_addr * toPointer);

@@ -1,9 +1,13 @@
 /*
  ** server.c -- a stream socket server demo
  */
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
-#include "../lib/538_utils.h"
-#include "../lib/debug.h"
+#include "../lib/utils.h"
+#include "../lib/network.h"
 #define BACKLOG 10     // how many pending connections queue will hold
 
 char *varadr_char[1000];

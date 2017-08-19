@@ -5,6 +5,11 @@
 // TODO: Add a get remote machine method (needs to get the remote machine which holds a specific address.)
 
 #include "client_lib.h"
+#include "utils.h"
+#include <string.h>           // strcpy, memset(), and memcpy()
+#include <stdlib.h>           // free(), alloc, and calloc()
+#include <stdio.h>            // printf() and sprintf()
+#include <arpa/inet.h>        // inet_pton() and inet_ntop()
 
 /*
  * Allocate memory from a remote machine.

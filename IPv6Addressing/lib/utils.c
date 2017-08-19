@@ -1,5 +1,54 @@
+#define _GNU_SOURCE
 
-#include "debug.h"
+#include "utils.h"
+
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
+/*
+ * Gets the line from the command prompt
+ * http://stackoverflow.com/questions/4023895/how-to-read-string-entered-by-user-in-c
+ */
+int getLine(char *prmpt, char *buff, size_t sz) {
+	int ch, extra;
+
+	// Get line with buffer overrun protection.
+	if (prmpt != NULL) {
+		printf("%s", prmpt);
+		fflush(stdout);
+	}
+	if (fgets(buff, sz, stdin) == NULL)
+		return 0;
+
+	// If it was too long, there'll be no newline. In that case, we flush
+	// to end of line so that excess doesn't affect the next call.
+	if (buff[strlen(buff) - 1] != '\n') {
+		extra = 0;
+		while (((ch = getchar()) != '\n') && (ch != EOF))
+			extra = 1;
+		return (extra == 1) ? 0 : 1;
+	}
+
+	// Otherwise remove newline and give string back to caller.
+	buff[strlen(buff) - 1] = '\0';
+	return 1;
+}
+
+/*
+ * Gets random byte array with size num_bytes
+ */
+unsigned char *gen_rdm_bytestream(size_t num_bytes) {
+	unsigned char *stream = (unsigned char *) malloc(num_bytes);
+	size_t i;
+
+	for (i = 0; i < num_bytes; i++) {
+		stream[i] = rand();
+	}
+
+	return stream;
+}
 
 /*void print_debug(char* message) {
 	if (DEBUG) {
@@ -19,6 +68,7 @@ int printBytes(char * receiveBuffer) {
 	printf("\n");
 	return i;
 }
+
 /*
  * Print reverse byte buffer including specified length
  */

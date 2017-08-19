@@ -1,4 +1,14 @@
 #include "../lib/client_lib.h"
+#include "../lib/utils.h"
+
+#include <unistd.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <sys/time.h>
+#include <arpa/inet.h>        // inet_pton() and inet_ntop()
 
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"

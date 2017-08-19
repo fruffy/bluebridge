@@ -17,8 +17,31 @@
 // Send a "cooked" IPv6 UDP packet via raw socket.
 // Need to specify destination MAC address.
 // Includes some UDP data.
+#include <stdio.h>            // printf() and sprintf()
+#include <stdlib.h>           // free(), alloc, and calloc()
+#include <unistd.h>           // close()
+#include <string.h>           // strcpy, memset(), and memcpy()
+#include <netdb.h>            // struct addrinfo
+#include <sys/socket.h>       // needed for socket()
+#include <netinet/in.h>       // IPPROTO_UDP, INET6_ADDRSTRLEN
+#include <netinet/ip.h>       // IP_MAXPACKET (which is 65535)
+#include <netinet/udp.h>      // struct udphdr
+#include <sys/ioctl.h>        // macro ioctl is defined
+#include <bits/ioctls.h>      // defines values for argument "request" of ioctl.
+#include <net/if.h>           // struct ifreq
+#include <linux/if_ether.h>   // ETH_P_IP = 0x0800, ETH_P_IPV6 = 0x86DD
+#include <linux/if_packet.h>  // struct sockaddr_ll (see man 7 packet)
+#include <net/ethernet.h>
+#include <ifaddrs.h>
+#include <errno.h>            // errno, perror()
+
 #include "udpcooked.h"
-#include "debug.h"
+#include "utils.h"
+
+// Function prototypes
+uint16_t checksum (uint16_t *, int);
+uint16_t udp6_checksum (struct ip6_hdr, struct udphdr, uint8_t *, int);
+
 struct udppacket {
     struct ip6_hdr iphdr;
     struct udphdr udphdr;

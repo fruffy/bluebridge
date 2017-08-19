@@ -3,8 +3,8 @@ srcDir = applications
 objDir = $(srcDir)/obj
 binDir = $(srcDir)/bin
 libDir = lib
-app := server userfaultfd_measure_pagefault testing dsm_wc test_rmem
-
+app := server testing test_rmem
+#userfaultfd_measure_pagefault dsm_wc test_rmem 
 
 # CC = gcc
 # #CFlags += -c -Wextra -Werror -Wall -g3
