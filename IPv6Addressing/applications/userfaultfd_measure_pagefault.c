@@ -54,7 +54,7 @@ static long get_page_size(void)
     return ret;
 }
 
-struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer, int machine) {
+struct in6_addr getRemoteAddr(int sockfd, struct sockaddr_in6 *targetIP, uint64_t pointer, int machine) {
     char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
     char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 
@@ -67,16 +67,15 @@ struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer, 
     
     // These lines get a specific IPv6 server to send a message to.
     struct in6_addr * ipv6Pointer = gen_fixed_IPv6Target(machine);
-    memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-    p->ai_addrlen = sizeof(*ipv6Pointer);
+    memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
 
     // printf("Retrieving address for pointer: %" PRIx64 "\n", pointer);
 
     // Send message
     print_debug("Sending raw packet with args: %d, %s, %d", sockfd, sendBuffer, BLOCK_SIZE);
-    sendUDPRaw(sendBuffer,BLOCK_SIZE, p);
+    sendUDPRaw(sendBuffer,BLOCK_SIZE, targetIP);
     // Receive response
-    receiveUDP(sockfd, receiveBuffer,BLOCK_SIZE, p);
+    receiveUDP(sockfd, receiveBuffer,BLOCK_SIZE, targetIP);
 
     struct in6_addr retVal;
 
@@ -91,7 +90,7 @@ struct in6_addr getRemoteAddr(int sockfd, struct addrinfo *p, uint64_t pointer, 
         // Insert information about the source host (black magic)
         //00 00 00 00 01 01 00 00 00 00 00 00 00 00 00 00
         //            ^  ^ these two bytes are stored (subnet and host ID)
-        memcpy(remotePointer->s6_addr+4, get_in_addr(p->ai_addr)+4, 2);
+        memcpy(remotePointer->s6_addr+4, ((char*)&targetIP->sin6_addr)+4, 2);
         print_debug("Got: %p from server", (void *)remotePointer);
 
         retVal = *remotePointer;
@@ -273,7 +272,7 @@ static void *handler(void *arg)
                     print_debug("Iteration %d\n", i);
                     first_rtt_start[i] = getns();
                     // TODO: this needs to be implemented with raw sockets, look at client_lib.c
-                    remoteMachine = getRemoteAddr(sockfd_server, p_server, addr_map_int[index], addr_map_machine[index]);
+                    remoteMachine = getRemoteAddr(sockfd_server, (struct sockaddr_in6*) p_server->ai_addr, addr_map_int[index], addr_map_machine[index]);
                     first_rtt_end[i] = getns();
 
                     char s[INET6_ADDRSTRLEN];
@@ -288,7 +287,7 @@ static void *handler(void *arg)
                     print_debug("Remote Machine is... %s\n", s);
                 }
                 second_rtt_start[i] = getns();
-                char* val = getRemoteMem(sockfd_server, p_server, &remoteMachine);
+                char* val = getRemoteMem(sockfd_server, (struct sockaddr_in6*) p_server->ai_addr, &remoteMachine);
                 second_rtt_end[i] = getns();
                 
                 struct uffdio_copy copy;
@@ -519,12 +518,12 @@ int main(int argc, char **argv)
         if (!local) {
             // Allocate remote memory
             if (directService) {
-                struct in6_addr temp = allocateRemoteMem(sockfd_server, p_server);
+                struct in6_addr temp = allocateRemoteMem(sockfd_server, (struct sockaddr_in6*) p_server->ai_addr);
                 addr_map_int[i] = getPointerFromIPv6(temp);
                 addr_map_machine[i] = getMachineFromIPv6(temp);
             } else {
                 struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-                struct in6_addr temp = allocateRemoteMem(sockfd_server, p_server);
+                struct in6_addr temp = allocateRemoteMem(sockfd_server, (struct sockaddr_in6*) p_server->ai_addr);
 
                 memcpy(remotePointer, &temp, IPV6_SIZE);
                 addr_map_in6[i] = remotePointer;

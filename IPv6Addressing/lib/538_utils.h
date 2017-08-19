@@ -47,12 +47,12 @@ int getLine(char *prmpt, char *buff, size_t sz);
 unsigned char *gen_rdm_bytestream(size_t num_bytes);
 struct in6_addr * gen_rdm_IPv6Target();
 struct in6_addr * gen_fixed_IPv6Target(uint8_t rndHost);
-int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p);
-int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr  ipv6Pointer);
-int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct addrinfo * p);
-int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr  ipv6Pointer);
-int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p);
-int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr * ipv6Pointer);
+int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct sockaddr_in6 * p);
+int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct sockaddr_in6 * p, struct in6_addr  ipv6Pointer);
+int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 * p);
+int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 * p, struct in6_addr  ipv6Pointer);
+int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 * p);
+int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 * p, struct in6_addr * ipv6Pointer);
 uint64_t getPointerFromIPv6(struct in6_addr addr);
 struct in6_addr getIPv6FromPointer(uint64_t pointer);
 /*

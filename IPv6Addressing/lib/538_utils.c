@@ -88,7 +88,7 @@ struct in6_addr * gen_rdm_IPv6Target() {
 
 
 	char s[INET6_ADDRSTRLEN];
-	inet_ntop(AF_INET6,newAddr, s, sizeof s);
+	inet_ntop(AF_INET6, newAddr, s, sizeof s);
 	print_debug("Target IPv6 Pointer %s",s);
 	return newAddr;
 }
@@ -112,7 +112,7 @@ struct in6_addr * gen_fixed_IPv6Target(uint8_t rndHost) {
 
 
 	char s[INET6_ADDRSTRLEN];
-	inet_ntop(AF_INET6,newAddr, s, sizeof s);
+	inet_ntop(AF_INET6, newAddr, s, sizeof s);
 	print_debug("Target IPv6 Pointer %s",s);
 	return newAddr;
 }
@@ -121,13 +121,13 @@ struct in6_addr * gen_fixed_IPv6Target(uint8_t rndHost) {
  * Sends message to specified socket
  * Simpler version where we do not need to insert the IPv6Addr into the header
  */
-int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p) {
+int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP) {
 
 	char s[INET6_ADDRSTRLEN];
-	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
-	print_debug("Sending to %s:%d", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
+	inet_ntop(targetIP->sin6_family, targetIP, s, sizeof s);
+	print_debug("Sending to %s:%d", s,ntohs(((struct sockaddr_in6*) targetIP)->sin6_port));
 	socklen_t slen = sizeof(struct sockaddr_in6);
-	if (sendto(sockfd,sendBuffer,msgBlockSize, MSG_DONTROUTE | MSG_DONTWAIT, p->ai_addr, slen) < 0) {
+	if (sendto(sockfd,sendBuffer,msgBlockSize, MSG_DONTROUTE | MSG_DONTWAIT, targetIP, slen) < 0) {
 		perror("ERROR writing to socket");
 		return EXIT_FAILURE;
 	}	
@@ -139,15 +139,14 @@ int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p
  */
 //TODO Evaluate what variables and structures are actually needed here
 //TODO: Error handling
-int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr remotePointer) {
+int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct sockaddr_in6 * targetIP, struct in6_addr remotePointer) {
 	
 	char s[INET6_ADDRSTRLEN];
-	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), &remotePointer, sizeof(remotePointer));
-	p->ai_addrlen = sizeof(remotePointer);
-	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), s, sizeof s);
-	print_debug("Inserting %u Pointer, sending to... %s:%d",p->ai_addrlen,s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port) );	
+	memcpy(&(targetIP->sin6_addr), &remotePointer, sizeof(remotePointer));
+	inet_ntop(targetIP->sin6_family, targetIP, s, sizeof s);
+	print_debug("Sending to... %s:%d", s, ntohs(targetIP->sin6_port));
 	socklen_t slen = sizeof(struct sockaddr_in6);
-	if (sendto(sockfd,sendBuffer,msgBlockSize, MSG_DONTROUTE | MSG_DONTWAIT, p->ai_addr, slen) < 0) {
+	if (sendto(sockfd,sendBuffer,msgBlockSize, MSG_DONTROUTE | MSG_DONTWAIT, targetIP, slen) < 0) {
 		perror("ERROR writing to socket");
 		return EXIT_FAILURE;
 	}
@@ -159,13 +158,13 @@ int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct addrinfo
  * Sends message to specified socket
  * RAW version, we craft our own packet.
  */
-int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct addrinfo * p) {
+int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP) {
 
 /*  char dst_ip[INET6_ADDRSTRLEN];
-	inet_ntop(p->ai_family,get_in_addr(p->ai_addr), dst_ip, sizeof dst_ip);
+	inet_ntop(p->ai_family,get_in_addr(p), dst_ip, sizeof dst_ip);
 	print_debug("Sending to %s:%d", dst_ip,dst_port);*/
-	int dst_port = ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port);
-	cookUDP((struct sockaddr_in6*) p->ai_addr, dst_port, sendBuffer, msgBlockSize);
+	int dst_port = ntohs(targetIP->sin6_port);
+	cookUDP(targetIP, dst_port, sendBuffer, msgBlockSize);
 	memset(sendBuffer, 0, msgBlockSize);
 	return EXIT_SUCCESS;
 }
@@ -176,15 +175,14 @@ int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct addrinfo * p) {
  */
 // TODO: Evaluate what variables and structures are actually needed here
 // TODO: Error handling
-int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr remotePointer) {
+int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr remotePointer) {
 	
-	memcpy(&(((struct sockaddr_in6*) p->ai_addr)->sin6_addr), &remotePointer, sizeof(remotePointer));
-	p->ai_addrlen = sizeof(remotePointer);
+	memcpy(&(targetIP->sin6_addr), &remotePointer, sizeof(remotePointer));
 	//char dst_ip[INET6_ADDRSTRLEN];
-	int dst_port = ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port);
-	//inet_ntop(p->ai_family,get_in_addr(p->ai_addr), dst_ip, sizeof dst_ip);
+	int dst_port = ntohs(targetIP->sin6_port);
+	//inet_ntop(p->ai_family,get_in_addr(p), dst_ip, sizeof dst_ip);
 	//print_debug("Sending to %s:%d", dst_ip,dst_port);
-	cookUDP((struct sockaddr_in6*) p->ai_addr, dst_port, sendBuffer, msgBlockSize);
+	cookUDP(targetIP, dst_port, sendBuffer, msgBlockSize);
 	memset(sendBuffer, 0, msgBlockSize);
 	return EXIT_SUCCESS;
 }
@@ -196,7 +194,7 @@ int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct addrinfo * p, str
  //http://stackoverflow.com/questions/3062205/setting-the-source-ip-for-a-udp-socket
 //TODO Evaluate what variables and structures are actually needed here
 //TODO: Error handling
-int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p, struct in6_addr * ipv6Pointer) {
+int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer) {
 
 	struct sockaddr_in6 from;
 	struct iovec iovec[1];
@@ -224,17 +222,16 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
 	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != 0; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
 		if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
 			in6_pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
-			inet_ntop(p->ai_family,&in6_pktinfo->ipi6_addr, s, sizeof s);
+			inet_ntop(targetIP->sin6_family, &in6_pktinfo->ipi6_addr, s, sizeof s);
 			print_debug("Received packet was sent to this IP %s",s);
 			memcpy(ipv6Pointer->s6_addr,&in6_pktinfo->ipi6_addr,IPV6_SIZE);
 			memcpy(receiveBuffer,iovec[0].iov_base,iovec[0].iov_len);
-			memcpy(p->ai_addr, (struct sockaddr *) &from, sizeof(from));
-			p->ai_addrlen = sizeof(from);
+			memcpy(targetIP, (struct sockaddr *) &from, sizeof(from));
 		}
 	}
 
-	inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
-	print_debug("Got message from %s:%d", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
+	inet_ntop(targetIP->sin6_family, targetIP, s, sizeof s);
+	print_debug("Got message from %s:%d", s, ntohs(targetIP->sin6_port));
 	//printNBytes(receiveBuffer, 50);
 	return numbytes;
 }
@@ -243,19 +240,19 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct ad
  * Receives message from socket
  * Simpler version where we do not need the fancy msghdr structure
  */
-int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct addrinfo * p) {
+int receiveUDP(int sockfd, char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP) {
 
 	int numbytes = 0;
 	socklen_t slen = sizeof(struct sockaddr_in6);
 	memset(receiveBuffer, 0, msgBlockSize);
 	print_debug("Waiting for response...");
-	if ((numbytes = recvfrom(sockfd,receiveBuffer, msgBlockSize, 0, p->ai_addr,&slen)) == -1) {
+	if ((numbytes = recvfrom(sockfd, receiveBuffer, msgBlockSize, 0, targetIP, &slen)) == -1) {
 		perror("ERROR reading from socket");
 		exit(1);
 	}
 	char s[INET6_ADDRSTRLEN];
-	inet_ntop(p->ai_family,(struct sockaddr *) get_in_addr(p->ai_addr), s, sizeof s);
-	print_debug("Got message from %s:%d", s,ntohs(((struct sockaddr_in6*) p->ai_addr)->sin6_port));
+	inet_ntop(targetIP->sin6_family, targetIP, s, sizeof s);
+	print_debug("Got message from %s:%d", s,ntohs(targetIP->sin6_port));
 
 	return numbytes;
 }
@@ -281,7 +278,7 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
 	// printf("Memcpy in getIPv6FromPointer\n");
 	memcpy(newAddr->s6_addr+IPV6_SIZE-POINTER_SIZE, (char *)pointer, POINTER_SIZE);
 	memcpy(newAddr->s6_addr+4,&SUBNET_ID,1);
-	inet_ntop(AF_INET6,newAddr, s, sizeof s);
+	inet_ntop(AF_INET6, newAddr, s, sizeof s);
 	print_debug("IPv6 Pointer %s",s);
 	return *newAddr;
 }
@@ -312,8 +309,8 @@ struct addrinfo* bindSocket(struct addrinfo* p, struct addrinfo* servinfo, int* 
 		setsockopt(*sockfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
 		setsockopt(*sockfd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on));
 		setsockopt(*sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
-		struct sockaddr_in6 *tempi = (struct sockaddr_in6 *) p->ai_addr;
-		 tempi->sin6_addr = in6addr_any;
+		struct sockaddr_in6* tempi = (struct sockaddr_in6*) p->ai_addr;
+		tempi->sin6_addr = in6addr_any;
 		if (bind(*sockfd, p->ai_addr, p->ai_addrlen) == -1) {
 			close(*sockfd);
 			perror("server: bind");

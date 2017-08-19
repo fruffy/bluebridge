@@ -224,7 +224,7 @@ static void *handler(void *arg) {
                 print_debug("Remote Machine is... %s\n", s);
 
                 second_rtt_start[i] = getns();
-                buf = getRemoteMem(sockfd_server, p_server, &remoteMachine);
+                buf = getRemoteMem(sockfd_server, (struct sockaddr_in6*) p_server->ai_addr, &remoteMachine);
                 second_rtt_end[i] = getns();
             } else {
                 perror("ERROR: not a remote address");
@@ -385,7 +385,7 @@ int main(int argc, char **argv)
     char *cur = region;
     for (i = 0; i < NUM_PAGES; i++) {
         struct in6_addr * remotePointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-        struct in6_addr temp = allocateRemoteMem(sockfd_server, p_server);
+        struct in6_addr temp = allocateRemoteMem(sockfd_server, (struct sockaddr_in6*) p_server->ai_addr);
         memcpy(remotePointer, &temp, IPV6_SIZE);
         addr_map_in6[i] = remotePointer;
     }
@@ -432,7 +432,7 @@ int main(int argc, char **argv)
             perror("fread");
             exit(1);
         }
-        writeRemoteMem(sockfd_server, p_server, buf, &remotePointer);
+        writeRemoteMem(sockfd_server, (struct sockaddr_in6*) p_server->ai_addr, buf, &remotePointer);
     }
 
     if (fclose(f)) {

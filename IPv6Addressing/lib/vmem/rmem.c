@@ -19,7 +19,7 @@ extern ssize_t pwrite (int __fd, const void *__buf, size_t __nbytes, __off_t __o
 
 struct rmem {
 	int sockfd;
-	struct addrinfo *p;
+	struct sockaddr_in6 *targetIP;
 	struct in6_addr *memList;
 	int block_size;
 	int nblocks;
@@ -29,7 +29,7 @@ struct rmem {
 
 void rmem_init_sockets(struct rmem *r) {
 	int sockfd;
-    struct addrinfo hints, *servinfo;
+    struct addrinfo hints, *servinfo, *p = NULL;
     int rv;
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET6;
@@ -39,8 +39,9 @@ void rmem_init_sockets(struct rmem *r) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         return;
     }
-    r->p = bindSocket(r->p, servinfo, &sockfd);
-    struct sockaddr_in6 *temp = (struct sockaddr_in6 *) r->p->ai_addr;
+    p = bindSocket(p, servinfo, &sockfd);
+    r->targetIP = (struct sockaddr_in6 *) p->ai_addr;
+    struct sockaddr_in6 *temp = (struct sockaddr_in6 *) r->targetIP;
     temp->sin6_port = htons(strtol("5000", (char **)NULL, 10));
     genPacketInfo(sockfd);
     openRawSocket();
@@ -50,7 +51,7 @@ void rmem_init_sockets(struct rmem *r) {
 void fill_rmem(struct rmem *r) {
 	struct in6_addr *memList = malloc(sizeof(struct in6_addr) * r->nblocks);
 	for (int i = 0; i<r->nblocks; i++){
-		memList[i] = allocateRemoteMem(r->sockfd, r->p);
+		memList[i] = allocateRemoteMem(r->sockfd, r->targetIP);
 	}
 	r->memList = memList;
 }
@@ -79,7 +80,7 @@ void rmem_write(struct rmem *r, int block, char *data )
 		abort();
 	}
 	// Get pointer to page data in (simulated) physical memory
-	writeRemoteMem(r->sockfd, r->p, data, &r->memList[block]);
+	writeRemoteMem(r->sockfd, r->targetIP, data, &r->memList[block]);
 }
 
 void rmem_read( struct rmem *r, int block, char *data )
@@ -89,7 +90,7 @@ void rmem_read( struct rmem *r, int block, char *data )
 		abort();
 	}
 	// Get pointer to page data in (simulated) physical memory
-	memcpy(data, getRemoteMem(r->sockfd, r->p, &r->memList[block]), r->block_size);
+	memcpy(data, getRemoteMem(r->sockfd, r->targetIP, &r->memList[block]), r->block_size);
 
 }
 
