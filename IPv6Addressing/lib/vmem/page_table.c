@@ -201,9 +201,9 @@ struct page_table *page_table_create( int npages, int nframes, page_fault_handle
     pt->page_mapping = malloc(sizeof(int)*npages);
 
     pt->handler = handler;
-    printf("The size of our local memory cache is: %d kbyte\n", nframes*PAGE_SIZE/1000);
+    /*printf("The size of our local memory cache is: %d kbyte\n", nframes*PAGE_SIZE/1000);
     printf ("The size of our page table is: %d\n", nframes);
-    printf("The size of the virtual memory is: %d kbyte\n", npages*PAGE_SIZE/1000);
+    printf("The size of the virtual memory is: %d kbyte\n", npages*PAGE_SIZE/1000);*/
     for(i=0;i<pt->npages;i++) pt->page_bits[i] = 0;
 
     sa.sa_sigaction = internal_fault_handler;
@@ -360,9 +360,14 @@ void print_page_faults() {
 void clean_page_table(struct page_table *pt) {
     free(frameState);
     free(framePage);
+/*    free(the_page_table);
+    free(physmem);*/
     page_table_delete(pt);
     if (!strcmp(pagingSystem, "disk"))
         disk_close(disk);
     else if (!strcmp(pagingSystem, "rmem"))
         rmem_deallocate(rmem);
+    pageFaults = 0;
+    pageReads = 0;
+    pageWrites = 0;
 }

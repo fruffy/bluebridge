@@ -52,8 +52,8 @@ def configureHosts(net):
                       '-eth0 scope global 0:0:01' + '{0:02x}'.format(hostNum) + '::/48')
         host.cmdPrint('ip -6 route add local 0:0:0100::/40  dev h' +
                       str(hostNum) + '-eth0')
-        host.cmdPrint('ip -6 route add local 0:0:01' +
-                      '{0:02x}'.format(hostNum) + '::/48 dev lo')
+        # host.cmdPrint('ip -6 route add local 0:0:01' +
+        #               '{0:02x}'.format(hostNum) + '::/48 dev lo')
         # Gotta get dem jumbo frames
         host.cmdPrint('ifconfig h' + str(hostNum) + '-eth0 mtu 9000')
         # Run the server
@@ -97,7 +97,10 @@ def run():
     i = 1
     while i <= hostNum:
         # Routing entries per port
-        os.system("ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=0:0:10" + str(i) + "::/48,priority=1,actions=output:" + str(i))
+        cmd = "ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=0:0:10%d::/48,priority=1,actions=output:%d" % (i, i)
+        os.system(cmd)
+        cmd = "ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_src=0:0:10%d::/48,ipv6_dst=0:0:10%d::/48,priority=2,actions=output:in_port" % (i, i)
+        os.system(cmd)
         # Gotta get dem jumbo frames
         os.system('ifconfig s1-eth' + str(i) + ' mtu 9000')
         i = i + 1

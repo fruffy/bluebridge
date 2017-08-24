@@ -36,5 +36,6 @@ int cookUDP (struct sockaddr_in6 *dst_addr, int dst_port, char* data, int datale
 struct udppacket* genPacketInfo (int sockfd);
 int openRawSocket();
 void closeRawSocket();
-
+int getRawSocket();
+int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP);
 #endif

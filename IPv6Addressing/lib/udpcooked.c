@@ -13,6 +13,7 @@
         You should have received a copy of the GNU General Public License
         along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define _GNU_SOURCE
 
 // Send a "cooked" IPv6 UDP packet via raw socket.
 // Need to specify destination MAC address.
@@ -51,7 +52,9 @@ struct udppacket {
 };
 
 static struct udppacket packetinfo;
-static int sd;
+static int sd_send;
+static int sd_rcv;
+
 struct udppacket* genPacketInfo (int sockfd) {
     struct ifaddrs *ifap, *ifa = NULL; 
     struct sockaddr_in6 *sa; 
@@ -78,7 +81,7 @@ struct udppacket* genPacketInfo (int sockfd) {
     strcpy(packetinfo.interface,ifa->ifa_name);
     //print_debug("Interface %s, Source IP %s, Source Port %d, Destination IP %s, Destination Port %d, Size %d", interface, src_ip, src_port, dst_ip, dst_port, datalen);
     // Submit request for a socket descriptor to look up interface.
-    if ((sd = socket (AF_INET6, SOCK_RAW, IPPROTO_RAW)) < 0) {
+    if ((sd_send = socket (AF_INET6, SOCK_RAW, IPPROTO_RAW)) < 0) {
         perror ("socket() failed to get socket descriptor for using ioctl() ");
         exit (EXIT_FAILURE);
     }
@@ -113,6 +116,7 @@ struct udppacket* genPacketInfo (int sockfd) {
 
     // Next header (8 bits): 17 for UDP
     packetinfo.iphdr.ip6_nxt = IPPROTO_UDP;
+    //packetinfo.iphdr.ip6_nxt = 0x9F;
 
     // Hop limit (8 bits): default to maximum value
     packetinfo.iphdr.ip6_hops = 255;
@@ -129,15 +133,45 @@ struct udppacket* genPacketInfo (int sockfd) {
 }
 
 int openRawSocket() {
-    if ((sd = socket (PF_PACKET, SOCK_RAW, htons (ETH_P_ALL))) < 0) {
+
+    //Socket operator variables
+    const int on=1, off=0;
+
+    if ((sd_send = socket (packetinfo.device.sll_family, SOCK_RAW, htons (ETH_P_ALL))) < 0) {
         perror ("socket() failed ");
         exit (EXIT_FAILURE);
     }
+    struct tpacket_req req;
+    req.tp_block_size =  4096;
+    req.tp_block_nr   =   2;
+    req.tp_frame_size =  256;
+    req.tp_frame_nr   =   16;
+
+    struct ifreq ifr;
+    strncpy ((char *) ifr.ifr_name, packetinfo.interface, 20);
+    ioctl (sd_send, SIOCGIFINDEX, &ifr);
+
+    bind ( sd_send, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device) );
+    struct packet_mreq      mr;
+    memset (&mr, 0, sizeof (mr));
+    mr.mr_ifindex = ifr.ifr_ifindex;
+    mr.mr_type = PACKET_MR_PROMISC;
+    setsockopt (sd_send, SOL_PACKET,PACKET_ADD_MEMBERSHIP, &mr, sizeof (mr));
+    setsockopt(sd_send , SOL_PACKET , PACKET_RX_RING , (void*)&req , sizeof(req));
+    setsockopt(sd_send , SOL_PACKET , PACKET_TX_RING , (void*)&req , sizeof(req));
+    setsockopt(sd_send, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
+    setsockopt(sd_send, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on));
+    setsockopt(sd_send, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
+
     return EXIT_SUCCESS;
 }
 
 void closeRawSocket() {
-    close(sd);
+    close(sd_send);
+}
+
+int getRawSocket() {
+    return sd_send;
 }
 
 int cookUDP (struct sockaddr_in6* dst_addr, int dst_port, char* data, int datalen) {
@@ -147,13 +181,12 @@ int cookUDP (struct sockaddr_in6* dst_addr, int dst_port, char* data, int datale
     packetinfo.iphdr.ip6_dst = dst_addr->sin6_addr;
 
     //TODO: Hardcorded hack, remove
-    if (memcmp(&packetinfo.iphdr.ip6_dst, &packetinfo.iphdr.ip6_src, 6) == 0 ) {
+/*    if (memcmp(&packetinfo.iphdr.ip6_dst, &packetinfo.iphdr.ip6_src, 6) == 0 ) {
         packetinfo.device.sll_ifindex = 1;
     } else {
         packetinfo.device.sll_ifindex = 2;
-
     }
-
+*/
     // Payload length (16 bits): UDP header + UDP data
     packetinfo.iphdr.ip6_plen = htons (UDP_HDRLEN + datalen);
     // UDP header
@@ -177,10 +210,12 @@ int cookUDP (struct sockaddr_in6* dst_addr, int dst_port, char* data, int datale
     frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + datalen;
 
     // Send ethernet frame to socket.
-    if ((sendto (sd, packetinfo.ether_frame, frame_length, 0, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device))) <= 0) {
+/*    if ((sendto (sd, packetinfo.ether_frame, frame_length, 0, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device))) <= 0) {
         perror ("sendto() failed");
         exit (EXIT_FAILURE);
-    }
+    }*/
+     write(sd_send,packetinfo.ether_frame, frame_length);
+
     return (EXIT_SUCCESS);
 }
 
@@ -219,6 +254,179 @@ uint16_t checksum (uint16_t *addr, int len) {
     return (answer);
 }
 
+int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP) {
+    
+    struct sockaddr_in6 from;
+    struct iovec iovec[1];
+    struct msghdr msg;
+    char msg_control[1024];
+    char udp_packet[msgBlockSize];
+    int numbytes = 0;
+    char s[INET6_ADDRSTRLEN];
+    iovec[0].iov_base = udp_packet;
+    iovec[0].iov_len = sizeof(udp_packet);
+    msg.msg_name = &from;
+    msg.msg_namelen = sizeof(from);
+    msg.msg_iov = iovec;
+    msg.msg_iovlen = sizeof(iovec) / sizeof(*iovec);
+    msg.msg_control = msg_control;
+    msg.msg_controllen = sizeof(msg_control);
+    msg.msg_flags = 0;
+    int sockfd;
+    int sockopt;
+    struct ifreq ifopts;    /* set promiscuous mode */
+    struct ifreq if_ip; /* get ip addr */
+        /* Open PF_PACKET socket, listening for EtherType ETHER_TYPE */
+    if ((sockfd = socket(PF_PACKET, SOCK_RAW, htons(0x86DD))) == -1) {
+        perror("listener: socket"); 
+        return -1;
+    }
+
+    /* Set interface to promiscuous mode - do we need to do this every time? */
+    strncpy(ifopts.ifr_name, packetinfo.interface, IFNAMSIZ-1);
+    ioctl(sockfd, SIOCGIFFLAGS, &ifopts);
+    ifopts.ifr_flags |= IFF_PROMISC;
+    ioctl(sockfd, SIOCSIFFLAGS, &ifopts);
+    /* Allow the socket to be reused - incase connection is closed prematurely */
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &sockopt, sizeof sockopt) == -1) {
+        perror("setsockopt");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+    /* Bind to device */
+    if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, packetinfo.interface, IFNAMSIZ-1) == -1)  {
+        perror("SO_BINDTODEVICE");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+    //03000000000002000000000086dd600000001008
+    while (1) {
+        print_debug("Waiting for response...");
+        memset(receiveBuffer, 0, msgBlockSize);
+        numbytes = recvfrom(sd_rcv, &msg, msgBlockSize, 0, NULL, NULL);
+        printNBytes((char*)&msg, 50);
+        struct in6_pktinfo * in6_pktinfo;
+        struct cmsghdr* cmsg;
+        for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != 0; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+            if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
+                in6_pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
+                inet_ntop(targetIP->sin6_family, &in6_pktinfo->ipi6_addr, s, sizeof s);
+                print_debug("Received packet was sent to this IP %s",s);
+                memcpy(&targetIP->sin6_addr.s6_addr,&in6_pktinfo->ipi6_addr, 16);
+                memcpy(receiveBuffer,iovec[0].iov_base,iovec[0].iov_len);
+                memcpy(targetIP, (struct sockaddr *) &from, sizeof(from));
+            }
+        }
+
+        inet_ntop(targetIP->sin6_family, targetIP, s, sizeof s);
+        print_debug("Got message from %s:%d", s, ntohs(targetIP->sin6_port));
+    }
+    return numbytes;
+}
+#define ETHER_TYPE  0x86DD
+#define DEST_MAC0   0x00
+#define DEST_MAC1   0x00
+#define DEST_MAC2   0x00
+#define DEST_MAC3   0x00
+#define DEST_MAC4   0x00
+#define DEST_MAC5   0x00
+
+int cooked_receive_failed(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP) {
+
+        char sender[INET6_ADDRSTRLEN];
+        int sockfd, ret, i;
+        int sockopt;
+        ssize_t numbytes;
+        struct ifreq ifopts;    /* set promiscuous mode */
+        struct ifreq if_ip; /* get ip addr */
+        struct sockaddr_in6 their_addr;
+        uint8_t buf[msgBlockSize];
+
+        /* Header structures */
+        struct ether_header *eh = (struct ether_header *) buf;
+        struct ip6_hdr *iph = (struct ip6_hdr *) (buf + sizeof(struct ether_header));
+        struct udphdr *udph = (struct udphdr *) (buf + sizeof(struct iphdr) + sizeof(struct ether_header));
+
+        memset(&if_ip, 0, sizeof(struct ifreq));
+
+        /* Open PF_PACKET socket, listening for EtherType ETHER_TYPE */
+        if ((sockfd = socket(PF_PACKET, SOCK_RAW, htons(ETHER_TYPE))) == -1) {
+            perror("listener: socket"); 
+            return -1;
+        }
+
+        /* Set interface to promiscuous mode - do we need to do this every time? */
+        strncpy(ifopts.ifr_name, packetinfo.interface, IFNAMSIZ-1);
+        ioctl(sockfd, SIOCGIFFLAGS, &ifopts);
+        ifopts.ifr_flags |= IFF_PROMISC;
+        ioctl(sockfd, SIOCSIFFLAGS, &ifopts);
+        /* Allow the socket to be reused - incase connection is closed prematurely */
+        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &sockopt, sizeof sockopt) == -1) {
+            perror("setsockopt");
+            close(sockfd);
+            exit(EXIT_FAILURE);
+        }
+        /* Bind to device */
+        if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, packetinfo.interface, IFNAMSIZ-1) == -1)  {
+            perror("SO_BINDTODEVICE");
+            close(sockfd);
+            exit(EXIT_FAILURE);
+        }
+
+    repeat: printf("listener: Waiting to recvfrom...\n");
+            numbytes = read(sockfd, buf, 0);
+            printf("listener: got packet %lu bytes\n", numbytes);
+
+            /* Check the packet is for me */
+            if (eh->ether_dhost[0] == DEST_MAC0 &&
+                    eh->ether_dhost[1] == DEST_MAC1 &&
+                    eh->ether_dhost[2] == DEST_MAC2 &&
+                    eh->ether_dhost[3] == DEST_MAC3 &&
+                    eh->ether_dhost[4] == DEST_MAC4 &&
+                    eh->ether_dhost[5] == DEST_MAC5) {
+                printf("Correct destination MAC address\n");
+            } else {
+                printf("Wrong destination MAC: %x:%x:%x:%x:%x:%x\n",
+                                eh->ether_dhost[0],
+                                eh->ether_dhost[1],
+                                eh->ether_dhost[2],
+                                eh->ether_dhost[3],
+                                eh->ether_dhost[4],
+                                eh->ether_dhost[5]);
+                ret = -1;
+                goto done;
+            }
+
+            /* Get source IP */
+            memcpy(&their_addr.sin6_addr.s6_addr, &iph->ip6_src, 16);
+            inet_ntop(AF_INET, &((struct sockaddr_in*)&their_addr)->sin_addr, sender, sizeof sender);
+
+    /*        //Look up my device IP addr if possible 
+            strncpy(if_ip.ifr_name, ifName, IFNAMSIZ-1);
+            if (ioctl(sockfd, SIOCGIFADDR, &if_ip) >= 0) {// if we can't check then don't 
+                printf("Source IP: %s\n My IP: %s\n", sender, 
+                        inet_ntoa(((struct sockaddr_in *)&if_ip.ifr_addr)->sin_addr));
+                // ignore if I sent it 
+                if (strcmp(sender, inet_ntoa(((struct sockaddr_in *)&if_ip.ifr_addr)->sin_addr)) == 0)  {
+                    printf("but I sent it :(\n");
+                    ret = -1;
+                    goto done;
+                }
+            }*/
+
+            /* UDP payload length */
+            ret = ntohs(udph->len) - sizeof(struct udphdr);
+
+            /* Print packet */
+            printf("\tData:");
+            for (i=0; i<numbytes; i++) printf("%02x:", buf[i]);
+            printf("\n");
+
+    done:   goto repeat;
+
+        close(sockfd);
+    return ret;
+}
 
 // Build IPv6 UDP pseudo-header and call checksum function (Section 8.1 of RFC 2460).
 uint16_t udp6_checksum (struct ip6_hdr iphdr, struct udphdr udphdr, uint8_t *payload, int payloadlen) {

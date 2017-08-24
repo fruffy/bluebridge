@@ -236,6 +236,7 @@ int main(int argc, char *argv[]) {
     }
     genPacketInfo(sockfd);
     openRawSocket();
+    //close(sockfd);
     // Start waiting for connections
     while (1) {
         char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
@@ -245,7 +246,7 @@ int main(int argc, char *argv[]) {
         handleClientRequests(sockfd, receiveBuffer, ipv6Pointer, (struct sockaddr_in6 *) p->ai_addr);
     }
     freeaddrinfo(p);
-    close(sockfd);
-    closeRawSocket();
+/*    close(sockfd);
+*/    closeRawSocket();
     return 0;
 }

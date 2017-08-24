@@ -4,7 +4,7 @@ objDir = $(srcDir)/obj
 binDir = $(srcDir)/bin
 libDir = lib
 app := server testing test_rmem
-#userfaultfd_measure_pagefault dsm_wc test_rmem 
+#userfaultfd_measure_pagefault dsm_wc rmem_test 
 
 # CC = gcc
 # #CFlags += -c -Wextra -Werror -Wall -g3

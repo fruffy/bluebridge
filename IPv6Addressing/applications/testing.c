@@ -10,13 +10,12 @@
 #include <sys/time.h>
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
 
-#define ANSI_COLOR_RED     "\x1b[31m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_YELLOW  "\x1b[33m"
-#define ANSI_COLOR_BLUE    "\x1b[34m"
-#define ANSI_COLOR_MAGENTA "\x1b[35m"
-#define ANSI_COLOR_CYAN    "\x1b[36m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KYEL  "\x1B[33m"
+#define KMAG  "\x1B[35m"
+#define KCYN  "\x1B[36m"
+#define RESET "\033[0m"
 const int NUM_ITERATIONS = 10;
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
@@ -46,7 +45,7 @@ struct LinkedPointer {
 
 
 void print_times( uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* write_latency, uint64_t* free_latency){
-	FILE *allocF = fopen("alloc_latency.csv", "w");
+	/*FILE *allocF = fopen("alloc_latency.csv", "w");
     if (allocF == NULL) {
         printf("Error opening file!\n");
         exit(1);
@@ -86,7 +85,23 @@ void print_times( uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* wri
     fclose(allocF);
     fclose(readF);
     fclose(writeF);
-    fclose(freeF);
+    fclose(freeF);*/
+    int i;
+    uint64_t alloc_total = 0;
+    uint64_t read_total = 0;
+    uint64_t write_total = 0;
+    uint64_t free_total = 0;
+
+    for (i = 0; i < NUM_ITERATIONS; i++) {
+        alloc_total += (unsigned long long) alloc_latency[i];
+        read_total += (unsigned long long) read_latency[i];
+        write_total += (unsigned long long) write_latency[i];
+        free_total += (unsigned long long) free_latency[i];
+    }
+    printf("Average allocate latency: "KRED"%lu ms\n"RESET, alloc_total/ (NUM_ITERATIONS*1000));
+    printf("Average read latency: "KRED"%lu ms\n"RESET, read_total/ (NUM_ITERATIONS*1000));
+    printf("Average write latency: "KRED"%lu ms\n"RESET, write_total/ (NUM_ITERATIONS*1000));
+    printf("Average free latency: "KRED"%lu ms\n"RESET, free_total/ (NUM_ITERATIONS*1000));
 }
 
 void basicOperations( int sockfd, struct sockaddr_in6 * p) {
@@ -99,6 +114,7 @@ void basicOperations( int sockfd, struct sockaddr_in6 * p) {
     memset(read_latency, 0, sizeof(uint64_t) * NUM_ITERATIONS);
 
     uint64_t *write_latency = malloc(sizeof(uint64_t) * NUM_ITERATIONS);
+
     assert(write_latency);
     memset(write_latency, 0, sizeof(uint64_t) * NUM_ITERATIONS);
 
@@ -138,11 +154,9 @@ void basicOperations( int sockfd, struct sockaddr_in6 * p) {
 		uint64_t wStart = getns();
 		writeRemoteMem(sockfd, p, payload, &remoteMemory);
 		write_latency[i - 1] = getns() - wStart;
-		printf("Raw socket write: %lu micro seconds\n", write_latency[i - 1]/1000);
 		uint64_t rStart = getns();
 		char * test = getRemoteMem(sockfd, p, &remoteMemory);
 		read_latency[i - 1] = getns() - rStart;
-		printf("Raw socket read: %lu micro seconds\n", read_latency[i - 1]/1000);
 
 		print_debug("Results of memory store: %.50s", test);
 		
@@ -248,11 +262,11 @@ void interactiveMode( int sockfd,  struct sockaddr_in6 * p) {
 				inet_ntop(p->sin6_family,(struct sockaddr *) &pointer.s6_addr, s, sizeof s);
 				printf("Reading from this pointer %s\n", s);
 				localData = getRemoteMem(sockfd, p, &pointer);
-				printf(ANSI_COLOR_CYAN "Retrieved Data (first 80 bytes):\n");
+				printf(KCYN "Retrieved Data (first 80 bytes):\n");
 				printf("****************************************\n");
 				printf("\t%.*s\t\n",80, localData);
 				printf("****************************************\n");
-				printf(ANSI_COLOR_RESET);
+				printf(RESET);
 			}
 		} else if (strcmp("W", input) == 0) {
 			memset(input, 0, len);
@@ -270,11 +284,11 @@ void interactiveMode( int sockfd,  struct sockaddr_in6 * p) {
 							unsigned char * payload = gen_rdm_bytestream(BLOCK_SIZE);
 							writeRemoteMem(sockfd, p, (char*) payload, &remotePointers[i]);
 						} else {
-							printf(ANSI_COLOR_MAGENTA "Writing:\n");
+							printf(KMAG "Writing:\n");
 							printf("****************************************\n");
 							printf("\t%.*s\t\n",80, input);
 							printf("****************************************\n");
-							printf(ANSI_COLOR_RESET);
+							printf(RESET);
 							writeRemoteMem(sockfd, p, input, &remotePointers[i]);	
 						}
 					}
@@ -432,8 +446,8 @@ int main(int argc, char *argv[]) {
 	gettimeofday(&et,NULL);
 	int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
 	printf("Total Time: %d micro seconds\n",elapsed);
-	printf(ANSI_COLOR_RED "Finished\n");
-	printf(ANSI_COLOR_RESET);
+	printf(KRED "Finished\n");
+	printf(RESET);
 	freeaddrinfo(servinfo); // all done with this structure
 
 	// TODO: send close message so the server exits

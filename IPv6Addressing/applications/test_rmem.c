@@ -5,6 +5,13 @@
 #include "../lib/vmem/page_table.h"
 #include "../lib/vmem/rmem.h"
 
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KYEL  "\x1B[33m"
+#define KMAG  "\x1B[35m"
+#define KCYN  "\x1B[36m"
+#define RESET "\033[0m"
+
 static inline uint64_t getns(void)
 
 {
@@ -85,7 +92,6 @@ void sort_program( char *data, int length, struct page_table *pt)
 	printf("Sort time...: %lu micro seconds\n", latency_sort/1000);
 	printf("Read time...: %lu micro seconds\n", latency_read/1000);
 
-
 }
 
 void scan_program( char *cdata, int length, struct page_table *pt )
@@ -100,6 +106,7 @@ void scan_program( char *cdata, int length, struct page_table *pt )
 		data[i] = i%256;
 	}
 	uint64_t latency_write = getns() - rStart;
+
 	printf("Summing up values\n");
 	rStart = getns();
 	for(j=0;j<10;j++) {
@@ -107,27 +114,26 @@ void scan_program( char *cdata, int length, struct page_table *pt )
 			total += data[i];
 		}
 	}
-	uint64_t latency_sum = getns() - rStart;
+	uint64_t latency_read = getns() - rStart;
 
-	printf("scan result is %d\n",total);
-	printf("Write time...: %lu micro seconds\n", latency_write/1000);
-	printf("Sum time...: %lu micro seconds\n", latency_sum/1000);
-	printf("Total time taken: %lu micro seconds\n", (latency_sum + latency_write)/1000 );
+	printf("scan result is %u\n",total);
+	printf("Write time...: "KGRN"%lu"RESET" micro seconds\n", latency_write/1000);
+	printf("Sum time...: "KGRN"%lu"RESET" micro seconds\n", latency_read/1000);
+	printf("Total time taken: "KGRN"%lu"RESET" micro seconds\n", (latency_read + latency_write)/1000 );
 }
 
 void simple_test( char *cdata, int length, struct page_table *pt )
 {
 	unsigned char *data = (unsigned char *) cdata;
 	uint64_t total = 0;
-	page_table_print(pt);
+	printf("%d iterations\n", length);
 	for (int i = 0; i< length; i++) {
 		uint64_t rStart = getns();
-		cdata[i] = i;
+		data[i] = i;
 		total += getns() - rStart;
 	}
-
-	page_table_print(pt);
-	printf("Write time average...: %lu micro seconds\n", total/(PAGE_SIZE/8 *1000));
+	printf("Write time total...: %lu micro seconds\n", total/1000);
+	printf("Write time average...: %lu nano seconds\n", total/length);
 }
 
 
@@ -145,9 +151,17 @@ int main( int argc, char *argv[] )
 
 	sync();
 	system("echo 3 > /proc/sys/vm/drop_caches");
-
-	struct page_table *pt = init_virtual_memory(npages, nframes, algo);
-	char *virtmem = page_table_get_virtmem(pt);
+	struct page_table *pt;
+	char *virtmem;
+	
+	if (!strcmp(algo,"mem")) {
+		pt = 0;
+		virtmem = malloc(npages*PAGE_SIZE);
+	} else {
+		pt = init_virtual_memory(npages, nframes, algo);
+		virtmem = page_table_get_virtmem(pt);
+	}
+	printf("Running "KRED"%s"RESET" benchmark...\n", algo);
 	if(!strcmp(program,"sort")) {
 		sort_program(virtmem,npages*PAGE_SIZE, pt);
 	} else if(!strcmp(program,"scan")) {
@@ -159,7 +173,10 @@ int main( int argc, char *argv[] )
 	} else {
 		fprintf(stderr,"unknown program: %s\n",argv[4]);
 	}
-	print_page_faults();
-	clean_page_table(pt);
+
+	if (strcmp(algo,"mem")) {
+		print_page_faults();
+		clean_page_table(pt);
+	}
 	return 0;
 }

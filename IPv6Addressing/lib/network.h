@@ -1,13 +1,10 @@
 #ifndef PROJECT_NET
 #define PROJECT_NET
 
-#include <netinet/ip6.h>      // struct ip6_hdr
 #include <netinet/udp.h>      // struct udphdr
+#include <netinet/ip6.h>      // struct ip6_hdr
 
 // Define some constants.
-#define ETH_HDRLEN 14  // Ethernet header length
-#define IP6_HDRLEN 40  // IPv6 header length
-#define UDP_HDRLEN  8  // UDP header length, excludes data
 #define BLOCK_SIZE 4096 // max number of bytes we can get at once
 #define POINTER_SIZE sizeof(void*)
 #define IPV6_SIZE 16
@@ -20,12 +17,14 @@ const int NUM_HOSTS;
 
 struct in6_addr * gen_rdm_IPv6Target();
 struct in6_addr * gen_fixed_IPv6Target(uint8_t rndHost);
-int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct sockaddr_in6 * p);
-int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct sockaddr_in6 * p, struct in6_addr  ipv6Pointer);
-int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 * p);
-int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 * p, struct in6_addr  ipv6Pointer);
-int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 * p);
-int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 * p, struct in6_addr * ipv6Pointer);
+int sendUDP(int sockfd, char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP);
+int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr  ipv6Pointer);
+int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP);
+int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr  ipv6Pointer);
+int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP);
+int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr * ipv6Pointer);
+int receiveUDPIPv6Raw(int sockfd, char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr * ipv6Pointer);
+
 uint64_t getPointerFromIPv6(struct in6_addr addr);
 struct in6_addr getIPv6FromPointer(uint64_t pointer);
 // Function prototypes

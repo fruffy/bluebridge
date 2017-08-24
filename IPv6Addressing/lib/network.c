@@ -169,17 +169,24 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct so
     for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != 0; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
         if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
             in6_pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
-            inet_ntop(targetIP->sin6_family, &in6_pktinfo->ipi6_addr, s, sizeof s);
-            print_debug("Received packet was sent to this IP %s",s);
-            memcpy(ipv6Pointer->s6_addr,&in6_pktinfo->ipi6_addr,IPV6_SIZE);
+            //inet_ntop(targetIP->sin6_family, &in6_pktinfo->ipi6_addr, s, sizeof s);
+            //print_debug("Received packet was sent to this IP %s",s);
+            if (ipv6Pointer != NULL)
+                memcpy(ipv6Pointer->s6_addr,&in6_pktinfo->ipi6_addr,IPV6_SIZE);
             memcpy(receiveBuffer,iovec[0].iov_base,iovec[0].iov_len);
             memcpy(targetIP, (struct sockaddr *) &from, sizeof(from));
         }
     }
 
-    inet_ntop(targetIP->sin6_family, targetIP, s, sizeof s);
-    print_debug("Got message from %s:%d", s, ntohs(targetIP->sin6_port));
+    //inet_ntop(targetIP->sin6_family, targetIP, s, sizeof s);
+    //print_debug("Got message from %s:%d", s, ntohs(targetIP->sin6_port));
     //printNBytes(receiveBuffer, 50);
+    return numbytes;
+}
+
+int receiveUDPIPv6Raw(int sockfd, char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer) {
+
+    int numbytes = cooked_receive(receiveBuffer, msgBlockSize, targetIP);
     return numbytes;
 }
 
