@@ -56,9 +56,10 @@ def configureHosts(net):
         #               '{0:02x}'.format(hostNum) + '::/48 dev lo')
         # Gotta get dem jumbo frames
         host.cmdPrint('ifconfig h' + str(hostNum) + '-eth0 mtu 9000')
-        # Run the server
-        host.cmdPrint('xterm  -T \"server' + str(hostNum) +
-                      '\" -e \"./applications/bin/server; bash\" &')
+        if hostNum != 1:
+            # Run the server
+            host.cmdPrint('xterm  -T \"server' + str(hostNum) +
+                          '\" -e \"./applications/bin/server; bash\" &')
 
         # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"./messaging/launchProxy.sh -i h' + str(hostNum) +
         #               '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')

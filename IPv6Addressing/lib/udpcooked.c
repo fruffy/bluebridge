@@ -39,7 +39,6 @@
 #include <sys/epoll.h>
 #include <signal.h>
 
-
 #include "udpcooked.h"
 #include "utils.h"
 
@@ -178,7 +177,6 @@ struct sockaddr_in6 *init_rcv_socket(const char *portNumber) {
             perror("server: bind");
             continue;
         }
-
         break;
     }
     struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
@@ -413,7 +411,7 @@ int setup_packet_mmap(struct interface * interface)
 
 int init_interface(struct interface * interface, const char * name)
 {
-    interface->socket = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+    interface->socket = socket(AF_PACKET, SOCK_RAW|SOCK_NONBLOCK|SOCK_CLOEXEC, htons(ETH_P_ALL));
     const int on = 1;
     setsockopt(interface->socket, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
     if (-1 == interface->socket) {
@@ -577,7 +575,7 @@ struct interface * interface;
 void init_epoll() {
     interface = create_interface(packetinfo.interface);
     struct epoll_event event1 = {
-        .events = EPOLLIN | EPOLLET,
+        .events = EPOLLIN,
         .data = { .ptr = NULL }
     };
 
@@ -606,16 +604,17 @@ void init_epoll() {
        exit(1);
     }
 }
+
 void close_epoll(){
     close(epoll_fd);
     destroy_interface(interface);
 }
+
 int strangeReceive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer) {
     //char s[INET6_ADDRSTRLEN];
     while (1) {
-        struct epoll_event events[16];
-        int num_events = -1;
-        num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
+        struct epoll_event events[1];
+        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
         if (num_events == -1)  {
             if (errno == EINTR)  {
                 perror("epoll_wait returned -1");
@@ -624,10 +623,8 @@ int strangeReceive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *
             perror("error");
             continue;
         }
-
         for (int i = 0; i < num_events; ++i)  {
             struct epoll_event * event = &events[i];
-
             if (event->events & EPOLLIN) {
                 struct tpacket_hdr *tpacket_hdr = get_packet(interface);
                 //struct sockaddr_ll *sockaddr_ll = NULL;
@@ -656,8 +653,8 @@ int strangeReceive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *
                     memcpy(&targetIP->sin6_port,&udphdr->source,sizeof(uint16_t));
                     /*inet_ntop(targetIP->sin6_family, &targetIP->sin6_addr, s, sizeof s);
                     print_debug("Got message from %s:%d", s, ntohs(targetIP->sin6_port));*/
+                    udphdr->dest = 0;
                     return msgBlockSize;
-
                 }
                 //print_packet(ethhdr);
                 //print_sockaddr_ll(sockaddr_ll);
