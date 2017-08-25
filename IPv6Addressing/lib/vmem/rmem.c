@@ -15,6 +15,7 @@ Make all of your changes to main.c instead.
 extern ssize_t pread (int __fd, void *__buf, size_t __nbytes, __off_t __offset);
 extern ssize_t pwrite (int __fd, const void *__buf, size_t __nbytes, __off_t __offset);
 
+#define TARGETPORT "5000"
 
 struct rmem {
 	int sockfd;
@@ -27,30 +28,17 @@ struct rmem {
 
 
 void rmem_init_sockets(struct rmem *r) {
-	int sockfd;
-    struct addrinfo hints, *servinfo, *p = NULL;
-    int rv;
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_INET6;
-    hints.ai_socktype = SOCK_DGRAM;
-
-    if ((rv = getaddrinfo(NULL, "0", &hints, &servinfo)) != 0) {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-        return;
-    }
-    p = bindSocket(p, servinfo, &sockfd);
-    r->targetIP = (struct sockaddr_in6 *) p->ai_addr;
-    struct sockaddr_in6 *temp = (struct sockaddr_in6 *) r->targetIP;
-    temp->sin6_port = htons(strtol("5000", (char **)NULL, 10));
-    genPacketInfo(sockfd);
-    openRawSocket();
-	r->sockfd =sockfd;
+    //p = bindSocket(p, servinfo, &sockfd);
+    r->targetIP = init_rcv_socket(TARGETPORT);
+    genPacketInfo();
+    init_send_socket();
+    r->sockfd = get_rcv_socket();
 }
 
 void fill_rmem(struct rmem *r) {
 	struct in6_addr *memList = malloc(sizeof(struct in6_addr) * r->nblocks);
 	for (int i = 0; i<r->nblocks; i++){
-		memList[i] = allocateRemoteMem(r->sockfd, r->targetIP);
+		memList[i] = allocateRemoteMem(r->targetIP);
 	}
 	r->memList = memList;
 }
@@ -79,7 +67,7 @@ void rmem_write(struct rmem *r, int block, char *data )
 		abort();
 	}
 	// Get pointer to page data in (simulated) physical memory
-	writeRemoteMem(r->sockfd, r->targetIP, data, &r->memList[block]);
+	writeRemoteMem(r->targetIP, data, &r->memList[block]);
 }
 
 void rmem_read( struct rmem *r, int block, char *data )
@@ -89,7 +77,7 @@ void rmem_read( struct rmem *r, int block, char *data )
 		abort();
 	}
 	// Get pointer to page data in (simulated) physical memory
-	memcpy(data, getRemoteMem(r->sockfd, r->targetIP, &r->memList[block]), r->block_size);
+	memcpy(data, getRemoteMem(r->targetIP, &r->memList[block]), r->block_size);
 
 }
 

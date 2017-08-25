@@ -44,7 +44,7 @@ int addchar(char* charadr) {
  * TODO: explain.
  * Allocates local memory and exposes it to a client requesting it
  */
-int providePointer(int sock_fd, struct sockaddr_in6 *targetIP) {
+int providePointer(struct sockaddr_in6 *targetIP) {
     //TODO: Error handling if we runt out of memory, this will fail
     char * allocated = (char *) calloc(BLOCK_SIZE,sizeof(char));
     char sendBuffer[BLOCK_SIZE];
@@ -56,7 +56,6 @@ int providePointer(int sock_fd, struct sockaddr_in6 *targetIP) {
     memcpy(sendBuffer, "ACK:", sizeof("ACK:"));
     size += sizeof("ACK:") - 1;
     memcpy(sendBuffer+size, &ipv6Pointer, IPV6_SIZE); 
-    //sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
     sendUDPRaw(sendBuffer, BLOCK_SIZE, targetIP);
 
 
@@ -66,7 +65,7 @@ int providePointer(int sock_fd, struct sockaddr_in6 *targetIP) {
     return 0;
 }
 
-int sendAddr(int sock_fd, struct sockaddr_in6 *targetIP, char* receiveBuffer) {
+int sendAddr(struct sockaddr_in6 *targetIP, char* receiveBuffer) {
     //TODO: Error handling if we runt out of memory, this will fail
     char sendBuffer[BLOCK_SIZE];
     int size = 0;
@@ -77,7 +76,6 @@ int sendAddr(int sock_fd, struct sockaddr_in6 *targetIP, char* receiveBuffer) {
     memcpy(sendBuffer, "ACK:", sizeof("ACK:"));
     size += sizeof("ACK:") - 1;
     memcpy(sendBuffer+size, &ipv6Pointer, IPV6_SIZE); 
-    //sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
     sendUDPRaw(sendBuffer, BLOCK_SIZE, targetIP);
 
     // TODO change to be meaningful, i.e., error message
@@ -88,7 +86,7 @@ int sendAddr(int sock_fd, struct sockaddr_in6 *targetIP, char* receiveBuffer) {
  * TODO: explain.
  * Writes a piece of memory?
  */
-int writeMem(int sock_fd, char * receiveBuffer, struct sockaddr_in6 * targetIP, struct in6_addr * ipv6Pointer) {
+int writeMem(char * receiveBuffer, struct sockaddr_in6 * targetIP, struct in6_addr * ipv6Pointer) {
     char sendBuffer[BLOCK_SIZE];    //Point to data after command
     char * dataToWrite = receiveBuffer + 1;
 
@@ -104,7 +102,6 @@ int writeMem(int sock_fd, char * receiveBuffer, struct sockaddr_in6 * targetIP, 
     print_debug("Content preview (50 bytes): %.50s", (char *)pointer);
     
     memcpy(sendBuffer, "ACK", 3);
-    //sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
     sendUDPRaw(sendBuffer, BLOCK_SIZE, targetIP);
 
     // TODO change to be meaningful, i.e., error message
@@ -115,7 +112,7 @@ int writeMem(int sock_fd, char * receiveBuffer, struct sockaddr_in6 * targetIP, 
  * TODO: explain.
  * This is freeing target memory?
  */
-int freeMem(int sock_fd, struct sockaddr_in6 *targetIP, struct in6_addr * ipv6Pointer) {
+int freeMem(struct sockaddr_in6 *targetIP, struct in6_addr * ipv6Pointer) {
     char sendBuffer[BLOCK_SIZE];
     uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);    
     
@@ -124,7 +121,6 @@ int freeMem(int sock_fd, struct sockaddr_in6 *targetIP, struct in6_addr * ipv6Po
     free((void *) pointer);
   //munmap((void *) pointer, BLOCK_SIZE);
     memcpy(sendBuffer, "ACK", sizeof("ACK"));
-    //sendUDP(sock_fd, sendBuffer, BLOCK_SIZE, p);
     sendUDPRaw(sendBuffer, BLOCK_SIZE, targetIP);
     // TODO change to be meaningful, i.e., error message
     return 0;
@@ -133,7 +129,7 @@ int freeMem(int sock_fd, struct sockaddr_in6 *targetIP, struct in6_addr * ipv6Po
 /*
  * Gets memory and sends it
  */
-int getMem(int sock_fd, struct sockaddr_in6 *targetIP, struct in6_addr * ipv6Pointer) {
+int getMem(struct sockaddr_in6 *targetIP, struct in6_addr * ipv6Pointer) {
     char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
     uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
 
@@ -161,26 +157,26 @@ void handleClientRequests(int sock_fd, char * receiveBuffer, struct in6_addr * i
     if (memcmp(receiveBuffer, ALLOC_CMD,2) == 0) {
         print_debug("******ALLOCATE******");
         splitResponse = receiveBuffer+2;
-        providePointer(sock_fd, targetIP);
+        providePointer(targetIP);
     } else if (memcmp(receiveBuffer, WRITE_CMD,2) == 0) {
         splitResponse = receiveBuffer+2;
         print_debug("******WRITE DATA: ");
         if (DEBUG) {
             printNBytes((char *) ipv6Pointer, IPV6_SIZE);
         }
-        writeMem(sock_fd, splitResponse, targetIP, ipv6Pointer);
+        writeMem(splitResponse, targetIP, ipv6Pointer);
     } else if (memcmp(receiveBuffer, GET_CMD,2) == 0) {
         splitResponse = receiveBuffer+2;
         print_debug("******GET DATA: ");
         // printNBytes((char *) ipv6Pointer,IPV6_SIZE);
-        getMem(sock_fd, targetIP, ipv6Pointer);
+        getMem(targetIP, ipv6Pointer);
     } else if (memcmp(receiveBuffer, FREE_CMD,2) == 0) {
         splitResponse = receiveBuffer+2;
         print_debug("******FREE DATA: ");
         if (DEBUG) {
             printNBytes((char *) ipv6Pointer,IPV6_SIZE);
         }
-        freeMem(sock_fd, targetIP, ipv6Pointer);
+        freeMem(targetIP, ipv6Pointer);
     } else if (memcmp(receiveBuffer, GET_ADDR_CMD,2) == 0) {
         splitResponse = receiveBuffer+2;
         print_debug("******GET ADDRESS: ");
@@ -189,7 +185,7 @@ void handleClientRequests(int sock_fd, char * receiveBuffer, struct in6_addr * i
             // printNBytes((char *) ipv6Pointer,IPV6_SIZE);
             printNBytes(splitResponse, POINTER_SIZE);
         }
-        sendAddr(sock_fd, targetIP, splitResponse);
+        sendAddr(targetIP, splitResponse);
     } else {
         printf("Cannot match command!\n");
 /*      if (sendUDP(sock_fd, "Hello, world!", 13, p) == -1) {
@@ -208,45 +204,31 @@ void handleClientRequests(int sock_fd, char * receiveBuffer, struct in6_addr * i
  * Blocks waiting for connections.
  */
 int main(int argc, char *argv[]) {
-    int sockfd;  // listen on sock_fd, new connection on sock_fd
-    struct addrinfo hints, *servinfo, *p = NULL;
-    int rv;
 
-    // hints = specifies criteria for selecting the socket address
-    // structures
-    memset(&hints, 0, sizeof(hints));
     if (argc < 2) {
         printf("Defaulting to standard values...\n");
         argv[1] = "5000";
-        hints.ai_flags = AI_PASSIVE; // use my IP
-
     }
-    hints.ai_family = AF_INET6;
-    hints.ai_socktype = SOCK_DGRAM;
-    if ((rv = getaddrinfo(NULL, argv[1], &hints, &servinfo)) != 0) {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-        return 1;
-    }
-
     // loop through all the results and bind to the first we can
-    p = bindSocket(p, servinfo, &sockfd);
+/*    p = bindSocket(p, servinfo, &sockfd);
     if (p == NULL) {
         fprintf(stderr, "server: failed to bind\n");
         exit(1);
-    }
-    genPacketInfo(sockfd);
-    openRawSocket();
+    }*/
+    struct sockaddr_in6 *temp = init_rcv_socket(argv[1]);
+    genPacketInfo();
+    init_send_socket();
+    int sockfd = get_rcv_socket();
     //close(sockfd);
     // Start waiting for connections
     while (1) {
         char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
         struct in6_addr * ipv6Pointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
         //TODO: Error handling (numbytes = -1)
-        receiveUDPIPv6(sockfd, receiveBuffer, BLOCK_SIZE, (struct sockaddr_in6 *) p->ai_addr, ipv6Pointer);
-        handleClientRequests(sockfd, receiveBuffer, ipv6Pointer, (struct sockaddr_in6 *) p->ai_addr);
+        strangeReceive(receiveBuffer, BLOCK_SIZE, temp, ipv6Pointer);
+        //receiveUDPIPv6Raw(receiveBuffer, BLOCK_SIZE, temp, ipv6Pointer);
+        handleClientRequests(sockfd, receiveBuffer, ipv6Pointer, temp);
     }
-    freeaddrinfo(p);
-/*    close(sockfd);
-*/    closeRawSocket();
+    close_sockets();
     return 0;
 }

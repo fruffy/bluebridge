@@ -16,7 +16,7 @@
  */
 // TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
 // TODO: Especially for all send and receive calls
-struct in6_addr allocateRemoteMem(int sockfd, struct sockaddr_in6 * targetIP) {
+struct in6_addr allocateRemoteMem(struct sockaddr_in6 * targetIP) {
 	char  sendBuffer[BLOCK_SIZE];
 	char  receiveBuffer[BLOCK_SIZE];
 
@@ -28,9 +28,8 @@ struct in6_addr allocateRemoteMem(int sockfd, struct sockaddr_in6 * targetIP) {
 	// Send the command to the target host and wait for response
 	memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
 	sendUDPRaw(sendBuffer,BLOCK_SIZE, targetIP);
-	receiveUDPIPv6(sockfd, receiveBuffer,BLOCK_SIZE, targetIP, NULL);
-
-
+	//receiveUDPIPv6Raw(receiveBuffer,BLOCK_SIZE, targetIP, NULL);
+	strangeReceive(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
 	struct in6_addr retVal;
 	if (memcmp(receiveBuffer,"ACK", 3) == 0) {
 		// If the message is ACK --> successful allocation
@@ -51,7 +50,7 @@ struct in6_addr allocateRemoteMem(int sockfd, struct sockaddr_in6 * targetIP) {
 		retVal = *remotePointer;
 		free(remotePointer);
 	} else {
-		printf("Response was not successful");
+		printf("Response was not successful\n");
 		// Not successful set the return address to zero.
 		memset(&retVal.s6_addr,0, IPV6_SIZE);
 	}
@@ -61,7 +60,7 @@ struct in6_addr allocateRemoteMem(int sockfd, struct sockaddr_in6 * targetIP) {
  * Sends a write command to the server based on toPointer
  */
 // TODO: Implement meaningful return types and error messages
-int writeRemoteMem(int sockfd, struct sockaddr_in6 * targetIP, char * payload,  struct in6_addr * toPointer) {
+int writeRemoteMem(struct sockaddr_in6 * targetIP, char * payload,  struct in6_addr * toPointer) {
 	
 	//TODO: Error handling
 	char sendBuffer[BLOCK_SIZE];
@@ -82,8 +81,8 @@ int writeRemoteMem(int sockfd, struct sockaddr_in6 * targetIP, char * payload,  
 	}
 
 	sendUDPIPv6Raw(sendBuffer, BLOCK_SIZE, targetIP, *toPointer);
-	receiveUDPIPv6(sockfd, receiveBuffer,BLOCK_SIZE, targetIP, NULL);
-
+	//receiveUDPIPv6Raw(receiveBuffer,BLOCK_SIZE, targetIP, NULL);
+	strangeReceive(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
 	// TODO: change to be meaningful, i.e., error message
 	return 0;
 }
@@ -92,7 +91,7 @@ int writeRemoteMem(int sockfd, struct sockaddr_in6 * targetIP, char * payload,  
  * Releases the remote memory based on toPointer
  */
 // TODO: Implement meaningful return types and error messages
-int freeRemoteMem(int sockfd, struct sockaddr_in6 * targetIP,  struct in6_addr * toPointer) {
+int freeRemoteMem(struct sockaddr_in6 * targetIP,  struct in6_addr * toPointer) {
 	char  sendBuffer[BLOCK_SIZE];
 	char  receiveBuffer[BLOCK_SIZE];
 
@@ -111,7 +110,8 @@ int freeRemoteMem(int sockfd, struct sockaddr_in6 * targetIP,  struct in6_addr *
 	// Send message and check if it was successful
 	// TODO: Check if it actually was successful
 	sendUDPIPv6Raw(sendBuffer,BLOCK_SIZE, targetIP,*toPointer);
-	receiveUDPIPv6(sockfd, receiveBuffer,BLOCK_SIZE, targetIP, NULL);
+	//receiveUDPIPv6Raw(receiveBuffer,BLOCK_SIZE, targetIP, NULL);
+	strangeReceive(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
 	return 0;
 }
 
@@ -119,7 +119,7 @@ int freeRemoteMem(int sockfd, struct sockaddr_in6 * targetIP,  struct in6_addr *
  * Reads the remote memory based on toPointer
  */
 // TODO: Implement meaningful return types and error messages
-char * getRemoteMem(int sockfd, struct sockaddr_in6 * targetIP, struct in6_addr * toPointer) {
+char * getRemoteMem(struct sockaddr_in6 * targetIP, struct in6_addr * toPointer) {
 	char  sendBuffer[BLOCK_SIZE];
 	char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 
@@ -137,14 +137,15 @@ char * getRemoteMem(int sockfd, struct sockaddr_in6 * targetIP, struct in6_addr 
 	// Send request and store response
 	sendUDPIPv6Raw(sendBuffer,BLOCK_SIZE, targetIP,*toPointer);
 	print_debug("Now waiting")
-	receiveUDPIPv6(sockfd, receiveBuffer,BLOCK_SIZE, targetIP, NULL);
+	//receiveUDPIPv6Raw(receiveBuffer,BLOCK_SIZE, targetIP, NULL);
+	strangeReceive(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
 	return receiveBuffer;
 }
 
 /*
  * Migrates remote memory
  */
-int migrateRemoteMem(int sockfd, struct sockaddr_in6 * targetIP, struct in6_addr * toPointer, int machineID) {
+int migrateRemoteMem(struct sockaddr_in6 * targetIP, struct in6_addr * toPointer, int machineID) {
 	char * sendBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
 	char * receiveBuffer;
 	// Allocates storage
@@ -154,16 +155,16 @@ int migrateRemoteMem(int sockfd, struct sockaddr_in6 * targetIP, struct in6_addr
 
 
 	printf("Getting pointer\n");
-	receiveBuffer = getRemoteMem(sockfd, targetIP, toPointer);
+	receiveBuffer = getRemoteMem(targetIP, toPointer);
 	printf("Freeing pointer\n");
 
-	freeRemoteMem(sockfd, targetIP, toPointer);
+	freeRemoteMem(targetIP, toPointer);
 	printf("Writing pointer\n");
 	sprintf(ovs_cmd, "ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=%s,priority=65535,actions=output:%d", s, machineID);
 	int status = system(ovs_cmd);
 	printf("%d\t%s\n", status, ovs_cmd);
 
-	writeRemoteMem(sockfd, targetIP, receiveBuffer, toPointer);
+	writeRemoteMem(targetIP, receiveBuffer, toPointer);
 	free(sendBuffer);
 	free(ovs_cmd);
 	free(receiveBuffer);

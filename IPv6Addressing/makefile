@@ -1,8 +1,9 @@
+ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 srcExt = c
-srcDir = applications
+srcDir = $(ROOT_DIR)/applications
 objDir = $(srcDir)/obj
 binDir = $(srcDir)/bin
-libDir = lib
+libDir = $(ROOT_DIR)/lib
 app := server testing test_rmem
 #userfaultfd_measure_pagefault dsm_wc rmem_test 
 
@@ -10,10 +11,9 @@ app := server testing test_rmem
 # #CFlags += -c -Wextra -Werror -Wall -g3
 # CFLAGS += -c -Wextra -Wall -g3 -std=gnu11
 # LDFLAGS := -lpcap -pthread -lm
-
 sources := $(shell find "$(libDir)" -name '*.$(srcExt)')
 srcDirs := $(shell find . -name '*.$(srcExt)' -exec dirname {} \; | uniq)
-objects := $(patsubst %.$(srcExt), $(objDir)/%.o, $(sources))
+objects := $(patsubst $(ROOT_DIR)/%.$(srcExt), $(objDir)/%.o, $(sources))
 
 all: $(app)
 	-rm -r $(objDir)
@@ -28,7 +28,7 @@ $(binDir)/%: buildrepo $(objects)
 
 $(objDir)/%.o: %.$(srcExt)
 	@echo "Building $@ ... "
-	@$(CC) $(CFLAGS) $< -o $@
+	@$(CC) $(CFLAGS) $(ROOT_DIR)/$< -o $@
 
 clean:
 	@echo "Cleaning..."

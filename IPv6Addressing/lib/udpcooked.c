@@ -35,6 +35,10 @@
 #include <net/ethernet.h>
 #include <ifaddrs.h>
 #include <errno.h>            // errno, perror()
+#include <sys/mman.h>
+#include <sys/epoll.h>
+#include <signal.h>
+
 
 #include "udpcooked.h"
 #include "utils.h"
@@ -42,6 +46,8 @@
 // Function prototypes
 uint16_t checksum (uint16_t *, int);
 uint16_t udp6_checksum (struct ip6_hdr, struct udphdr, uint8_t *, int);
+void init_epoll();
+void close_epoll();
 
 struct udppacket {
     struct ip6_hdr iphdr;
@@ -55,7 +61,7 @@ static struct udppacket packetinfo;
 static int sd_send;
 static int sd_rcv;
 
-struct udppacket* genPacketInfo (int sockfd) {
+struct udppacket* genPacketInfo () {
     struct ifaddrs *ifap, *ifa = NULL; 
     struct sockaddr_in6 *sa; 
     char src_ip[INET6_ADDRSTRLEN];
@@ -89,7 +95,7 @@ struct udppacket* genPacketInfo (int sockfd) {
     struct sockaddr_in6 sin;
     int src_port;
     socklen_t len = sizeof(sin);
-    if (getsockname(sockfd, (struct sockaddr *)&sin, &len) == -1) {
+    if (getsockname(sd_rcv, (struct sockaddr *)&sin, &len) == -1) {
         perror("getsockname");
         exit (EXIT_FAILURE);
     } else {
@@ -132,10 +138,58 @@ struct udppacket* genPacketInfo (int sockfd) {
     return &packetinfo;
 }
 
-int openRawSocket() {
+/* Initialize a listening socket */
+struct sockaddr_in6 *init_rcv_socket(const char *portNumber) {
+
+    struct addrinfo hints, *servinfo, *p = NULL;
+    int rv;
+    //Socket operator variables
+    const int on=1;
+    // hints = specifies criteria for selecting the socket address
+    // structures
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET6;
+    hints.ai_socktype = SOCK_DGRAM;
+    if ((rv = getaddrinfo(NULL, portNumber, &hints, &servinfo)) != 0) {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+        exit(1);
+    }
+
+    // loop through all the results and bind to the first we can
+    for (p = servinfo; p != NULL; p = p->ai_next) {
+        if ((sd_rcv = socket(p->ai_family, p->ai_socktype, p->ai_protocol))
+                == -1) {
+            perror("server: socket");
+            continue;
+        }
+
+        if (setsockopt(sd_rcv, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int))
+                == -1) {
+            perror("setsockopt");
+            exit(1);
+        }
+        setsockopt(sd_rcv, IPPROTO_IPV6, IP_PKTINFO, &on, sizeof(int));
+        setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(int));
+        setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
+        struct sockaddr_in6* tempi = (struct sockaddr_in6*) p->ai_addr;
+        tempi->sin6_addr = in6addr_any;
+        if (bind(sd_rcv, p->ai_addr, p->ai_addrlen) == -1) {
+            close(sd_rcv);
+            perror("server: bind");
+            continue;
+        }
+
+        break;
+    }
+    struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
+    memcpy(temp, p->ai_addr, sizeof(struct sockaddr_in6));
+    return temp;
+}
+
+void init_send_socket() {
 
     //Socket operator variables
-    const int on=1, off=0;
+    const int on=1;
 
     if ((sd_send = socket (packetinfo.device.sll_family, SOCK_RAW, htons (ETH_P_ALL))) < 0) {
         perror ("socket() failed ");
@@ -151,7 +205,7 @@ int openRawSocket() {
     strncpy ((char *) ifr.ifr_name, packetinfo.interface, 20);
     ioctl (sd_send, SIOCGIFINDEX, &ifr);
 
-    bind ( sd_send, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device) );
+    bind (sd_send, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device) );
     struct packet_mreq      mr;
     memset (&mr, 0, sizeof (mr));
     mr.mr_ifindex = ifr.ifr_ifindex;
@@ -159,21 +213,26 @@ int openRawSocket() {
     setsockopt (sd_send, SOL_PACKET,PACKET_ADD_MEMBERSHIP, &mr, sizeof (mr));
     setsockopt(sd_send , SOL_PACKET , PACKET_RX_RING , (void*)&req , sizeof(req));
     setsockopt(sd_send , SOL_PACKET , PACKET_TX_RING , (void*)&req , sizeof(req));
-    setsockopt(sd_send, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
-    setsockopt(sd_send, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on));
-    setsockopt(sd_send, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
+    setsockopt(sd_send, IPPROTO_IPV6, IP_PKTINFO, &on, sizeof(int));
+    setsockopt(sd_send, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(int));
+    setsockopt(sd_send, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
+    init_epoll();
 
-    return EXIT_SUCCESS;
 }
 
-void closeRawSocket() {
-    close(sd_send);
+int get_rcv_socket() {
+    return sd_rcv;
 }
 
-int getRawSocket() {
+int get_send_socket() {
     return sd_send;
 }
 
+void close_sockets() {
+    close(sd_send);
+    close(sd_rcv);
+    close_epoll();
+}
 int cookUDP (struct sockaddr_in6* dst_addr, int dst_port, char* data, int datalen) {
 
     int frame_length;
@@ -253,16 +312,372 @@ uint16_t checksum (uint16_t *addr, int len) {
 
     return (answer);
 }
+struct interface {
+    int socket;
+    int index;
+    char name[255];
+    struct tpacket_hdr * first_tpacket_hdr;
+    int tpacket_i;
+    int mapped_memory_size;
+    struct tpacket_req tpacket_req;
+};
 
-int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP) {
+
+int get_interface_index(int socket, const char * name)
+{
+    struct ifreq ifreq;
+    memset(&ifreq, 0, sizeof ifreq);
+
+    snprintf(ifreq.ifr_name, sizeof ifreq.ifr_name, "%s", name);
+
+    if (ioctl(socket, SIOCGIFINDEX, &ifreq)) {
+        return -1;
+    }
+
+    return ifreq.ifr_ifindex;
+}
+
+
+int bind_to_interface(int socket, int interface_index)
+{
+    struct sockaddr_ll sockaddr_ll;
+    memset(&sockaddr_ll, 0, sizeof sockaddr_ll);
     
+    sockaddr_ll.sll_family = AF_PACKET;
+    sockaddr_ll.sll_protocol = htons(ETH_P_ALL);
+    sockaddr_ll.sll_ifindex = interface_index;
+
+    if (-1 == bind(socket, (struct sockaddr *)&sockaddr_ll, sizeof sockaddr_ll)) {
+        return -1;
+    }
+
+    return 0;
+}
+
+struct tpacket_hdr * get_packet(struct interface * interface)
+{
+    return (struct tpacket_hdr *)((void *)interface->first_tpacket_hdr + interface->tpacket_i * interface->tpacket_req.tp_frame_size);
+}
+
+
+struct ethhdr * get_ethhdr(struct tpacket_hdr * tpacket_hdr)
+{
+    return ((void *) tpacket_hdr) + tpacket_hdr->tp_mac;
+}
+
+
+struct sockaddr_ll * get_sockaddr_ll(struct tpacket_hdr * tpacket_hdr)
+{
+    return ((void *) tpacket_hdr) + TPACKET_ALIGN(sizeof *tpacket_hdr);
+}
+
+
+void next_packet(struct interface * interface)
+{
+    interface->tpacket_i = (interface->tpacket_i + 1) % interface->tpacket_req.tp_frame_nr;
+}
+
+
+int setup_packet_mmap(struct interface * interface)
+{
+    struct tpacket_req tpacket_req = {
+        .tp_block_size = 4096,
+        .tp_frame_size = 2048,
+        .tp_block_nr = 32,
+        .tp_frame_nr = 64
+    };
+
+    int size = tpacket_req.tp_block_size * tpacket_req.tp_block_nr;
+
+    void * mapped_memory = NULL;
+
+    if (setsockopt(interface->socket, SOL_PACKET, PACKET_RX_RING, &tpacket_req, sizeof tpacket_req)) {
+        return -1;
+    }
+
+    mapped_memory = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, interface->socket, 0);
+
+    if (MAP_FAILED == mapped_memory) {
+        return -1;
+    }
+
+    interface->first_tpacket_hdr = mapped_memory;
+    interface->mapped_memory_size = size;
+    interface->tpacket_req = tpacket_req;
+
+    return 0;
+}
+
+
+
+
+int init_interface(struct interface * interface, const char * name)
+{
+    interface->socket = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+    const int on = 1;
+    setsockopt(interface->socket, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
+    if (-1 == interface->socket) {
+        return -1;
+    }
+
+    interface->index = get_interface_index(interface->socket, name);
+
+    if (interface->index < 0) {
+        close(interface->socket);
+        return -1;
+    }
+
+    snprintf(interface->name, sizeof interface->name, "%s", name); 
+
+    if (bind_to_interface(interface->socket, interface->index)) {
+        close(interface->socket);
+        return -1;
+    }
+
+    if (setup_packet_mmap(interface)) {
+        close(interface->socket);
+        return -1;
+    }
+
+    return 0;
+}
+
+
+struct interface * create_interface(const char * name) 
+{
+    struct interface * interface = malloc(sizeof *interface);
+
+    if (!interface) {
+        return NULL;
+    }
+
+    if (init_interface(interface, name)) {
+        free(interface);
+        return NULL;
+    }
+
+    return interface;
+}
+
+
+void exit_interface(struct interface * interface)
+{
+    munmap(interface->first_tpacket_hdr, interface->mapped_memory_size);
+    close(interface->socket);
+}
+
+
+void destroy_interface(struct interface * interface)
+{
+    exit_interface(interface);
+    free(interface);
+}
+
+void handler(int signal_number) 
+{
+    printf("Received %d\n", signal_number);
+}
+
+int install_signal(void) 
+{
+    struct sigaction ssigaction;
+    memset(&ssigaction, 0, sizeof ssigaction);
+    ssigaction.sa_handler = handler;
+    return sigaction(SIGINT, &ssigaction, NULL);
+}
+
+
+void print_packet(struct ethhdr * ethhdr)
+{
+    printf("{\"src\": \"%02x:%02x:%02x:%02x:%02x:%02x\", \"dst\":\"%02x:%02x:%02x:%02x:%02x:%02x\"}\n",
+        ethhdr->h_source[0],
+        ethhdr->h_source[1],
+        ethhdr->h_source[2],
+        ethhdr->h_source[3],
+        ethhdr->h_source[4],
+        ethhdr->h_source[5],
+        ethhdr->h_dest[0],
+        ethhdr->h_dest[1],
+        ethhdr->h_dest[2],
+        ethhdr->h_dest[3],
+        ethhdr->h_dest[4],
+        ethhdr->h_dest[5]
+    );
+}
+
+
+void hex_dump (void *addr, int len) {
+    int i;
+    unsigned char buff[17];
+    unsigned char *pc = (unsigned char*)addr;
+
+    // Process every byte in the data.
+    for (i = 0; i < len; i++) {
+        // Multiple of 16 means new line (with line offset).
+
+        if ((i % 16) == 0) {
+            // Just don't print ASCII for the zeroth line.
+            if (i != 0)
+                printf ("  %s\n", buff);
+
+            // Output the offset.
+            printf ("  %04x ", i);
+        }
+
+        // Now the hex code for the specific character.
+        printf (" %02x", pc[i]);
+
+        // And store a printable ASCII character for later.
+        if ((pc[i] < 0x20) || (pc[i] > 0x7e))
+            buff[i % 16] = '.';
+        else
+            buff[i % 16] = pc[i];
+        buff[(i % 16) + 1] = '\0';
+    }
+
+    // Pad out last line if not exactly 16 characters.
+    while ((i % 16) != 0) {
+        printf ("   ");
+        i++;
+    }
+
+    // And print the final ASCII bit.
+    printf ("  %s\n", buff);
+}
+
+
+void print_sockaddr_ll(struct sockaddr_ll * sockaddr_ll)
+{
+    printf("sll_family: %d\n", sockaddr_ll->sll_family);
+    printf("sll_protocol: %d\n", sockaddr_ll->sll_protocol);
+    printf("sll_ifindex: %d\n", sockaddr_ll->sll_ifindex);
+    printf("sll_hatype: %d\n", sockaddr_ll->sll_hatype);
+    printf("sll_halen: %d\n", sockaddr_ll->sll_halen);
+    printf("sll_family: %d\n", sockaddr_ll->sll_family);
+    printf("sll_addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
+        sockaddr_ll->sll_addr[0],
+        sockaddr_ll->sll_addr[1],
+        sockaddr_ll->sll_addr[2],
+        sockaddr_ll->sll_addr[3],
+        sockaddr_ll->sll_addr[4],
+        sockaddr_ll->sll_addr[5]
+    );
+}
+
+/*          struct sockaddr_in6 {
+               sa_family_t     sin6_family;   AF_INET6
+               in_port_t       sin6_port;     port number
+               uint32_t        sin6_flowinfo; IPv6 flow information
+               struct in6_addr sin6_addr;     IPv6 address
+               uint32_t        sin6_scope_id; Scope ID (new in 2.4)};
+*/
+#include <arpa/inet.h>        // inet_pton() and inet_ntop()
+int epoll_fd = -1;
+struct interface * interface;
+void init_epoll() {
+    interface = create_interface(packetinfo.interface);
+    struct epoll_event event1 = {
+        .events = EPOLLIN | EPOLLET,
+        .data = { .ptr = NULL }
+    };
+
+    if (install_signal()) {
+        perror("failed to install signal");
+       exit(1);
+    }
+
+    if (!interface) {
+        perror("create_interface failed.");
+       exit(1);
+    }
+
+    epoll_fd = epoll_create(1024);
+
+    if (-1 == epoll_fd) {
+        perror("epoll_create failed.");
+        destroy_interface(interface);
+       exit(1);
+    }
+
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, interface->socket, &event1)) {
+        perror("epoll_ctl failed");
+        close(epoll_fd);
+        destroy_interface(interface);
+       exit(1);
+    }
+}
+void close_epoll(){
+    close(epoll_fd);
+    destroy_interface(interface);
+}
+int strangeReceive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer) {
+    //char s[INET6_ADDRSTRLEN];
+    while (1) {
+        struct epoll_event events[16];
+        int num_events = -1;
+        num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
+        if (num_events == -1)  {
+            if (errno == EINTR)  {
+                perror("epoll_wait returned -1");
+                break;
+            }
+            perror("error");
+            continue;
+        }
+
+        for (int i = 0; i < num_events; ++i)  {
+            struct epoll_event * event = &events[i];
+
+            if (event->events & EPOLLIN) {
+                struct tpacket_hdr *tpacket_hdr = get_packet(interface);
+                //struct sockaddr_ll *sockaddr_ll = NULL;
+                struct ethhdr * ethhdr = NULL;
+
+                if (tpacket_hdr->tp_status & TP_STATUS_COPY) {
+                    next_packet(interface);
+                    continue;
+                }
+
+                if (tpacket_hdr->tp_status & TP_STATUS_LOSING) {
+                    next_packet(interface);
+                    continue;
+                }
+                
+                ethhdr = get_ethhdr(tpacket_hdr);
+                //sockaddr_ll = get_sockaddr_ll(tpacket_hdr);
+                struct ip6_hdr *iphdr = (struct ip6_hdr *)((char*)ethhdr + ETH_HDRLEN);
+                struct udphdr *udphdr = (struct udphdr *)((char*)ethhdr + ETH_HDRLEN + IP6_HDRLEN);
+                char* payload = ((char*)ethhdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
+                if (!memcmp(&udphdr->dest, &packetinfo.udphdr.source, sizeof(uint16_t))) {
+                    memcpy(receiveBuffer,payload, msgBlockSize);
+                    if (ipv6Pointer != NULL)
+                        memcpy(ipv6Pointer->s6_addr,&iphdr->ip6_dst,IPV6_SIZE);
+                    memcpy(targetIP->sin6_addr.s6_addr,&iphdr->ip6_src,IPV6_SIZE);
+                    memcpy(&targetIP->sin6_port,&udphdr->source,sizeof(uint16_t));
+                    /*inet_ntop(targetIP->sin6_family, &targetIP->sin6_addr, s, sizeof s);
+                    print_debug("Got message from %s:%d", s, ntohs(targetIP->sin6_port));*/
+                    return msgBlockSize;
+
+                }
+                //print_packet(ethhdr);
+                //print_sockaddr_ll(sockaddr_ll);
+                tpacket_hdr->tp_status = TP_STATUS_KERNEL;
+                next_packet(interface);
+            }
+        }
+    }
+
+    return 0;
+}
+
+int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer) {
     struct sockaddr_in6 from;
     struct iovec iovec[1];
     struct msghdr msg;
     char msg_control[1024];
     char udp_packet[msgBlockSize];
     int numbytes = 0;
-    char s[INET6_ADDRSTRLEN];
+    //char s[INET6_ADDRSTRLEN];
     iovec[0].iov_base = udp_packet;
     iovec[0].iov_len = sizeof(udp_packet);
     msg.msg_name = &from;
@@ -272,160 +687,28 @@ int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *
     msg.msg_control = msg_control;
     msg.msg_controllen = sizeof(msg_control);
     msg.msg_flags = 0;
-    int sockfd;
-    int sockopt;
-    struct ifreq ifopts;    /* set promiscuous mode */
-    struct ifreq if_ip; /* get ip addr */
-        /* Open PF_PACKET socket, listening for EtherType ETHER_TYPE */
-    if ((sockfd = socket(PF_PACKET, SOCK_RAW, htons(0x86DD))) == -1) {
-        perror("listener: socket"); 
-        return -1;
-    }
 
-    /* Set interface to promiscuous mode - do we need to do this every time? */
-    strncpy(ifopts.ifr_name, packetinfo.interface, IFNAMSIZ-1);
-    ioctl(sockfd, SIOCGIFFLAGS, &ifopts);
-    ifopts.ifr_flags |= IFF_PROMISC;
-    ioctl(sockfd, SIOCSIFFLAGS, &ifopts);
-    /* Allow the socket to be reused - incase connection is closed prematurely */
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &sockopt, sizeof sockopt) == -1) {
-        perror("setsockopt");
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
-    /* Bind to device */
-    if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, packetinfo.interface, IFNAMSIZ-1) == -1)  {
-        perror("SO_BINDTODEVICE");
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
-    //03000000000002000000000086dd600000001008
-    while (1) {
-        print_debug("Waiting for response...");
-        memset(receiveBuffer, 0, msgBlockSize);
-        numbytes = recvfrom(sd_rcv, &msg, msgBlockSize, 0, NULL, NULL);
-        printNBytes((char*)&msg, 50);
-        struct in6_pktinfo * in6_pktinfo;
-        struct cmsghdr* cmsg;
-        for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != 0; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-            if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
-                in6_pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
-                inet_ntop(targetIP->sin6_family, &in6_pktinfo->ipi6_addr, s, sizeof s);
-                print_debug("Received packet was sent to this IP %s",s);
-                memcpy(&targetIP->sin6_addr.s6_addr,&in6_pktinfo->ipi6_addr, 16);
-                memcpy(receiveBuffer,iovec[0].iov_base,iovec[0].iov_len);
-                memcpy(targetIP, (struct sockaddr *) &from, sizeof(from));
-            }
+    print_debug("Waiting for response...");
+    memset(receiveBuffer, 0, msgBlockSize);
+    numbytes = recvmsg(sd_rcv, &msg, 0);
+    struct in6_pktinfo * in6_pktinfo;
+    struct cmsghdr* cmsg;
+    for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != 0; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+        if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
+            in6_pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
+            //inet_ntop(targetIP->sin6_family, &in6_pktinfo->ipi6_addr, s, sizeof s);
+            //print_debug("Received packet was sent to this IP %s",s);
+            if (ipv6Pointer != NULL)
+                memcpy(ipv6Pointer->s6_addr,&in6_pktinfo->ipi6_addr,IPV6_SIZE);
+            memcpy(receiveBuffer,iovec[0].iov_base,iovec[0].iov_len);
+            memcpy(targetIP, (struct sockaddr *) &from, sizeof(from));
         }
-
-        inet_ntop(targetIP->sin6_family, targetIP, s, sizeof s);
-        print_debug("Got message from %s:%d", s, ntohs(targetIP->sin6_port));
     }
+
+    //inet_ntop(targetIP->sin6_family, targetIP, s, sizeof s);
+    //print_debug("Got message from %s:%d", s, ntohs(targetIP->sin6_port));
+    //printNBytes(receiveBuffer, 50);
     return numbytes;
-}
-#define ETHER_TYPE  0x86DD
-#define DEST_MAC0   0x00
-#define DEST_MAC1   0x00
-#define DEST_MAC2   0x00
-#define DEST_MAC3   0x00
-#define DEST_MAC4   0x00
-#define DEST_MAC5   0x00
-
-int cooked_receive_failed(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP) {
-
-        char sender[INET6_ADDRSTRLEN];
-        int sockfd, ret, i;
-        int sockopt;
-        ssize_t numbytes;
-        struct ifreq ifopts;    /* set promiscuous mode */
-        struct ifreq if_ip; /* get ip addr */
-        struct sockaddr_in6 their_addr;
-        uint8_t buf[msgBlockSize];
-
-        /* Header structures */
-        struct ether_header *eh = (struct ether_header *) buf;
-        struct ip6_hdr *iph = (struct ip6_hdr *) (buf + sizeof(struct ether_header));
-        struct udphdr *udph = (struct udphdr *) (buf + sizeof(struct iphdr) + sizeof(struct ether_header));
-
-        memset(&if_ip, 0, sizeof(struct ifreq));
-
-        /* Open PF_PACKET socket, listening for EtherType ETHER_TYPE */
-        if ((sockfd = socket(PF_PACKET, SOCK_RAW, htons(ETHER_TYPE))) == -1) {
-            perror("listener: socket"); 
-            return -1;
-        }
-
-        /* Set interface to promiscuous mode - do we need to do this every time? */
-        strncpy(ifopts.ifr_name, packetinfo.interface, IFNAMSIZ-1);
-        ioctl(sockfd, SIOCGIFFLAGS, &ifopts);
-        ifopts.ifr_flags |= IFF_PROMISC;
-        ioctl(sockfd, SIOCSIFFLAGS, &ifopts);
-        /* Allow the socket to be reused - incase connection is closed prematurely */
-        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &sockopt, sizeof sockopt) == -1) {
-            perror("setsockopt");
-            close(sockfd);
-            exit(EXIT_FAILURE);
-        }
-        /* Bind to device */
-        if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, packetinfo.interface, IFNAMSIZ-1) == -1)  {
-            perror("SO_BINDTODEVICE");
-            close(sockfd);
-            exit(EXIT_FAILURE);
-        }
-
-    repeat: printf("listener: Waiting to recvfrom...\n");
-            numbytes = read(sockfd, buf, 0);
-            printf("listener: got packet %lu bytes\n", numbytes);
-
-            /* Check the packet is for me */
-            if (eh->ether_dhost[0] == DEST_MAC0 &&
-                    eh->ether_dhost[1] == DEST_MAC1 &&
-                    eh->ether_dhost[2] == DEST_MAC2 &&
-                    eh->ether_dhost[3] == DEST_MAC3 &&
-                    eh->ether_dhost[4] == DEST_MAC4 &&
-                    eh->ether_dhost[5] == DEST_MAC5) {
-                printf("Correct destination MAC address\n");
-            } else {
-                printf("Wrong destination MAC: %x:%x:%x:%x:%x:%x\n",
-                                eh->ether_dhost[0],
-                                eh->ether_dhost[1],
-                                eh->ether_dhost[2],
-                                eh->ether_dhost[3],
-                                eh->ether_dhost[4],
-                                eh->ether_dhost[5]);
-                ret = -1;
-                goto done;
-            }
-
-            /* Get source IP */
-            memcpy(&their_addr.sin6_addr.s6_addr, &iph->ip6_src, 16);
-            inet_ntop(AF_INET, &((struct sockaddr_in*)&their_addr)->sin_addr, sender, sizeof sender);
-
-    /*        //Look up my device IP addr if possible 
-            strncpy(if_ip.ifr_name, ifName, IFNAMSIZ-1);
-            if (ioctl(sockfd, SIOCGIFADDR, &if_ip) >= 0) {// if we can't check then don't 
-                printf("Source IP: %s\n My IP: %s\n", sender, 
-                        inet_ntoa(((struct sockaddr_in *)&if_ip.ifr_addr)->sin_addr));
-                // ignore if I sent it 
-                if (strcmp(sender, inet_ntoa(((struct sockaddr_in *)&if_ip.ifr_addr)->sin_addr)) == 0)  {
-                    printf("but I sent it :(\n");
-                    ret = -1;
-                    goto done;
-                }
-            }*/
-
-            /* UDP payload length */
-            ret = ntohs(udph->len) - sizeof(struct udphdr);
-
-            /* Print packet */
-            printf("\tData:");
-            for (i=0; i<numbytes; i++) printf("%02x:", buf[i]);
-            printf("\n");
-
-    done:   goto repeat;
-
-        close(sockfd);
-    return ret;
 }
 
 // Build IPv6 UDP pseudo-header and call checksum function (Section 8.1 of RFC 2460).

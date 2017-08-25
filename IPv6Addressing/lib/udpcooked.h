@@ -27,15 +27,19 @@
 #define ETH_HDRLEN 14  // Ethernet header length
 #define IP6_HDRLEN 40  // IPv6 header length
 #define UDP_HDRLEN  8  // UDP header length, excludes data
+#define IPV6_SIZE 16
 
 #include <stdint.h>        // needed for uint8_t, uint16_t
 #include <netinet/ip6.h>      // struct ip6_hdr
 
 
 int cookUDP (struct sockaddr_in6 *dst_addr, int dst_port, char* data, int datalen);
-struct udppacket* genPacketInfo (int sockfd);
-int openRawSocket();
-void closeRawSocket();
-int getRawSocket();
-int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP);
+struct udppacket* genPacketInfo();
+struct sockaddr_in6 *init_rcv_socket(const char *portNumber);
+void init_send_socket();
+void close_sockets();
+int get_rcv_socket();
+int get_send_socket();
+int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer);
+int strangeReceive();
 #endif

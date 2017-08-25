@@ -6,8 +6,8 @@
 
 // Define some constants.
 #define BLOCK_SIZE 4096 // max number of bytes we can get at once
-#define POINTER_SIZE sizeof(void*)
 #define IPV6_SIZE 16
+#define POINTER_SIZE sizeof(void*)
 #define ALLOC_CMD       "01"
 #define WRITE_CMD       "02"
 #define GET_CMD         "03"
@@ -23,7 +23,7 @@ int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetI
 int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr  ipv6Pointer);
 int receiveUDP(int sockfd, char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP);
 int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr * ipv6Pointer);
-int receiveUDPIPv6Raw(int sockfd, char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr * ipv6Pointer);
+int receiveUDPIPv6Raw(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr * ipv6Pointer);
 
 uint64_t getPointerFromIPv6(struct in6_addr addr);
 struct in6_addr getIPv6FromPointer(uint64_t pointer);
@@ -33,10 +33,14 @@ uint16_t udp6_checksum (struct ip6_hdr, struct udphdr, uint8_t *, int);
 
 int cookUDP (struct sockaddr_in6* dst_addr, int dst_port, char* data, int datalen);
 
-struct udppacket* genPacketInfo (int sockfd);
-extern int openRawSocket();
-extern void closeRawSocket();
 
+extern struct udppacket* genPacketInfo();
+extern struct sockaddr_in6 *init_rcv_socket();
+extern void init_send_socket();
+extern void close_sockets();
+extern int get_rcv_socket();
+extern int get_send_socket();
+extern int strangeReceive();
 /*
  * TODO: explain
  * Binds to the next available address?
