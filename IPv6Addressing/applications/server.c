@@ -151,7 +151,7 @@ int getMem(struct sockaddr_in6 *targetIP, struct in6_addr * ipv6Pointer) {
  * Request handler for socket sock_fd
  * TODO: get message format
  */
-void handleClientRequests(int sock_fd, char * receiveBuffer, struct in6_addr * ipv6Pointer, struct sockaddr_in6 *targetIP) {
+void handleClientRequests(char * receiveBuffer, struct in6_addr * ipv6Pointer, struct sockaddr_in6 *targetIP) {
     char * splitResponse;
     // Switch on the client command
     if (memcmp(receiveBuffer, ALLOC_CMD,2) == 0) {
@@ -209,25 +209,16 @@ int main(int argc, char *argv[]) {
         printf("Defaulting to standard values...\n");
         argv[1] = "5000";
     }
-    // loop through all the results and bind to the first we can
-/*    p = bindSocket(p, servinfo, &sockfd);
-    if (p == NULL) {
-        fprintf(stderr, "server: failed to bind\n");
-        exit(1);
-    }*/
-    struct sockaddr_in6 *temp = init_rcv_socket(argv[1]);
-    genPacketInfo();
+    genPacketInfo(argv[1]);
+    struct sockaddr_in6 *temp = init_rcv_socket();
     init_send_socket();
-    int sockfd = get_rcv_socket();
-    //close(sockfd);
     // Start waiting for connections
     while (1) {
         char * receiveBuffer = (char *) calloc(BLOCK_SIZE,sizeof(char));
         struct in6_addr * ipv6Pointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
         //TODO: Error handling (numbytes = -1)
-        strangeReceive(receiveBuffer, BLOCK_SIZE, temp, ipv6Pointer);
-        //receiveUDPIPv6Raw(receiveBuffer, BLOCK_SIZE, temp, ipv6Pointer);
-        handleClientRequests(sockfd, receiveBuffer, ipv6Pointer, temp);
+        receiveUDPIPv6Raw(receiveBuffer, BLOCK_SIZE, temp, ipv6Pointer);
+        handleClientRequests(receiveBuffer, ipv6Pointer, temp);
     }
     close_sockets();
     return 0;

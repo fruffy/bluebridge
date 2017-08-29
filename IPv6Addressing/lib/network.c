@@ -4,10 +4,6 @@
 #include "utils.h"
 #include "udpcooked.h"
 
-const int SUBNET_ID = 1;// 16 bits for subnet id
-const int GLOBAL_ID = 33022;// 16 bits for link local id
-
-const int NUM_HOSTS = 3; // number of hosts in the rack
 
 #include <stdio.h>            // printf() and sprintf()
 #include <stdlib.h>           // free(), alloc, and calloc()
@@ -15,55 +11,11 @@ const int NUM_HOSTS = 3; // number of hosts in the rack
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
 #include <unistd.h>           // close()
 
-/*
- * Generates a random IPv6 address target under specific constraints
- * This is used by the client to request a pointer from a random server in the network
- * In future implementations this will be handled by the switch and controller to 
- * loadbalance. The client will send out a generic request. 
- */
-struct in6_addr * gen_rdm_IPv6Target() {
-    // Add the pointer
+uint64_t sendLat = 0;
+uint64_t send_calls = 0;
 
-    struct in6_addr * newAddr = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-    uint8_t rndHost = (rand()% NUM_HOSTS)+1;
-    if (rndHost == 1) rndHost++;
-    /*// Insert link local id
-    memcpy(newAddr->s6_addr,&GLOBAL_ID,2);*/
-    // Insert subnet id
-    memcpy(newAddr->s6_addr+4,&SUBNET_ID,1);
-    //We are allocating from a random host
-    memcpy(newAddr->s6_addr+5,&rndHost,1);
-
-
-    char s[INET6_ADDRSTRLEN];
-    inet_ntop(AF_INET6, newAddr, s, sizeof s);
-    print_debug("Target IPv6 Pointer %s",s);
-    return newAddr;
-}
-
-/*
- * Generates a fixed IPv6 address target based on the provides int value
- * This is used by the client to request a pointer from a random server in the network
- * In future implementations this will be handled by the switch and controller to 
- * loadbalance. The client will send out a generic request. 
- */
-struct in6_addr * gen_fixed_IPv6Target(uint8_t rndHost) {
-    // Add the pointer
-
-    struct in6_addr * newAddr = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-    /*// Insert link local id
-    memcpy(newAddr->s6_addr,&GLOBAL_ID,2);*/
-    // Insert subnet id
-    memcpy(newAddr->s6_addr+4,&SUBNET_ID,1);
-    //We are allocating from a random host
-    memcpy(newAddr->s6_addr+5,&rndHost,1);
-
-
-    char s[INET6_ADDRSTRLEN];
-    inet_ntop(AF_INET6, newAddr, s, sizeof s);
-    print_debug("Target IPv6 Pointer %s",s);
-    return newAddr;
-}
+uint64_t rcvLat = 0;
+uint64_t rcv_calls = 0;
 
 /*
  * Sends message to specified socket
@@ -107,13 +59,11 @@ int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct sockaddr
  * RAW version, we craft our own packet.
  */
 int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP) {
-
-
     int dst_port = ntohs(targetIP->sin6_port);
     char dst_ip[INET6_ADDRSTRLEN];
     inet_ntop(targetIP->sin6_family,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
     print_debug("Sending to %s:%d", dst_ip,dst_port);
-    cookUDP(targetIP, dst_port, sendBuffer, msgBlockSize);
+    cooked_send(targetIP, dst_port, sendBuffer, msgBlockSize);
     memset(sendBuffer, 0, msgBlockSize);
     return EXIT_SUCCESS;
 }
@@ -131,7 +81,10 @@ int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *tar
     int dst_port = ntohs(targetIP->sin6_port);
     //inet_ntop(p->ai_family,get_in_addr(p), dst_ip, sizeof dst_ip);
     //print_debug("Sending to %s:%d", dst_ip,dst_port);
-    cookUDP(targetIP, dst_port, sendBuffer, msgBlockSize);
+    uint64_t start = getns(); 
+    cooked_send(targetIP, dst_port, sendBuffer, msgBlockSize);
+    sendLat += getns() - start;
+    send_calls++;
     memset(sendBuffer, 0, msgBlockSize);
     return EXIT_SUCCESS;
 }
@@ -187,7 +140,12 @@ int receiveUDPIPv6(int sockfd, char * receiveBuffer, int msgBlockSize, struct so
 }
 
 int receiveUDPIPv6Raw(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer) {
-    int numbytes = cooked_receive(receiveBuffer, msgBlockSize, targetIP, ipv6Pointer);
+    uint64_t start = getns(); 
+    int numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, ipv6Pointer);
+//     int numbytes = cooked_receive(receiveBuffer, msgBlockSize, targetIP, ipv6Pointer);
+
+    rcvLat += getns() - start;
+    rcv_calls++;
     return numbytes;
 }
 
@@ -275,4 +233,9 @@ struct addrinfo* bindSocket(struct addrinfo* p, struct addrinfo* servinfo, int* 
     }
 
     return p;
+}
+void printSendLat() {
+    printf("Average Sending Time %lu ms\n", (sendLat/1000)/send_calls );
+    printf("Average Receive Time %lu ms\n", (rcvLat/1000)/rcv_calls );
+
 }

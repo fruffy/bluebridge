@@ -11,6 +11,56 @@
 #include <stdio.h>            // printf() and sprintf()
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
 
+
+/*
+ * Generates a random IPv6 address target under specific constraints
+ * This is used by the client to request a pointer from a random server in the network
+ * In future implementations this will be handled by the switch and controller to 
+ * loadbalance. The client will send out a generic request. 
+ */
+struct in6_addr *gen_rdm_IPv6Target() {
+    
+    // Add the pointer
+    struct in6_addr * newAddr = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
+    uint8_t rndHost = (rand()% NUM_HOSTS)+1;
+    if (rndHost == 1) rndHost++;
+    /*// Insert link local id
+    memcpy(newAddr->s6_addr,&GLOBAL_ID,2);*/
+    // Insert subnet id
+    memcpy(newAddr->s6_addr+4,&SUBNET_ID,1);
+    //We are allocating from a random host
+    memcpy(newAddr->s6_addr+5,&rndHost,1);
+
+    char s[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6, newAddr, s, sizeof s);
+    print_debug("Target IPv6 Pointer %s",s);
+    return newAddr;
+}
+
+/*
+ * Generates a fixed IPv6 address target based on the provides int value
+ * This is used by the client to request a pointer from a random server in the network
+ * In future implementations this will be handled by the switch and controller to 
+ * loadbalance. The client will send out a generic request. 
+ */
+struct in6_addr * gen_fixed_IPv6Target(uint8_t rndHost) {
+    // Add the pointer
+
+    struct in6_addr * newAddr = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
+    /*// Insert link local id
+    memcpy(newAddr->s6_addr,&GLOBAL_ID,2);*/
+    // Insert subnet id
+    memcpy(newAddr->s6_addr+4,&SUBNET_ID,1);
+    //We are allocating from a random host
+    memcpy(newAddr->s6_addr+5,&rndHost,1);
+
+
+    char s[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6, newAddr, s, sizeof s);
+    print_debug("Target IPv6 Pointer %s",s);
+    return newAddr;
+}
+
 /*
  * Allocate memory from a remote machine.
  */
@@ -28,8 +78,8 @@ struct in6_addr allocateRemoteMem(struct sockaddr_in6 * targetIP) {
 	// Send the command to the target host and wait for response
 	memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
 	sendUDPRaw(sendBuffer,BLOCK_SIZE, targetIP);
-	//receiveUDPIPv6Raw(receiveBuffer,BLOCK_SIZE, targetIP, NULL);
-	strangeReceive(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
+	receiveUDPIPv6Raw(receiveBuffer,BLOCK_SIZE, targetIP, NULL);
+
 	struct in6_addr retVal;
 	if (memcmp(receiveBuffer,"ACK", 3) == 0) {
 		// If the message is ACK --> successful allocation
@@ -81,8 +131,7 @@ int writeRemoteMem(struct sockaddr_in6 * targetIP, char * payload,  struct in6_a
 	}
 
 	sendUDPIPv6Raw(sendBuffer, BLOCK_SIZE, targetIP, *toPointer);
-	//receiveUDPIPv6Raw(receiveBuffer,BLOCK_SIZE, targetIP, NULL);
-	strangeReceive(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
+	receiveUDPIPv6Raw(receiveBuffer,BLOCK_SIZE, targetIP, NULL);
 	// TODO: change to be meaningful, i.e., error message
 	return 0;
 }
@@ -110,8 +159,7 @@ int freeRemoteMem(struct sockaddr_in6 * targetIP,  struct in6_addr * toPointer) 
 	// Send message and check if it was successful
 	// TODO: Check if it actually was successful
 	sendUDPIPv6Raw(sendBuffer,BLOCK_SIZE, targetIP,*toPointer);
-	//receiveUDPIPv6Raw(receiveBuffer,BLOCK_SIZE, targetIP, NULL);
-	strangeReceive(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
+	receiveUDPIPv6Raw(receiveBuffer,BLOCK_SIZE, targetIP, NULL);
 	return 0;
 }
 
@@ -137,8 +185,7 @@ char * getRemoteMem(struct sockaddr_in6 * targetIP, struct in6_addr * toPointer)
 	// Send request and store response
 	sendUDPIPv6Raw(sendBuffer,BLOCK_SIZE, targetIP,*toPointer);
 	print_debug("Now waiting")
-	//receiveUDPIPv6Raw(receiveBuffer,BLOCK_SIZE, targetIP, NULL);
-	strangeReceive(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
+	receiveUDPIPv6Raw(receiveBuffer,BLOCK_SIZE, targetIP, NULL);
 	return receiveBuffer;
 }
 

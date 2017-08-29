@@ -26,20 +26,37 @@
 // Define some constants.
 #define ETH_HDRLEN 14  // Ethernet header length
 #define IP6_HDRLEN 40  // IPv6 header length
-#define UDP_HDRLEN  8  // UDP header length, excludes data
+#define UDP_HDRLEN 8  // UDP header length, excludes data
 #define IPV6_SIZE 16
 
-#include <stdint.h>        // needed for uint8_t, uint16_t
-#include <netinet/ip6.h>      // struct ip6_hdr
 
+/// The number of frames in the ring
+//  This number is not set in stone. Nor are block_size, block_nr or frame_size
+#define CONF_RING_FRAMES        128
+#define FRAMESIZE               (4096 + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + 2 + 32)
+#define BLOCKSIZE               (FRAMESIZE) * (CONF_RING_FRAMES)
 
-int cookUDP (struct sockaddr_in6 *dst_addr, int dst_port, char* data, int datalen);
-struct udppacket* genPacketInfo();
-struct sockaddr_in6 *init_rcv_socket(const char *portNumber);
-void init_send_socket();
-void close_sockets();
-int get_rcv_socket();
-int get_send_socket();
-int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer);
-int strangeReceive();
+#include <stdint.h>         // needed for uint8_t, uint16_t
+#include <netinet/ip6.h>    // struct ip6_hdr
+#include "config.h"
+
+extern struct udppacket *gen_packet_info();
+
+extern int cooked_send(struct sockaddr_in6 *dst_addr, int dst_port, char* data, int datalen);
+extern void init_send_socket();
+extern int get_send_socket();
+extern int close_send_socket();
+
+extern int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer);
+extern struct sockaddr_in6 *init_rcv_socket();
+extern struct sockaddr_in6 *init_rcv_socket_old(const char *portNumber);
+extern int get_rcv_socket();
+extern int epoll_rcv();
+extern void close_rcv_socket();
+
+inline void close_sockets() {
+    close_send_socket();
+    close_rcv_socket();
+}
+
 #endif

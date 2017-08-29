@@ -416,9 +416,9 @@ int main(int argc, char *argv[]) {
     }
 
 //    p = bindSocket(p, servinfo, &sockfd);
-    struct sockaddr_in6 *temp = init_rcv_socket("0");
+    genPacketInfo("0");
+    struct sockaddr_in6 *temp = init_rcv_socket();
     temp->sin6_port = htons(strtol(argv[2], (char **)NULL, 10));
-    genPacketInfo();
     init_send_socket();
     int sockfd = get_rcv_socket();
     struct timeval st, et;
@@ -433,7 +433,7 @@ int main(int argc, char *argv[]) {
     printf("Total Time: %d micro seconds\n",elapsed);
     printf(KRED "Finished\n");
     printf(RESET);
-
+    printSendLat();
     free(temp);
     close_sockets();
     return 0;

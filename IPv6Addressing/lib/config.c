@@ -1,0 +1,124 @@
+#define _GNU_SOURCE
+
+#include <stdio.h>            // printf() and sprintf()
+#include <stdlib.h>           // free(), alloc, and calloc()
+#include <unistd.h>           // close()
+#include <string.h>           // strcpy, memset(), and memcpy()
+#include <netdb.h>            // struct addrinfo
+#include <sys/socket.h>       // needed for socket()
+#include <netinet/in.h>       // IPPROTO_UDP, INET6_ADDRSTRLEN
+#include <netinet/ip.h>       // IP_MAXPACKET (which is 65535)
+#include <netinet/udp.h>      // struct udphdr
+#include <sys/ioctl.h>        // macro ioctl is defined
+#include <bits/ioctls.h>      // defines values for argument "request" of ioctl.
+#include <net/if.h>           // struct ifreq
+#include <linux/if_ether.h>   // ETH_P_IP = 0x0800, ETH_P_IPV6 = 0x86DD
+#include <linux/if_packet.h>  // struct sockaddr_ll (see man 7 packet)
+#include <net/ethernet.h>
+#include <ifaddrs.h>
+#include <errno.h>            // errno, perror()
+#include <sys/mman.h>
+#include <sys/epoll.h>
+#include <signal.h>
+#include <poll.h>
+
+#include "config.h"
+
+// Define some constants.
+#define ETH_HDRLEN 14  // Ethernet header length
+#define IP6_HDRLEN 40  // IPv6 header length
+#define UDP_HDRLEN 8  // UDP header length, excludes data
+struct udppacket packetinfo;
+
+void set_interface_name(){
+    struct ifaddrs *ifap, *ifa = NULL; 
+    struct sockaddr_in6 *sa; 
+    char src_ip[INET6_ADDRSTRLEN];
+    //TODO: Use config file instead. Avoid memory leaks
+    getifaddrs(&ifap); 
+    int i = 0; 
+    for (ifa = ifap; i<2; ifa = ifa->ifa_next) { 
+        if (ifa->ifa_addr->sa_family==AF_INET6) { 
+            i++; 
+            sa = (struct sockaddr_in6 *) ifa->ifa_addr; 
+            getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in6), src_ip, 
+            sizeof(src_ip), NULL, 0, NI_NUMERICHOST); 
+        } 
+    }
+    strcpy(packetinfo.interface,ifa->ifa_name);
+    packetinfo.iphdr.ip6_src = sa->sin6_addr; 
+}
+
+struct udppacket *genPacketInfo(const char *portNumber) {
+
+    // Allocate memory for various arrays.
+    // Set source/destination MAC address to filler values.
+    uint8_t src_mac[6] = { 2 };
+    uint8_t dst_mac[6] = { 3 };
+    int sd_send;
+    //print_debug("Interface %s, Source IP %s, Source Port %d, Destination IP %s, Destination Port %d, Size %d", interface, src_ip, src_port, dst_ip, dst_port, datalen);
+    set_interface_name();
+
+    // Submit request for a socket descriptor to look up interface.
+    if ((sd_send = socket (AF_INET6, SOCK_RAW, IPPROTO_RAW)) < 0) {
+        perror ("socket() failed to get socket descriptor for using ioctl() ");
+        exit (EXIT_FAILURE);
+    }
+    int port = atoi(portNumber);
+    if (!port) {
+        struct sockaddr_in6 sin;
+        socklen_t len = sizeof(sin);
+        if (getsockname(sd_send, (struct sockaddr *)&sin, &len) == -1) {
+            perror("getsockname");
+            exit (EXIT_FAILURE);
+        } else {
+            packetinfo.udphdr.source = htons(sin.sin6_port);
+        } 
+    } else {
+        packetinfo.udphdr.source = htons(port);
+    }
+
+    // Find interface index from interface name and store index in
+    // struct sockaddr_ll device, which will be used as an argument of sendto().
+    memset (&packetinfo.device, 0, sizeof (packetinfo.device));
+    if ((packetinfo.device.sll_ifindex = if_nametoindex (packetinfo.interface)) == 0) {
+        perror ("if_nametoindex() failed to obtain interface index ");
+        exit (EXIT_FAILURE);
+    }
+
+    // Fill out sockaddr_ll.
+    packetinfo.device.sll_family = AF_PACKET;
+    memcpy (packetinfo.device.sll_addr, src_mac, 6 * sizeof (uint8_t));
+    packetinfo.device.sll_halen = 6;
+
+    // IPv6 header
+    // IPv6 version (4 bits), Traffic class (8 bits), Flow label (20 bits)
+    packetinfo.iphdr.ip6_flow = htonl ((6 << 28) | (0 << 20) | 0);
+
+    // Next header (8 bits): 17 for UDP
+    packetinfo.iphdr.ip6_nxt = IPPROTO_UDP;
+    //packetinfo.iphdr.ip6_nxt = 0x9F;
+
+    // Hop limit (8 bits): default to maximum value
+    packetinfo.iphdr.ip6_hops = 255;
+
+    // Destination and Source MAC addresses
+    memcpy (packetinfo.ether_frame, &dst_mac, 6 * sizeof (uint8_t));
+    memcpy (packetinfo.ether_frame + 6, &src_mac, 6 * sizeof (uint8_t));
+    // Next is ethernet type code (ETH_P_IPV6 for IPv6).
+    // http://www.iana.org/assignments/ethernet-numbers
+    packetinfo.ether_frame[12] = ETH_P_IPV6 / 256;
+    packetinfo.ether_frame[13] = ETH_P_IPV6 % 256;
+    
+    memcpy (packetinfo.ether_frame + ETH_HDRLEN, &packetinfo.iphdr, IP6_HDRLEN * sizeof (uint8_t));
+    memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN, &packetinfo.udphdr, UDP_HDRLEN * sizeof (uint8_t));
+    // UDP data
+    //memcpy (packetinfo->ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, data, datalen * sizeof (uint8_t));
+    close(sd_send);
+    return &packetinfo;
+
+}
+
+struct udppacket* getPacketInfo() {
+    return &packetinfo;
+}
