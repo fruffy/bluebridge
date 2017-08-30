@@ -21,6 +21,7 @@
 #include <sys/epoll.h>
 #include <signal.h>
 #include <poll.h>
+#include <arpa/inet.h>        // inet_pton() and inet_ntop()
 
 #include "config.h"
 
@@ -28,7 +29,8 @@
 #define ETH_HDRLEN 14  // Ethernet header length
 #define IP6_HDRLEN 40  // IPv6 header length
 #define UDP_HDRLEN 8  // UDP header length, excludes data
-struct udppacket packetinfo;
+struct packetconfig packetinfo;
+struct config configstruct;
 
 void set_interface_name(){
     struct ifaddrs *ifap, *ifa = NULL; 
@@ -43,13 +45,31 @@ void set_interface_name(){
             sa = (struct sockaddr_in6 *) ifa->ifa_addr; 
             getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in6), src_ip, 
             sizeof(src_ip), NULL, 0, NI_NUMERICHOST); 
-        } 
+        }
     }
-    strcpy(packetinfo.interface,ifa->ifa_name);
     packetinfo.iphdr.ip6_src = sa->sin6_addr; 
 }
 
-struct udppacket *genPacketInfo(const char *portNumber) {
+int set_interface_ip() {
+    struct ifreq ifr;
+    int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+
+    strncpy(ifr.ifr_name, configstruct.interface, IFNAMSIZ);
+    struct sockaddr_in6* addr = (struct sockaddr_in6*)&ifr.ifr_addr;
+    ifr.ifr_addr.sa_family = AF_INET6;
+    memcpy(&addr->sin6_addr,&configstruct.src_addr, IPV6_SIZE);
+    ioctl(fd, SIOCSIFADDR, &ifr);
+
+    ioctl(fd, SIOCGIFFLAGS, &ifr);
+    strncpy(ifr.ifr_name, configstruct.interface, IFNAMSIZ);
+    ifr.ifr_flags |= (IFF_UP | IFF_RUNNING);
+
+    ioctl(fd, SIOCSIFFLAGS, &ifr);
+    close(fd);
+    return 0;
+}
+
+struct packetconfig *genPacketInfo(const char *portNumber) {
 
     // Allocate memory for various arrays.
     // Set source/destination MAC address to filler values.
@@ -81,7 +101,7 @@ struct udppacket *genPacketInfo(const char *portNumber) {
     // Find interface index from interface name and store index in
     // struct sockaddr_ll device, which will be used as an argument of sendto().
     memset (&packetinfo.device, 0, sizeof (packetinfo.device));
-    if ((packetinfo.device.sll_ifindex = if_nametoindex (packetinfo.interface)) == 0) {
+    if ((packetinfo.device.sll_ifindex = if_nametoindex (configstruct.interface)) == 0) {
         perror ("if_nametoindex() failed to obtain interface index ");
         exit (EXIT_FAILURE);
     }
@@ -92,6 +112,9 @@ struct udppacket *genPacketInfo(const char *portNumber) {
     packetinfo.device.sll_halen = 6;
 
     // IPv6 header
+    // IPv6 version (4 bits), Traffic class (8 bits), Flow label (20 bits)
+    packetinfo.iphdr.ip6_src = configstruct.src_addr;
+    set_interface_ip();
     // IPv6 version (4 bits), Traffic class (8 bits), Flow label (20 bits)
     packetinfo.iphdr.ip6_flow = htonl ((6 << 28) | (0 << 20) | 0);
 
@@ -116,9 +139,52 @@ struct udppacket *genPacketInfo(const char *portNumber) {
     //memcpy (packetinfo->ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, data, datalen * sizeof (uint8_t));
     close(sd_send);
     return &packetinfo;
-
 }
 
-struct udppacket* getPacketInfo() {
+struct packetconfig* getPacketInfo() {
     return &packetinfo;
+}
+
+#define DELIM "="
+#define SEP ","
+struct config get_config(char *filename) {
+    printf("Opening...%s\n",filename );
+    FILE *file = fopen (filename, "r");
+    if (file != NULL) {
+        char line[1024];
+        int i = 0;
+        while(fgets(line, sizeof(line), file) != NULL) {
+            char *cfline;
+            cfline = strstr((char *)line,DELIM);
+            cfline = cfline + strlen(DELIM);
+            cfline[strcspn(cfline, "\n")] = 0;
+            if (i == 0){
+                    memcpy(configstruct.interface,cfline,20);
+            } else if (i == 1){
+                char *token;
+                token = strtok(cfline, SEP);
+                int j = 0;
+                while (token != NULL) {
+                        inet_pton(AF_INET6, token, configstruct.hosts[j].s6_addr);
+                        token = strtok (NULL, ",");
+                        j++;
+                    }
+                configstruct.num_hosts = j;
+            } else if (i == 2){
+                    memcpy(configstruct.server_port,cfline,strlen(cfline));
+            } else if (i == 3){
+                    memcpy(configstruct.src_port,cfline,strlen(cfline));
+            } else if (i == 4){
+                    inet_pton(AF_INET6, cfline, configstruct.src_addr.s6_addr);
+            } else if (i == 5){
+                    configstruct.debug = atoi(cfline);
+            }
+            i++;
+        }
+        fclose(file);
+        return configstruct;
+    } else {
+        perror("Could not find or open file!");
+        exit(1);
+    }
 }

@@ -35,23 +35,21 @@
 #define PKT_OFFSET      (TPACKET_ALIGN(sizeof(struct tpacket_hdr)) + \
                          TPACKET_ALIGN(sizeof(struct sockaddr_ll)))
 
-/// (unimportant) macro for loud failure
-#define RETURN_ERROR(lvl, msg) \
-  do {                    \
-    fprintf(stderr, msg); \
-    return lvl;            \
-  } while(0);
-
 // Function prototypes
 uint16_t checksum (uint16_t *, int);
 uint16_t udp6_checksum (struct ip6_hdr *, struct udphdr *, uint8_t *, int);
 
 
 static int sd_send;
-static struct udppacket *packetinfo;
+static struct packetconfig *packetinfo;
 static char *ring;
 
 
+
+// tp_block_size must be a multiple of PAGE_SIZE (1)
+// tp_frame_size must be greater than TPACKET_HDRLEN (obvious)
+// tp_frame_size must be a multiple of TPACKET_ALIGNMENT
+// tp_frame_nr   must be exactly frames_per_block*tp_block_nr
 
 /// Initialize a packet socket ring buffer
 //  @param ringtype is one of PACKET_RX_RING or PACKET_TX_RING
@@ -60,9 +58,9 @@ int init_packetsock_ring(){
 
     // tell kernel to export data through mmap()ped ring
     tp.tp_block_size = BLOCKSIZE;
-    tp.tp_block_nr = 1;
+    tp.tp_block_nr = CONF_RING_BLOCKS;
     tp.tp_frame_size = FRAMESIZE;
-    tp.tp_frame_nr = CONF_RING_FRAMES;
+    tp.tp_frame_nr = CONF_RING_BLOCKS * (BLOCKSIZE/ FRAMESIZE);
     if (setsockopt(sd_send, SOL_PACKET, PACKET_TX_RING, (void*) &tp, sizeof(tp)))
         RETURN_ERROR(-1, "setsockopt() ring\n");
     #ifdef TPACKET_V2
@@ -185,15 +183,13 @@ void init_send_socket_old() {
     req.tp_frame_size =  256;
     req.tp_frame_nr   =   16;
 
-    struct ifreq ifr;
-    strncpy ((char *) ifr.ifr_name, packetinfo->interface, 20);
-    ioctl (sd_send, SIOCGIFINDEX, &ifr);
+
     bind(sd_send, (struct sockaddr *) &packetinfo->device, sizeof (packetinfo->device) );
 
 
     struct packet_mreq      mr;
     memset (&mr, 0, sizeof (mr));
-    mr.mr_ifindex = ifr.ifr_ifindex;
+    mr.mr_ifindex = packetinfo->device.sll_ifindex;
     mr.mr_type = PACKET_MR_PROMISC;
     setsockopt (sd_send, SOL_PACKET,PACKET_ADD_MEMBERSHIP, &mr, sizeof (mr));
     setsockopt(sd_send , SOL_PACKET , PACKET_RX_RING , (void*)&req , sizeof(req));

@@ -14,6 +14,13 @@
         printf("\n");                \
     }                                \
 
+/// (unimportant) macro for loud failure
+#define RETURN_ERROR(lvl, msg) \
+  do {                    \
+    fprintf(stderr, msg); \
+    return lvl;            \
+  } while(0);
+
 //void print_debug(char* message);
 
 int printBytes(char * receiveBuffer);
@@ -32,5 +39,6 @@ static inline uint64_t getns(void)
     assert(ret == 0);
     return (((uint64_t)ts.tv_sec) * 1000000000ULL) + ts.tv_nsec;
 }
+
 
 #endif

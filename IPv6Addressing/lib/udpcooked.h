@@ -33,11 +33,14 @@
 /// The number of frames in the ring
 //  This number is not set in stone. Nor are block_size, block_nr or frame_size
 #define CONF_RING_FRAMES        128
+#define CONF_RING_BLOCKS        1
 #define FRAMESIZE               (4096 + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + 2 + 32)
 #define BLOCKSIZE               (FRAMESIZE) * (CONF_RING_FRAMES)
 
+
 #include <stdint.h>         // needed for uint8_t, uint16_t
 #include <netinet/ip6.h>    // struct ip6_hdr
+
 #include "config.h"
 
 extern struct udppacket *gen_packet_info();
@@ -53,7 +56,7 @@ extern struct sockaddr_in6 *init_rcv_socket_old(const char *portNumber);
 extern int get_rcv_socket();
 extern int epoll_rcv();
 extern void close_rcv_socket();
-
+extern int strange_receive();
 inline void close_sockets() {
     close_send_socket();
     close_rcv_socket();

@@ -235,7 +235,7 @@ struct addrinfo* bindSocket(struct addrinfo* p, struct addrinfo* servinfo, int* 
     return p;
 }
 void printSendLat() {
-    printf("Average Sending Time %lu ms\n", (sendLat/1000)/send_calls );
-    printf("Average Receive Time %lu ms\n", (rcvLat/1000)/rcv_calls );
+    printf("Average Sending Time %lu us\n", (sendLat/1000)/send_calls );
+    printf("Average Receive Time %lu us\n", (rcvLat/1000)/rcv_calls );
 
 }

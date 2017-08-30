@@ -22,8 +22,8 @@ struct in6_addr *gen_rdm_IPv6Target() {
     
     // Add the pointer
     struct in6_addr * newAddr = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
-    uint8_t rndHost = (rand()% NUM_HOSTS)+1;
-    if (rndHost == 1) rndHost++;
+    uint8_t rndHost = (rand()% (NUM_HOSTS-1))+2;
+    //if (rndHost == 1) rndHost++;
     /*// Insert link local id
     memcpy(newAddr->s6_addr,&GLOBAL_ID,2);*/
     // Insert subnet id

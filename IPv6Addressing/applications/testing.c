@@ -98,10 +98,10 @@ void print_times( uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* wri
         write_total += (unsigned long long) write_latency[i];
         free_total += (unsigned long long) free_latency[i];
     }
-    printf("Average allocate latency: "KRED"%lu ms\n"RESET, alloc_total/ (NUM_ITERATIONS*1000));
-    printf("Average read latency: "KRED"%lu ms\n"RESET, read_total/ (NUM_ITERATIONS*1000));
-    printf("Average write latency: "KRED"%lu ms\n"RESET, write_total/ (NUM_ITERATIONS*1000));
-    printf("Average free latency: "KRED"%lu ms\n"RESET, free_total/ (NUM_ITERATIONS*1000));
+    printf("Average allocate latency: "KRED"%lu us\n"RESET, alloc_total/ (NUM_ITERATIONS*1000));
+    printf("Average read latency: "KRED"%lu us\n"RESET, read_total/ (NUM_ITERATIONS*1000));
+    printf("Average write latency: "KRED"%lu us\n"RESET, write_total/ (NUM_ITERATIONS*1000));
+    printf("Average free latency: "KRED"%lu us\n"RESET, free_total/ (NUM_ITERATIONS*1000));
 }
 
 void basicOperations(struct sockaddr_in6 * targetIP) {
@@ -408,6 +408,11 @@ int main(int argc, char *argv[]) {
         abort ();
       }
     }
+    struct config myConf = get_config("distMem.cnf");
+    printf("myConf Interface %s\n", myConf.interface);
+    printf("myConf serverport %s\n", myConf.server_port);
+    printf("myConf srcport  %s\n", myConf.src_port);
+    printf("myConf debug %d\n", myConf.debug);
 
     if (argc <= 2) {
         printf("Defaulting to standard values...\n");
@@ -418,6 +423,7 @@ int main(int argc, char *argv[]) {
 //    p = bindSocket(p, servinfo, &sockfd);
     genPacketInfo("0");
     struct sockaddr_in6 *temp = init_rcv_socket();
+//    struct sockaddr_in6 *temp = init_rcv_socket_old(argv[2]);
     temp->sin6_port = htons(strtol(argv[2], (char **)NULL, 10));
     init_send_socket();
     int sockfd = get_rcv_socket();

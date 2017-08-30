@@ -211,6 +211,7 @@ int main(int argc, char *argv[]) {
     }
     genPacketInfo(argv[1]);
     struct sockaddr_in6 *temp = init_rcv_socket();
+//    struct sockaddr_in6 *temp = init_rcv_socket_old(argv[1]);
     init_send_socket();
     // Start waiting for connections
     while (1) {
