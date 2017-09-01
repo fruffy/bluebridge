@@ -15,26 +15,15 @@
 static const int SUBNET_ID = 1; // 16 bits for subnet id
 #define NUM_HOSTS 3 // number of hosts in the rack
 
-
-struct packetconfig {
-    struct ip6_hdr iphdr;
-    struct udphdr udphdr;
-    struct sockaddr_ll device;
-    unsigned char ether_frame[IP_MAXPACKET];
-};
-
 struct config {
     char interface[20];
     char server_port[5];
-    char src_port[5];
+    uint16_t src_port;
     struct in6_addr src_addr;
     int debug;
     int num_hosts;
     struct in6_addr hosts[10];
 };
-struct config get_config(char *filename);
-struct packetconfig *gen_packet_info(struct config *configstruct, int isServer);
-struct packetconfig *get_packet_info();
-
+struct config configure_bluebridge(char *filename, int isServer);
 
 #endif

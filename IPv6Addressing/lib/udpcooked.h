@@ -43,16 +43,14 @@
 
 #include "config.h"
 
-extern struct packetconfig *gen_packet_info(struct config *configstruct, int isServer);
-extern struct packetconfig *get_packet_info();
 extern int cooked_send(struct sockaddr_in6 *dst_addr, int dst_port, char* data, int datalen);
-extern void init_send_socket();
+extern void init_send_socket(struct config *configstruct);
 extern int get_send_socket();
 extern int close_send_socket();
 
 extern int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer);
-extern struct sockaddr_in6 *init_rcv_socket();
-extern struct sockaddr_in6 *init_rcv_socket_old(const char *portNumber);
+extern struct sockaddr_in6 *init_rcv_socket(struct config *configstruct);
+extern struct sockaddr_in6 *init_rcv_socket_old(struct config *configstruct);
 extern int get_rcv_socket();
 extern int epoll_rcv();
 extern void close_rcv_socket();

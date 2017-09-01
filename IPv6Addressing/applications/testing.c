@@ -408,15 +408,12 @@ int main(int argc, char *argv[]) {
         abort ();
       }
     }
-    struct config myConf = get_config("tmp/config/distMem.cnf");
+    struct config myConf = configure_bluebridge("tmp/config/distMem.cnf", 0);
 
-//    p = bindSocket(p, servinfo, &sockfd);
-    gen_packet_info(&myConf, 0);
-    struct sockaddr_in6 *temp = init_rcv_socket();
+    struct sockaddr_in6 *temp = init_rcv_socket(&myConf);
 //    struct sockaddr_in6 *temp = init_rcv_socket_old(argv[2]);
     temp->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
-    init_send_socket();
-    int sockfd = get_rcv_socket();
+    init_send_socket(&myConf);
     struct timeval st, et;
     gettimeofday(&st,NULL);
     if(isAutoMode) {

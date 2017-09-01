@@ -11,6 +11,8 @@ from mininet.topolib import TreeNet
 import os
 import time
 from mininet.node import Host
+from mininet.term import makeTerm
+
 from functools import partial
 
 
@@ -40,7 +42,7 @@ def configureHosts(net):
     hosts = net.hosts
     for host in hosts:
         print(host)
-        
+
         # Insert host configuration
         configString = "\"INTERFACE=h" + \
             str(hostNum) + \
@@ -82,8 +84,9 @@ def run():
                    else directory for directory in privateDirs]
     info('Private Directories:', directories, '\n')
     configureHosts(net)
-    net.startTerms()
+    # net.startTerms()
 
+    makeTerm(net.hosts[0])
     # switch.cmdPrint('ifconfig -a')
     # switch = net.switch(name=('s1'))
     # switch.cmdPrint('ip -6 route add local 0:0:01' +
@@ -101,7 +104,7 @@ def run():
         os.system(cmd)
         # Gotta get dem jumbo frames
         os.system('ifconfig s1-eth' + str(i) + ' mtu 9000')
-        i = i + 1
+        i += 1
     # Flood ndp request messages (Deprecated)
     os.system("ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=ff02::1:ff00:0,priority=1,actions=output:flood")
 

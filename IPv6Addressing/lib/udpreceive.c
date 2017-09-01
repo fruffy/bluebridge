@@ -41,26 +41,36 @@ void *get_free_buffer();
 
 
 struct ep_interface {
+    struct sockaddr_ll device;
+    uint16_t my_port;
     struct tpacket_hdr *first_tpacket_hdr;
     int tpacket_i;
     int mapped_memory_size;
     struct tpacket_req tpacket_req;
 };
 
-static struct packetconfig *packetinfo;
 static int epoll_fd = -1;
 static struct ep_interface interface_ep;
 static int sd_rcv;
+
+
 /* Initialize a listening socket */
-struct sockaddr_in6 *init_rcv_socket() {
+struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
     struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
-    packetinfo = get_packet_info();
+    interface_ep.my_port = configstruct->src_port;
+    memset (&interface_ep.device, 0, sizeof (interface_ep.device));
+    if ((interface_ep.device.sll_ifindex = if_nametoindex (configstruct->interface)) == 0) {
+        perror ("if_nametoindex() failed to obtain interface index ");
+        exit (EXIT_FAILURE);
+    }
+    interface_ep.device.sll_family = AF_PACKET;
+    interface_ep.device.sll_protocol = htons (ETH_P_ALL);
     init_epoll();
     return temp;
 }
 
 /* Initialize a listening socket */
-struct sockaddr_in6 *init_rcv_socket_old(const char *portNumber) {
+struct sockaddr_in6 *init_rcv_socket_old(struct config *configstruct) {
 
     struct addrinfo hints, *servinfo, *p = NULL;
     int rv;
@@ -68,12 +78,19 @@ struct sockaddr_in6 *init_rcv_socket_old(const char *portNumber) {
     const int on=1, off=0;
     // hints = specifies criteria for selecting the socket address
     // structures
-    packetinfo = get_packet_info();
+    interface_ep.my_port = configstruct->src_port;
+    memset (&interface_ep.device, 0, sizeof (interface_ep.device));
+    if ((interface_ep.device.sll_ifindex = if_nametoindex (configstruct->interface)) == 0) {
+        perror ("if_nametoindex() failed to obtain interface index ");
+        exit (EXIT_FAILURE);
+    }
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET6;
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_flags = AI_PASSIVE; // use my IP
-    if ((rv = getaddrinfo(NULL, portNumber, &hints, &servinfo)) != 0) {
+    char str_port[5];
+    sprintf(str_port, "%d", configstruct->src_port);
+    if ((rv = getaddrinfo(NULL, str_port, &hints, &servinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         exit(1);
     }
@@ -94,7 +111,7 @@ struct sockaddr_in6 *init_rcv_socket_old(const char *portNumber) {
         setsockopt(sd_rcv, IPPROTO_IPV6, IP_PKTINFO, &on, sizeof(int));
         setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(int));
         setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(int));
-        ((struct sockaddr_in6 *)p->ai_addr)->sin6_port = packetinfo->udphdr.source;
+        ((struct sockaddr_in6 *)p->ai_addr)->sin6_port = interface_ep.my_port;
         if (bind(sd_rcv, p->ai_addr, p->ai_addrlen) == -1) {
             close(sd_rcv);
             perror("server: bind");
@@ -150,12 +167,16 @@ int setup_packet_mmap() {
 
 int init_socket() {
     sd_rcv = socket(AF_PACKET, SOCK_RAW|SOCK_NONBLOCK, htons(ETH_P_ALL));
+
     const int on = 1;
     setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
+    //setsockopt(sd_rcv, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
     if (-1 == sd_rcv) {
+        perror("Could not set socket");
         return EXIT_FAILURE;
     }
-    if (-1 == bind(sd_rcv, (struct sockaddr *)&packetinfo->device, sizeof(packetinfo->device))) {
+    if (-1 == bind(sd_rcv, (struct sockaddr *)&interface_ep.device, sizeof(interface_ep.device))) {
+        perror("Could not bind socket.");
         return EXIT_FAILURE;
     }
     if (setup_packet_mmap()) {
@@ -209,6 +230,7 @@ void next_packet(struct ep_interface *interface) {
 
 int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer) {
     while (1) {
+
         struct epoll_event events[16];
         int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
         if (num_events == -1)  {
@@ -219,6 +241,7 @@ int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targe
             perror("error");
             continue;
         }
+
         for (int i = 0; i < num_events; ++i)  {
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
@@ -236,7 +259,7 @@ int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targe
                 struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ethhdr + ETH_HDRLEN);
                 struct udphdr *udphdr = (struct udphdr *)((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN);
                 char* payload = ((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
-                if (!memcmp(&udphdr->dest, &packetinfo->udphdr.source, sizeof(uint16_t))) {
+                if (!memcmp(&udphdr->dest, &interface_ep.my_port, sizeof(uint16_t))) {
                     memcpy(receiveBuffer,payload, msgBlockSize);
                     if (ipv6Pointer != NULL)
                         memcpy(ipv6Pointer->s6_addr,&iphdr->ip6_dst,IPV6_SIZE);

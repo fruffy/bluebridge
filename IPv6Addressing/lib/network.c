@@ -60,9 +60,9 @@ int sendUDPIPv6(int sockfd, char * sendBuffer, int msgBlockSize, struct sockaddr
  */
 int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP) {
     int dst_port = ntohs(targetIP->sin6_port);
-    char dst_ip[INET6_ADDRSTRLEN];
-    inet_ntop(targetIP->sin6_family,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
-    print_debug("Sending to %s:%d", dst_ip,dst_port);
+    //char dst_ip[INET6_ADDRSTRLEN];
+    //inet_ntop(targetIP->sin6_family,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
+    //print_debug("Sending to %s:%d", dst_ip,dst_port);
     cooked_send(targetIP, dst_port, sendBuffer, msgBlockSize);
     memset(sendBuffer, 0, msgBlockSize);
     return EXIT_SUCCESS;

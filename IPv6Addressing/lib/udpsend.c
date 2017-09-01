@@ -40,11 +40,85 @@ uint16_t checksum (uint16_t *, int);
 uint16_t udp6_checksum (struct ip6_hdr *, struct udphdr *, uint8_t *, int);
 
 
+struct packetconfig {
+    struct ip6_hdr iphdr;
+    struct udphdr udphdr;
+    struct sockaddr_ll device;
+    unsigned char ether_frame[IP_MAXPACKET];
+};
+
 static int sd_send;
-static struct packetconfig *packetinfo;
+static struct packetconfig packetinfo;
 static char *ring;
 
 
+
+/*void get_interface_name(){
+    struct ifaddrs *ifap, *ifa = NULL; 
+    struct sockaddr_in6 *sa; 
+    char src_ip[INET6_ADDRSTRLEN];
+    //TODO: Use config file instead. Avoid memory leaks
+    getifaddrs(&ifap); 
+    int i = 0; 
+    for (ifa = ifap; i<2; ifa = ifa->ifa_next) { 
+        if (ifa->ifa_addr->sa_family==AF_INET6) { 
+            i++; 
+            sa = (struct sockaddr_in6 *) ifa->ifa_addr; 
+            getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in6), src_ip, 
+            sizeof(src_ip), NULL, 0, NI_NUMERICHOST); 
+        }
+    }
+    packetinfo.iphdr.ip6_src = sa->sin6_addr; 
+}*/
+
+struct packetconfig *gen_packet_info(struct config *configstruct) {
+
+    // Allocate memory for various arrays.
+
+    // Find interface index from interface name and store index in
+    // struct sockaddr_ll device, which will be used as an argument of sendto().
+    memset (&packetinfo.device, 0, sizeof (packetinfo.device));
+    if ((packetinfo.device.sll_ifindex = if_nametoindex (configstruct->interface)) == 0) {
+        perror ("if_nametoindex() failed to obtain interface index ");
+        exit (EXIT_FAILURE);
+    }
+    // Set source/destination MAC address to filler values.
+    uint8_t src_mac[6] = { 2 };
+    uint8_t dst_mac[6] = { 3 };
+    // Fill out sockaddr_ll.
+    packetinfo.device.sll_family = AF_PACKET;
+    memcpy (packetinfo.device.sll_addr, src_mac, 6 * sizeof (uint8_t));
+    packetinfo.device.sll_halen = 6;
+
+    // Destination and Source MAC addresses
+    memcpy (packetinfo.ether_frame, &dst_mac, 6 * sizeof (uint8_t));
+    memcpy (packetinfo.ether_frame + 6, &src_mac, 6 * sizeof (uint8_t));
+    // Next is ethernet type code (ETH_P_IPV6 for IPv6).
+    // http://www.iana.org/assignments/ethernet-numbers
+    packetinfo.ether_frame[12] = ETH_P_IPV6 / 256;
+    packetinfo.ether_frame[13] = ETH_P_IPV6 % 256;
+
+    // IPv6 header
+    // IPv6 version (4 bits), Traffic class (8 bits), Flow label (20 bits)
+    packetinfo.iphdr.ip6_src = configstruct->src_addr;
+    // IPv6 version (4 bits), Traffic class (8 bits), Flow label (20 bits)
+    packetinfo.iphdr.ip6_flow = htonl ((6 << 28) | (0 << 20) | 0);
+
+    // Next header (8 bits): 17 for UDP
+    packetinfo.iphdr.ip6_nxt = IPPROTO_UDP;
+    //packetinfo.iphdr.ip6_nxt = 0x9F;
+
+    // Hop limit (8 bits): default to maximum value
+    packetinfo.iphdr.ip6_hops = 255;
+    packetinfo.udphdr.source = configstruct->src_port;
+    memcpy (packetinfo.ether_frame + ETH_HDRLEN, &packetinfo.iphdr, IP6_HDRLEN * sizeof (uint8_t));
+    memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN, &packetinfo.udphdr, UDP_HDRLEN * sizeof (uint8_t));
+    return &packetinfo;
+}
+
+struct packetconfig *get_packet_info() {
+    return &packetinfo;
+}
 
 // tp_block_size must be a multiple of PAGE_SIZE (1)
 // tp_frame_size must be greater than TPACKET_HDRLEN (obvious)
@@ -97,6 +171,62 @@ static int init_packetsock() {
   return EXIT_SUCCESS;
 }
 
+int get_send_socket() {
+    return sd_send;
+}
+
+int close_send_socket() {
+    if (munmap(ring, BLOCKSIZE)) {
+        perror("munmap");
+        return 1;
+    }
+    if (close(sd_send)) {
+        perror("close");
+        return 1;
+    }
+    return 0;
+}
+
+void init_send_socket(struct config *configstruct) {
+
+    gen_packet_info(configstruct);
+    init_packetsock();
+    bind(sd_send, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device) );
+
+}
+
+void init_send_socket_old() {
+
+    //Socket operator variables
+    const int on=1;
+
+    if ((sd_send = socket (AF_PACKET, SOCK_RAW|SOCK_NONBLOCK|SOCK_CLOEXEC, htons (ETH_P_ALL))) < 0) {
+        perror ("socket() failed ");
+        exit (EXIT_FAILURE);
+    }
+    struct tpacket_req req;
+    req.tp_block_size =  4096;
+    req.tp_block_nr   =   2;
+    req.tp_frame_size =  256;
+    req.tp_frame_nr   =   16;
+
+
+    bind(sd_send, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device) );
+
+
+    struct packet_mreq      mr;
+    memset (&mr, 0, sizeof (mr));
+    mr.mr_ifindex = packetinfo.device.sll_ifindex;
+    mr.mr_type = PACKET_MR_PROMISC;
+    setsockopt (sd_send, SOL_PACKET,PACKET_ADD_MEMBERSHIP, &mr, sizeof (mr));
+    setsockopt(sd_send , SOL_PACKET , PACKET_RX_RING , (void*)&req , sizeof(req));
+    setsockopt(sd_send , SOL_PACKET , PACKET_TX_RING , (void*)&req , sizeof(req));
+    setsockopt(sd_send, IPPROTO_IPV6, IP_PKTINFO, &on, sizeof(int));
+    setsockopt(sd_send, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(int));
+    setsockopt(sd_send, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
+}
+
+
 /// transmit a packet using packet ring
 //  NOTE: for high rate processing try to batch system calls, 
 //        by writing multiple packets to the ring before calling send()
@@ -139,71 +269,15 @@ static int send_mmap(unsigned const char *pkt, int pktlen) {
     // increase consumer ring pointer
     ring_offset = (ring_offset + 1) & (CONF_RING_FRAMES - 1);
     // notify kernel
-    if (sendto(sd_send, NULL, 0, 0, (struct sockaddr *) &packetinfo->device, sizeof(packetinfo->device)) < 0)
+    if (sendto(sd_send, NULL, 0, 0, (struct sockaddr *) &packetinfo.device, sizeof(packetinfo.device)) < 0)
         RETURN_ERROR(-1, "sendto failed!\n");
   return 0;
 }
 
-int get_send_socket() {
-    return sd_send;
-}
-
-int close_send_socket() {
-    if (munmap(ring, BLOCKSIZE)) {
-        perror("munmap");
-        return 1;
-    }
-    if (close(sd_send)) {
-        perror("close");
-        return 1;
-    }
-    return 0;
-}
-
-void init_send_socket() {
-
-    packetinfo = get_packet_info();
-    init_packetsock();
-    bind(sd_send, (struct sockaddr *) &packetinfo->device, sizeof (packetinfo->device) );
-
-}
-
-void init_send_socket_old() {
-
-    //Socket operator variables
-    const int on=1;
-
-    if ((sd_send = socket (AF_PACKET, SOCK_RAW|SOCK_NONBLOCK|SOCK_CLOEXEC, htons (ETH_P_ALL))) < 0) {
-        perror ("socket() failed ");
-        exit (EXIT_FAILURE);
-    }
-    struct tpacket_req req;
-    req.tp_block_size =  4096;
-    req.tp_block_nr   =   2;
-    req.tp_frame_size =  256;
-    req.tp_frame_nr   =   16;
-
-
-    bind(sd_send, (struct sockaddr *) &packetinfo->device, sizeof (packetinfo->device) );
-
-
-    struct packet_mreq      mr;
-    memset (&mr, 0, sizeof (mr));
-    mr.mr_ifindex = packetinfo->device.sll_ifindex;
-    mr.mr_type = PACKET_MR_PROMISC;
-    setsockopt (sd_send, SOL_PACKET,PACKET_ADD_MEMBERSHIP, &mr, sizeof (mr));
-    setsockopt(sd_send , SOL_PACKET , PACKET_RX_RING , (void*)&req , sizeof(req));
-    setsockopt(sd_send , SOL_PACKET , PACKET_TX_RING , (void*)&req , sizeof(req));
-    setsockopt(sd_send, IPPROTO_IPV6, IP_PKTINFO, &on, sizeof(int));
-    setsockopt(sd_send, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(int));
-    setsockopt(sd_send, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
-}
-
-
 int cooked_send(struct sockaddr_in6* dst_addr, int dst_port, char* data, int datalen) {
 
-    struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)packetinfo->ether_frame + ETH_HDRLEN);
-    struct udphdr *udphdr = (struct udphdr *)((char *)packetinfo->ether_frame + ETH_HDRLEN + IP6_HDRLEN);
+    struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN);
+    struct udphdr *udphdr = (struct udphdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN);
     //Set destination IP
     iphdr->ip6_dst = dst_addr->sin6_addr;
     // Payload length (16 bits): UDP header + UDP data
@@ -217,7 +291,7 @@ int cooked_send(struct sockaddr_in6* dst_addr, int dst_port, char* data, int dat
     // UDP checksum (16 bits)
     //udphdr->check = udp6_checksum (iphdr, udphdr, (uint8_t *) data, datalen);
     // Copy our data
-    memcpy (packetinfo->ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, data, datalen * sizeof (uint8_t));
+    memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, data, datalen * sizeof (uint8_t));
     // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
     int frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + datalen;
     // Send ethernet frame to socket.
@@ -226,8 +300,8 @@ int cooked_send(struct sockaddr_in6* dst_addr, int dst_port, char* data, int dat
     //    exit (EXIT_FAILURE);
     //}
     //write(sd_send,packetinfo->ether_frame, frame_length);
-    send_mmap(packetinfo->ether_frame, frame_length);
-    return (EXIT_SUCCESS);
+    send_mmap(packetinfo.ether_frame, frame_length);
+    return EXIT_SUCCESS;
 }
 
 // Computing the internet checksum (RFC 1071).

@@ -29,10 +29,9 @@ struct rmem {
 
 void rmem_init_sockets(struct rmem *r) {
     //p = bindSocket(p, servinfo, &sockfd);
-    r->targetIP = init_rcv_socket(TARGETPORT);
-    struct config myConf = get_config("tmp/config/distMem.cnf");
-    gen_packet_info(&myConf, 0);
-    init_send_socket();
+    struct config myConf = configure_bluebridge("tmp/config/distMem.cnf", 0);
+    r->targetIP = init_rcv_socket(&myConf);
+    init_send_socket(&myConf);
     r->sockfd = get_rcv_socket();
 }
 

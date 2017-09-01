@@ -3,7 +3,6 @@
  */
 
 #include <netdb.h>            // struct addrinfo
-
 #include "network.h"
 
 
