@@ -408,23 +408,13 @@ int main(int argc, char *argv[]) {
         abort ();
       }
     }
-    struct config myConf = get_config("distMem.cnf");
-    printf("myConf Interface %s\n", myConf.interface);
-    printf("myConf serverport %s\n", myConf.server_port);
-    printf("myConf srcport  %s\n", myConf.src_port);
-    printf("myConf debug %d\n", myConf.debug);
-
-    if (argc <= 2) {
-        printf("Defaulting to standard values...\n");
-        argv[1] = "::1";
-        argv[2] = "5000";
-    }
+    struct config myConf = get_config("tmp/config/distMem.cnf");
 
 //    p = bindSocket(p, servinfo, &sockfd);
-    genPacketInfo("0");
+    gen_packet_info(&myConf, 0);
     struct sockaddr_in6 *temp = init_rcv_socket();
 //    struct sockaddr_in6 *temp = init_rcv_socket_old(argv[2]);
-    temp->sin6_port = htons(strtol(argv[2], (char **)NULL, 10));
+    temp->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
     init_send_socket();
     int sockfd = get_rcv_socket();
     struct timeval st, et;

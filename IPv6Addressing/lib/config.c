@@ -30,9 +30,8 @@
 #define IP6_HDRLEN 40  // IPv6 header length
 #define UDP_HDRLEN 8  // UDP header length, excludes data
 struct packetconfig packetinfo;
-struct config configstruct;
 
-void set_interface_name(){
+void get_interface_name(){
     struct ifaddrs *ifap, *ifa = NULL; 
     struct sockaddr_in6 *sa; 
     char src_ip[INET6_ADDRSTRLEN];
@@ -50,18 +49,18 @@ void set_interface_name(){
     packetinfo.iphdr.ip6_src = sa->sin6_addr; 
 }
 
-int set_interface_ip() {
+int set_interface_ip(struct config *configstruct) {
     struct ifreq ifr;
     int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
 
-    strncpy(ifr.ifr_name, configstruct.interface, IFNAMSIZ);
+    strncpy(ifr.ifr_name, configstruct->interface, IFNAMSIZ);
     struct sockaddr_in6* addr = (struct sockaddr_in6*)&ifr.ifr_addr;
     ifr.ifr_addr.sa_family = AF_INET6;
-    memcpy(&addr->sin6_addr,&configstruct.src_addr, IPV6_SIZE);
+    memcpy(&addr->sin6_addr,&configstruct->src_addr, IPV6_SIZE);
     ioctl(fd, SIOCSIFADDR, &ifr);
 
     ioctl(fd, SIOCGIFFLAGS, &ifr);
-    strncpy(ifr.ifr_name, configstruct.interface, IFNAMSIZ);
+    strncpy(ifr.ifr_name, configstruct->interface, IFNAMSIZ);
     ifr.ifr_flags |= (IFF_UP | IFF_RUNNING);
 
     ioctl(fd, SIOCSIFFLAGS, &ifr);
@@ -69,52 +68,37 @@ int set_interface_ip() {
     return 0;
 }
 
-struct packetconfig *genPacketInfo(const char *portNumber) {
+struct packetconfig *gen_packet_info(struct config *configstruct, int isServer) {
 
     // Allocate memory for various arrays.
-    // Set source/destination MAC address to filler values.
-    uint8_t src_mac[6] = { 2 };
-    uint8_t dst_mac[6] = { 3 };
-    int sd_send;
-    //print_debug("Interface %s, Source IP %s, Source Port %d, Destination IP %s, Destination Port %d, Size %d", interface, src_ip, src_port, dst_ip, dst_port, datalen);
-    set_interface_name();
-
-    // Submit request for a socket descriptor to look up interface.
-    if ((sd_send = socket (AF_INET6, SOCK_RAW, IPPROTO_RAW)) < 0) {
-        perror ("socket() failed to get socket descriptor for using ioctl() ");
-        exit (EXIT_FAILURE);
-    }
-    int port = atoi(portNumber);
-    if (!port) {
-        struct sockaddr_in6 sin;
-        socklen_t len = sizeof(sin);
-        if (getsockname(sd_send, (struct sockaddr *)&sin, &len) == -1) {
-            perror("getsockname");
-            exit (EXIT_FAILURE);
-        } else {
-            packetinfo.udphdr.source = htons(sin.sin6_port);
-        } 
-    } else {
-        packetinfo.udphdr.source = htons(port);
-    }
 
     // Find interface index from interface name and store index in
     // struct sockaddr_ll device, which will be used as an argument of sendto().
     memset (&packetinfo.device, 0, sizeof (packetinfo.device));
-    if ((packetinfo.device.sll_ifindex = if_nametoindex (configstruct.interface)) == 0) {
+    if ((packetinfo.device.sll_ifindex = if_nametoindex (configstruct->interface)) == 0) {
         perror ("if_nametoindex() failed to obtain interface index ");
         exit (EXIT_FAILURE);
     }
-
+    // Set source/destination MAC address to filler values.
+    uint8_t src_mac[6] = { 2 };
+    uint8_t dst_mac[6] = { 3 };
     // Fill out sockaddr_ll.
     packetinfo.device.sll_family = AF_PACKET;
     memcpy (packetinfo.device.sll_addr, src_mac, 6 * sizeof (uint8_t));
     packetinfo.device.sll_halen = 6;
 
+    // Destination and Source MAC addresses
+    memcpy (packetinfo.ether_frame, &dst_mac, 6 * sizeof (uint8_t));
+    memcpy (packetinfo.ether_frame + 6, &src_mac, 6 * sizeof (uint8_t));
+    // Next is ethernet type code (ETH_P_IPV6 for IPv6).
+    // http://www.iana.org/assignments/ethernet-numbers
+    packetinfo.ether_frame[12] = ETH_P_IPV6 / 256;
+    packetinfo.ether_frame[13] = ETH_P_IPV6 % 256;
+
     // IPv6 header
     // IPv6 version (4 bits), Traffic class (8 bits), Flow label (20 bits)
-    packetinfo.iphdr.ip6_src = configstruct.src_addr;
-    set_interface_ip();
+    packetinfo.iphdr.ip6_src = configstruct->src_addr;
+    set_interface_ip(configstruct);
     // IPv6 version (4 bits), Traffic class (8 bits), Flow label (20 bits)
     packetinfo.iphdr.ip6_flow = htonl ((6 << 28) | (0 << 20) | 0);
 
@@ -125,29 +109,47 @@ struct packetconfig *genPacketInfo(const char *portNumber) {
     // Hop limit (8 bits): default to maximum value
     packetinfo.iphdr.ip6_hops = 255;
 
-    // Destination and Source MAC addresses
-    memcpy (packetinfo.ether_frame, &dst_mac, 6 * sizeof (uint8_t));
-    memcpy (packetinfo.ether_frame + 6, &src_mac, 6 * sizeof (uint8_t));
-    // Next is ethernet type code (ETH_P_IPV6 for IPv6).
-    // http://www.iana.org/assignments/ethernet-numbers
-    packetinfo.ether_frame[12] = ETH_P_IPV6 / 256;
-    packetinfo.ether_frame[13] = ETH_P_IPV6 % 256;
-    
+    int port = 0;
+    if (isServer) {
+        printf("This is a server port\n");
+        port = atoi(configstruct->server_port);
+    }
+    if (!port) {
+        struct sockaddr_in6 sin;
+        socklen_t len = sizeof(sin);
+        int sd_send;
+        if ((sd_send = socket (AF_INET6, SOCK_RAW, IPPROTO_RAW)) < 0) {
+            perror ("socket() failed to get socket descriptor for using ioctl() ");
+            exit (EXIT_FAILURE);
+        }
+        if (getsockname(sd_send, (struct sockaddr *)&sin, &len) == -1) {
+            perror("getsockname");
+            close(sd_send);
+            exit (EXIT_FAILURE);
+        } else {
+            packetinfo.udphdr.source = htons(sin.sin6_port);
+            close(sd_send);
+        }
+    } else {
+        printf("This is a server port\n");
+        packetinfo.udphdr.source = htons(port);
+    }
     memcpy (packetinfo.ether_frame + ETH_HDRLEN, &packetinfo.iphdr, IP6_HDRLEN * sizeof (uint8_t));
     memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN, &packetinfo.udphdr, UDP_HDRLEN * sizeof (uint8_t));
     // UDP data
     //memcpy (packetinfo->ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, data, datalen * sizeof (uint8_t));
-    close(sd_send);
     return &packetinfo;
 }
 
-struct packetconfig* getPacketInfo() {
+struct packetconfig *get_packet_info() {
     return &packetinfo;
 }
 
 #define DELIM "="
 #define SEP ","
 struct config get_config(char *filename) {
+    struct config configstruct;
+
     printf("Opening...%s\n",filename );
     FILE *file = fopen (filename, "r");
     if (file != NULL) {
@@ -181,6 +183,18 @@ struct config get_config(char *filename) {
             }
             i++;
         }
+        printf("Loading Config...\n");
+        printf("*** Interface %s\n", configstruct.interface);
+        printf("*** Server port %s\n", configstruct.server_port);
+        printf("*** Client port %s\n", configstruct.src_port);
+        printf("*** Debug active? %d\n", configstruct.debug);
+        printf("*** %d target hosts:\t ", configstruct.num_hosts);
+        for (int j =0; j < configstruct.num_hosts; j++) {
+            char s[INET6_ADDRSTRLEN];
+            inet_ntop(AF_INET6, &configstruct.hosts[j], s, sizeof s);
+            printf("%s ",s);
+        }
+        printf("\n");
         fclose(file);
         return configstruct;
     } else {

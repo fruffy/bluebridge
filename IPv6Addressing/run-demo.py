@@ -40,12 +40,13 @@ def configureHosts(net):
     hosts = net.hosts
     for host in hosts:
         print(host)
-
-        # Insert NDP configuration (deprecated)
-        # testString = "\"proxy h" + str(hostNum) + "-eth0 { ttl 1 router no rule 0:0:01" + '{0:02x}'.format(
-        #     hostNum) + "::/48 { static } }\" > ./tmp/config/ndp_conf.conf"
-        # print(testString)
-        # host.cmdPrint('echo ' + testString)
+        
+        # Insert host configuration
+        configString = "\"INTERFACE=h" + \
+            str(hostNum) + \
+            "-eth0\n\HOSTS=0:0:101::,0:0:102::,0:0:103::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
+            '{0:02x}'.format(hostNum) + "::\n\DEBUG=0\" > ./tmp/config/distMem.cnf"
+        host.cmdPrint('echo ' + configString)
 
         # Configure the interface and respective routing
         host.cmdPrint('ip address change dev h' + str(hostNum) +
@@ -57,14 +58,9 @@ def configureHosts(net):
         # Gotta get dem jumbo frames
         host.cmdPrint('ifconfig h' + str(hostNum) + '-eth0 mtu 9000')
         if hostNum != 1:
-            # Run the server
+                # Run the server
             host.cmdPrint('xterm  -T \"server' + str(hostNum) +
                           '\" -e \"./applications/bin/server; bash\" &')
-
-        # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) + '\" -e \"./messaging/launchProxy.sh -i h' + str(hostNum) +
-        #               '-eth0 0:0:01' + "{0:02x}".format(hostNum) + '::/48; bash\" &')
-        # host.cmdPrint('xterm  -T \"ndpproxy' + str(hostNum) +
-        #               '\" -e \"./ndpproxy/ndppd -vvv -c ./tmp/config/ndp_conf.conf; bash\" &')
         hostNum += 1
 
 
@@ -100,7 +96,8 @@ def run():
         # Routing entries per port
         cmd = "ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=0:0:10%d::/48,priority=1,actions=output:%d" % (i, i)
         os.system(cmd)
-        cmd = "ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_src=0:0:10%d::/48,ipv6_dst=0:0:10%d::/48,priority=2,actions=output:in_port" % (i, i)
+        cmd = "ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_src=0:0:10%d::/48,ipv6_dst=0:0:10%d::/48,priority=2,actions=output:in_port" % (
+            i, i)
         os.system(cmd)
         # Gotta get dem jumbo frames
         os.system('ifconfig s1-eth' + str(i) + ' mtu 9000')

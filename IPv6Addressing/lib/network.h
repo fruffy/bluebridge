@@ -24,7 +24,6 @@ uint64_t getPointerFromIPv6(struct in6_addr addr);
 struct in6_addr getIPv6FromPointer(uint64_t pointer);
 
 
-extern struct udppacket* genPacketInfo();
 extern struct sockaddr_in6 *init_rcv_socket();
 extern struct sockaddr_in6 *init_rcv_socket_old();
 extern void init_send_socket();

@@ -162,7 +162,7 @@ int close_send_socket() {
 
 void init_send_socket() {
 
-    packetinfo = getPacketInfo();
+    packetinfo = get_packet_info();
     init_packetsock();
     bind(sd_send, (struct sockaddr *) &packetinfo->device, sizeof (packetinfo->device) );
 

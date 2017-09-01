@@ -43,8 +43,8 @@
 
 #include "config.h"
 
-extern struct udppacket *gen_packet_info();
-
+extern struct packetconfig *gen_packet_info(struct config *configstruct, int isServer);
+extern struct packetconfig *get_packet_info();
 extern int cooked_send(struct sockaddr_in6 *dst_addr, int dst_port, char* data, int datalen);
 extern void init_send_socket();
 extern int get_send_socket();

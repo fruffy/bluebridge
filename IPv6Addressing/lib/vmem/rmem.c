@@ -30,7 +30,8 @@ struct rmem {
 void rmem_init_sockets(struct rmem *r) {
     //p = bindSocket(p, servinfo, &sockfd);
     r->targetIP = init_rcv_socket(TARGETPORT);
-    genPacketInfo();
+    struct config myConf = get_config("tmp/config/distMem.cnf");
+    gen_packet_info(&myConf, 0);
     init_send_socket();
     r->sockfd = get_rcv_socket();
 }

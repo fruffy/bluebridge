@@ -8,6 +8,8 @@
 
 #include "../lib/utils.h"
 #include "../lib/network.h"
+#include "../lib/config.h"
+
 #define BACKLOG 10     // how many pending connections queue will hold
 
 char *varadr_char[1000];
@@ -205,11 +207,9 @@ void handleClientRequests(char * receiveBuffer, struct in6_addr * ipv6Pointer, s
  */
 int main(int argc, char *argv[]) {
 
-    if (argc < 2) {
-        printf("Defaulting to standard values...\n");
-        argv[1] = "5000";
-    }
-    genPacketInfo(argv[1]);
+    struct config myConf = get_config("tmp/config/distMem.cnf");
+    gen_packet_info(&myConf, 1);
+
     struct sockaddr_in6 *temp = init_rcv_socket();
 //    struct sockaddr_in6 *temp = init_rcv_socket_old(argv[1]);
     init_send_socket();

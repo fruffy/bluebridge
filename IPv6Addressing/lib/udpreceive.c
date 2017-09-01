@@ -54,7 +54,7 @@ static int sd_rcv;
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket() {
     struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
-    packetinfo = getPacketInfo();
+    packetinfo = get_packet_info();
     init_epoll();
     return temp;
 }
@@ -68,7 +68,7 @@ struct sockaddr_in6 *init_rcv_socket_old(const char *portNumber) {
     const int on=1, off=0;
     // hints = specifies criteria for selecting the socket address
     // structures
-    packetinfo = getPacketInfo();
+    packetinfo = get_packet_info();
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET6;
     hints.ai_socktype = SOCK_DGRAM;

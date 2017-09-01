@@ -32,7 +32,9 @@ struct config {
     int num_hosts;
     struct in6_addr hosts[10];
 };
+struct config get_config(char *filename);
+struct packetconfig *gen_packet_info(struct config *configstruct, int isServer);
+struct packetconfig *get_packet_info();
 
-struct packetconfig* getPacketInfo();
 
 #endif
