@@ -104,7 +104,7 @@ void print_times( uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* wri
     printf("Average free latency: "KRED"%lu us\n"RESET, free_total/ (NUM_ITERATIONS*1000));
 }
 
-void basicOperations(struct sockaddr_in6 * targetIP) {
+void basicOperations(struct sockaddr_in6 *targetIP) {
     uint64_t *alloc_latency = malloc(sizeof(uint64_t) * NUM_ITERATIONS);
     assert(alloc_latency);
     memset(alloc_latency, 0, sizeof(uint64_t) * NUM_ITERATIONS);
@@ -127,11 +127,17 @@ void basicOperations(struct sockaddr_in6 * targetIP) {
     struct LinkedPointer * nextPointer = rootPointer;
     //init the root element
     nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
+    // Generate a random IPv6 address out of a set of available hosts
+    struct in6_addr *ipv6Pointer = gen_rdm_IPv6Target();
+    memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
     nextPointer->AddrString = allocateRemoteMem(targetIP);
     srand(time(NULL));
     for (i = 0; i < NUM_ITERATIONS; i++) {
         nextPointer = nextPointer->Pointer;
         nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
+        // Generate a random IPv6 address out of a set of available hosts
+        struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
+        memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
         uint64_t start = getns(); 
         nextPointer->AddrString = allocateRemoteMem(targetIP);
         alloc_latency[i] = getns() - start; 
@@ -164,7 +170,6 @@ void basicOperations(struct sockaddr_in6 * targetIP) {
         freeRemoteMem(targetIP, &remoteMemory);
         free_latency[i-1] = getns() - fStart;
         free(payload);
-        free(test);
         nextPointer = nextPointer->Pointer;
         i++;
     }
@@ -322,12 +327,9 @@ void interactiveMode(struct sockaddr_in6 *targetIP) {
                         memset(input, 0, len);
                         printf("Migrating pointer %s\n", s);
                         getLine("Please enter your migration machine:\n", input, sizeof(input));
-                        if (atoi(input) <= NUM_HOSTS) {
-                            printf("Migrating\n");
-                            migrateRemoteMem(targetIP, &remotePointers[i], atoi(input));
-                        } else {
-                            printf("FAILED\n"); 
-                        }
+                        printf("Migrating\n");
+                        migrateRemoteMem(targetIP, &remotePointers[i], atoi(input));
+
                     }
                 }
             } else if (strcmp("C", input) == 0) {
@@ -339,12 +341,8 @@ void interactiveMode(struct sockaddr_in6 *targetIP) {
                 printf("Migrating pointer %s\n", s);
                 memset(input, 0, len);
                 getLine("Please enter your migration machine:\n", input, sizeof(input));
-                if (atoi(input) <= NUM_HOSTS) {
-                    printf("Migrating\n");
-                    migrateRemoteMem(targetIP, &pointer, atoi(input));
-                } else {
-                    printf("FAILED\n"); 
-                }
+                migrateRemoteMem(targetIP, &pointer, atoi(input));
+
             }
         } else if (strcmp("F", input) == 0) {
             memset(input, 0, len);
@@ -414,6 +412,8 @@ int main(int argc, char *argv[]) {
 //    struct sockaddr_in6 *temp = init_rcv_socket_old(argv[2]);
     temp->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
     init_send_socket(&myConf);
+    set_host_list(myConf.hosts, myConf.num_hosts);
+
     struct timeval st, et;
     gettimeofday(&st,NULL);
     if(isAutoMode) {

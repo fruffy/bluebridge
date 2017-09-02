@@ -18,7 +18,6 @@ extern ssize_t pwrite (int __fd, const void *__buf, size_t __nbytes, __off_t __o
 #define TARGETPORT "5000"
 
 struct rmem {
-	int sockfd;
 	struct sockaddr_in6 *targetIP;
 	struct in6_addr *memList;
 	int block_size;
@@ -32,12 +31,14 @@ void rmem_init_sockets(struct rmem *r) {
     struct config myConf = configure_bluebridge("tmp/config/distMem.cnf", 0);
     r->targetIP = init_rcv_socket(&myConf);
     init_send_socket(&myConf);
-    r->sockfd = get_rcv_socket();
 }
 
 void fill_rmem(struct rmem *r) {
 	struct in6_addr *memList = malloc(sizeof(struct in6_addr) * r->nblocks);
 	for (int i = 0; i<r->nblocks; i++){
+		// Generate a random IPv6 address out of a set of available hosts
+		struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
+		memcpy(&(r->targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
 		memList[i] = allocateRemoteMem(r->targetIP);
 	}
 	r->memList = memList;
@@ -50,10 +51,6 @@ struct rmem *rmem_allocate(int nblocks)
 	if(!r) return 0;
 
 	rmem_init_sockets(r);
-	if(r->sockfd<0) {
-		free(r);
-		return 0;
-	}
 	r->block_size = BLOCK_SIZE;
 	r->nblocks = nblocks;
 	fill_rmem(r);
@@ -88,6 +85,6 @@ int rmem_blocks( struct rmem *r )
 
 void rmem_deallocate( struct rmem *r )
 {
-	close(r->sockfd);
+	close_sockets();
 	free(r);
 }

@@ -1,6 +1,5 @@
-/*
- ** client.c -- a stream socket client demo
- */
+#ifndef PROJECT_CLIENT
+#define PROJECT_CLIENT
 
 #include <netdb.h>            // struct addrinfo
 #include "network.h"
@@ -13,6 +12,6 @@ char * getRemoteMem(struct sockaddr_in6 *targetIP, struct in6_addr *toPointer);
 int migrateRemoteMem(struct sockaddr_in6 *targetIP, struct in6_addr *toPointer, int machineID);
 
 struct in6_addr *gen_rdm_IPv6Target();
-struct in6_addr *gen_fixed_IPv6Target(uint8_t rndHost);
+void set_host_list(struct in6_addr *host_addrs, int num_hosts);
 
-extern struct config get_config(char *filename);
+#endif

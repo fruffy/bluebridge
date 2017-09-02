@@ -56,12 +56,12 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in6 *temp = init_rcv_socket(&myConf);
     init_send_socket(&myConf);
    // Start waiting for connections
-    struct in6_addr * ipv6Pointer = (struct in6_addr *) calloc(1,sizeof(struct in6_addr));
+    struct in6_addr ipv6Pointer;
+    char receiveBuffer[BLOCK_SIZE];
     while (1) {
-        char receiveBuffer[BLOCK_SIZE];
         //TODO: Error handling (numbytes = -1)
-        receiveUDPIPv6Raw(receiveBuffer, BLOCK_SIZE, temp, ipv6Pointer);
-        handleClientRequests(receiveBuffer, ipv6Pointer, temp);
+        receiveUDPIPv6Raw(receiveBuffer, BLOCK_SIZE, temp, &ipv6Pointer);
+        handleClientRequests(receiveBuffer, &ipv6Pointer, temp);
     }
     close_sockets();
     return 0;

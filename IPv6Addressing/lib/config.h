@@ -13,7 +13,6 @@
 #define POINTER_SIZE sizeof(void*)
 
 static const int SUBNET_ID = 1; // 16 bits for subnet id
-#define NUM_HOSTS 3 // number of hosts in the rack
 
 struct config {
     char interface[20];
@@ -22,8 +21,9 @@ struct config {
     struct in6_addr src_addr;
     int debug;
     int num_hosts;
-    struct in6_addr hosts[10];
+    struct in6_addr hosts[40];
 };
+
 struct config configure_bluebridge(char *filename, int isServer);
 
 #endif
