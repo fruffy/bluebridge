@@ -152,7 +152,7 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
 
         print_debug("Iteration %d", i);
         struct in6_addr remoteMemory = nextPointer->AddrString;
-        print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
+        //print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
         print_debug("Creating payload");
         char *payload= malloc(50);
         memcpy(payload,"Hello World!", 10);
