@@ -50,7 +50,7 @@ void handleClientRequests(char * receiveBuffer, struct in6_addr * ipv6Pointer, s
  */
 int main(int argc, char *argv[]) {
 
-    struct config myConf = configure_bluebridge("tmp/config/distMem.cnf", 1);
+    struct config myConf = configure_bluebridge(argv[1], 1);
 
 //    struct sockaddr_in6 *temp = init_rcv_socket_old(argv[1]);
     struct sockaddr_in6 *temp = init_rcv_socket(&myConf);

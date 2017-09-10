@@ -30,24 +30,53 @@
 #define IP6_HDRLEN 40  // IPv6 header length
 #define UDP_HDRLEN 8  // UDP header length, excludes data
 
+#define ifreq_offsetof(x)  offsetof(struct ifreq, x)
+
+struct in6_ifreq {
+    struct in6_addr ifr6_addr;
+    __u32 ifr6_prefixlen;
+    unsigned int ifr6_ifindex;
+};
+
 int set_interface_ip(struct config *configstruct) {
     struct ifreq ifr;
-    int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+    struct in6_ifreq ifr6;
+    int fd = socket(PF_INET6, SOCK_DGRAM, IPPROTO_IP);
 
     strncpy(ifr.ifr_name, configstruct->interface, IFNAMSIZ);
-    struct sockaddr_in6* addr = (struct sockaddr_in6*)&ifr.ifr_addr;
+    //struct sockaddr_in6* addr = (struct sockaddr_in6*) &ifr.ifr6_addr;
     ifr.ifr_addr.sa_family = AF_INET6;
-    memcpy(&addr->sin6_addr,&configstruct->src_addr, IPV6_SIZE);
-    ioctl(fd, SIOCSIFADDR, &ifr);
-
-    ioctl(fd, SIOCGIFFLAGS, &ifr);
+    //memcpy(&addr->sin6_addr, &configstruct->src_addr, IPV6_SIZE);
+    if(ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
+        perror("SIOCGIFFLAGS");
+        return EXIT_FAILURE;
+    }
+    if (ioctl(fd, SIOGIFINDEX, &ifr) < 0) {
+        perror("SIOGIFINDEX");
+        return EXIT_FAILURE;
+    }
+    memcpy(&ifr6.ifr6_addr, &configstruct->src_addr,
+               sizeof(struct in6_addr));
+    ifr6.ifr6_ifindex = ifr.ifr_ifindex;
+    ifr6.ifr6_prefixlen = 64;
+    if (ioctl(fd, SIOCSIFADDR, &ifr6) < 0) {
+        perror("SIOCSIFADDR");
+        return EXIT_FAILURE;
+    }
     strncpy(ifr.ifr_name, configstruct->interface, IFNAMSIZ);
     ifr.ifr_flags |= (IFF_UP | IFF_RUNNING);
-
-    ioctl(fd, SIOCSIFFLAGS, &ifr);
+    if(ioctl(fd, SIOCSIFFLAGS, &ifr) != 0) {
+        perror("Failed to configure the interface ");
+        return EXIT_FAILURE;
+    }
+    ifr.ifr_mtu = 9000;
+    if(ioctl(fd, SIOCSIFMTU, &ifr) < 0) {
+        perror("SIOCSIFMTU");
+    }
     close(fd);
-    return 0;
+    return EXIT_SUCCESS;
 }
+
 int set_source_port(struct config *configstruct, int isServer, char *src_port) {
     int port = 0;
     if (isServer) {

@@ -46,6 +46,7 @@ struct in6_addr allocateRemoteMem(struct sockaddr_in6 * targetIP) {
     sendUDPRaw(sendBuffer, BLOCK_SIZE, targetIP);
     receiveUDPIPv6Raw(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
     struct in6_addr retAddr;
+    print_debug("******ALLOCATE******");
     if (memcmp(receiveBuffer,"ACK", 3) == 0) {
         // If the message is ACK --> successful allocation
         // Copy the returned pointer (very precise offsets)
@@ -71,6 +72,7 @@ char *getRemoteMem(struct sockaddr_in6 * targetIP, struct in6_addr * toPointer) 
     // Prep message
     memcpy(sendBuffer, GET_CMD, size);
     memcpy(sendBuffer+size,toPointer->s6_addr,IPV6_SIZE);
+    print_debug("******GET DATA******");
     // Send request and store response
     sendUDPIPv6Raw(sendBuffer, BLOCK_SIZE, targetIP, *toPointer);
     receiveUDPIPv6Raw(receiveBuffer,BLOCK_SIZE, targetIP, NULL);
@@ -86,6 +88,7 @@ int writeRemoteMem(struct sockaddr_in6 * targetIP, char * payload,  struct in6_a
     // Create the data
     memcpy(sendBuffer, WRITE_CMD, size);
     memcpy(sendBuffer+size, payload, BLOCK_SIZE - size);
+    print_debug("******WRITE DATA******");
     sendUDPIPv6Raw(sendBuffer, BLOCK_SIZE, targetIP, *toPointer);
     receiveUDPIPv6Raw(receiveBuffer,BLOCK_SIZE, targetIP, NULL);
     return EXIT_SUCCESS;
@@ -100,6 +103,7 @@ int freeRemoteMem(struct sockaddr_in6 * targetIP,  struct in6_addr * toPointer) 
     // Create message
     memcpy(sendBuffer, FREE_CMD, size);
     memcpy(sendBuffer+size,toPointer->s6_addr,IPV6_SIZE);
+    print_debug("******FREE DATA******");
     // Send message and check if it was successful
     // TODO: Check if it actually was successful
     sendUDPIPv6Raw(sendBuffer, BLOCK_SIZE, targetIP, *toPointer);

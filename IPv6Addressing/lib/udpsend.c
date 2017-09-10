@@ -274,7 +274,7 @@ static int send_mmap(unsigned const char *pkt, int pktlen) {
   return 0;
 }
 
-int cooked_send(struct sockaddr_in6* dst_addr, int dst_port, char* data, int datalen) {
+int cooked_send(struct sockaddr_in6 *dst_addr, int dst_port, char *data, int datalen) {
 
     struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN);
     struct udphdr *udphdr = (struct udphdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN);

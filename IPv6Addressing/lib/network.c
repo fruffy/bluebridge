@@ -24,9 +24,9 @@ uint64_t rcv_calls = 0;
  */
 int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP) {
     int dst_port = ntohs(targetIP->sin6_port);
-    //char dst_ip[INET6_ADDRSTRLEN];
-    //inet_ntop(targetIP->sin6_family,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
-    //print_debug("Sending to %s:%d", dst_ip,dst_port);
+    char dst_ip[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
+    print_debug("Sending to %s:%d", dst_ip,dst_port);
     cooked_send(targetIP, dst_port, sendBuffer, msgBlockSize);
     memset(sendBuffer, 0, msgBlockSize);
     return EXIT_SUCCESS;
@@ -41,10 +41,10 @@ int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetI
 int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr remotePointer) {
     
     memcpy(&(targetIP->sin6_addr), &remotePointer, sizeof(remotePointer));
-    //char dst_ip[INET6_ADDRSTRLEN];
+    char dst_ip[INET6_ADDRSTRLEN];
     int dst_port = ntohs(targetIP->sin6_port);
-    //inet_ntop(p->ai_family,get_in_addr(p), dst_ip, sizeof dst_ip);
-    //print_debug("Sending to %s:%d", dst_ip,dst_port);
+    inet_ntop(AF_INET6,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
+    print_debug("Sending to %s:%d", dst_ip,dst_port);
     uint64_t start = getns(); 
     cooked_send(targetIP, dst_port, sendBuffer, msgBlockSize);
     sendLat += getns() - start;

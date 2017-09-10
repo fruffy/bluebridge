@@ -52,7 +52,7 @@ struct ep_interface {
 static int epoll_fd = -1;
 static struct ep_interface interface_ep;
 static int sd_rcv;
-
+struct in6_addr myAddr;
 
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
@@ -63,6 +63,7 @@ struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
         perror ("if_nametoindex() failed to obtain interface index ");
         exit (EXIT_FAILURE);
     }
+    myAddr = configstruct->src_addr;
     interface_ep.device.sll_family = AF_PACKET;
     interface_ep.device.sll_protocol = htons (ETH_P_ALL);
     init_epoll();
@@ -136,6 +137,7 @@ void close_rcv_socket() {
 }
 
 int setup_packet_mmap() {
+
     struct tpacket_req tpacket_req = {
         .tp_block_size = BLOCKSIZE,
         .tp_block_nr = 1,
@@ -170,7 +172,7 @@ int init_socket() {
 
     const int on = 1;
     setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
-    //setsockopt(sd_rcv, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
+    setsockopt(sd_rcv, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
     if (-1 == sd_rcv) {
         perror("Could not set socket");
         return EXIT_FAILURE;
@@ -187,11 +189,11 @@ int init_socket() {
 }
 
 void init_epoll() {
-    
+
     init_socket();
-    struct epoll_event event1 = {
+    struct epoll_event event = {
         .events = EPOLLIN,
-        .data = { .ptr = NULL }
+        .data = {.ptr = NULL }
     };
 
     epoll_fd = epoll_create1(0);
@@ -201,7 +203,7 @@ void init_epoll() {
        exit(1);
     }
 
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sd_rcv, &event1)) {
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sd_rcv, &event)) {
         perror("epoll_ctl failed");
         close(epoll_fd);
        exit(1);
@@ -227,12 +229,13 @@ struct sockaddr_ll * get_sockaddr_ll(struct tpacket_hdr * tpacket_hdr) {
 void next_packet(struct ep_interface *interface) {
     interface->tpacket_i = (interface->tpacket_i + 1) % interface->tpacket_req.tp_frame_nr;
 }
+#include <arpa/inet.h>        // inet_pton() and inet_ntop()
 
 int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer) {
     while (1) {
 
         struct epoll_event events[16];
-        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
+        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 0);
         if (num_events == -1)  {
             if (errno == EINTR)  {
                 perror("epoll_wait returned -1");
@@ -241,7 +244,6 @@ int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targe
             perror("error");
             continue;
         }
-
         for (int i = 0; i < num_events; ++i)  {
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
@@ -258,17 +260,21 @@ int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targe
                 struct ethhdr *ethhdr = (struct ethhdr *)((char *) tpacket_hdr + tpacket_hdr->tp_mac);
                 struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ethhdr + ETH_HDRLEN);
                 struct udphdr *udphdr = (struct udphdr *)((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN);
-                char* payload = ((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
-                if (!memcmp(&udphdr->dest, &interface_ep.my_port, sizeof(uint16_t))) {
+                char *payload = ((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
+                //char s[INET6_ADDRSTRLEN];
+                //char s1[INET6_ADDRSTRLEN];
+                //inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
+                //inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
+                //printf("Got message from %s:%d to %s:%d\n", s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
+                if (udphdr->dest == interface_ep.my_port) {
                     memcpy(receiveBuffer,payload, msgBlockSize);
                     if (ipv6Pointer != NULL)
                         memcpy(ipv6Pointer->s6_addr,&iphdr->ip6_dst,IPV6_SIZE);
                     memcpy(targetIP->sin6_addr.s6_addr,&iphdr->ip6_src,IPV6_SIZE);
                     targetIP->sin6_port = udphdr->source;
-/*                    char s[INET6_ADDRSTRLEN];
-                    inet_ntop(AF_INET6, &targetIP->sin6_addr, s, sizeof s);
-                    printf("Got message from %s:%d\n", s, ntohs(targetIP->sin6_port))*/;
-                    udphdr->dest = 0;
+                    memset(payload, 0, msgBlockSize);
+                    tpacket_hdr->tp_status = TP_STATUS_KERNEL;
+                    next_packet(&interface_ep);
                     return msgBlockSize;
                 }
                 tpacket_hdr->tp_status = TP_STATUS_KERNEL;
@@ -278,6 +284,7 @@ int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targe
     }
     return 0;
 }
+
 
 int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer){
     struct sockaddr_in6 from;

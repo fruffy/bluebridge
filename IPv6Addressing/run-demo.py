@@ -62,7 +62,7 @@ def configureHosts(net):
         if hostNum != 1:
                 # Run the server
             host.cmdPrint('xterm  -T \"server' + str(hostNum) +
-                          '\" -e \"./applications/bin/server; bash\" &')
+                          '\" -e \"./applications/bin/server tmp/config/distMem.cnf; bash\" &')
         hostNum += 1
 
 

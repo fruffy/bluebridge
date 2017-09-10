@@ -165,7 +165,10 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
         read_latency[i - 1] = getns() - rStart;
 
         print_debug("Results of memory store: %.50s", test);
-        
+        if (strncmp(test,"Hello World!", 10) < 0) {
+            print_debug(KRED"ERROR: WRONG RESULT"RESET);
+            exit(1);
+        }
         uint64_t fStart = getns();
         freeRemoteMem(targetIP, &remoteMemory);
         free_latency[i-1] = getns() - fStart;
@@ -406,7 +409,7 @@ int main(int argc, char *argv[]) {
         abort ();
       }
     }
-    struct config myConf = configure_bluebridge("tmp/config/distMem.cnf", 0);
+    struct config myConf = configure_bluebridge(argv[1], 0);
 
     struct sockaddr_in6 *temp = init_rcv_socket(&myConf);
 //    struct sockaddr_in6 *temp = init_rcv_socket_old(argv[2]);
