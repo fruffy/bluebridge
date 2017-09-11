@@ -20,6 +20,7 @@
 #include <sys/mman.h>
 #include <sys/epoll.h>
 #include <poll.h>
+#include <pthread.h>
 
 
 #include "udpcooked.h"
@@ -48,28 +49,9 @@ struct packetconfig {
 };
 
 static int sd_send;
+int epoll_fd;
 static struct packetconfig packetinfo;
 static char *ring;
-
-
-
-/*void get_interface_name(){
-    struct ifaddrs *ifap, *ifa = NULL; 
-    struct sockaddr_in6 *sa; 
-    char src_ip[INET6_ADDRSTRLEN];
-    //TODO: Use config file instead. Avoid memory leaks
-    getifaddrs(&ifap); 
-    int i = 0; 
-    for (ifa = ifap; i<2; ifa = ifa->ifa_next) { 
-        if (ifa->ifa_addr->sa_family==AF_INET6) { 
-            i++; 
-            sa = (struct sockaddr_in6 *) ifa->ifa_addr; 
-            getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in6), src_ip, 
-            sizeof(src_ip), NULL, 0, NI_NUMERICHOST); 
-        }
-    }
-    packetinfo.iphdr.ip6_src = sa->sin6_addr; 
-}*/
 
 struct packetconfig *gen_packet_info(struct config *configstruct) {
 
@@ -120,6 +102,26 @@ struct packetconfig *get_packet_info() {
     return &packetinfo;
 }
 
+void init_epoll_send() {
+
+    struct epoll_event event = {
+        .events = EPOLLOUT,
+        .data = {.fd = sd_send }
+    };
+
+    epoll_fd = epoll_create1(0);
+
+    if (-1 == epoll_fd) {
+        perror("epoll_create failed.");
+       exit(1);
+    }
+
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sd_send, &event)) {
+        perror("epoll_ctl failed");
+        close(epoll_fd);
+       exit(1);
+    }
+}
 // tp_block_size must be a multiple of PAGE_SIZE (1)
 // tp_frame_size must be greater than TPACKET_HDRLEN (obvious)
 // tp_frame_size must be a multiple of TPACKET_ALIGNMENT
@@ -137,10 +139,11 @@ int init_packetsock_ring(){
     tp.tp_frame_nr = CONF_RING_BLOCKS * (BLOCKSIZE/ FRAMESIZE);
     if (setsockopt(sd_send, SOL_PACKET, PACKET_TX_RING, (void*) &tp, sizeof(tp)))
         RETURN_ERROR(-1, "setsockopt() ring\n");
-    #ifdef TPACKET_V2
-    val = TPACKET_V1;
+    int on = 1;
+    setsockopt(sd_send, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
+
+    int val = TPACKET_V3;
     setsockopt(sd_send, SOL_PACKET, PACKET_HDRLEN, &val, sizeof(val));
-    #endif
 
 
     // open ring
@@ -167,6 +170,19 @@ static int init_packetsock() {
       close(sd_send);
         RETURN_ERROR(-1, "Ring initialisation failed!\n");
     }
+/*    init_epoll_send();
+
+    pthread_attr_t t_attr_send;
+    struct sched_param para_send;
+    pthread_t tx_send;
+    pthread_attr_init(&t_attr_send);
+    pthread_attr_setschedpolicy(&t_attr_send, SCHED_FIFO);
+    para_send.sched_priority = 20;
+    pthread_attr_setschedparam(&t_attr_send, &para_send);
+    if (pthread_create(&tx_send, &t_attr_send, txring_send, (void *)sd_send) != 0) {
+        perror("pthread_create() failed\n");
+        abort();
+    }*/
 
   return EXIT_SUCCESS;
 }
@@ -195,10 +211,11 @@ void init_send_socket(struct config *configstruct) {
 
 }
 
-void init_send_socket_old() {
+void init_send_socket_old(struct config *configstruct) {
 
     //Socket operator variables
     const int on=1;
+    gen_packet_info(configstruct);
 
     if ((sd_send = socket (AF_PACKET, SOCK_RAW|SOCK_NONBLOCK|SOCK_CLOEXEC, htons (ETH_P_ALL))) < 0) {
         perror ("socket() failed ");
@@ -219,7 +236,6 @@ void init_send_socket_old() {
     mr.mr_ifindex = packetinfo.device.sll_ifindex;
     mr.mr_type = PACKET_MR_PROMISC;
     setsockopt (sd_send, SOL_PACKET,PACKET_ADD_MEMBERSHIP, &mr, sizeof (mr));
-    setsockopt(sd_send , SOL_PACKET , PACKET_RX_RING , (void*)&req , sizeof(req));
     setsockopt(sd_send , SOL_PACKET , PACKET_TX_RING , (void*)&req , sizeof(req));
     setsockopt(sd_send, IPPROTO_IPV6, IP_PKTINFO, &on, sizeof(int));
     setsockopt(sd_send, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(int));
@@ -237,7 +253,6 @@ static int send_mmap(unsigned const char *pkt, int pktlen) {
     static int ring_offset = 0;
 
     struct tpacket_hdr *header;
-    struct pollfd pollset;
     char *off;
 
     // fetch a frame
@@ -245,20 +260,6 @@ static int send_mmap(unsigned const char *pkt, int pktlen) {
     // including their header. This explains the use of getpagesize().
     header = (struct tpacket_hdr * )((char *) ring + (ring_offset * FRAMESIZE));
     //assert((((unsigned long) header) & (FRAMESIZE - 1)) == 0);
-    while (header->tp_status != TP_STATUS_AVAILABLE) {
-        // if none available: wait on more data
-        pollset.fd = sd_send;
-        pollset.events = POLLOUT;
-        pollset.revents = 0;
-        int ret = poll(&pollset, 1, 1000 /* don't hang */);
-        if (ret < 0) {
-            if (errno != EINTR) {
-                perror("poll");
-                return -1;
-            }
-            return 0;
-        }
-    }
     // fill data
     off = ((char *) header) + (TPACKET_HDRLEN - sizeof(struct sockaddr_ll));
     memcpy(off, pkt, pktlen);
@@ -268,10 +269,46 @@ static int send_mmap(unsigned const char *pkt, int pktlen) {
 
     // increase consumer ring pointer
     ring_offset = (ring_offset + 1) & (CONF_RING_FRAMES - 1);
+
     // notify kernel
-    if (sendto(sd_send, NULL, 0, 0, (struct sockaddr *) &packetinfo.device, sizeof(packetinfo.device)) < 0)
+
+    if (sendto(sd_send, NULL, 0, MSG_DONTWAIT, (struct sockaddr *)NULL, sizeof(struct sockaddr_ll)) < 0)
         RETURN_ERROR(-1, "sendto failed!\n");
   return 0;
+}
+
+/**
+ * This task will call be called when content has been written to the mapped region
+ */
+void *txring_send(void *arg)
+{
+    long ec_send;
+    (void)arg;
+    while (1) {
+        struct epoll_event events[1024];
+        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 0);
+        
+        if (num_events == -1)  {
+        if (errno == EINTR)  {
+            perror("epoll_wait returned -1");
+            break;
+        }
+            perror("error");
+            continue;
+        }
+
+        for (int i = 0; i < num_events; ++i)  {
+            struct epoll_event *event = &events[i];
+            if (event->events & EPOLLOUT) {
+                /* send all buffers with TP_STATUS_SEND_REQUEST */
+                ec_send=sendto(sd_send, NULL, 0, MSG_DONTWAIT,
+                        (struct sockaddr *)NULL, sizeof(struct sockaddr_ll));
+            }
+            //if(blocking) printf("end of task send()\n");
+            //printf("end of task send(ec=%x)\n", ec_send);
+        }
+}
+    return (void*) ec_send;
 }
 
 int cooked_send(struct sockaddr_in6 *dst_addr, int dst_port, char *data, int datalen) {
@@ -291,6 +328,7 @@ int cooked_send(struct sockaddr_in6 *dst_addr, int dst_port, char *data, int dat
     // UDP checksum (16 bits)
     //udphdr->check = udp6_checksum (iphdr, udphdr, (uint8_t *) data, datalen);
     // Copy our data
+    //printf("Sending %s\n", data );
     memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, data, datalen * sizeof (uint8_t));
     // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
     int frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + datalen;
@@ -299,7 +337,7 @@ int cooked_send(struct sockaddr_in6 *dst_addr, int dst_port, char *data, int dat
     //     perror ("sendto() failed");
     //    exit (EXIT_FAILURE);
     //}
-    //write(sd_send,packetinfo->ether_frame, frame_length);
+    //write(sd_send,packetinfo.ether_frame, frame_length);
     send_mmap(packetinfo.ether_frame, frame_length);
     return EXIT_SUCCESS;
 }

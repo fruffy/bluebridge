@@ -193,7 +193,7 @@ void init_epoll() {
     init_socket();
     struct epoll_event event = {
         .events = EPOLLIN,
-        .data = {.ptr = NULL }
+        .data = {.fd = sd_rcv }
     };
 
     epoll_fd = epoll_create1(0);
@@ -234,7 +234,8 @@ void next_packet(struct ep_interface *interface) {
 int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer) {
     while (1) {
 
-        struct epoll_event events[16];
+        struct epoll_event events[1024];
+        //printf("Waiting...\n");
         int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 0);
         if (num_events == -1)  {
             if (errno == EINTR)  {
@@ -266,7 +267,9 @@ int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targe
                 //inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
                 //inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
                 //printf("Got message from %s:%d to %s:%d\n", s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
+                //printf("My port %d their port %d\n", interface_ep.my_port, udphdr->dest );
                 if (udphdr->dest == interface_ep.my_port) {
+                    //printf("Got %s\n", payload );
                     memcpy(receiveBuffer,payload, msgBlockSize);
                     if (ipv6Pointer != NULL)
                         memcpy(ipv6Pointer->s6_addr,&iphdr->ip6_dst,IPV6_SIZE);
