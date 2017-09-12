@@ -115,9 +115,9 @@ int freeRemoteMem(struct sockaddr_in6 * targetIP,  struct in6_addr * toPointer) 
  * Migrates remote memory
  */
 //TODO: Currently unused.
-int migrateRemoteMem(struct sockaddr_in6 * targetIP, struct in6_addr * toPointer, int machineID) {
+int migrateRemoteMem(struct sockaddr_in6 *targetIP, struct in6_addr *toPointer, int machineID) {
     // Allocates storage
-    char * ovs_cmd = (char*)malloc(100 * sizeof(char));
+    char ovs_cmd[100];
     char s[INET6_ADDRSTRLEN];
     inet_ntop(targetIP->sin6_family,(struct sockaddr *) toPointer->s6_addr, s, sizeof s);
     printf("Getting pointer\n");
@@ -129,8 +129,7 @@ int migrateRemoteMem(struct sockaddr_in6 * targetIP, struct in6_addr * toPointer
     int status = system(ovs_cmd);
     printf("%d\t%s\n", status, ovs_cmd);
     writeRemoteMem(targetIP, receiveBuffer, toPointer);
-    free(ovs_cmd);
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 

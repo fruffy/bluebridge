@@ -43,8 +43,6 @@ int addchar(char* charadr) {
 uint64_t getPointerFromIPv6(struct in6_addr addr) {
     uint64_t pointer;
     memcpy(&pointer,addr.s6_addr+IPV6_SIZE-POINTER_SIZE, POINTER_SIZE);
-    // printf("Converted IPv6 to Pointer: ");
-    // printNBytes((char*) &pointer,POINTER_SIZE);
     return pointer;
 }
 
@@ -57,9 +55,6 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
     // printf("Memcpy in getIPv6FromPointer\n");
     memcpy(newAddr->s6_addr+IPV6_SIZE-POINTER_SIZE, (char *)pointer, POINTER_SIZE);
     memcpy(newAddr->s6_addr+4,&SUBNET_ID,1);
-    //char s[INET6_ADDRSTRLEN];
-    //inet_ntop(AF_INET6, newAddr, s, sizeof s);
-    //print_debug("IPv6 Pointer %s",s);
     return *newAddr;
 }
 
@@ -73,8 +68,12 @@ int allocateMem(struct sockaddr_in6 *targetIP) {
     //void *allocated = mmap(NULL, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
     //if (allocated == (void *) MAP_FAILED) perror("mmap"), exit(1);
     int size = 4; //sizeof("ACK");
-    //print_debug("Input pointer: %p", (void *) allocated);
-    struct in6_addr ipv6Pointer = getIPv6FromPointer((uint64_t) &allocated);
+    //printf("Input pointer: %p\n", (void *) allocated);
+    struct in6_addr ipv6Pointer;
+    memset(&ipv6Pointer.s6_addr, 0, IPV6_SIZE);
+    memcpy(((char*) &ipv6Pointer.s6_addr)+IPV6_SIZE-POINTER_SIZE, &allocated, POINTER_SIZE);
+    memcpy(((char*) &ipv6Pointer.s6_addr)+4,&SUBNET_ID,1);
+    //struct in6_addr ipv6Pointer; = getIPv6FromPointer((uint64_t) &allocated);
     memcpy(sendBuffer, "ACK", size);
     memcpy(sendBuffer+size, &ipv6Pointer, IPV6_SIZE); 
     sendUDPRaw(sendBuffer, BLOCK_SIZE, targetIP);
@@ -86,14 +85,16 @@ int allocateMem(struct sockaddr_in6 *targetIP) {
  * Gets memory and sends it
  */
 int getMem(struct sockaddr_in6 *targetIP, struct in6_addr * ipv6Pointer) {
-    uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
 
+    uint64_t *pointer = (uint64_t *)(((char *)ipv6Pointer->s6_addr) +IPV6_SIZE-POINTER_SIZE);
+    //memcpy(&pointer,addr.s6_addr+IPV6_SIZE-POINTER_SIZE, POINTER_SIZE);
+    //uint64_t pointer1 = getPointerFromIPv6(*ipv6Pointer);
     //print_debug("Content length %lu is currently stored at %p!", strlen((char *)pointer), (void*)pointer);
     //print_debug("Content preview (50 bytes): %.50s", (char *)pointer);
 
     // Send the sendBuffer (entire BLOCK_SIZE) to sock_fd
     // print_debug("Content length %lu will be delivered to client!", strlen((char *)pointer));
-    sendUDPRaw((void *) pointer, BLOCK_SIZE, targetIP);
+    sendUDPRaw((void *) *pointer, BLOCK_SIZE, targetIP);
 
     // TODO change to be meaningful, i.e., error message
     return EXIT_SUCCESS;
@@ -107,12 +108,11 @@ int writeMem(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_addr
     char *dataToWrite = receiveBuffer + 1;
 
     //print_debug("Data received (first 50 bytes): %.50s", dataToWrite);
-
-    uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
+    uint64_t *pointer = (uint64_t *)(((char *)ipv6Pointer->s6_addr) + IPV6_SIZE-POINTER_SIZE);
+    //uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
     // Copy the first POINTER_SIZE bytes of receive buffer into the target
-    //print_debug("Target pointer: %p", (void *) pointer);
-
-    memcpy((void *) pointer, dataToWrite, BLOCK_SIZE); 
+    //uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);    
+    memcpy((void *) *pointer, dataToWrite, BLOCK_SIZE); 
     //print_debug("Content length %lu is currently stored at %p!", strlen((char *)pointer), (void*)pointer);
     //print_debug("Content preview (50 bytes): %.50s", (char *)pointer);
 
@@ -128,11 +128,12 @@ int writeMem(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_addr
  * This is freeing target memory?
  */
 int freeMem(struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer) {
-    uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);    
-    
+    //uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);    
+
+    uint64_t *pointer = (uint64_t *)(((char *)ipv6Pointer->s6_addr) +IPV6_SIZE-POINTER_SIZE);
     //print_debug("Content stored at %p has been freed!", (void*)pointer);
     
-    free((void *) pointer);
+    free((void *) *pointer);
     //munmap((void *) pointer, BLOCK_SIZE);
     memcpy(sendBuffer, "ACK", sizeof("ACK"));
     sendUDPRaw(sendBuffer, BLOCK_SIZE, targetIP);
