@@ -22,8 +22,7 @@ struct disk {
 	int nblocks;
 };
 
-struct disk * disk_open( const char *diskname, int nblocks )
-{
+struct disk *disk_open( const char *diskname, int nblocks ) {
 	struct disk *d;
 
 	d = malloc(sizeof(*d));
@@ -47,8 +46,7 @@ struct disk * disk_open( const char *diskname, int nblocks )
 	return d;
 }
 
-void disk_write( struct disk *d, int block, const char *data )
-{
+void disk_write( struct disk *d, int block, const char *data ) {
 	if(block<0 || block>=d->nblocks) {
 		fprintf(stderr,"disk_write: invalid block #%d\n",block);
 		abort();
@@ -61,8 +59,7 @@ void disk_write( struct disk *d, int block, const char *data )
 	}
 }
 
-void disk_read( struct disk *d, int block, char *data )
-{
+void disk_read( struct disk *d, int block, char *data ) {
 	if(block<0 || block>=d->nblocks) {
 		fprintf(stderr,"disk_read: invalid block #%d\n",block);
 		abort();
@@ -75,13 +72,11 @@ void disk_read( struct disk *d, int block, char *data )
 	}
 }
 
-int disk_nblocks( struct disk *d )
-{
+int disk_nblocks( struct disk *d ) {
 	return d->nblocks;
 }
 
-void disk_close( struct disk *d )
-{
+void disk_close( struct disk *d ) {
 	close(d->fd);
 	free(d);
 }

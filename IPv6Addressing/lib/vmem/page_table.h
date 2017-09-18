@@ -16,10 +16,19 @@
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
 #endif
-
 struct page_table;
-
 typedef void (*page_fault_handler_t) ( struct page_table *pt, int page );
+struct page_table {
+    int fd;
+    char *virtmem;
+    int npages;
+    char *physmem;
+    int nframes;
+    int *page_mapping;
+    int *page_bits;
+    page_fault_handler_t handler;
+};
+
 
 /* Create a new page table, along with a corresponding virtual memory
 that is "npages" big and a physical memory that is "nframes" big
@@ -71,6 +80,8 @@ void page_table_print_entry( struct page_table *pt, int page );
 /* Print out the state of every page in a page table. */
 
 void page_table_print( struct page_table *pt );
+
+void set_vmem_config(char *filename);
 
 struct page_table *init_virtual_memory(int npages, int nframes, const char* algo);
 

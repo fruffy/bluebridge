@@ -11,7 +11,7 @@
 #include <stdio.h>            // printf() and sprintf()
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
 
-static struct in6_addr *hostList;
+struct in6_addr *hostList;
 static int nhosts;
 static char sendBuffer[BLOCK_SIZE];
 static char receiveBuffer[BLOCK_SIZE];
@@ -40,7 +40,7 @@ void set_host_list(struct in6_addr *host_addrs, int num_hosts) {
  * Allocate memory from a remote machine.
  */
 // TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
-struct in6_addr allocateRemoteMem(struct sockaddr_in6 * targetIP) {
+struct in6_addr allocateRemoteMem(struct sockaddr_in6 *targetIP) {
     // Send the command to the target host and wait for response
     memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
     sendUDPRaw(sendBuffer, BLOCK_SIZE, targetIP);

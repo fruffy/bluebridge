@@ -23,9 +23,9 @@
 
 //void print_debug(char* message);
 
-int printBytes(char * receiveBuffer);
+int printBytes(char *receiveBuffer);
 
-int printNBytes(char * receiveBuffer, int num);
+int printNBytes(char *receiveBuffer, int num);
 
 int print_addrInfo(struct addrinfo *result);
 

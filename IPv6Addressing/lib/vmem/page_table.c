@@ -1,25 +1,10 @@
-
-/*
-Do not modify this file.
-Make all of your changes to main.c instead.
-*/
-
 #define _GNU_SOURCE
 
 #include "page_table.h"
 #include "rmem.h"
 #include "disk.h"
-       #include <arpa/inet.h>
-struct page_table {
-    int fd;
-    char *virtmem;
-    int npages;
-    char *physmem;
-    int nframes;
-    int *page_mapping;
-    int *page_bits;
-    page_fault_handler_t handler;
-};
+#include "mem.h"
+
 
 int* frameState; // keeps track of how long a page has been in a frame
 int* framePage; // keeps track of which page is in a frame
@@ -50,7 +35,7 @@ static void internal_fault_handler( int signum, siginfo_t *info, void *context )
     fprintf(stderr,"segmentation fault at address %p\n",addr);
     abort();
 }
-
+// TODO: Add compile IFDEFS to save space
 struct rmem* rmem;
 void page_fault_handler_rmem( struct page_table *pt, int page ) {
     int i;
@@ -68,8 +53,8 @@ void page_fault_handler_rmem( struct page_table *pt, int page ) {
     if(bits == 0) { // page is not in memory
         int emptyFrame = 0;
         for(i = 0; i < pt->nframes; i++) {
-
-            if(frameState[i] == 0) { // empty frame
+            // empty frame, we can insert a page
+            if(frameState[i] == 0) {
                 frameState[i] = 1;
                 framePage[i] = page;
                 emptyFrame = 1;
@@ -164,6 +149,64 @@ void page_fault_handler_disk( struct page_table *pt, int page) {
     }
 }
 
+struct mem* mem;
+void page_fault_handler_mem( struct page_table *pt, int page ) {
+    int i;
+    int frame;
+    int bits;
+
+    pageFaults++;
+    page_table_get_entry(pt, page, &frame, &bits); // check if the page is in memory
+    for(i = 0; i < pt->nframes; i++) { // increment values already in frameState--keeps track of oldest value in frame table
+        if(frameState[i] != 0) {
+            frameState[i]++;
+        }
+    }
+
+    if(bits == 0) { // page is not in memory
+        int emptyFrame = 0;
+        for(i = 0; i < pt->nframes; i++) {
+            // empty frame, we can insert a page
+            if(frameState[i] == 0) {
+                frameState[i] = 1;
+                framePage[i] = page;
+                emptyFrame = 1;
+                page_table_set_entry(pt, page, i, PROT_READ);
+                mem_read(mem, page, &physmem[i*PAGE_SIZE]);
+                pageReads++;
+                break;
+            }
+        }
+        // first in first out page replacement
+        if (emptyFrame == 0) {
+            int value = 0;
+            for(i = 0; i < pt->nframes; i++) { // get oldest page
+                if(frameState[i] > value) {
+                    value = frameState[i];
+                    frame = i;
+                }
+            }
+            int tempPage = framePage[frame]; // get page currently in frame
+            page_table_get_entry(pt, tempPage, &frame, &bits);
+            if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
+                mem_write(mem, tempPage, &physmem[frame*PAGE_SIZE]);
+                pageWrites++;
+            }
+            mem_read(mem, page, &physmem[frame*PAGE_SIZE]);
+            pageReads++;
+            page_table_set_entry(pt, page, frame, PROT_READ);
+            page_table_set_entry(pt, tempPage, frame, 0);
+            frameState[frame] = 1;
+            framePage[frame] = page;
+        }
+    } else { // if page is already in table--need to set write bit
+        page_table_set_entry(pt, page, frame, PROT_READ|PROT_WRITE);
+        frameState[frame] = 1;
+        framePage[frame] = page;
+    }
+}
+
+
 struct page_table *page_table_create( int npages, int nframes, page_fault_handler_t handler ) {
     int i;
     struct sigaction sa;
@@ -215,7 +258,7 @@ struct page_table *page_table_create( int npages, int nframes, page_fault_handle
     return pt;
 }
 
-void page_table_delete( struct page_table *pt ) {
+void page_table_delete(struct page_table *pt) {
     munmap(pt->virtmem,pt->npages*PAGE_SIZE);
     munmap(pt->physmem,pt->nframes*PAGE_SIZE);
     free(pt->page_bits);
@@ -242,7 +285,7 @@ void page_table_flush(struct page_table *pt) {
     }
 }
 
-void page_table_set_entry( struct page_table *pt, int page, int frame, int bits ) {
+void page_table_set_entry(struct page_table *pt, int page, int frame, int bits ) {
     if( page<0 || page>=pt->npages ) {
         fprintf(stderr,"page_table_set_entry: illegal page #%d\n",page);
         abort();
@@ -310,6 +353,10 @@ char * page_table_get_physmem( struct page_table *pt ) {
     return pt->physmem;
 }
 
+void set_vmem_config(char *filename) {
+    configure_rmem(filename);
+}
+
 struct page_table *init_virtual_memory(int npages, int nframes, const char* system) {
     struct page_table *pt;
     pagingSystem = system;
@@ -339,6 +386,13 @@ struct page_table *init_virtual_memory(int npages, int nframes, const char* syst
             abort();
         }
         pt = page_table_create( npages, nframes, page_fault_handler_disk );
+    } else if (!strcmp(pagingSystem, "mem")) {
+        mem = mem_allocate(npages);
+        if(!mem) {
+            fprintf(stderr,"couldn't create virtual mem: %s\n",strerror(errno));
+            abort();
+        }
+        pt = page_table_create( npages, nframes, page_fault_handler_mem );
     }
     else {
         perror("Please specify the correct page table structure (rmem|disk)!");
