@@ -10,12 +10,13 @@ static char sendBuffer[BLOCK_SIZE];
 
 
 
-char *varadr_char[1000];
-int countchar = 0;
+
 /*
  * Frees global memory
  */
 // DEPRECATED 
+char *varadr_char[1000];
+int countchar = 0;
 int cleanMemory() {
     int i;
     for (i = 0; i <= countchar; i++) {
@@ -67,19 +68,19 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
  * TODO: explain.
  * Allocates local memory and exposes it to a client requesting it
  */
+struct in6_memaddr allocPointer; // Keep this struct global as we reaccess it many times
 int allocateMem(struct sockaddr_in6 *targetIP) {
     //TODO: Error handling if we runt out of memory, this will fail
-    char *allocated = (char *) malloc(BLOCK_SIZE);
+    //do some work, which might goto error
+    void *allocated = aligned_alloc(BLOCK_SIZE, BLOCK_SIZE);
     //void *allocated = mmap(NULL, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
     //if (allocated == (void *) MAP_FAILED) perror("mmap"), exit(1);
-    struct in6_memaddr ipv6Pointer;
-    memset(&ipv6Pointer, 0, IPV6_SIZE);
-
-    ipv6Pointer.paddr = (uint64_t) allocated;
-    ipv6Pointer.subid = SUBNET_ID;
+    memset(&allocPointer, 0, IPV6_SIZE);
+    allocPointer.paddr = (uint64_t) allocated;
+    allocPointer.subid = SUBNET_ID;
     //struct in6_addr ipv6Pointer; = getIPv6FromPointer((uint64_t) &allocated);
     memcpy(sendBuffer, "ACK", 4);
-    memcpy(sendBuffer+4, &ipv6Pointer, IPV6_SIZE); 
+    memcpy(sendBuffer+4, &allocPointer, IPV6_SIZE); 
     sendUDPRaw(sendBuffer, BLOCK_SIZE, targetIP);
     // TODO change to be meaningful, i.e., error message
     return EXIT_SUCCESS;
@@ -133,13 +134,11 @@ int writeMem(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_mema
  */
 int freeMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
     //uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);    
-
     //uint64_t *pointer = &ipv6Pointer->paddr;
     //print_debug("Content stored at %p has been freed!", (void*)pointer);
-    
     free((void *) *&ipv6Pointer->paddr);
     //munmap((void *) pointer, BLOCK_SIZE);
-    memcpy(sendBuffer, "ACK", sizeof("ACK"));
+    memcpy(sendBuffer, "ACK", 3);
     sendUDPRaw(sendBuffer, BLOCK_SIZE, targetIP);
     return EXIT_SUCCESS;
 }

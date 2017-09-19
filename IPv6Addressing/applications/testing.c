@@ -136,7 +136,7 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
         nextPointer = nextPointer->Pointer;
         nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
         // Generate a random IPv6 address out of a set of available hosts
-        struct in6_addr * ipv6Pointer = gen_rdm_IPv6Target();
+        struct in6_addr *ipv6Pointer = gen_rdm_IPv6Target();
         memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
         uint64_t start = getns(); 
         nextPointer->AddrString = allocateRemoteMem(targetIP);

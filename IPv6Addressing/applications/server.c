@@ -9,12 +9,11 @@
  * Request handler for socket sock_fd
  * TODO: get message format
  */
-void handleClientRequests(char * receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
-    char * splitResponse;
+void handleClientRequests(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
+    char *splitResponse;
     // Switch on the client command
     if (memcmp(receiveBuffer, ALLOC_CMD,2) == 0) {
         print_debug("******ALLOCATE******");
-        splitResponse = receiveBuffer+2;
         allocateMem(targetIP);
     } else if (memcmp(receiveBuffer, WRITE_CMD,2) == 0) {
         splitResponse = receiveBuffer+2;
@@ -24,12 +23,10 @@ void handleClientRequests(char * receiveBuffer, struct sockaddr_in6 *targetIP, s
         }
         writeMem(splitResponse, targetIP, remoteAddr);
     } else if (memcmp(receiveBuffer, GET_CMD,2) == 0) {
-        splitResponse = receiveBuffer+2;
         print_debug("******GET DATA: ");
         // printNBytes((char *) ipv6Pointer,IPV6_SIZE);
         getMem(targetIP, remoteAddr);
     } else if (memcmp(receiveBuffer, FREE_CMD,2) == 0) {
-        splitResponse = receiveBuffer+2;
         print_debug("******FREE DATA: ");
         if (DEBUG) {
             printNBytes((char *) remoteAddr,IPV6_SIZE);
@@ -56,13 +53,14 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in6 *targetIP = init_rcv_socket(&myConf);
     init_send_socket(&myConf);
    // Start waiting for connections
-    struct in6_memaddr remoteAddr;
+    struct in6_memaddr *remoteAddr = malloc(sizeof(struct in6_memaddr));
     char receiveBuffer[BLOCK_SIZE];
     while (1) {
         //TODO: Error handling (numbytes = -1)
-        receiveUDPIPv6Raw(receiveBuffer, BLOCK_SIZE, targetIP, &remoteAddr);
-        handleClientRequests(receiveBuffer, targetIP, &remoteAddr);
+        receiveUDPIPv6Raw(receiveBuffer, BLOCK_SIZE, targetIP, remoteAddr);
+        handleClientRequests(receiveBuffer, targetIP, remoteAddr);
     }
+    free (remoteAddr);
     close_sockets();
     return 0;
 }

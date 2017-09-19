@@ -239,17 +239,13 @@ void init_send_socket_old(struct config *configstruct) {
 //  @return 0 on success, -1 on failure
 static int send_mmap(unsigned const char *pkt, int pktlen) {
     static int ring_offset = 0;
-
-    struct tpacket_hdr *header;
-    char *off;
-
     // fetch a frame
     // like in the PACKET_RX_RING case, we define frames to be a page long,
     // including their header. This explains the use of getpagesize().
-    header = (struct tpacket_hdr * )((char *) ring + (ring_offset * FRAMESIZE));
+    struct tpacket_hdr *header = (struct tpacket_hdr * )((char *) ring + (ring_offset * FRAMESIZE));
     //assert((((unsigned long) header) & (FRAMESIZE - 1)) == 0);
     // fill data
-    off = ((char *) header) + (TPACKET_HDRLEN - sizeof(struct sockaddr_ll));
+    char *off = ((char *) header) + (TPACKET_HDRLEN - sizeof(struct sockaddr_ll));
     memcpy(off, pkt, pktlen);
     // fill header
     header->tp_len = pktlen;
@@ -259,7 +255,6 @@ static int send_mmap(unsigned const char *pkt, int pktlen) {
     ring_offset = (ring_offset + 1) & (CONF_RING_FRAMES - 1);
 
     // notify kernel
-
     if (sendto(sd_send, NULL, 0, MSG_DONTWAIT, (struct sockaddr *)NULL, sizeof(struct sockaddr_ll)) < 0)
         RETURN_ERROR(-1, "sendto failed!\n");
   return 0;
@@ -299,12 +294,12 @@ void *txring_send(void *arg)
     return (void*) ec_send;
 }
 
-int cooked_send(struct sockaddr_in6 *dst_addr, int dst_port, char *data, int datalen) {
+int cooked_send(struct in6_addr *dst_addr, int dst_port, char *data, int datalen) {
 
     struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN);
     struct udphdr *udphdr = (struct udphdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN);
     //Set destination IP
-    iphdr->ip6_dst = dst_addr->sin6_addr;
+    iphdr->ip6_dst = *dst_addr;
     // Payload length (16 bits): UDP header + UDP data
     iphdr->ip6_plen = htons (UDP_HDRLEN + datalen);
     // UDP header

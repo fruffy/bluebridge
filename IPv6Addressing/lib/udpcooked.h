@@ -43,12 +43,12 @@
 
 #include "config.h"
 
-extern int cooked_send(struct sockaddr_in6 *dst_addr, int dst_port, char* data, int datalen);
+extern int cooked_send(struct in6_addr *dst_addr, int dst_port, char* data, int datalen);
 extern void init_send_socket(struct config *configstruct);
 extern int get_send_socket();
 extern int close_send_socket();
 
-extern int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *remoteAddr);
+extern int cooked_receive(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *remoteAddr);
 extern struct sockaddr_in6 *init_rcv_socket(struct config *configstruct);
 extern struct sockaddr_in6 *init_rcv_socket_old(struct config *configstruct);
 extern int get_rcv_socket();

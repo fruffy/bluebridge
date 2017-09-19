@@ -26,7 +26,7 @@ int sendUDPRaw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP
     //char dst_ip[INET6_ADDRSTRLEN];
     //inet_ntop(AF_INET6,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
     //print_debug("Sending to %s:%d", dst_ip,dst_port);
-    cooked_send(targetIP, targetIP->sin6_port, sendBuffer, msgBlockSize);
+    cooked_send(&targetIP->sin6_addr, targetIP->sin6_port, sendBuffer, msgBlockSize);
     memset(sendBuffer, 0, msgBlockSize);
     return EXIT_SUCCESS;
 }
@@ -38,13 +38,12 @@ int sendUDPRaw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP
 // TODO: Evaluate what variables and structures are actually needed here
 // TODO: Error handling
 int sendUDPIPv6Raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr remoteAddr) {
-    
-    memcpy(&(targetIP->sin6_addr), &remoteAddr, IPV6_SIZE);
+    //memcpy(&(targetIP->sin6_addr), &remoteAddr, IPV6_SIZE);
     //char dst_ip[INET6_ADDRSTRLEN];
     //inet_ntop(AF_INET6,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
     //print_debug("Sending to %s:%d", dst_ip,dst_port);
     uint64_t start = getns(); 
-    cooked_send(targetIP, targetIP->sin6_port, sendBuffer, msgBlockSize);
+    cooked_send((struct in6_addr *) &remoteAddr, targetIP->sin6_port, sendBuffer, msgBlockSize);
     sendLat += getns() - start;
     send_calls++;
     memset(sendBuffer, 0, msgBlockSize);
@@ -68,7 +67,7 @@ int receiveUDPIPv6Raw(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6
 }
 
 void printSendLat() {
-    printf("Average Sending Time %lu us\n", (sendLat/1000)/send_calls );
-    printf("Average Receive Time %lu us\n", (rcvLat/1000)/rcv_calls );
+    printf("Average Sending Time %lu ns\n", (sendLat)/send_calls );
+    printf("Average Receive Time %lu ns\n", (rcvLat)/rcv_calls );
 
 }
