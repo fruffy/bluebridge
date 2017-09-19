@@ -12,9 +12,16 @@
 #define FREE_CMD        "04"
 #define GET_ADDR_CMD    "05"
 
+struct in6_memaddr {
+    uint32_t wildcard;
+    uint16_t subid;
+    uint16_t src;
+    uint64_t paddr;
+};
+
 int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP);
-int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr  ipv6Pointer);
-int receiveUDPIPv6Raw(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr * ipv6Pointer);
+int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr remoteAddr);
+int receiveUDPIPv6Raw(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
 
 extern struct sockaddr_in6 *init_rcv_socket();
 extern struct sockaddr_in6 *init_rcv_socket_old();

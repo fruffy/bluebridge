@@ -20,7 +20,7 @@ extern ssize_t pwrite (int __fd, const void *__buf, size_t __nbytes, __off_t __o
 
 struct rmem {
     struct sockaddr_in6 *targetIP;
-    struct in6_addr *memList;
+    struct in6_memaddr *memList;
     int block_size;
     int nblocks;
 };
@@ -39,7 +39,7 @@ void rmem_init_sockets(struct rmem *r) {
 }
 
 void fill_rmem(struct rmem *r) {
-    struct in6_addr *memList = malloc(sizeof(struct in6_addr) * r->nblocks);
+    struct in6_memaddr *memList = malloc(sizeof(struct in6_addr) * r->nblocks);
     for (int i = 0; i<r->nblocks; i++){
         // Generate a random IPv6 address out of a set of available hosts
         struct in6_addr *ipv6Pointer = gen_rdm_IPv6Target();

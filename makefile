@@ -4,8 +4,9 @@ MSG_DIR    := $(MAKE_DIR)/IPv6Addressing/
 
 
 CC = gcc
-CFLAGS += -c -Wextra -Wall -Wall -Wshadow -Wpointer-arith -Wcast-qual
+CFLAGS += -c -Wextra -Wall -Wall -Wshadow -Wpointer-arith -Wcast-qual 
 CFLAGS += -std=gnu11 -pedantic
+CFGLAS += -oFast # performance flags
 # CFLAGS += -Wstrict-prototypes -Wmissing-prototypes
 LDFLAGS := -lpcap -pthread -lm
 

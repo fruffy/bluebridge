@@ -48,7 +48,7 @@ extern void init_send_socket(struct config *configstruct);
 extern int get_send_socket();
 extern int close_send_socket();
 
-extern int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer);
+extern int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *remoteAddr);
 extern struct sockaddr_in6 *init_rcv_socket(struct config *configstruct);
 extern struct sockaddr_in6 *init_rcv_socket_old(struct config *configstruct);
 extern int get_rcv_socket();

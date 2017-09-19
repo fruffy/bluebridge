@@ -4,23 +4,12 @@
 #include <stdlib.h>           // free(), alloc, and calloc()
 #include <unistd.h>           // close()
 #include <string.h>           // strcpy, memset(), and memcpy()
-#include <netdb.h>            // struct addrinfo
-#include <sys/socket.h>       // needed for socket()
-#include <netinet/in.h>       // IPPROTO_UDP, INET6_ADDRSTRLEN
-#include <netinet/ip.h>       // IP_MAXPACKET (which is 65535)
 #include <netinet/udp.h>      // struct udphdr
-#include <sys/ioctl.h>        // macro ioctl is defined
-#include <bits/ioctls.h>      // defines values for argument "request" of ioctl.
 #include <net/if.h>           // struct ifreq
 #include <linux/if_ether.h>   // ETH_P_IP = 0x0800, ETH_P_IPV6 = 0x86DD
-#include <linux/if_packet.h>  // struct sockaddr_ll (see man 7 packet)
-#include <net/ethernet.h>
-#include <ifaddrs.h>
 #include <errno.h>            // errno, perror()
-#include <sys/mman.h>
-#include <sys/epoll.h>
-#include <signal.h>
-#include <poll.h>
+#include <sys/mman.h>         // mmap()
+#include <sys/epoll.h>        // epoll_wait(), epoll_event, epoll_rcv()
 
 #include "udpcooked.h"
 #include "utils.h"
@@ -229,11 +218,10 @@ struct sockaddr_ll * get_sockaddr_ll(struct tpacket_hdr * tpacket_hdr) {
 void next_packet(struct ep_interface *interface) {
     interface->tpacket_i = (interface->tpacket_i + 1) % interface->tpacket_req.tp_frame_nr;
 }
+
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
-
-int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer) {
+int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *remoteAddr) {
     while (1) {
-
         struct epoll_event events[1024];
         //printf("Waiting...\n");
         int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 0);
@@ -271,9 +259,9 @@ int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targe
                 if (udphdr->dest == interface_ep.my_port) {
                     //printf("Got %s\n", payload );
                     memcpy(receiveBuffer,payload, msgBlockSize);
-                    if (ipv6Pointer != NULL)
-                        memcpy(ipv6Pointer->s6_addr,&iphdr->ip6_dst,IPV6_SIZE);
-                    memcpy(targetIP->sin6_addr.s6_addr,&iphdr->ip6_src,IPV6_SIZE);
+                    if (remoteAddr != NULL)
+                        memcpy(remoteAddr->s6_addr, &iphdr->ip6_dst, IPV6_SIZE);
+                    memcpy(targetIP->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
                     targetIP->sin6_port = udphdr->source;
                     memset(payload, 0, msgBlockSize);
                     tpacket_hdr->tp_status = TP_STATUS_KERNEL;

@@ -22,12 +22,11 @@ uint64_t rcv_calls = 0;
  * Sends message to specified socket
  * RAW version, we craft our own packet.
  */
-int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP) {
-    int dst_port = ntohs(targetIP->sin6_port);
+int sendUDPRaw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP) {
     //char dst_ip[INET6_ADDRSTRLEN];
     //inet_ntop(AF_INET6,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
     //print_debug("Sending to %s:%d", dst_ip,dst_port);
-    cooked_send(targetIP, dst_port, sendBuffer, msgBlockSize);
+    cooked_send(targetIP, targetIP->sin6_port, sendBuffer, msgBlockSize);
     memset(sendBuffer, 0, msgBlockSize);
     return EXIT_SUCCESS;
 }
@@ -38,15 +37,14 @@ int sendUDPRaw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetI
  */
 // TODO: Evaluate what variables and structures are actually needed here
 // TODO: Error handling
-int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr remotePointer) {
+int sendUDPIPv6Raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr remoteAddr) {
     
-    memcpy(&(targetIP->sin6_addr), &remotePointer, sizeof(remotePointer));
+    memcpy(&(targetIP->sin6_addr), &remoteAddr, IPV6_SIZE);
     //char dst_ip[INET6_ADDRSTRLEN];
-    int dst_port = ntohs(targetIP->sin6_port);
     //inet_ntop(AF_INET6,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
     //print_debug("Sending to %s:%d", dst_ip,dst_port);
     uint64_t start = getns(); 
-    cooked_send(targetIP, dst_port, sendBuffer, msgBlockSize);
+    cooked_send(targetIP, targetIP->sin6_port, sendBuffer, msgBlockSize);
     sendLat += getns() - start;
     send_calls++;
     memset(sendBuffer, 0, msgBlockSize);
@@ -59,9 +57,9 @@ int sendUDPIPv6Raw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *tar
  */
 // TODO: Evaluate what variables and structures are actually needed here
 // TODO: Error handling
-int receiveUDPIPv6Raw(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer) {
+int receiveUDPIPv6Raw(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     uint64_t start = getns(); 
-    int numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, ipv6Pointer);
+    int numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr);
 //     int numbytes = cooked_receive(receiveBuffer, msgBlockSize, targetIP, ipv6Pointer);
 
     rcvLat += getns() - start;

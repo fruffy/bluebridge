@@ -9,7 +9,7 @@
  * Request handler for socket sock_fd
  * TODO: get message format
  */
-void handleClientRequests(char * receiveBuffer, struct in6_addr * ipv6Pointer, struct sockaddr_in6 *targetIP) {
+void handleClientRequests(char * receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     char * splitResponse;
     // Switch on the client command
     if (memcmp(receiveBuffer, ALLOC_CMD,2) == 0) {
@@ -20,21 +20,21 @@ void handleClientRequests(char * receiveBuffer, struct in6_addr * ipv6Pointer, s
         splitResponse = receiveBuffer+2;
         print_debug("******WRITE DATA: ");
         if (DEBUG) {
-            printNBytes((char *) ipv6Pointer, IPV6_SIZE);
+            printNBytes((char *) remoteAddr, IPV6_SIZE);
         }
-        writeMem(splitResponse, targetIP, ipv6Pointer);
+        writeMem(splitResponse, targetIP, remoteAddr);
     } else if (memcmp(receiveBuffer, GET_CMD,2) == 0) {
         splitResponse = receiveBuffer+2;
         print_debug("******GET DATA: ");
         // printNBytes((char *) ipv6Pointer,IPV6_SIZE);
-        getMem(targetIP, ipv6Pointer);
+        getMem(targetIP, remoteAddr);
     } else if (memcmp(receiveBuffer, FREE_CMD,2) == 0) {
         splitResponse = receiveBuffer+2;
         print_debug("******FREE DATA: ");
         if (DEBUG) {
-            printNBytes((char *) ipv6Pointer,IPV6_SIZE);
+            printNBytes((char *) remoteAddr,IPV6_SIZE);
         }
-        freeMem(targetIP, ipv6Pointer);
+        freeMem(targetIP, remoteAddr);
     } else {
         printf("Cannot match command!\n");
         if (sendUDPRaw("Hello, world!", 13, targetIP) == -1) {
@@ -53,15 +53,15 @@ int main(int argc, char *argv[]) {
     struct config myConf = configure_bluebridge(argv[1], 1);
 
 //    struct sockaddr_in6 *temp = init_rcv_socket_old(argv[1]);
-    struct sockaddr_in6 *temp = init_rcv_socket(&myConf);
+    struct sockaddr_in6 *targetIP = init_rcv_socket(&myConf);
     init_send_socket(&myConf);
    // Start waiting for connections
-    struct in6_addr ipv6Pointer;
+    struct in6_memaddr remoteAddr;
     char receiveBuffer[BLOCK_SIZE];
     while (1) {
         //TODO: Error handling (numbytes = -1)
-        receiveUDPIPv6Raw(receiveBuffer, BLOCK_SIZE, temp, &ipv6Pointer);
-        handleClientRequests(receiveBuffer, &ipv6Pointer, temp);
+        receiveUDPIPv6Raw(receiveBuffer, BLOCK_SIZE, targetIP, &remoteAddr);
+        handleClientRequests(receiveBuffer, targetIP, &remoteAddr);
     }
     close_sockets();
     return 0;

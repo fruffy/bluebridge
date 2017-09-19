@@ -39,7 +39,7 @@ const int NUM_ITERATIONS = 10000;
 //sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo
 //ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dest=0:0:01ff:0:ffff:ffff:0:0,actions=output:2
 struct LinkedPointer {
-    struct in6_addr AddrString;
+    struct in6_memaddr AddrString;
     struct LinkedPointer * Pointer;
 };
 
@@ -123,8 +123,8 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
     memset(free_latency, 0, sizeof(uint64_t) * NUM_ITERATIONS);
     int i;
     // Initialize remotePointers array
-    struct LinkedPointer * rootPointer = (struct LinkedPointer *) malloc( sizeof(struct LinkedPointer));
-    struct LinkedPointer * nextPointer = rootPointer;
+    struct LinkedPointer *rootPointer = (struct LinkedPointer *) malloc( sizeof(struct LinkedPointer));
+    struct LinkedPointer *nextPointer = rootPointer;
     //init the root element
     nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
     // Generate a random IPv6 address out of a set of available hosts
@@ -151,7 +151,7 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
     while(nextPointer != NULL)  {
 
         print_debug("Iteration %d", i);
-        struct in6_addr remoteMemory = nextPointer->AddrString;
+        struct in6_memaddr remoteMemory = nextPointer->AddrString;
         //print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
         print_debug("Creating payload");
         char *payload= malloc(50);
@@ -161,7 +161,7 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
         writeRemoteMem(targetIP, payload, &remoteMemory);
         write_latency[i - 1] = getns() - wStart;
         uint64_t rStart = getns();
-        char * test = getRemoteMem(targetIP, &remoteMemory);
+        char *test = getRemoteMem(targetIP, &remoteMemory);
         read_latency[i - 1] = getns() - rStart;
 
         print_debug("Results of memory store: %.50s", test);
@@ -193,195 +193,6 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
 struct PointerMap {
     struct in6_addr Pointer;
 };
-
-
-/*
- * Interactive structure for debugging purposes
- */
-void interactiveMode(struct sockaddr_in6 *targetIP) {
-    long unsigned int len = 200;
-    char input[len];
-    char * localData;
-    int count = 0;
-    int i;
-    struct in6_addr remotePointers[100];
-    char * lazyZero = calloc(IPV6_SIZE, sizeof(char));
-    char s[INET6_ADDRSTRLEN];
-    
-    // Initialize remotePointers array
-    for (i = 0; i < 100; i++) {
-        memset(remotePointers[i].s6_addr,0,IPV6_SIZE);
-    }
-    
-    int active = 1;
-    while (active) {
-        srand(time(NULL));
-        memset(input, 0, len);
-        getLine("Please specify if you would like to (L)ist, (A)llocate, (F)ree, (W)rite, or (R)equest data.\nPress Q to quit the program.\n", input, sizeof(input));
-        if (strcmp("A", input) == 0) {
-            memset(input, 0, len);
-            getLine("Specify a number of address or press enter for one.\n", input, sizeof(input));
-
-            if (strcmp("", input) == 0) {
-                printf("Calling allocateRemoteMem\n");              
-                struct in6_addr remoteMemory = allocateRemoteMem(targetIP);
-                inet_ntop(targetIP->sin6_family,(struct sockaddr *) &remoteMemory.s6_addr, s, sizeof s);
-                printf("Got this pointer from call%s\n", s);
-                memcpy(&remotePointers[count++], &remoteMemory, sizeof(remoteMemory));
-            } else {
-                int num = atoi(input);
-                printf("Received %d as input\n", num);
-                int j; 
-                for (j = 0; j < num; j++) {
-                    printf("Calling allocateRemoteMem\n");
-                    struct in6_addr remoteMemory = allocateRemoteMem(targetIP);                    
-                    inet_ntop(targetIP->sin6_family,(struct sockaddr *) &remoteMemory.s6_addr, s, sizeof s);
-                    printf("Got this pointer from call%s\n", s);
-                    printf("Creating pointer to remote memory address\n");
-                    memcpy(&remotePointers[count++], &remoteMemory, sizeof(remoteMemory));
-                }
-            }
-        } else if (strcmp("L", input) == 0){
-            printf("Remote Address Pointer\n");
-            for (i = 0; i < 100; i++){
-                if (memcmp(&remotePointers[i].s6_addr, lazyZero, IPV6_SIZE) != 0) {
-                    inet_ntop(targetIP->sin6_family,(struct sockaddr *) &remotePointers[i].s6_addr, s, sizeof s);
-                    printf("%s\n", s);
-                }
-            }
-        } else if (strcmp("R", input) == 0) {
-            memset(input, 0, len);
-            getLine("Enter C to read a custom memory address. A to read all pointers.\n", input, sizeof(input));
-
-            if (strcmp("A", input) == 0) {
-                for (i = 0; i < 100; i++) {
-                    if (memcmp(&remotePointers[i].s6_addr, lazyZero, IPV6_SIZE) != 0) {
-                        inet_ntop(targetIP->sin6_family,(struct sockaddr *) &remotePointers[i].s6_addr, s, sizeof s);
-                        printf("Using pointer %s to read\n", s);
-                        localData = getRemoteMem(targetIP, &remotePointers[i]);
-                        printf("Retrieved Data (first 80 bytes): %.*s\n", 80, localData);
-                    }
-                }
-            } else if (strcmp("C", input) == 0) {
-                memset(input, 0, len);
-                getLine("Please specify the target pointer:\n", input, sizeof(input));
-                struct in6_addr pointer;
-                inet_pton(AF_INET6, input, &pointer);
-                inet_ntop(targetIP->sin6_family,(struct sockaddr *) &pointer.s6_addr, s, sizeof s);
-                printf("Reading from this pointer %s\n", s);
-                localData = getRemoteMem(targetIP, &pointer);
-                printf(KCYN "Retrieved Data (first 80 bytes):\n");
-                printf("****************************************\n");
-                printf("\t%.*s\t\n",80, localData);
-                printf("****************************************\n");
-                printf(RESET);
-            }
-        } else if (strcmp("W", input) == 0) {
-            memset(input, 0, len);
-            getLine("Enter C to write to a custom memory address. A to write to all pointers.\n", input, sizeof(input));
-
-            if (strcmp("A", input) == 0) {
-                for (i = 0; i < 100; i++) {
-                    if (memcmp(&remotePointers[i].s6_addr, lazyZero, IPV6_SIZE) != 0) {
-                        inet_ntop(targetIP->sin6_family,(struct sockaddr *) &remotePointers[i].s6_addr, s, sizeof s);                  
-                        printf("Writing to pointer %s\n", s);
-                        memset(input, 0, len);
-                        getLine("Please enter your data:\n", input, sizeof(input));
-                        if (strcmp("", input) == 0) {
-                            printf("Writing random bytes\n");
-                            unsigned char * payload = gen_rdm_bytestream(BLOCK_SIZE);
-                            writeRemoteMem(targetIP, (char*) payload, &remotePointers[i]);
-                        } else {
-                            printf(KMAG "Writing:\n");
-                            printf("****************************************\n");
-                            printf("\t%.*s\t\n",80, input);
-                            printf("****************************************\n");
-                            printf(RESET);
-                            writeRemoteMem(targetIP, input, &remotePointers[i]);   
-                        }
-                    }
-                }
-            } else if (strcmp("C", input) == 0) {
-                memset(input, 0, len);
-                getLine("Please specify the target pointer:\n", input, sizeof(input));
-                struct in6_addr pointer;
-                inet_pton(AF_INET6, input, &pointer);
-                inet_ntop(targetIP->sin6_family,(struct sockaddr *) pointer.s6_addr, s, sizeof s);
-                printf("Writing to pointer %s\n", s);
-                memset(input, 0, len);
-                getLine("Please enter your data:\n", input, sizeof(input));
-                if (strcmp("", input) == 0) {
-                    printf("Writing random bytes\n");
-                    unsigned char * payload = gen_rdm_bytestream(BLOCK_SIZE);
-                    writeRemoteMem(targetIP, (char*) payload, &remotePointers[i]);
-                } else {
-                    printf("Writing: %s\n", input);
-                    writeRemoteMem(targetIP, input, &remotePointers[i]);   
-                }
-            }
-        } else if (strcmp("M", input) == 0) {
-            memset(input, 0, len);
-            getLine("Enter C to free a custom memory address. A to migrate all pointers.\n", input, sizeof(input));
-            
-            if (strcmp("A", input) == 0) {
-                for (i = 0; i < 100; i++) {
-                    if (memcmp(&remotePointers[i].s6_addr, lazyZero, IPV6_SIZE) != 0) {
-                        inet_ntop(targetIP->sin6_family,(struct sockaddr *) &remotePointers[i].s6_addr, s, sizeof s);                  
-                        memset(input, 0, len);
-                        printf("Migrating pointer %s\n", s);
-                        getLine("Please enter your migration machine:\n", input, sizeof(input));
-                        printf("Migrating\n");
-                        migrateRemoteMem(targetIP, &remotePointers[i], atoi(input));
-
-                    }
-                }
-            } else if (strcmp("C", input) == 0) {
-                memset(input, 0, len);
-                getLine("Please specify the target pointer:\n", input, sizeof(input));
-                struct in6_addr pointer;
-                inet_pton(AF_INET6, input, &pointer);
-                inet_ntop(targetIP->sin6_family,(struct sockaddr *) pointer.s6_addr, s, sizeof s);
-                printf("Migrating pointer %s\n", s);
-                memset(input, 0, len);
-                getLine("Please enter your migration machine:\n", input, sizeof(input));
-                migrateRemoteMem(targetIP, &pointer, atoi(input));
-
-            }
-        } else if (strcmp("F", input) == 0) {
-            memset(input, 0, len);
-            getLine("Enter C to free a custom memory address. A to free all pointers.\n", input, sizeof(input));
-            
-            if (strcmp("A", input) == 0) {
-                for (i = 0; i < 100; i++) {
-                    if (memcmp(&remotePointers[i].s6_addr, lazyZero, IPV6_SIZE) != 0) {
-                        inet_ntop(targetIP->sin6_family,(struct sockaddr *) &remotePointers[i].s6_addr, s, sizeof s);
-                        printf("Freeing pointer %s\n", s);
-                        freeRemoteMem(targetIP, &remotePointers[i]);
-                        memset(remotePointers[i].s6_addr,0, IPV6_SIZE);
-                    }
-                }   
-            } else if (strcmp("C", input) == 0) {
-                memset(input, 0, len);
-                getLine("Please specify the target pointer:\n", input, sizeof(input));
-                struct in6_addr pointer;
-                inet_pton(AF_INET6, input, &pointer);
-                inet_ntop(targetIP->sin6_family,(struct sockaddr *) &pointer.s6_addr, s, sizeof s);
-                printf("Freeing pointer%s\n", s);               freeRemoteMem(targetIP, &pointer);
-                for (i = 0; i < 100; i++) {
-                    if (memcmp(&remotePointers[i].s6_addr, lazyZero, IPV6_SIZE) != 0) {
-                        memset(remotePointers[i].s6_addr,0, IPV6_SIZE);
-                    }
-                }
-            }
-        } else if (strcmp("Q", input) == 0) {
-            active = 0;
-            printf("Ende Gelaende\n");
-        } else {
-            printf("Try again.\n");
-        }
-    }
-    free(lazyZero);
-}
 
 /*
  * Main workhorse method. Parses arguments, setups connections
@@ -419,11 +230,8 @@ int main(int argc, char *argv[]) {
 
     struct timeval st, et;
     gettimeofday(&st,NULL);
-    if(isAutoMode) {
-        basicOperations(temp);
-    } else {
-        interactiveMode(temp);
-    }
+    basicOperations(temp);
+
     gettimeofday(&et,NULL);
     int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
     printf("Total Time: %d micro seconds\n",elapsed);

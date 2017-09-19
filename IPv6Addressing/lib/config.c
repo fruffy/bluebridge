@@ -4,23 +4,8 @@
 #include <stdlib.h>           // free(), alloc, and calloc()
 #include <unistd.h>           // close()
 #include <string.h>           // strcpy, memset(), and memcpy()
-#include <netdb.h>            // struct addrinfo
-#include <sys/socket.h>       // needed for socket()
-#include <netinet/in.h>       // IPPROTO_UDP, INET6_ADDRSTRLEN
-#include <netinet/ip.h>       // IP_MAXPACKET (which is 65535)
-#include <netinet/udp.h>      // struct udphdr
 #include <sys/ioctl.h>        // macro ioctl is defined
-#include <bits/ioctls.h>      // defines values for argument "request" of ioctl.
 #include <net/if.h>           // struct ifreq
-#include <linux/if_ether.h>   // ETH_P_IP = 0x0800, ETH_P_IPV6 = 0x86DD
-#include <linux/if_packet.h>  // struct sockaddr_ll (see man 7 packet)
-#include <net/ethernet.h>
-#include <ifaddrs.h>
-#include <errno.h>            // errno, perror()
-#include <sys/mman.h>
-#include <sys/epoll.h>
-#include <signal.h>
-#include <poll.h>
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
 
 #include "config.h"
@@ -66,7 +51,7 @@ int set_interface_ip(struct config *configstruct) {
     strncpy(ifr.ifr_name, configstruct->interface, IFNAMSIZ);
     ifr.ifr_flags |= (IFF_UP | IFF_RUNNING);
     if(ioctl(fd, SIOCSIFFLAGS, &ifr) != 0) {
-        perror("Failed to configure the interface ");
+        perror("SIOCSIFFLAGS");
         return EXIT_FAILURE;
     }
     ifr.ifr_mtu = 9000;

@@ -1,12 +1,12 @@
 #define _GNU_SOURCE
 
+#include <stdio.h>            // printf() and sprintf()
+#include <stdlib.h>           // free(), malloc, and calloc()
+#include <string.h>           // strcpy, memset(), and memcpy()
+#include <arpa/inet.h>        // inet_pton() and inet_ntop()
+
 #include "utils.h"
 
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <arpa/inet.h>
 /*
  * Gets the line from the command prompt
  * http://stackoverflow.com/questions/4023895/how-to-read-string-entered-by-user-in-c
