@@ -27,7 +27,7 @@
 // Function prototypes
 uint16_t checksum (uint16_t *, int);
 uint16_t udp6_checksum (struct ip6_hdr *, struct udphdr *, uint8_t *, int);
-
+void *txring_send(void *arg);
 
 struct packetconfig {
     struct ip6_hdr iphdr;
@@ -192,15 +192,13 @@ int close_send_socket() {
 }
 
 void init_send_socket(struct config *configstruct) {
-
     gen_packet_info(configstruct);
     init_packetsock();
     bind(sd_send, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device) );
-
 }
 
+// DEPRECATED
 void init_send_socket_old(struct config *configstruct) {
-
     //Socket operator variables
     const int on=1;
     gen_packet_info(configstruct);
@@ -263,8 +261,7 @@ static int send_mmap(unsigned const char *pkt, int pktlen) {
 /**
  * This task will call be called when content has been written to the mapped region
  */
-void *txring_send(void *arg)
-{
+void *txring_send(void *arg) {
     long ec_send;
     (void)arg;
     while (1) {
@@ -326,6 +323,7 @@ int cooked_send(struct in6_addr *dst_addr, int dst_port, char *data, int datalen
     return EXIT_SUCCESS;
 }
 
+// DEPRECATED
 // Computing the internet checksum (RFC 1071).
 // Note that the internet checksum does not preclude collisions.
 uint16_t checksum (uint16_t *addr, int len) {
@@ -361,6 +359,7 @@ uint16_t checksum (uint16_t *addr, int len) {
     return (answer);
 }
 
+// DEPRECATED
 // Build IPv6 UDP pseudo-header and call checksum function (Section 8.1 of RFC 2460).
 uint16_t udp6_checksum (struct ip6_hdr *iphdr, struct udphdr *udphdr, uint8_t *payload, int payloadlen) {
     char buf[IP_MAXPACKET];

@@ -60,7 +60,7 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
     struct in6_addr *newAddr = (struct in6_addr *) calloc(1, sizeof(struct in6_addr));
     // printf("Memcpy in getIPv6FromPointer\n");
     memcpy(newAddr->s6_addr+IPV6_SIZE-POINTER_SIZE, (char *)pointer, POINTER_SIZE);
-    memcpy(newAddr->s6_addr+4,&SUBNET_ID,1);
+    memcpy(newAddr->s6_addr+4,&SUBNET_ID,2);
     return *newAddr;
 }
 
@@ -72,12 +72,12 @@ struct in6_memaddr allocPointer; // Keep this struct global as we reaccess it ma
 int allocateMem(struct sockaddr_in6 *targetIP) {
     //TODO: Error handling if we runt out of memory, this will fail
     //do some work, which might goto error
-    void *allocated = aligned_alloc(BLOCK_SIZE, BLOCK_SIZE);
+    void *allocated = malloc(BLOCK_SIZE);
     //void *allocated = mmap(NULL, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
     //if (allocated == (void *) MAP_FAILED) perror("mmap"), exit(1);
     memset(&allocPointer, 0, IPV6_SIZE);
-    allocPointer.paddr = (uint64_t) allocated;
-    allocPointer.subid = SUBNET_ID;
+    memcpy(&allocPointer.paddr, &allocated, POINTER_SIZE);
+    memcpy(&allocPointer.subid, &SUBNET_ID, 2);
     //struct in6_addr ipv6Pointer; = getIPv6FromPointer((uint64_t) &allocated);
     memcpy(sendBuffer, "ACK", 4);
     memcpy(sendBuffer+4, &allocPointer, IPV6_SIZE); 
