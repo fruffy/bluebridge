@@ -53,8 +53,9 @@ struct packetconfig *gen_packet_info(struct config *configstruct) {
         exit (EXIT_FAILURE);
     }
     // Set source/destination MAC address to filler values.
-    uint8_t src_mac[6] = { 2 };
-    uint8_t dst_mac[6] = { 3 };
+    uint8_t src_mac[6];
+    memcpy(src_mac, packetinfo.device.sll_addr, 6); //{ 0xa0, 0x36, 0x9f, 0x45, 0xd8, 0x74 };
+    uint8_t dst_mac[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
     // Fill out sockaddr_ll.
     packetinfo.device.sll_family = AF_PACKET;
     memcpy (packetinfo.device.sll_addr, src_mac, 6 * sizeof (uint8_t));
@@ -191,14 +192,14 @@ int close_send_socket() {
     return 0;
 }
 
-void init_send_socket(struct config *configstruct) {
+void init_send_socket_old(struct config *configstruct) {
     gen_packet_info(configstruct);
     init_packetsock();
     bind(sd_send, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device) );
 }
 
 // DEPRECATED
-void init_send_socket_old(struct config *configstruct) {
+void init_send_socket(struct config *configstruct) {
     //Socket operator variables
     const int on=1;
     gen_packet_info(configstruct);
@@ -305,21 +306,21 @@ int cooked_send(struct in6_addr *dst_addr, int dst_port, char *data, int datalen
     udphdr->dest = dst_port;
     // Length of UDP datagram (16 bits): UDP header + UDP data
     udphdr->len = htons (UDP_HDRLEN + datalen);
-    udphdr->check = 0xFFAA;
+    //udphdr->check = 0xFFAA;
     // UDP checksum (16 bits)
-    //udphdr->check = udp6_checksum (iphdr, udphdr, (uint8_t *) data, datalen);
+    udphdr->check = udp6_checksum (iphdr, udphdr, (uint8_t *) data, datalen);
     // Copy our data
     //printf("Sending %s\n", data );
     memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, data, datalen * sizeof (uint8_t));
     // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
     int frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + datalen;
     // Send ethernet frame to socket.
-    //    if ((sendto (sd, packetinfo->ether_frame, frame_length, 0, (struct sockaddr *) &packetinfo->device, sizeof (packetinfo->device))) <= 0) {
-    //     perror ("sendto() failed");
-    //    exit (EXIT_FAILURE);
-    //}
+    if ((sendto (sd_send, packetinfo.ether_frame, frame_length, 0, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device))) <= 0) {
+        perror ("sendto() failed");
+        exit (EXIT_FAILURE);
+    }
     //write(sd_send,packetinfo.ether_frame, frame_length);
-    send_mmap(packetinfo.ether_frame, frame_length);
+    //send_mmap(packetinfo.ether_frame, frame_length);
     return EXIT_SUCCESS;
 }
 

@@ -34,11 +34,9 @@ int set_interface_ip(struct config *configstruct) {
     //memcpy(&addr->sin6_addr, &configstruct->src_addr, IPV6_SIZE);
     if(ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
         perror("SIOCGIFFLAGS");
-        return EXIT_FAILURE;
     }
     if (ioctl(fd, SIOGIFINDEX, &ifr) < 0) {
         perror("SIOGIFINDEX");
-        return EXIT_FAILURE;
     }
     memcpy(&ifr6.ifr6_addr, &configstruct->src_addr,
                sizeof(struct in6_addr));
@@ -46,13 +44,11 @@ int set_interface_ip(struct config *configstruct) {
     ifr6.ifr6_prefixlen = 64;
     if (ioctl(fd, SIOCSIFADDR, &ifr6) < 0) {
         perror("SIOCSIFADDR");
-        return EXIT_FAILURE;
     }
     strncpy(ifr.ifr_name, configstruct->interface, IFNAMSIZ);
     ifr.ifr_flags |= (IFF_UP | IFF_RUNNING);
     if(ioctl(fd, SIOCSIFFLAGS, &ifr) != 0) {
         perror("SIOCSIFFLAGS");
-        return EXIT_FAILURE;
     }
     ifr.ifr_mtu = 9000;
     if(ioctl(fd, SIOCSIFMTU, &ifr) < 0) {

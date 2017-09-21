@@ -17,7 +17,7 @@
 /// (unimportant) macro for loud failure
 #define RETURN_ERROR(lvl, msg) \
   do {                    \
-    fprintf(stderr, msg); \
+    perror(msg); \
     return lvl;            \
   } while(0);
 
