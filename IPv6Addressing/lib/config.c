@@ -32,6 +32,9 @@ int set_interface_ip(struct config *configstruct) {
     //struct sockaddr_in6* addr = (struct sockaddr_in6*) &ifr.ifr6_addr;
     ifr.ifr_addr.sa_family = AF_INET6;
     //memcpy(&addr->sin6_addr, &configstruct->src_addr, IPV6_SIZE);
+    if(ioctl(fd, SIOCGIFHWADDR, &ifr) < 0) {
+        perror("SIOCGIFHWADDR");
+    }
     if(ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
         perror("SIOCGIFFLAGS");
     }
@@ -53,7 +56,7 @@ int set_interface_ip(struct config *configstruct) {
     ifr.ifr_mtu = 9000;
     if(ioctl(fd, SIOCSIFMTU, &ifr) < 0) {
         perror("SIOCSIFMTU");
-    }
+    } 
     close(fd);
     return EXIT_SUCCESS;
 }
