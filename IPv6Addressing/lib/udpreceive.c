@@ -160,8 +160,10 @@ int init_socket() {
     sd_rcv = socket(AF_PACKET, SOCK_RAW|SOCK_NONBLOCK, htons(ETH_P_ALL));
 
     const int on = 1;
-    setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
+//    setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
     setsockopt(sd_rcv, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
+    setsockopt(sd_rcv, SOL_PACKET, SO_BUSY_POLL, &on, sizeof(on));
+
     if (-1 == sd_rcv) {
         perror("Could not set socket");
         return EXIT_FAILURE;

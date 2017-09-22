@@ -133,6 +133,7 @@ int init_packetsock_ring(){
 
     int val = TPACKET_V3;
     setsockopt(sd_send, SOL_PACKET, PACKET_HDRLEN, &val, sizeof(val));
+    setsockopt(sd_send, SOL_PACKET, SO_BUSY_POLL, &on, sizeof(on));
 
 
     // open ring
