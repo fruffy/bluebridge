@@ -40,7 +40,6 @@ static int sd_send;
 int epoll_fd;
 static struct packetconfig packetinfo;
 static char *ring;
-#include <sys/ioctl.h>        // macro ioctl is defined
 
 struct packetconfig *gen_packet_info(struct config *configstruct) {
 

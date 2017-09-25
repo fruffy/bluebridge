@@ -259,7 +259,6 @@ int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targe
                 //printf("Got message from %s:%d to %s:%d\n", s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
                 //printf("My port %d their port %d\n", interface_ep.my_port, udphdr->dest );
                 if (udphdr->dest == interface_ep.my_port) {
-                    //printf("Got %s\n", payload );
                     memcpy(receiveBuffer,payload, msgBlockSize);
                     if (remoteAddr != NULL)
                         memcpy(remoteAddr->s6_addr, &iphdr->ip6_dst, IPV6_SIZE);
