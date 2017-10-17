@@ -41,27 +41,33 @@ also increases the DC resource utilization.
 % might then run among several disaggregated racks, while a single-machine
 % application will reside in one rack.
 
-Disaggregation also challenges several assumptions behind datacenter software:
-as memory becomes rack-wide and shared between rack CPUs, the entire rack starts
-to resemble a ccNUMA system rather than a set of traditional distinct servers.
+Disaggregation also challenges several assumptions behind datacenter software
+design: as memory becomes rack-wide and shared between rack CPUs, the entire
+rack starts to resemble a ccNUMA system rather than a set of traditional
+distinct servers. This changes assumptions surrounding fate sharing boundaries
+and the role of the network.
 
 The idea of a globally shared address space is not new \todo{CITE STUFF}. A
 globally shared address space allows applications to scale across a cluster and
 perform computations on data without the need of partitioning. Yet, single
-global address space systems historically do not gain traction because of the
-difficulties associated with their failure models and poor performance.
+global address space systems historically do not gain traction due to the
+implications of transparent distribution: poor performance and difficult to
+understand failure models.
 
-ccNUMA also encounters these same issues caused by transparent distribution.
-Scalable single-host systems are often designed with each core acting as a
-``shared-nothing'' instance. Which means each core operates independently on
+ccNUMA machines also encounter these same issues unless applications are
+written explicitly for non-uniform access of memory. Scalable
+single-host systems are often designed with each core acting as a
+``shared-nothing'' instance. Essentially, each core operates independently on
 partitioned data and local structures. 
 
-As disaggregation is pushing racks to appear more like a single ccNUMA machine,
+As disaggregation pushes racks to appear more like a single ccNUMA machine and
+ccNUMA machines trend towards looking like distributed systems,
 the question arises: \emph{What would it take to allow us to treat a rack of
 disaggregated resources like a supercomputer with commodity components?} In
-particular, we plan on extending the \emph{BlueBridge} distributed memory
-system to support sharing, memory RAIDing, optimized paging with different cache
-eviction policies, and a programmable switch. 
+particular, we plan on extending the \texttt{BlueBridge} distributed memory
+system to support remote memory sharing, memory RAIDing, optimized paging with
+different cache eviction policies, and a programmable switch which acts as the
+MMU.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
