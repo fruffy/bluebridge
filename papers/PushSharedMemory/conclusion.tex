@@ -1,0 +1,15 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion}
+\label{sec:conclusion}
+% \ugh{ASSIGNED TO: Amanda and Fabian}\\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+We have described the full system design and proof of concept implementation for BlueBridge, a network managed memory system. We have shown the feasibility of our design in a proof of concept system, then evaluated that system. The speedups gained by our proof of concept indicate that our full system implementation should produce promising results. As this was a proof of concept implementation, we have left work to be completed at a later date.
+
+\textbf{Future Work.} One outstanding work item necessary to complete BlueBridge is the switch controller. We plan to implement a switch controller which handles most functionality attributed to a directory service, such as memory migration due to hot spots or failure, replication, etc. We plan to complete our data migration evaluation with this controller. If possible, we would like to also evaluate the failure recovery, replication, and any other features we get to implement. Next we plan on implementing concurrency control for the system to provide semantics around concurrent writes in this system. Lastly, we plan on implementing a library or API that an application can interface with to use BlueBridge.
+
+% \begin{itemize}
+%     \item Our own SDN controller to become the directory service
+%     \item Concurrency control $\rightarrow$ if a client ``checks out'' a page of memory and continues to read it while another client writes to that page of memory on the server, what happens?
+%     \item Fault tolerance $\rightarrow$ how can this be leveraged for improved fault tolerance... can it be?
+%     \item Full virtual memory system hooked into the kernel so the application does not need to know that it's accessing remote memory.
+% \end{itemize}

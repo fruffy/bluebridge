@@ -1,0 +1,101 @@
+\section{Proposal}
+
+In this section we propose experimental features of a disaggregated
+memory system, and extensions to an existing distributed shared memory
+system which will allow developers to write more expressive
+applications on top of it.
+
+
+\noindent{\textbf{Disaggregated memory striping}}
+
+In a disaggregated rack the memory allocated to a single application
+may be resident on separate machines. This begs the question, what are
+the operational semantics for a failure of part of a memory
+allocation? A variety of options are available; The traditional
+approach would see the application share the fate of its memory, and
+simply crash. In contrast the contents of the memory could be
+replicated, and in the face of a failure, a memory replica is
+transitioned to transparently. We propose to use an approach already
+common in disks, mainly the RAID architecture. 
+
+Our proposal is to implement main memory raiding at the page level.
+When an application page fault occurs, the page fault is intercepted
+by a raiding manager which implements a given raid algorithm, either
+(0, 1 or 6), and stripes the evicted page across memory blades. To
+retrieve pages, the page manager requests the striped page from memory
+blades and checks for the pages correctness. In the case of a failure,
+our proposed system has the same semantics as traditional raid. If a
+page is missing, it is reconstructed using parity raid 2-6. Or in the
+case of raid 0 the data is lost. In the face of truly lost data (raid
+0 or 1) an entire application should share the fate of the memory
+blade.
+
+Using main memory raid has multiple attractive properties. As already
+noted raid allows for correctness in the face of partial failures. In
+addition to failures, bit level memory correctness is also checked
+which allows for optimization's to be made at the network later. For
+example remote pages need not use TCP checksums. Finally this
+architecture has the advantage that memory bandwidth is multiplied
+almost linearly by the number of raided memory blades.
+
+To evaluate our disaggregated memory raided system we will implement
+popular graph processing algorithms (label propagation, and pagerank)
+and measure their performance relative to benchmarks reached by other
+frameworks, such as Naiad, and GraphX. Additionally we will measure
+the rate of recovery of applications in the face of failures. 
+
+
+\noindent{\textbf{Multi-Threaded Applications}}
+
+To date our distributed memory simulator only has support for single
+threaded applications, which share no resources. In order to
+investigate the appropriate OS semantics for applications written on a
+disaggregated architecture memory sharing and multi-threading are
+necessary. Adding these additional features requires re-engineering a
+portion of the Blue Bridge distributed shared memory system.
+
+In the current architecture a single thread is allocated a local
+scratch space, when the scratch space is filled, and an application
+page faults, a request for distributed memory is made. The request has
+no information about the thread which issued the request or the scope
+of its distributed memory access. We propose an extension to the
+distributed memory allocation protocol, in which requests are
+identified by their memory offset, and the thread which issued the
+request. Additionally the system will require extensions to the memory
+manager so that multiple local scratch spaces can be maintained
+concurrently.
+
+The addition of multi threaded applications raises the problem of
+isolation. Currently BlueBridge gives a single thread unlimited access
+to a 128 bit address space. In order to implement isolation, a manager
+must maintain an offset on which a given thread can operate on all
+memory blades. In essence this extension is simplified virtual memory
+for a distributed system.
+
+With the addition of isolation comes the need to facilitate sharing.
+We propose the use of named buffers at known locations to allow
+sharing between isolated threads. Additionally two threads will have
+the ability to operate in the same address space for efficient
+computation.
+
+\noindent{\textbf{DPDK}}
+-Real applications will require real benchmarks
+-Faster is always better
+-We can get actual wins using DSM
+
+\noindent{\textbf{Switch MMU}}
+
+ Access to distributed memory is currently administered by a
+user space process collocated with an executing application. This
+application is trapped into when page faults occur, and it issues
+requests for remote memory. While practical, this approach does not
+take advantage of key aspects of disaggregated architecture at the
+scale of a rack.
+
+In a pure disaggregated architecture, CPU’s do not maintain a cache of
+data, all memory requests are remote. This property causes all memory
+access requests to pass through a TOR. This routing property allows
+for memory management to be centralized on a TOR.
+
+-This part is weak.
+
