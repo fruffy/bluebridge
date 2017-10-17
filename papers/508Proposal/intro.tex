@@ -26,23 +26,42 @@ also increases the DC resource utilization.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% Research challenges %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-There are two broad types of disaggregation: partial and full.
-In partial disaggregation compute resources have a small amount of
-local memory,
-memory and storage resources have CPUs,
-and a NIC is attached to each resource. 
-In full disaggregation each resource is independent and is directly
-connected to the rack interconnect. Current research focuses on the practicality
-of partial disaggregation~\cite{IntelRSA,Gao2016,Lim2009,Lim2012}.
+% There are two broad types of disaggregation: partial and full.
+% In partial disaggregation compute resources have a small amount of local memory,
+% memory and storage resources have CPUs, and a NIC is attached to each resource. 
+% In full disaggregation each resource is independent and is directly
+% connected to the rack interconnect. Current research focuses on the practicality
+% of partial disaggregation~\cite{IntelRSA,Gao2016,Lim2009,Lim2012}.
 
-In this paper, we discuss partial disaggregation at rack-scale:
-resources can only connect to other resources in the same rack (e.g., a CPU in
-rack1 cannot connect to a DIMM in rack2).
-The disaggregated rack is presented to the
-client as a single machine through a virtualization layer. Applications can
-request a number of VMs to allocate among the racks.
-Distributed applications might then run among several disaggregated racks, while
-a single-machine application will reside in one rack.
+% In this paper, we discuss partial disaggregation at rack-scale:
+% resources can only connect to other resources in the same rack (e.g., a CPU in
+% rack1 cannot connect to a DIMM in rack2). The disaggregated rack is presented to
+% the client as a single machine through a virtualization layer. Applications can
+% request a number of VMs to allocate among the racks. Distributed applications
+% might then run among several disaggregated racks, while a single-machine
+% application will reside in one rack.
+
+Disaggregation also challenges several assumptions behind datacenter software:
+as memory becomes rack-wide and shared between rack CPUs, the entire rack starts
+to resemble a ccNUMA system rather than a set of traditional distinct servers.
+
+The idea of a globally shared address space is not new \todo{CITE STUFF}. A
+globally shared address space allows applications to scale across a cluster and
+perform computations on data without the need of partitioning. Yet, single
+global address space systems historically do not gain traction because of the
+difficulties associated with their failure models and poor performance.
+
+ccNUMA also encounters these same issues caused by transparent distribution.
+Scalable single-host systems are often designed with each core acting as a
+``shared-nothing'' instance. Which means each core operates independently on
+partitioned data and local structures. 
+
+As disaggregation is pushing racks to appear more like a single ccNUMA machine,
+the question arises: \emph{What would it take to allow us to treat a rack of
+disaggregated resources like a supercomputer with commodity components?} In
+particular, we plan on extending the \emph{BlueBridge} distributed memory
+system to support sharing, memory RAIDing, optimized paging with different cache
+eviction policies, and a programmable switch. 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
