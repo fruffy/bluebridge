@@ -1,0 +1,9 @@
+*.bak
+paper.out
+paper.aux
+paper.bbl
+paper.blg
+paper.log
+paper.pdf
+*.swp
+
