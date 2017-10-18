@@ -92,14 +92,32 @@ for this implementation, LRU can be implemented efficiently using
 splay trees.
 
 \noindent{\textbf{Switch MMU:}} Access to distributed memory is
-currently administered by a user space process collocated with an
-executing application. This application is trapped into when page
-faults occur, and it issues requests for remote memory. While
-simple, this approach does not take advantage of key aspects of
-disaggregated architecture at the scale of a rack.
+currently administered by a user space process running on another layer of
+virtual memory. In case of a page fault on the allocated buffer, the application
+traps into the handler, which performs address translation and issues requests
+for remote memory. While simple, this approach does not take advantage of the
+IP-addressing schema.
 
-In a pure disaggregated architecture, CPU’s do not maintain a cache of
-data, all memory requests are remote. This property causes all memory
-access requests to pass through a TOR. This routing property allows
-for memory management to be centralized on a TOR and potentially give
-a significant performance boost.
+In a rack-scale design, all memory requests pass the central ToR-switch to reach
+any remote node. Since we are encoding memory access directly in packet headers,
+we can leverage the switch as flexible enforcement agent. Using the programmable
+data plane language P4 we are able to define our own switch control flow and
+redefine packet processing behavior. Switches may interact with a central
+directory service or controller defining custom policies. This allows us to
+investigate several potentially interesting questions of the system.
+\begin{enumerate}
+\item The client-server interaction of BlueBridge resembles a write-back cache.
+Assuming servers are cooperative, could we implement a MESIF-style protocol
+directly in the network data path and manage cache coherence and consistency?
+\item A central scheduler and directory service may manage the distribution and
+balancing of memory in the system. Is it possible to transparently migrate
+memory by rewriting and redirecting client requests?
+\item Are there benefits in performing address translation in the switch instead
+of in the virtual memory layer? Can we implement a transaction lookaside buffer
+on switches, which will trap to a central directory service to translate requests?
+
+\end{enumerate}
+We intend to build the foundation for such a system and develop a programmable
+switch and controller blueprint, which will be tested in the Mininet emulator.
+If time permits, we plan to explore one of the aforementioned ideas and evaluate
+their effectiveness.
