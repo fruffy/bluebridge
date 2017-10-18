@@ -10,7 +10,7 @@ specific hardware capabilities tailored to their needs (e.g.,
 compute-intensive EC2 instances from Amazon). 
 A \emph{disaggregated} datacenter (DDC) disaggregates, or separates,
 the resources in a traditional DC into resource \emph{blades},
-with each resource connected directly to an interconnect (Figure~\ref{fig:DDC})~\cite{Han2013,Gao2016}. 
+with each resource connected directly to an interconnect~\cite{Han2013,Gao2016}. 
 We use the term \emph{blade} to describe a 1U server containing one resource
 type, and \emph{resource} for an individual CPU, DIMM, SSD, etc. in a blade. 
 
@@ -77,14 +77,14 @@ reduce the overhead of memory RAIDing, allocation, and paging.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{figure}
-    \centering
-    \includegraphics[width=\columnwidth]{fig/ddc-overview}
-    \caption{Simplified representation of a disaggregated datacenter with
-    three communication points: (1) between the application and the
-    virtualization layer,
-    (2) between the virtualization layer and the physical resources, and (3)
-    between the physical resources bundled as blades.}
-    \label{fig:DDC}
-\end{figure}
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=\columnwidth]{fig/ddc-overview}
+%     \caption{Simplified representation of a disaggregated datacenter with
+%     three communication points: (1) between the application and the
+%     virtualization layer,
+%     (2) between the virtualization layer and the physical resources, and (3)
+%     between the physical resources bundled as blades.}
+%     \label{fig:DDC}
+% \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
