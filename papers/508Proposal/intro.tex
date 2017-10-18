@@ -10,14 +10,14 @@ specific hardware capabilities tailored to their needs (e.g.,
 compute-intensive EC2 instances from Amazon). 
 A \emph{disaggregated} datacenter (DDC) disaggregates, or separates,
 the resources in a traditional DC into resource \emph{blades},
-with each resource connected directly to an interconnect (Figure~\ref{fig:DDC}). 
+with each resource connected directly to an interconnect (Figure~\ref{fig:DDC})~\cite{Han2013,Gao2016}. 
 We use the term \emph{blade} to describe a 1U server containing one resource
 type, and \emph{resource} for an individual CPU, DIMM, SSD, etc. in a blade. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% DDC benefits %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % The modularity of DDCs benefits both operators and
-% users~\cite{Han2013}. By separating resources into blades, a
+% users. By separating resources into blades, a
 % DDC provides efficiency: the operator can upgrade specific hardware
 % blades without impacting other resources types. Users also experience
 % an efficiency win: in a DDC a user can provision the exact amount of
