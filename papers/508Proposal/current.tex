@@ -11,7 +11,7 @@ client process will look up the pages remote address in the page table
 and evict the page on a FIFO-basis.  Servers act as simple
 memory-banks with the only purpose of storing and retrieving pages.
 They do not provide protection nor do they enforce access policies.
-Single-threaded C applications such as \texttt{grep} or \texttt{wc}
+Single-threaded C applications, such as \texttt{grep} or \texttt{wc},
 are able to run on the remote memory cache, any paging is done
 automatically in the BlueBridge virtual memory system.  BlueBridge
 does not yet support threading or sharing among processes.
@@ -30,13 +30,9 @@ currently uses its own user level networking processing pipeline to
 support the IPv6 addressing scheme and latency requirements.
 
 BlueBridge's design of several clients accessing a static single
-address space is a suitable foundation to emulate a disaggregated
-memory architecture. Client threads represent racks of CPU's with only
-local caches, servers are interpreted as disaggregated and "dumb"
-memory, and the rack switch serves as the memory manager of the
-system.  BlueBridge can be modelled as a NUMA system, which may
+address space is a suitable foundation to model a ccNUMA system, which may
 implement virtual address translation, access policy enforcement,
 request balancing, and cache coherence completely in the network.
-
 In this project, we will expand on several features of this system
-which will enable BlueBridge to simulate a disaggregated rack.
+which will enable BlueBridge to present a disaggregated rack as a ccNUMA
+machine.
