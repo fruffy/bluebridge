@@ -42,7 +42,7 @@ and measure their performance relative to benchmarks reached by other
 frameworks, such as Naiad, and GraphX. Additionally we will measure
 the rate of recovery of applications in the face of failures. 
 
-\textbf{Multi-Threaded Applications.} To date our
+\textbf{Multi-threaded applications.} To date our
 distributed memory simulator only has support for single threaded
 applications, which share no resources. To investigate the appropriate
 OS semantics for applications written on a disaggregated architecture
@@ -73,7 +73,7 @@ sharing between isolated threads. Additionally two threads will have
 the ability to operate in the same address space for efficient
 computation.
 
-\textbf{LRU Caching.} BlueBridge's current implementation
+\textbf{LRU caching.} BlueBridge's current implementation
 makes use if FIFO page replacement. This paging strategy was chosen
 for simplicity during early development; now it represents a
 performance bottleneck, and a more optimal strategy should be used. We
