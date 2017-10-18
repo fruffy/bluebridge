@@ -60,18 +60,20 @@ distribution: poor performance and difficult to understand failure models.
 % ``shared-nothing'' instance. Essentially, each core operates independently on
 % partitioned data and local structures. 
 
-Yet, with the emergence of disaggregation, the implementation of global shared
-memory systems should be revisited in this new context. More specifically, we
-plan to address the question: \emph{How can we design a system that will
-present a rack of disaggregated resources like a supercomputer?} To do so, we
-plan on extending the \texttt{BlueBridge} distributed memory system in four
-ways. We will add support for remote memory sharing and memory RAIDing to
-provide a resilient globally shared address space. We will also optimize the
-user space paging and implement different cache eviction policies to reduce
-latency on the end hosts. Finally, we will add a programmable switch which acts
-as the memory controller for the address space. We believe by moving the memory
-controller from the end-host to the network switch, we will reduce the overhead
-of memory RAIDing, allocation, and paging.
+Yet, with the emergence of disaggregation, and 100Gbit full bisection
+bandwidth, server racks are closer than ever to a single computer and
+global shared memory systems should be revisited in this new context.
+Specifically, we plan to address the question: \emph{How can we design
+a system that will present a rack of disaggregated resources like a
+supercomputer?} To do so, we plan on extending the \texttt{BlueBridge}
+distributed memory system in four ways. We will add support for remote
+memory sharing and memory RAIDing to provide a resilient globally
+shared address space. We will also optimize the user space paging and
+implement different cache eviction policies to reduce latency on the
+end hosts. Finally, we will add a programmable switch which acts as
+the memory controller for the address space. We believe by moving the
+memory controller from the end-host to the network switch, we will
+reduce the overhead of memory RAIDing, allocation, and paging.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
