@@ -189,7 +189,7 @@ void grep_program(char *cdata, int length) {
 int main( int argc, char *argv[] )
 {
     if(argc!=5) {
-        printf("use: virtmem <npages> <nframes> <disk|rmem> <sort|scan|focus>\n");
+        printf("use: virtmem <npages> <nframes> <disk|rmem|mem> <sort|scan|focus|test|grep>\n");
         return EXIT_FAILURE;
     }
 

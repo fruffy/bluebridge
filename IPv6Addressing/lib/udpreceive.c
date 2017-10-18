@@ -226,7 +226,7 @@ int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targe
     while (1) {
         struct epoll_event events[1024];
         //printf("Waiting...\n");
-        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 0);
+        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 1);
         if (num_events == -1)  {
             if (errno == EINTR)  {
                 perror("epoll_wait returned -1");
