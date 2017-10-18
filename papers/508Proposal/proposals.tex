@@ -6,7 +6,7 @@ system which will allow developers to write more expressive
 applications on top of it.
 
 
-\noindent{\textbf{Disaggregated memory striping:}} In a disaggregated
+\textbf{Disaggregated memory striping:} In a disaggregated
 rack the memory allocated to a single application may be resident on
 separate machines. This raised the question \emph{What are the operational
 semantics for a failure of part of a memory allocation?} A variety of
@@ -29,7 +29,7 @@ case of raid 0 the data is lost. In the face of truly lost data (raid
 0 or 1) an entire application should share the fate of the memory
 blade.
 
-Using main memory raid has many benefits.  In addition to correctness
+Using main memory raid has many benefits. In addition to correctness
 in the face of partial failures, bit level memory correctness is also
 checked.  This allows for optimization's to be made at the network
 later. For example remote pages need not use TCP checksums. Finally
@@ -42,7 +42,7 @@ and measure their performance relative to benchmarks reached by other
 frameworks, such as Naiad, and GraphX. Additionally we will measure
 the rate of recovery of applications in the face of failures. 
 
-\noindent{\textbf{Multi-Threaded Applications:}} To date our
+\textbf{Multi-Threaded Applications:} To date our
 distributed memory simulator only has support for single threaded
 applications, which share no resources. To investigate the appropriate
 OS semantics for applications written on a disaggregated architecture
@@ -73,7 +73,7 @@ sharing between isolated threads. Additionally two threads will have
 the ability to operate in the same address space for efficient
 computation.
 
-\noindent{\textbf{LRU Caching}} BlueBridge's current implementation
+\textbf{LRU Caching:} BlueBridge's current implementation
 makes use if FIFO page replacement. This paging strategy was chosen
 for simplicity during early development; now it represents a
 performance bottleneck, and a more optimal strategy should be used. We
@@ -91,7 +91,7 @@ space and limited memory on the switch. If resources are too scarce
 for this implementation, LRU can be implemented efficiently using
 splay trees.
 
-\noindent{\textbf{Switch MMU:}} Access to distributed memory is
+\textbf{Switch MMU:} Access to distributed memory is
 currently administered by a user space process running on another layer of
 virtual memory. In case of a page fault on the allocated buffer, the application
 traps into the handler, which performs address translation and issues requests
