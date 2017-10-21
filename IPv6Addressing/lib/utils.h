@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <netdb.h>            // struct addrinfo
 
-#define DEBUG 0
+#define DEBUG 1
 
 #define print_debug(...); \
     if (DEBUG) {                     \

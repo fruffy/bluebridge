@@ -63,6 +63,7 @@ def configureHosts(net):
                 # Run the server
             host.cmdPrint('xterm  -T \"server' + str(hostNum) +
                           '\" -e \"./applications/bin/server tmp/config/distMem.cnf; bash\" &')
+            #host.cmdPrint('./applications/bin/server tmp/config/distMem.cnf &')
         hostNum += 1
 
 
@@ -107,6 +108,7 @@ def run():
         i += 1
     # Flood ndp request messages (Deprecated)
     os.system("ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=ff02::1:ff00:0,priority=1,actions=output:flood")
+    #net.hosts[0].cmdPrint('./applications/bin/testing tmp/config/distMem.cnf')
 
     # Run the testing script on all clients simultaneously
     # hosts = net.hosts
@@ -116,6 +118,7 @@ def run():
     #     host.cmdPrint('xterm  -T \"client' + str(hostNum) +
     #                   '\" -e \"./messaging/bin/testing; bash\" &')
     #     hostNum += 1
+
     CLI(net)
     net.stop()
 

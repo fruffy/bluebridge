@@ -292,3 +292,5 @@ TestApps/Cost/single/cache
 IPv6Addressing/applications/bin/
 
 IPv6Addressing/myvirtualdisk
+
+ovs/
