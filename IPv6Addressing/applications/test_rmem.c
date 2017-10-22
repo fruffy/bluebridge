@@ -175,7 +175,7 @@ void *wc(void *arg) {
 
 }
 
-#define NUM_THREADS 2
+#define NUM_THREADS 3
 void grep_program(char *cdata, int length) {
     pthread_t thr[NUM_THREADS];
     int rc;
@@ -203,7 +203,11 @@ void grep_program(char *cdata, int length) {
         int split = fileLenght/NUM_THREADS;
         thr_data[i].tid = i;
         thr_data[i].data = &cdata[split * i];
-        thr_data[i].length = split;
+        if (i == NUM_THREADS-1)
+            thr_data[i].length = length - split * i;
+        else
+            thr_data[i].length = split;
+        printf("%d %d %d\n", length, thr_data[i].length, split );
         if ((rc = pthread_create(&thr[i], NULL, wc, &thr_data[i]))) {
           fprintf(stderr, "error: pthread_create, rc: %d\n", rc);
         }

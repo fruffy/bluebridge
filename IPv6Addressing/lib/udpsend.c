@@ -259,6 +259,7 @@ static int send_mmap(unsigned const char *pkt, int pktlen) {
   return 0;
 }
 
+// CURRENTLY NOT IN USE
 /**
  * This task will call be called when content has been written to the mapped region
  */
@@ -294,8 +295,10 @@ void *txring_send(void *arg) {
 
 int cooked_send(struct in6_addr *dst_addr, int dst_port, char *data, int datalen) {
 
-    struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN);
-    struct udphdr *udphdr = (struct udphdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN);
+    unsigned char ether_frame[datalen + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN];
+    memcpy(ether_frame, packetinfo.ether_frame,datalen + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN );
+    struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ether_frame + ETH_HDRLEN);
+    struct udphdr *udphdr = (struct udphdr *)((char *)ether_frame + ETH_HDRLEN + IP6_HDRLEN);
     //Set destination IP
     iphdr->ip6_dst = *dst_addr;
     // Payload length (16 bits): UDP header + UDP data
@@ -311,7 +314,7 @@ int cooked_send(struct in6_addr *dst_addr, int dst_port, char *data, int datalen
     //udphdr->check = udp6_checksum (iphdr, udphdr, (uint8_t *) data, datalen);
     // Copy our data
     //printf("Sending %s\n", data );
-    memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, data, datalen * sizeof (uint8_t));
+    memcpy (ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, data, datalen * sizeof (uint8_t));
     // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
     int frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + datalen;
     // Send ethernet frame to socket.
@@ -320,7 +323,7 @@ int cooked_send(struct in6_addr *dst_addr, int dst_port, char *data, int datalen
         exit (EXIT_FAILURE);
     }*/
     //write(sd_send,packetinfo.ether_frame, frame_length);
-    send_mmap(packetinfo.ether_frame, frame_length);
+    send_mmap(ether_frame, frame_length);
     return EXIT_SUCCESS;
 }
 

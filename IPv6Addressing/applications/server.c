@@ -12,21 +12,20 @@
 void handleClientRequests(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     char *splitResponse;
     // Switch on the client command
-    if (memcmp(receiveBuffer, ALLOC_CMD,2) == 0) {
+    if (remoteAddr->cmd == ALLOC_CMD) {
         print_debug("******ALLOCATE******");
         allocateMem(targetIP);
-    } else if (memcmp(receiveBuffer, WRITE_CMD,2) == 0) {
-        splitResponse = receiveBuffer+2;
+    } else if (remoteAddr->cmd == WRITE_CMD) {
         print_debug("******WRITE DATA: ");
         if (DEBUG) {
             printNBytes((char *) remoteAddr, IPV6_SIZE);
         }
-        writeMem(splitResponse, targetIP, remoteAddr);
-    } else if (memcmp(receiveBuffer, GET_CMD,2) == 0) {
+        writeMem(receiveBuffer, targetIP, remoteAddr);
+    } else if (remoteAddr->cmd == GET_CMD) {
         print_debug("******GET DATA: ");
         // printNBytes((char *) ipv6Pointer,IPV6_SIZE);
         getMem(targetIP, remoteAddr);
-    } else if (memcmp(receiveBuffer, FREE_CMD,2) == 0) {
+    } else if (remoteAddr->cmd == FREE_CMD) {
         print_debug("******FREE DATA: ");
         if (DEBUG) {
             printNBytes((char *) remoteAddr,IPV6_SIZE);
@@ -34,7 +33,7 @@ void handleClientRequests(char *receiveBuffer, struct sockaddr_in6 *targetIP, st
         freeMem(targetIP, remoteAddr);
     } else {
         printf("Cannot match command!\n");
-        if (sendUDPRaw("Hello, world!", 13, targetIP) == -1) {
+        if (send_udp_raw("Hello, world!", 13, targetIP) == -1) {
             perror("ERROR writing to socket");
             exit(1);
         }
@@ -57,7 +56,7 @@ int main(int argc, char *argv[]) {
     char receiveBuffer[BLOCK_SIZE];
     while (1) {
         //TODO: Error handling (numbytes = -1)
-        receiveUDPIPv6Raw(receiveBuffer, BLOCK_SIZE, targetIP, remoteAddr);
+        rcv_udp6_raw(receiveBuffer, BLOCK_SIZE, targetIP, remoteAddr);
         handleClientRequests(receiveBuffer, targetIP, remoteAddr);
     }
     free (remoteAddr);

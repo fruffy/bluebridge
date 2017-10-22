@@ -43,6 +43,13 @@
 
 #include "config.h"
 
+struct in6_memaddr {
+    uint32_t wildcard;
+    uint16_t subid;
+    uint16_t cmd;
+    uint64_t paddr;
+};
+
 extern int cooked_send(struct in6_addr *dst_addr, int dst_port, char* data, int datalen);
 extern void init_send_socket(struct config *configstruct);
 extern int get_send_socket();
@@ -55,9 +62,6 @@ extern int get_rcv_socket();
 extern int epoll_rcv();
 extern void close_rcv_socket();
 extern int strange_receive();
-inline void close_sockets() {
-    close_send_socket();
-    close_rcv_socket();
-}
+
 
 #endif

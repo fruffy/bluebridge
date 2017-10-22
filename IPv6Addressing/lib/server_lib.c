@@ -79,9 +79,9 @@ int allocateMem(struct sockaddr_in6 *targetIP) {
     memcpy(&allocPointer.paddr, &allocated, POINTER_SIZE);
     memcpy(&allocPointer.subid, &SUBNET_ID, 2);
     //struct in6_addr ipv6Pointer; = getIPv6FromPointer((uint64_t) &allocated);
-    memcpy(sendBuffer, "ACK", 4);
-    memcpy(sendBuffer+4, &allocPointer, IPV6_SIZE); 
-    sendUDPRaw(sendBuffer, BLOCK_SIZE, targetIP);
+    memcpy(sendBuffer, "ACK", 3);
+    memcpy(sendBuffer+3, &allocPointer, IPV6_SIZE); 
+    send_udp_raw(sendBuffer, BLOCK_SIZE, targetIP);
     // TODO change to be meaningful, i.e., error message
     return EXIT_SUCCESS;
 }
@@ -99,7 +99,10 @@ int getMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
 
     // Send the sendBuffer (entire BLOCK_SIZE) to sock_fd
     // print_debug("Content length %lu will be delivered to client!", strlen((char *)pointer));
-    sendUDPRaw((void *) *&ipv6Pointer->paddr, BLOCK_SIZE, targetIP);
+    struct in6_memaddr *returnID = (struct in6_memaddr *) (&targetIP->sin6_addr);
+    returnID->cmd = ipv6Pointer->cmd;
+    returnID->paddr = ipv6Pointer->paddr;
+    send_udp_raw((void *) *&ipv6Pointer->paddr, BLOCK_SIZE, targetIP);
 
     // TODO change to be meaningful, i.e., error message
     return EXIT_SUCCESS;
@@ -110,20 +113,22 @@ int getMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
  * Writes a piece of memory?
  */
 int writeMem(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
-    char *dataToWrite = receiveBuffer + 1;
 
     //print_debug("Data received (first 50 bytes): %.50s", dataToWrite);
     //uint64_t *pointer = &ipv6Pointer->paddr;
     //uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
     // Copy the first POINTER_SIZE bytes of receive buffer into the target
-    //uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);    
-    memcpy((void *) *&ipv6Pointer->paddr, dataToWrite, BLOCK_SIZE); 
+    //uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
+
+    memcpy((void *) *(&ipv6Pointer->paddr), receiveBuffer, BLOCK_SIZE); 
     //print_debug("Content length %lu is currently stored at %p!", strlen((char *)pointer), (void*)pointer);
     //print_debug("Content preview (50 bytes): %.50s", (char *)pointer);
 
     memcpy(sendBuffer, "ACK", 3);
-    sendUDPRaw(sendBuffer, BLOCK_SIZE, targetIP);
-
+    struct in6_memaddr *returnID = (struct in6_memaddr *) (&targetIP->sin6_addr);
+    returnID->cmd = ipv6Pointer->cmd;
+    returnID->paddr = ipv6Pointer->paddr;
+    send_udp_raw(sendBuffer, BLOCK_SIZE, targetIP);
     // TODO change to be meaningful, i.e., error message
     return EXIT_SUCCESS;
 }
@@ -139,6 +144,9 @@ int freeMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
     free((void *) *&ipv6Pointer->paddr);
     //munmap((void *) pointer, BLOCK_SIZE);
     memcpy(sendBuffer, "ACK", 3);
-    sendUDPRaw(sendBuffer, BLOCK_SIZE, targetIP);
+    struct in6_memaddr *returnID = (struct in6_memaddr *) (&targetIP->sin6_addr);
+    returnID->cmd = ipv6Pointer->cmd;
+    returnID->paddr = ipv6Pointer->paddr;
+    send_udp_raw(sendBuffer, BLOCK_SIZE, targetIP);
     return EXIT_SUCCESS;
 }

@@ -41,7 +41,6 @@ struct ep_interface {
 static int epoll_fd = -1;
 static struct ep_interface interface_ep;
 static int sd_rcv;
-struct in6_addr myAddr;
 
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
@@ -52,7 +51,7 @@ struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
         perror ("if_nametoindex() failed to obtain interface index ");
         exit (EXIT_FAILURE);
     }
-    myAddr = configstruct->src_addr;
+
     interface_ep.device.sll_family = AF_PACKET;
     interface_ep.device.sll_protocol = htons (ETH_P_ALL);
     init_epoll();
@@ -222,7 +221,7 @@ void next_packet(struct ep_interface *interface) {
 }
 
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
-int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *remoteAddr) {
+int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server) {
     while (1) {
         struct epoll_event events[1024];
         //printf("Waiting...\n");
@@ -235,7 +234,7 @@ int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targe
             perror("error");
             continue;
         }
-        for (int i = 0; i < num_events; ++i)  {
+        for (int i = 0; i < num_events; i++)  {
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
                 struct tpacket_hdr *tpacket_hdr = get_packet(&interface_ep);
@@ -252,22 +251,35 @@ int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targe
                 struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ethhdr + ETH_HDRLEN);
                 struct udphdr *udphdr = (struct udphdr *)((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN);
                 char *payload = ((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
-                //char s[INET6_ADDRSTRLEN];
-                //char s1[INET6_ADDRSTRLEN];
-                //inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
-                //inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
-                //printf("Got message from %s:%d to %s:%d\n", s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
-                //printf("My port %d their port %d\n", interface_ep.my_port, udphdr->dest );
+                char s[INET6_ADDRSTRLEN];
+                char s1[INET6_ADDRSTRLEN];
+                inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
+                inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
+                printf("Got message from %s:%d to %s:%d\n", s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
+                printf("My port %d their dest port %d\n", ntohs(interface_ep.my_port), ntohs(udphdr->dest) );
+
                 if (udphdr->dest == interface_ep.my_port) {
-                    memcpy(receiveBuffer,payload, msgBlockSize);
-                    if (remoteAddr != NULL)
-                        memcpy(remoteAddr->s6_addr, &iphdr->ip6_dst, IPV6_SIZE);
-                    memcpy(targetIP->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
-                    targetIP->sin6_port = udphdr->source;
-                    memset(payload, 0, msgBlockSize);
-                    tpacket_hdr->tp_status = TP_STATUS_KERNEL;
-                    next_packet(&interface_ep);
-                    return msgBlockSize;
+                    struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
+                    int isMyID = 1;
+                    if (remoteAddr != NULL && !server) {
+                        printf("Their ID\n");
+                        printNBytes(inAddress, 16);
+                        printf("MY ID\n");
+                        printNBytes(remoteAddr, 16);
+                        isMyID = (inAddress->cmd == remoteAddr->cmd) && (inAddress->paddr == remoteAddr->paddr);
+                    }
+                    if (isMyID) {
+                        memcpy(receiveBuffer,payload, msgBlockSize);
+                        if (remoteAddr != NULL && server) {
+                            memcpy(remoteAddr, &iphdr->ip6_dst, IPV6_SIZE);
+                        }
+                        memcpy(targetIP->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
+                        targetIP->sin6_port = udphdr->source;
+                        memset(payload, 0, msgBlockSize);
+                        tpacket_hdr->tp_status = TP_STATUS_KERNEL;
+                        next_packet(&interface_ep);
+                        return msgBlockSize;
+                    }
                 }
                 tpacket_hdr->tp_status = TP_STATUS_KERNEL;
                 next_packet(&interface_ep);

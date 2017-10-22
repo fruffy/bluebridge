@@ -16,7 +16,7 @@
 #define KMAG  "\x1B[35m"
 #define KCYN  "\x1B[36m"
 #define RESET "\033[0m"
-const int NUM_ITERATIONS = 10000;
+const int NUM_ITERATIONS = 500;
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //  1. Check correctness of pointer on server side, it should never segfault.
@@ -189,10 +189,75 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
     free(read_latency);
     free(free_latency);
 }
-//TODO: Remove?
-struct PointerMap {
-    struct in6_addr Pointer;
-};
+
+/* create thread argument struct for thr_func() */
+#include <pthread.h>
+#define NUM_THREADS 1
+
+typedef struct _thread_data_t {
+  int tid;
+  struct in6_memaddr *r_addr;
+  struct sockaddr_in6 *targetIP;
+  int length;
+} thread_data_t;
+
+void *testing_loop(void *arg) {
+    thread_data_t *data = (thread_data_t *)arg;
+    for (int i = 0; i < data->length; i++) {
+        print_debug("Iteration %d", i);
+        struct in6_memaddr *remoteMemory = data->r_addr + i;
+        //print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
+        print_debug("Creating payload");
+        char *payload= malloc(50);
+        snprintf(payload, 50, "HELLO WORLD! MY ID is: %d", data->tid);
+        writeRemoteMem(data->targetIP, payload, remoteMemory);
+        char *test = getRemoteMem(data->targetIP, remoteMemory);
+
+        print_debug("Thread: %d, Results of memory store: %.50s\n",  data->tid, test);
+        if (strncmp(test,payload, 50) < 0) {
+            print_debug(KRED"ERROR: WRONG RESULT"RESET);
+            exit(1);
+        }
+        free(payload);
+    }
+    return NULL;
+}
+
+void basic_op_threads(struct sockaddr_in6 *targetIP) {
+    pthread_t thr[NUM_THREADS];
+    int i;
+    /* create a thread_data_t argument array */
+    thread_data_t thr_data[NUM_THREADS];
+
+    // Generate a random IPv6 address out of a set of available hosts
+    memcpy(&(targetIP->sin6_addr), gen_rdm_IPv6Target(), sizeof(struct in6_addr));
+    struct in6_memaddr r_addr[NUM_ITERATIONS];
+    srand(time(NULL));
+    for (i = 0; i< NUM_ITERATIONS; i++) {
+        r_addr[i] = allocateRemoteMem(targetIP);
+    }
+    int rc;
+   /* create threads */
+    for (i = 0; i < NUM_THREADS; i++) {
+        int split = NUM_ITERATIONS/NUM_THREADS;
+        thr_data[i].tid =  i;
+        thr_data[i].targetIP =  targetIP;
+        thr_data[i].r_addr =  &r_addr[split *i];
+        thr_data[i].length = split;
+        if ((rc = pthread_create(&thr[i], NULL, testing_loop, &thr_data[i]))) {
+          fprintf(stderr, "error: pthread_create, rc: %d\n", rc);
+        }
+    }
+    /* block until all threads complete */
+    for (i = 0; i < NUM_THREADS; i++) {
+        pthread_join(thr[i], NULL);
+    }
+
+    for (int i = 0; i < NUM_ITERATIONS; i++) {
+        freeRemoteMem(targetIP, &r_addr[i]);
+    }
+
+}
 
 /*
  * Main workhorse method. Parses arguments, setups connections
@@ -230,9 +295,9 @@ int main(int argc, char *argv[]) {
 
     struct timeval st, et;
     gettimeofday(&st,NULL);
-    basicOperations(temp);
-
-    gettimeofday(&et,NULL);
+    //basicOperations(temp);
+    basic_op_threads(temp);
+    //gettimeofday(&et,NULL);
     int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
     printf("Total Time: %d micro seconds\n",elapsed);
     printf(KRED "Finished\n");

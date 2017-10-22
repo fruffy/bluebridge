@@ -73,7 +73,7 @@ struct in6_addr getRemoteAddr(int sockfd, struct sockaddr_in6 *targetIP, uint64_
 
     // Send message
     print_debug("Sending raw packet with args: %d, %s, %d", sockfd, sendBuffer, BLOCK_SIZE);
-    sendUDPRaw(sendBuffer,BLOCK_SIZE, targetIP);
+    send_udp_raw(sendBuffer,BLOCK_SIZE, targetIP);
     // Receive response
     receiveUDP(sockfd, receiveBuffer,BLOCK_SIZE, targetIP);
 
