@@ -72,14 +72,14 @@ int printBytes(char * receiveBuffer) {
 /*
  * Print reverse byte buffer including specified length
  */
-int printNBytes(char * receiveBuffer, int num) {
+int printNBytes(void *receiveBuffer, int num) {
 	int i;
 
 	// for (i = num-1; i>=0; i--) {
 	// 	printf("%02x", (unsigned char) receiveBuffer[i]);
 	// }
 	for (i =0; i<=num-1; i++) {
-		printf("%02x", (unsigned char) receiveBuffer[i]);
+		printf("%02x", ((unsigned char *)receiveBuffer)[i]);
 	}
 	printf("\n");
 	return i;
