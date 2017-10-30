@@ -33,14 +33,15 @@ struct ep_interface {
     struct sockaddr_ll device;
     uint16_t my_port;
     struct tpacket_hdr *first_tpacket_hdr;
-    int tpacket_i;
     int mapped_memory_size;
     struct tpacket_req tpacket_req;
+    int tpacket_i;
 };
 
-static int epoll_fd = -1;
-static struct ep_interface interface_ep;
-static int sd_rcv;
+static __thread int epoll_fd = -1;
+static __thread  struct ep_interface interface_ep;
+static __thread int sd_rcv;
+static __thread int thread_id;
 
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
@@ -57,7 +58,9 @@ struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
     init_epoll();
     return temp;
 }
-
+void set_thread_id_rx(int id) {
+    thread_id = id;
+}
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket_old(struct config *configstruct) {
 
@@ -128,9 +131,9 @@ int setup_packet_mmap() {
 
     struct tpacket_req tpacket_req = {
         .tp_block_size = BLOCKSIZE,
-        .tp_block_nr = 1,
+        .tp_block_nr = CONF_RING_BLOCKS,
         .tp_frame_size = FRAMESIZE,
-        .tp_frame_nr = CONF_RING_FRAMES,
+        .tp_frame_nr = CONF_RING_BLOCKS * (BLOCKSIZE/ FRAMESIZE)
     };
 
     int size = tpacket_req.tp_block_size *tpacket_req.tp_block_nr;
@@ -203,12 +206,11 @@ void init_epoll() {
 void close_epoll() {
     close(epoll_fd);
     munmap(interface_ep.first_tpacket_hdr, interface_ep.mapped_memory_size);
-    close(sd_rcv);
 }
 
 
 struct tpacket_hdr *get_packet(struct ep_interface *interface) {
-    return (void *)((char *)interface->first_tpacket_hdr + interface->tpacket_i * interface->tpacket_req.tp_frame_size);
+    return (void *)((char *)interface->first_tpacket_hdr + interface_ep.tpacket_i * interface->tpacket_req.tp_frame_size);
 }
 
 struct sockaddr_ll * get_sockaddr_ll(struct tpacket_hdr * tpacket_hdr) {
@@ -217,11 +219,11 @@ struct sockaddr_ll * get_sockaddr_ll(struct tpacket_hdr * tpacket_hdr) {
 
 
 void next_packet(struct ep_interface *interface) {
-    interface->tpacket_i = (interface->tpacket_i + 1) % interface->tpacket_req.tp_frame_nr;
+    interface_ep.tpacket_i = (interface_ep.tpacket_i + 1) % interface->tpacket_req.tp_frame_nr;
 }
 
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
-int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server) {
+int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server) {
     while (1) {
         struct epoll_event events[1024];
         //printf("Waiting...\n");
@@ -238,6 +240,10 @@ int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targe
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
                 struct tpacket_hdr *tpacket_hdr = get_packet(&interface_ep);
+                if ( tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
+                    //next_packet(&interface_ep);
+                    continue;
+                }
                 //struct sockaddr_ll *sockaddr_ll = NULL;
                 if (tpacket_hdr->tp_status & TP_STATUS_COPY) {
                     next_packet(&interface_ep);
@@ -251,44 +257,44 @@ int epoll_rcv(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targe
                 struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ethhdr + ETH_HDRLEN);
                 struct udphdr *udphdr = (struct udphdr *)((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN);
                 char *payload = ((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
-                char s[INET6_ADDRSTRLEN];
+/*                char s[INET6_ADDRSTRLEN];
                 char s1[INET6_ADDRSTRLEN];
                 inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
                 inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
-                printf("Got message from %s:%d to %s:%d\n", s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
-                printf("My port %d their dest port %d\n", ntohs(interface_ep.my_port), ntohs(udphdr->dest) );
+                printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
+                printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(interface_ep.my_port), ntohs(udphdr->dest) );*/
 
                 if (udphdr->dest == interface_ep.my_port) {
                     struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
                     int isMyID = 1;
                     if (remoteAddr != NULL && !server) {
-                        printf("Their ID\n");
+/*                        printf("Thread %d Their ID\n", thread_id);
                         printNBytes(inAddress, 16);
-                        printf("MY ID\n");
-                        printNBytes(remoteAddr, 16);
+                        printf("Thread %d MY ID\n", thread_id);
+                        printNBytes(remoteAddr, 16);*/
                         isMyID = (inAddress->cmd == remoteAddr->cmd) && (inAddress->paddr == remoteAddr->paddr);
                     }
                     if (isMyID) {
-                        memcpy(receiveBuffer,payload, msgBlockSize);
+                        memcpy(receiveBuffer, payload, msgBlockSize);
                         if (remoteAddr != NULL && server) {
                             memcpy(remoteAddr, &iphdr->ip6_dst, IPV6_SIZE);
                         }
                         memcpy(targetIP->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
                         targetIP->sin6_port = udphdr->source;
-                        memset(payload, 0, msgBlockSize);
+                        //memset(payload, 0, msgBlockSize);
                         tpacket_hdr->tp_status = TP_STATUS_KERNEL;
                         next_packet(&interface_ep);
                         return msgBlockSize;
                     }
                 }
                 tpacket_hdr->tp_status = TP_STATUS_KERNEL;
+                //printf("Giving packet back to kernel...\n");
                 next_packet(&interface_ep);
             }
         }
     }
     return 0;
 }
-
 
 int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer){
     struct sockaddr_in6 from;

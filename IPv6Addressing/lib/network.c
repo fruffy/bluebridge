@@ -59,9 +59,9 @@ int send_udp6_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targe
 // TODO: Error handling
 struct in6_memaddr *send_id_udp6_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     //memcpy(&(targetIP->sin6_addr), &remoteAddr, IPV6_SIZE);
-    //char dst_ip[INET6_ADDRSTRLEN];
-    //inet_ntop(AF_INET6,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
-    //print_debug("Sending to %s:%d", dst_ip,dst_port);
+   /* char dst_ip[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
+    print_debug("Sending to %s", dst_ip);*/
     uint64_t start = getns(); 
     cooked_send((struct in6_addr *) remoteAddr, targetIP->sin6_port, sendBuffer, msgBlockSize);
     sendLat += getns() - start;

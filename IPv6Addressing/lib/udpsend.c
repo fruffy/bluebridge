@@ -10,6 +10,7 @@
 #include <errno.h>            // errno, perror()
 #include <sys/mman.h>         // mmap()
 #include <sys/epoll.h>        // epoll_wait(), epoll_event, epoll_rcv()
+#include <pthread.h>
 
 #include "udpcooked.h"
 #include "utils.h"
@@ -36,10 +37,13 @@ struct packetconfig {
     unsigned char ether_frame[IP_MAXPACKET];
 };
 
-static int sd_send;
-int epoll_fd;
-static struct packetconfig packetinfo;
-static char *ring;
+static __thread int sd_send;
+//int epoll_fd;
+static __thread struct packetconfig packetinfo;
+static __thread char *ring;
+static __thread int ring_offset = 0;
+static __thread int thread_id;
+//static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct packetconfig *gen_packet_info(struct config *configstruct) {
 
@@ -90,7 +94,7 @@ struct packetconfig *get_packet_info() {
     return &packetinfo;
 }
 
-void init_epoll_send() {
+/*void init_epoll_send() {
 
     struct epoll_event event = {
         .events = EPOLLOUT,
@@ -109,7 +113,7 @@ void init_epoll_send() {
         close(epoll_fd);
        exit(1);
     }
-}
+}*/
 // tp_block_size must be a multiple of PAGE_SIZE (1)
 // tp_frame_size must be greater than TPACKET_HDRLEN (obvious)
 // tp_frame_size must be a multiple of TPACKET_ALIGNMENT
@@ -117,7 +121,7 @@ void init_epoll_send() {
 
 /// Initialize a packet socket ring buffer
 //  @param ringtype is one of PACKET_RX_RING or PACKET_TX_RING
-int init_packetsock_ring(){
+int init_packetsock_ring(int sd){
     struct tpacket_req tp;
 
     // tell kernel to export data through mmap()ped ring
@@ -125,19 +129,23 @@ int init_packetsock_ring(){
     tp.tp_block_nr = CONF_RING_BLOCKS;
     tp.tp_frame_size = FRAMESIZE;
     tp.tp_frame_nr = CONF_RING_BLOCKS * (BLOCKSIZE/ FRAMESIZE);
-    if (setsockopt(sd_send, SOL_PACKET, PACKET_TX_RING, (void*) &tp, sizeof(tp)))
+    if (setsockopt(sd, SOL_PACKET, PACKET_TX_RING, (void*) &tp, sizeof(tp)))
         RETURN_ERROR(-1, "setsockopt() ring\n");
     int on = 1;
-    setsockopt(sd_send, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
+    setsockopt(sd, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
 
     int val = TPACKET_V3;
-    setsockopt(sd_send, SOL_PACKET, PACKET_HDRLEN, &val, sizeof(val));
-    setsockopt(sd_send, SOL_PACKET, SO_BUSY_POLL, &on, sizeof(on));
-
+    setsockopt(sd, SOL_PACKET, PACKET_HDRLEN, &val, sizeof(val));
+    setsockopt(sd, SOL_PACKET, SO_BUSY_POLL, &on, sizeof(on));
+    setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &on,sizeof(int));
+    int size = tp.tp_block_size *tp.tp_block_nr;
+/*    if (setsockopt(sd, SOL_PACKET, PACKET_LOSS, &on, sizeof(int)))
+        RETURN_ERROR(-1, "setsockopt: PACKET_LOSS");*/
+/*    if (setsockopt(sd, SOL_PACKET, SO_SNDBUF, &size, on))
+        RETURN_ERROR(-1, "setsockopt: SO_SNDBUF");*/
 
     // open ring
-    ring = mmap(0, tp.tp_block_size * tp.tp_block_nr,
-               PROT_READ | PROT_WRITE, MAP_SHARED, sd_send, 0);
+    ring = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, sd, 0);
     if (!ring)
         RETURN_ERROR(-1, "mmap()\n");
     return EXIT_SUCCESS;
@@ -146,17 +154,17 @@ int init_packetsock_ring(){
 /// Create a packet socket. If param ring is not NULL, the buffer is mapped
 //  @param ring will, if set, point to the mapped ring on return
 //  @return the socket fd
-static int init_packetsock() {
-
+int init_packetsock() {
     // open packet socket
-    sd_send = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+    sd_send = socket(AF_PACKET, SOCK_RAW|SOCK_NONBLOCK, htons(ETH_P_ALL));
     if (sd_send < 0)
         RETURN_ERROR(-1, "Root privileges are required\nsocket() rx. \n");
 
-    init_packetsock_ring();
+    if (init_packetsock_ring(sd_send))
+        RETURN_ERROR(-1, "init_packetsock");
 
     if (!ring) {
-      close(sd_send);
+        close(sd_send);
         RETURN_ERROR(-1, "Ring initialisation failed!\n");
     }
 /*    init_epoll_send();
@@ -179,9 +187,11 @@ static int init_packetsock() {
 int get_send_socket() {
     return sd_send;
 }
-
+void set_thread_id_sd(int id) {
+    thread_id = id;
+}
 int close_send_socket() {
-    if (munmap(ring, BLOCKSIZE)) {
+    if (munmap(ring, CONF_RING_BLOCKS * BLOCKSIZE)) {
         perror("munmap");
         return 1;
     }
@@ -189,13 +199,23 @@ int close_send_socket() {
         perror("close");
         return 1;
     }
+    sd_send = -1;
+    ring = NULL;
+    ring_offset = 0;
+
     return 0;
 }
 
 void init_send_socket(struct config *configstruct) {
     gen_packet_info(configstruct);
     init_packetsock();
-    bind(sd_send, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device) );
+    if (-1 == bind(sd_send, (struct sockaddr *)&packetinfo.device, sizeof(packetinfo.device))) {
+        perror("Send: Could not bind socket.");
+        exit(1);
+    }    
+    printf("My Socket %d \n", sd_send);
+    printf("MY RIng %p\n", ring );
+
 }
 
 // DEPRECATED
@@ -209,14 +229,15 @@ void init_send_socket_old(struct config *configstruct) {
         exit (EXIT_FAILURE);
     }
     struct tpacket_req req;
-    req.tp_block_size =  4096;
-    req.tp_block_nr   =   2;
-    req.tp_frame_size =  256;
-    req.tp_frame_nr   =   16;
+    req.tp_block_size = BLOCKSIZE;
+    req.tp_block_nr = CONF_RING_BLOCKS;
+    req.tp_frame_size = FRAMESIZE;
+    req.tp_frame_nr = CONF_RING_BLOCKS * (BLOCKSIZE/ FRAMESIZE);
 
-
-    bind(sd_send, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device) );
-
+    if (-1 == bind(sd_send, (struct sockaddr *)&packetinfo.device, sizeof(packetinfo.device))) {
+        perror("Send: Could not bind socket.");
+        exit(1);
+    }    
 
     struct packet_mreq      mr;
     memset (&mr, 0, sizeof (mr));
@@ -236,8 +257,7 @@ void init_send_socket_old(struct config *configstruct) {
 //
 //  @param pkt is a packet from the network layer up (e.g., IP)
 //  @return 0 on success, -1 on failure
-static int send_mmap(unsigned const char *pkt, int pktlen) {
-    static int ring_offset = 0;
+int send_mmap(unsigned const char *pkt, int pktlen) {
     // fetch a frame
     // like in the PACKET_RX_RING case, we define frames to be a page long,
     // including their header. This explains the use of getpagesize().
@@ -249,11 +269,11 @@ static int send_mmap(unsigned const char *pkt, int pktlen) {
     // fill header
     header->tp_len = pktlen;
     header->tp_status = TP_STATUS_SEND_REQUEST;
-
+/*    printf(KRED"Thread %d Sending on socket %d and offset %d\n"RESET, thread_id, sd_send, ring_offset);*/
     // increase consumer ring pointer
     ring_offset = (ring_offset + 1) & (CONF_RING_FRAMES - 1);
-
     // notify kernel
+    //write(sd_send,packetinfo.ether_frame, 0);
     if (sendto(sd_send, NULL, 0, MSG_DONTWAIT, (struct sockaddr *)NULL, sizeof(struct sockaddr_ll)) < 0)
         RETURN_ERROR(-1, "sendto failed ");
   return 0;
@@ -263,7 +283,7 @@ static int send_mmap(unsigned const char *pkt, int pktlen) {
 /**
  * This task will call be called when content has been written to the mapped region
  */
-void *txring_send(void *arg) {
+/*void *txring_send(void *arg) {
     long ec_send;
     (void)arg;
     while (1) {
@@ -282,7 +302,7 @@ void *txring_send(void *arg) {
         for (int i = 0; i < num_events; ++i)  {
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLOUT) {
-                /* send all buffers with TP_STATUS_SEND_REQUEST */
+                // send all buffers with TP_STATUS_SEND_REQUEST 
                 ec_send=sendto(sd_send, NULL, 0, MSG_DONTWAIT,
                         (struct sockaddr *)NULL, sizeof(struct sockaddr_ll));
             }
@@ -291,10 +311,10 @@ void *txring_send(void *arg) {
         }
 }
     return (void*) ec_send;
-}
-
+}*/
+#include <arpa/inet.h>
 int cooked_send(struct in6_addr *dst_addr, int dst_port, char *data, int datalen) {
-
+    //pthread_mutex_lock(&mutex);
     unsigned char ether_frame[datalen + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN];
     memcpy(ether_frame, packetinfo.ether_frame,datalen + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN );
     struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ether_frame + ETH_HDRLEN);
@@ -322,8 +342,11 @@ int cooked_send(struct in6_addr *dst_addr, int dst_port, char *data, int datalen
         perror ("sendto() failed");
         exit (EXIT_FAILURE);
     }*/
-    //write(sd_send,packetinfo.ether_frame, frame_length);
+   /* char dst_ip[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6,&iphdr->ip6_dst, dst_ip, sizeof dst_ip);
+    print_debug("Sending to part two %s", dst_ip);*/
     send_mmap(ether_frame, frame_length);
+    //pthread_mutex_unlock(&mutex);
     return EXIT_SUCCESS;
 }
 

@@ -12,9 +12,9 @@
 #include "utils.h"
 
 struct in6_addr *hostList;
-static int nhosts;
-static char sendBuffer[BLOCK_SIZE];
-static char receiveBuffer[BLOCK_SIZE];
+int nhosts;
+static __thread char sendBuffer[BLOCK_SIZE];
+static __thread char receiveBuffer[BLOCK_SIZE];
 
 /*
  * Generates a random IPv6 address target under specific constraints
@@ -63,7 +63,9 @@ struct in6_memaddr allocateRemoteMem(struct sockaddr_in6 *targetIP) {
         // Not successful set the return address to zero.
         memset(&retAddr,0, IPV6_SIZE);
     }
-
+/*    char dst_ip[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6,&retAddr, dst_ip, sizeof dst_ip);
+    print_debug("Allocated %s", dst_ip);*/
     return retAddr;
 }
 
