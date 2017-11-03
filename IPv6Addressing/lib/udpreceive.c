@@ -39,7 +39,7 @@ struct ep_interface {
 };
 
 static __thread int epoll_fd = -1;
-static __thread  struct ep_interface interface_ep;
+static __thread struct ep_interface interface_ep;
 static __thread int sd_rcv;
 static __thread int thread_id;
 
@@ -126,9 +126,16 @@ void close_rcv_socket() {
     close(sd_rcv);
     close_epoll();
 }
-
+#ifndef PACKET_FANOUT
+# define PACKET_FANOUT          18
+# define PACKET_FANOUT_HASH     0
+# define PACKET_FANOUT_LB       1
+#endif
+static int fanout_type;
+static int fanout_id;
 int setup_packet_mmap() {
 
+    int fanout_arg;
     struct tpacket_req tpacket_req = {
         .tp_block_size = BLOCKSIZE,
         .tp_block_nr = CONF_RING_BLOCKS,
@@ -143,7 +150,9 @@ int setup_packet_mmap() {
     if (setsockopt(sd_rcv, SOL_PACKET, PACKET_RX_RING, &tpacket_req, sizeof tpacket_req)) {
         return -1;
     }
-
+    fanout_arg = (fanout_id | (fanout_type << 16));
+    setsockopt(sd_rcv, SOL_PACKET, PACKET_FANOUT_LB,
+             &fanout_arg, sizeof(fanout_arg));
     mapped_memory = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, sd_rcv, 0);
 
     if (MAP_FAILED == mapped_memory) {
@@ -162,7 +171,7 @@ int init_socket() {
     sd_rcv = socket(AF_PACKET, SOCK_RAW|SOCK_NONBLOCK, htons(ETH_P_ALL));
 
     const int on = 1;
-//    setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
+    //setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
     setsockopt(sd_rcv, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
     setsockopt(sd_rcv, SOL_PACKET, SO_BUSY_POLL, &on, sizeof(on));
 
@@ -286,9 +295,8 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                         next_packet(&interface_ep);
                         return msgBlockSize;
                     }
-                }
+                } 
                 tpacket_hdr->tp_status = TP_STATUS_KERNEL;
-                //printf("Giving packet back to kernel...\n");
                 next_packet(&interface_ep);
             }
         }

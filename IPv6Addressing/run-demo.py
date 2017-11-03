@@ -12,6 +12,7 @@ import os
 import time
 from mininet.node import Host
 from mininet.term import makeTerm
+from subprocess import Popen, PIPE
 
 from functools import partial
 
@@ -65,6 +66,21 @@ def configureHosts(net):
                           '\" -e \"./applications/bin/server tmp/config/distMem.cnf; bash\" &')
             #host.cmdPrint('./applications/bin/server tmp/config/distMem.cnf &')
         hostNum += 1
+
+
+def clean():
+    ''' Clean any the running instances of POX '''
+    Popen("killall xterm", stdout=PIPE, shell=True)
+    # p = Popen("ps aux | grep 'xterm' | awk '{print $2}'",
+    #           stdout=PIPE, shell=True)
+    # p.wait()
+    # procs = (p.communicate()[0]).split('\n')
+    # for pid in procs:
+    #     try:
+    #         pid = int(pid)
+    #         Popen('kill %d' % pid, shell=True).wait()
+    #     except:
+    #         pass
 
 
 def run():
@@ -121,6 +137,7 @@ def run():
 
     CLI(net)
     net.stop()
+    clean()
 
 
 if __name__ == '__main__':

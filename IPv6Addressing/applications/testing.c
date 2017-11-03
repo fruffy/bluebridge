@@ -196,6 +196,7 @@ typedef struct _thread_data_t {
 } thread_data_t;
 struct config myConf;
 void *testing_loop(void *arg) {
+
     thread_data_t *data = (thread_data_t *)arg;
     //struct sockaddr_in6 *temp = calloc(1,sizeof(struct sockaddr_in6));//init_rcv_socket(&myConf);
     struct sockaddr_in6 *temp = init_rcv_socket(&myConf);
@@ -203,7 +204,6 @@ void *testing_loop(void *arg) {
     init_send_socket(&myConf);
     set_thread_id_sd(data->tid);
     set_thread_id_rx(data->tid);
-
     for (int i = 0; i < data->length; i++) {
         print_debug("Writing Memory Iteration %d", i);
         struct in6_memaddr *remoteMemory = data->r_addr + i;
@@ -229,7 +229,9 @@ void *testing_loop(void *arg) {
     for (int i = 0; i < data->length; i++) {
         struct in6_memaddr *remoteMemory = data->r_addr + i;
         freeRemoteMem(temp, remoteMemory);
-    } 
+    }
+    printSendLat();
+
     return NULL;
 }
 
@@ -242,12 +244,19 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
 
     // Generate a random IPv6 address out of a set of available hosts
     memcpy(&(targetIP->sin6_addr), gen_rdm_IPv6Target(), sizeof(struct in6_addr));
-    struct in6_memaddr r_addr[NUM_ITERATIONS];
+    struct in6_memaddr *r_addr = malloc(NUM_ITERATIONS * sizeof(struct in6_memaddr));
+    if(!r_addr)
+        perror("Allocation too large");
+    
+    //struct in6_memaddr r_addr[NUM_ITERATIONS];
     srand(time(NULL));
+
     for (i = 0; i< NUM_ITERATIONS; i++) {
         r_addr[i] = allocateRemoteMem(targetIP);
     }
-    close_sockets();
+
+   close_sockets();
+   //close_send_socket();
    /* create threads */
     for (i = 0; i < NUM_THREADS; i++) {
         int rc;
@@ -256,15 +265,18 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
         thr_data[i].targetIP =  targetIP;
         thr_data[i].r_addr =  &r_addr[split *i];
         thr_data[i].length = split;
+
         printf("Launching thread %d\n", i );
         if ((rc = pthread_create(&thr[i], NULL, testing_loop, &thr_data[i]))) {
           fprintf(stderr, "error: pthread_create, rc: %d\n", rc);
         }
     }
+
     /* block until all threads complete */
     for (i = 0; i < NUM_THREADS; i++) {
         pthread_join(thr[i], NULL);
     }
+
 }
 
 /*
@@ -311,7 +323,7 @@ int main(int argc, char *argv[]) {
     printf("Total Time: %d micro seconds\n",elapsed);
     printf(KRED "Finished\n");
     printf(RESET);
-    printSendLat();
+    //printSendLat();
     free(temp);
     //close_sockets();
     return 0;

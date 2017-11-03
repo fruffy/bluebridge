@@ -11,11 +11,11 @@
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
 #include <unistd.h>           // close()
 
-uint64_t sendLat = 0;
-uint64_t send_calls = 0;
+static __thread uint64_t sendLat = 0;
+static __thread uint64_t send_calls = 0;
 
-uint64_t rcvLat = 0;
-uint64_t rcv_calls = 0;
+static __thread uint64_t rcvLat = 0;
+static __thread uint64_t rcv_calls = 0;
 
 
 /*
