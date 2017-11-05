@@ -12,6 +12,7 @@ import os
 import time
 from mininet.node import Host
 from mininet.term import makeTerm
+from subprocess import Popen, PIPE
 
 from functools import partial
 
@@ -63,7 +64,23 @@ def configureHosts(net):
                 # Run the server
             host.cmdPrint('xterm  -T \"server' + str(hostNum) +
                           '\" -e \"./applications/bin/server tmp/config/distMem.cnf; bash\" &')
+            #host.cmdPrint('./applications/bin/server tmp/config/distMem.cnf &')
         hostNum += 1
+
+
+def clean():
+    ''' Clean any the running instances of POX '''
+    Popen("killall xterm", stdout=PIPE, shell=True)
+    # p = Popen("ps aux | grep 'xterm' | awk '{print $2}'",
+    #           stdout=PIPE, shell=True)
+    # p.wait()
+    # procs = (p.communicate()[0]).split('\n')
+    # for pid in procs:
+    #     try:
+    #         pid = int(pid)
+    #         Popen('kill %d' % pid, shell=True).wait()
+    #     except:
+    #         pass
 
 
 def run():
@@ -107,6 +124,7 @@ def run():
         i += 1
     # Flood ndp request messages (Deprecated)
     os.system("ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=ff02::1:ff00:0,priority=1,actions=output:flood")
+    #net.hosts[0].cmdPrint('./applications/bin/testing tmp/config/distMem.cnf')
 
     # Run the testing script on all clients simultaneously
     # hosts = net.hosts
@@ -116,8 +134,10 @@ def run():
     #     host.cmdPrint('xterm  -T \"client' + str(hostNum) +
     #                   '\" -e \"./messaging/bin/testing; bash\" &')
     #     hostNum += 1
+
     CLI(net)
     net.stop()
+    clean()
 
 
 if __name__ == '__main__':

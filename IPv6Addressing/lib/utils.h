@@ -7,6 +7,13 @@
 
 #define DEBUG 0
 
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KYEL  "\x1B[33m"
+#define KMAG  "\x1B[35m"
+#define KCYN  "\x1B[36m"
+#define RESET "\033[0m"
+
 #define print_debug(...); \
     if (DEBUG) {                     \
         printf("[DEBUG]: ");         \
@@ -25,7 +32,7 @@
 
 int printBytes(char *receiveBuffer);
 
-int printNBytes(char *receiveBuffer, int num);
+int printNBytes(void *receiveBuffer, int num);
 
 int print_addrInfo(struct addrinfo *result);
 

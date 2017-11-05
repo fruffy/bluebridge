@@ -144,17 +144,49 @@ void simple_test( char *cdata, int length) {
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <ctype.h>
+#include <pthread.h>
 
 int isWord(char prev, char cur) {
     return isspace(cur) && isgraph(prev);
 }
 
+/* create thread argument struct for thr_func() */
+typedef struct _thread_data_t {
+  int tid;
+  char *data;
+  int length;
+  int count;
+} thread_data_t;
+
+
+void *wc(void *arg) {
+    char prev = ' ';
+    thread_data_t *data = (thread_data_t *)arg;
+    char *cdata = data->data;
+    printf("Hello!\n");
+    for (int index = 0; index < data->length; index++) {
+        // TODO: Should also handle \n (i.e. any whitespace)
+        //       should also ensure that it's only a word if
+        //       there was a non white space character before it.
+        if (isWord(prev, cdata[index])) {
+            data->count++;
+        }
+        prev = cdata[index];
+    }
+
+}
+
+#define NUM_THREADS 1
 void grep_program(char *cdata, int length) {
+    pthread_t thr[NUM_THREADS];
+    int rc;
+    /* create a thread_data_t argument array */
+    thread_data_t thr_data[NUM_THREADS];
+    char symbol;
+    int i =0;
     FILE *fp = fopen("baskerville.txt", "rb");
 
     printf("Storing thingy\n");
-    char symbol;
-    int i =0;
     uint64_t rStart = getns();
     if(fp != NULL) {
         while((symbol = getc(fp)) != EOF) {
@@ -163,24 +195,37 @@ void grep_program(char *cdata, int length) {
         }
         fclose(fp);
     }
+    int fileLenght = i;
     uint64_t latency_store = getns() - rStart;
     printf("Done with storing thingy\n");
-    int count = 0, index;
-    char prev = ' ';
-
+     
+      /* create threads */
+    for (i = 0; i < NUM_THREADS; i++) {
+        int split = fileLenght/NUM_THREADS;
+        thr_data[i].tid = i;
+        thr_data[i].data = &cdata[split * i];
+        if (i == NUM_THREADS-1)
+            thr_data[i].length = length - split * i;
+        else
+            thr_data[i].length = split;
+        printf("%d %d %d\n", length, thr_data[i].length, split );
+        if ((rc = pthread_create(&thr[i], NULL, wc, &thr_data[i]))) {
+          fprintf(stderr, "error: pthread_create, rc: %d\n", rc);
+        }
+    }
+    /* block until all threads complete */
+    for (i = 0; i < NUM_THREADS; i++) {
+        pthread_join(thr[i], NULL);
+    }
     printf("Reading from thingy..\n");
     rStart = getns();
-    for (index = 0; index < length; index++) {
-        // TODO: Should also handle \n (i.e. any whitespace)
-        //       should also ensure that it's only a word if
-        //       there was a non white space character before it.
-        if (isWord(prev, cdata[index])) {
-            count++;
-        }
-        prev = cdata[index];
+
+    int count = 0;
+    for (i = 0; i < NUM_THREADS; ++i) {
+        count +=         thr_data[i].count;
     }
-    uint64_t latency_read = getns() - rStart;
     printf("Word count: %d\n", count);
+    uint64_t latency_read = getns() - rStart;
     printf("Storing time...: "KGRN"%lu"RESET" micro seconds\n", latency_store/1000);
     printf("Reading time...: "KGRN"%lu"RESET" micro seconds\n", latency_read/1000);
     printf("Total time taken: "KGRN"%lu"RESET" micro seconds\n", (latency_read + latency_store)/1000 );

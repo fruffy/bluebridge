@@ -32,7 +32,7 @@
 
 /// The number of frames in the ring
 //  This number is not set in stone. Nor are block_size, block_nr or frame_size
-#define CONF_RING_FRAMES        128
+#define CONF_RING_FRAMES        2048
 #define CONF_RING_BLOCKS        1
 #define FRAMESIZE               (4096 + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + 2 + 32)
 #define BLOCKSIZE               (FRAMESIZE) * (CONF_RING_FRAMES)
@@ -43,8 +43,17 @@
 
 #include "config.h"
 
+struct in6_memaddr {
+    uint32_t wildcard;
+    uint16_t subid;
+    uint16_t cmd;
+    uint64_t paddr;
+};
+
 extern int cooked_send(struct in6_addr *dst_addr, int dst_port, char* data, int datalen);
 extern void init_send_socket(struct config *configstruct);
+extern void init_send_socket_old(struct config *configstruct);
+
 extern int get_send_socket();
 extern int close_send_socket();
 
@@ -53,11 +62,13 @@ extern struct sockaddr_in6 *init_rcv_socket(struct config *configstruct);
 extern struct sockaddr_in6 *init_rcv_socket_old(struct config *configstruct);
 extern int get_rcv_socket();
 extern int epoll_rcv();
+extern void init_epoll();
+
 extern void close_rcv_socket();
 extern int strange_receive();
-inline void close_sockets() {
-    close_send_socket();
-    close_rcv_socket();
-}
+extern struct sockaddr_in6 *rx_client_init_socket(struct config *configstruct);
+extern int rxring_mainloop(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server);
+extern void set_thread_id_sd(int id);
+extern void set_thread_id_rx(int id);
 
 #endif
