@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "../lib/client_lib.h"
 #include "../lib/utils.h"
 
@@ -186,7 +187,7 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
 
 /* create thread argument struct for thr_func() */
 #include <pthread.h>
-#define NUM_THREADS 10
+#define NUM_THREADS 4
 
 typedef struct _thread_data_t {
   int tid;
@@ -198,6 +199,16 @@ struct config myConf;
 void *testing_loop(void *arg) {
 
     thread_data_t *data = (thread_data_t *)arg;
+
+    pthread_t my_thread = pthread_self();
+    /* Set affinity mask to include CPUs 0 to 7 */
+    int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+    int assigned = data->tid % num_cores;
+    printf("ASSIGNED THREAD %d to CORE %d\n", data->tid, assigned );
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(assigned, &cpuset);
+    pthread_setaffinity_np(my_thread, sizeof(cpu_set_t), &cpuset);
     //struct sockaddr_in6 *temp = calloc(1,sizeof(struct sockaddr_in6));//init_rcv_socket(&myConf);
     struct sockaddr_in6 *temp = init_rcv_socket(&myConf);
     temp->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
@@ -205,7 +216,6 @@ void *testing_loop(void *arg) {
     set_thread_id_sd(data->tid);
     set_thread_id_rx(data->tid);
     for (int i = 0; i < data->length; i++) {
-        print_debug("Writing Memory Iteration %d", i);
         struct in6_memaddr *remoteMemory = data->r_addr + i;
         //print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
         print_debug("Creating payload");
@@ -257,7 +267,10 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
 
    close_sockets();
    //close_send_socket();
+   //close_rcv_socket();
    /* create threads */
+
+
     for (i = 0; i < NUM_THREADS; i++) {
         int rc;
         int split = NUM_ITERATIONS/NUM_THREADS;
@@ -316,8 +329,8 @@ int main(int argc, char *argv[]) {
 
     struct timeval st, et;
     gettimeofday(&st,NULL);
-    //basicOperations(temp);
-    basic_op_threads(temp);
+    basicOperations(temp);
+    //basic_op_threads(temp);
     gettimeofday(&et,NULL);
     int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
     printf("Total Time: %d micro seconds\n",elapsed);

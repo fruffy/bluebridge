@@ -34,7 +34,7 @@
 //  This number is not set in stone. Nor are block_size, block_nr or frame_size
 #define CONF_RING_FRAMES        2048
 #define CONF_RING_BLOCKS        1
-#define FRAMESIZE               8192//(4096 + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + 2 + 32)
+#define FRAMESIZE               (4096 + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + 2 + 32)
 #define BLOCKSIZE               (FRAMESIZE) * (CONF_RING_FRAMES)
 
 
@@ -62,6 +62,8 @@ extern struct sockaddr_in6 *init_rcv_socket(struct config *configstruct);
 extern struct sockaddr_in6 *init_rcv_socket_old(struct config *configstruct);
 extern int get_rcv_socket();
 extern int epoll_rcv();
+extern void init_epoll();
+
 extern void close_rcv_socket();
 extern int strange_receive();
 extern struct sockaddr_in6 *rx_client_init_socket(struct config *configstruct);

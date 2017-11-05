@@ -163,6 +163,7 @@ void *wc(void *arg) {
     char prev = ' ';
     thread_data_t *data = (thread_data_t *)arg;
     char *cdata = data->data;
+    printf("Hello!\n");
     for (int index = 0; index < data->length; index++) {
         // TODO: Should also handle \n (i.e. any whitespace)
         //       should also ensure that it's only a word if
@@ -175,7 +176,7 @@ void *wc(void *arg) {
 
 }
 
-#define NUM_THREADS 3
+#define NUM_THREADS 1
 void grep_program(char *cdata, int length) {
     pthread_t thr[NUM_THREADS];
     int rc;

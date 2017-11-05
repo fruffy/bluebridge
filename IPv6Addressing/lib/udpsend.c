@@ -224,7 +224,7 @@ void init_send_socket_old(struct config *configstruct) {
     const int on=1;
     gen_packet_info(configstruct);
 
-    if ((sd_send = socket (AF_PACKET, SOCK_RAW|SOCK_NONBLOCK|SOCK_CLOEXEC, htons (ETH_P_ALL))) < 0) {
+    if ((sd_send = socket (AF_PACKET, SOCK_RAW|SOCK_NONBLOCK, htons (ETH_P_ALL))) < 0) {
         perror ("socket() failed ");
         exit (EXIT_FAILURE);
     }
@@ -274,9 +274,16 @@ int send_mmap(unsigned const char *pkt, int pktlen) {
     ring_offset = (ring_offset + 1) & (CONF_RING_FRAMES - 1);
     // notify kernel
     //write(sd_send,packetinfo.ether_frame, 0);
-    if (sendto(sd_send, NULL, 0, MSG_DONTWAIT, (struct sockaddr *)NULL, sizeof(struct sockaddr_ll)) < 0)
-        RETURN_ERROR(-1, "sendto failed ");
-  return 0;
+
+    while (1) {
+        if (sendto(sd_send, NULL, 0, MSG_DONTWAIT, (struct sockaddr *)NULL, sizeof(struct sockaddr_ll)) < 0) {
+            perror( "sendto failed");
+            sleep(1);
+            printf("Retrying....\n");
+        } else {
+            return 0;
+        }
+    }
 }
 
 // CURRENTLY NOT IN USE
@@ -315,10 +322,10 @@ int send_mmap(unsigned const char *pkt, int pktlen) {
 #include <arpa/inet.h>
 int cooked_send(struct in6_addr *dst_addr, int dst_port, char *data, int datalen) {
     //pthread_mutex_lock(&mutex);
-    unsigned char ether_frame[datalen + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN];
-    memcpy(ether_frame, packetinfo.ether_frame,datalen + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN );
-    struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ether_frame + ETH_HDRLEN);
-    struct udphdr *udphdr = (struct udphdr *)((char *)ether_frame + ETH_HDRLEN + IP6_HDRLEN);
+    //unsigned char ether_frame[datalen + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN];
+    //memcpy(ether_frame, packetinfo.ether_frame,datalen + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN );
+    struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN);
+    struct udphdr *udphdr = (struct udphdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN);
     //Set destination IP
     iphdr->ip6_dst = *dst_addr;
     // Payload length (16 bits): UDP header + UDP data
@@ -334,7 +341,7 @@ int cooked_send(struct in6_addr *dst_addr, int dst_port, char *data, int datalen
     //udphdr->check = udp6_checksum (iphdr, udphdr, (uint8_t *) data, datalen);
     // Copy our data
     //printf("Sending %s\n", data );
-    memcpy (ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, data, datalen * sizeof (uint8_t));
+    memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, data, datalen * sizeof (uint8_t));
     // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
     int frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + datalen;
     // Send ethernet frame to socket.
@@ -342,10 +349,10 @@ int cooked_send(struct in6_addr *dst_addr, int dst_port, char *data, int datalen
         perror ("sendto() failed");
         exit (EXIT_FAILURE);
     }*/
-   /* char dst_ip[INET6_ADDRSTRLEN];
+/*    char dst_ip[INET6_ADDRSTRLEN];
     inet_ntop(AF_INET6,&iphdr->ip6_dst, dst_ip, sizeof dst_ip);
-    print_debug("Sending to part two %s", dst_ip);*/
-    send_mmap(ether_frame, frame_length);
+    printf("Sending to part two %s\n", dst_ip);*/
+    send_mmap(packetinfo.ether_frame, frame_length);
     //pthread_mutex_unlock(&mutex);
     return EXIT_SUCCESS;
 }

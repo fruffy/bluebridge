@@ -10,6 +10,7 @@
 #include <string.h>           // strcpy, memset(), and memcpy()
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
 #include <unistd.h>           // close()
+#include <pthread.h>           // close()
 
 static __thread uint64_t sendLat = 0;
 static __thread uint64_t send_calls = 0;
@@ -93,7 +94,7 @@ int rcv_udp6_raw(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *tar
 // TODO: Evaluate what variables and structures are actually needed here
 // TODO: Error handling
 int rcv_udp6_raw_id(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
-    uint64_t start = getns(); 
+    uint64_t start = getns();
     int numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 0);
 //     int numbytes = cooked_receive(receiveBuffer, msgBlockSize, targetIP, ipv6Pointer);
 
