@@ -77,10 +77,23 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
         fprintf(stderr,"rr_write: invalid block #%d\n",block);
         abort();
     }
-    //TODO loop
     // Get pointer to page data in (simulated) physical memory
-    for (int i = 0; i<numHosts(); i++) {
-        writeRemoteMem(r->targetIP, data, &r->rsmem[i].memList[block]);
+    // Slice up data based on given raid configuration
+    int alloc = r->block_size / (numHosts() - 1); //Raid 4
+    if (r->block_size % (numHosts() -1) > 0) {
+        alloc++;
+    }
+    int base = 0;
+    char *buf = malloc(sizeof(char) * alloc);
+    printf("Writing to Remote hosts\n");
+    for (int i = 0; i<numHosts()-1; i++) {
+        if (r->block_size % (numHosts() -1) <= i) {
+            alloc = r->block_size / (numHosts() -1);
+        }
+        printf("Writing %d bytes of Data to host %d from loc %d\n",alloc,i,base);
+        memcpy(buf,&(data[base]),alloc);
+        writeRemoteMem(r->targetIP, buf, &r->rsmem[i].memList[block]);
+        base += alloc;
     }
 }
 
@@ -93,12 +106,29 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
     for (int i = 0; i<numHosts(); i++) {
         remoteReads[i] = malloc(sizeof(char) * r->block_size);
         // Get pointer to page data in (simulated) physical memory
-        printf("memlist [cmd:%d] \n",&r->rsmem[i].memList[block].cmd);
-        printf("memlist [subid:%d] \n",&r->rsmem[i].memList[block].subid);
-        printf("memlist [paddr:%d] \n",&r->rsmem[i].memList[block].paddr);
+        //printf("memlist [cmd:%d] \n",&r->rsmem[i].memList[block].cmd);
+        //printf("memlist [subid:%d] \n",&r->rsmem[i].memList[block].subid);
+        //printf("memlist [paddr:%d] \n",&r->rsmem[i].memList[block].paddr);
         memcpy(remoteReads[i], getRemoteMem(r->targetIP, &r->rsmem[i].memList[block]), r->block_size);
     }
-    memcpy(data,remoteReads[0],r->block_size);
+    /*
+    for (int i= 0; i < numHosts() -1;i++) {
+        if( memcmp(remoteReads[i],remoteReads[i+1],r->block_size) != 0) {
+            printf("Inconsistant pages [%s]\n, [%s]\n",remoteReads[i],remoteReads[i+1]);
+        }
+    }*/
+    int alloc = r->block_size / (numHosts() - 1); //Raid 4
+    if (r->block_size % (numHosts() -1) > 0) {
+        alloc++;
+    }
+    int base = 0;
+    for (int i = 0; i<numHosts()-1; i++) {
+        if (r->block_size % (numHosts() -1) <= i) {
+            alloc = r->block_size / (numHosts() -1);
+        }
+        memcpy(&(data[base]),remoteReads[i],alloc);
+        base += alloc;
+    }
 
 }
 
