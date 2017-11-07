@@ -445,6 +445,7 @@ struct page_table *init_virtual_memory(int npages, int nframes, const char* syst
     }
     else if (!strcmp(pagingSystem, "rrmem")) {
         rrmem = rrmem_allocate(npages);
+  struct rrmem *rrmem_allocate(int blocks);
         if(!rrmem) {
             fprintf(stderr,"couldn't create virtual rrmem: %s\n",strerror(errno));
             abort();

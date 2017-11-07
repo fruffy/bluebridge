@@ -84,7 +84,7 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
         alloc++;
     }
     int base = 0;
-    char *buf = malloc(sizeof(char) * alloc);
+    char *buf = malloc(sizeof(char) * r->block_size);
     printf("Writing to Remote hosts\n");
     for (int i = 0; i<numHosts()-1; i++) {
         if (r->block_size % (numHosts() -1) <= i) {
@@ -92,7 +92,9 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
         }
         printf("Writing %d bytes of Data to host %d from loc %d\n",alloc,i,base);
         memcpy(buf,&(data[base]),alloc);
+        printf("prewrite\n");
         writeRemoteMem(r->targetIP, buf, &r->rsmem[i].memList[block]);
+        printf("postwrite\n");
         base += alloc;
     }
 }

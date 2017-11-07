@@ -108,6 +108,7 @@ int writeRemoteMem(struct sockaddr_in6 *targetIP, char *payload, struct in6_mema
     //memcpy(sendBuffer, WRITE_CMD, size);
 
     remoteAddr->cmd =  WRITE_CMD;
+    print_debug("Writing to send buffer");
     memcpy(sendBuffer, payload, BLOCK_SIZE);
     print_debug("******WRITE DATA******");
     send_udp6_raw(sendBuffer, BLOCK_SIZE, targetIP, remoteAddr);
