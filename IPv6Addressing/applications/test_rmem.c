@@ -164,6 +164,7 @@ void *wc(void *arg) {
     thread_data_t *data = (thread_data_t *)arg;
     char *cdata = data->data;
     printf("Hello!\n");
+    printf("%d\n", data->length);
     for (int index = 0; index < data->length; index++) {
         // TODO: Should also handle \n (i.e. any whitespace)
         //       should also ensure that it's only a word if
@@ -177,7 +178,7 @@ void *wc(void *arg) {
 }
 
 #define NUM_THREADS 1
-void grep_program(char *cdata, int length) {
+void wc_program_threads(char *cdata, int length) {
     pthread_t thr[NUM_THREADS];
     int rc;
     /* create a thread_data_t argument array */
@@ -222,7 +223,7 @@ void grep_program(char *cdata, int length) {
 
     int count = 0;
     for (i = 0; i < NUM_THREADS; ++i) {
-        count +=         thr_data[i].count;
+        count += thr_data[i].count;
     }
     printf("Word count: %d\n", count);
     uint64_t latency_read = getns() - rStart;
@@ -231,6 +232,42 @@ void grep_program(char *cdata, int length) {
     printf("Total time taken: "KGRN"%lu"RESET" micro seconds\n", (latency_read + latency_store)/1000 );
 }
 
+void wc_program(char *cdata, int length) {
+    FILE *fp = fopen("baskerville.txt", "rb");
+
+    printf("Storing thingy\n");
+    char symbol;
+    int i =0;
+    uint64_t rStart = getns();
+    if(fp != NULL) {
+        while((symbol = getc(fp)) != EOF) {
+        cdata[i] = symbol; 
+        i++;
+        }
+        fclose(fp);
+    }
+    uint64_t latency_store = getns() - rStart;
+    printf("Done with storing thingy\n");
+    int count = 0, index;
+    char prev = ' ';
+
+    printf("Reading from thingy..\n");
+    rStart = getns();
+    for (index = 0; index < length; index++) {
+        // TODO: Should also handle \n (i.e. any whitespace)
+        //       should also ensure that it's only a word if
+        //       there was a non white space character before it.
+        if (isWord(prev, cdata[index])) {
+            count++;
+        }
+        prev = cdata[index];
+    }
+    uint64_t latency_read = getns() - rStart;
+    printf("Word count: %d\n", count);
+    printf("Storing time...: "KGRN"%lu"RESET" micro seconds\n", latency_store/1000);
+    printf("Reading time...: "KGRN"%lu"RESET" micro seconds\n", latency_read/1000);
+    printf("Total time taken: "KGRN"%lu"RESET" micro seconds\n", (latency_read + latency_store)/1000 );
+}
 int main( int argc, char *argv[] )
 {
     if(argc!=5) {
@@ -260,8 +297,10 @@ int main( int argc, char *argv[] )
         focus_program(virtmem,npages*PAGE_SIZE);
     } else if(!strcmp(program,"test")) {
         simple_test(virtmem,npages*PAGE_SIZE);
-    } else if(!strcmp(program,"grep")) {
-        grep_program(virtmem,npages*PAGE_SIZE);
+    } else if(!strcmp(program,"wc")) {
+        wc_program(virtmem,npages*PAGE_SIZE);
+    } else if(!strcmp(program,"wc_t")) {
+        wc_program(virtmem,npages*PAGE_SIZE);
     } else {
         fprintf(stderr,"unknown program: %s\n",argv[4]);
     }
