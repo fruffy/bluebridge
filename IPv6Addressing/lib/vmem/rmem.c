@@ -15,17 +15,12 @@ Make all of your changes to main.c instead.
 
 #include "../client_lib.h"
 #include "../utils.h"
+#include "rmem.h"
 
 extern ssize_t pread (int __fd, void *__buf, size_t __nbytes, __off_t __offset);
 extern ssize_t pwrite (int __fd, const void *__buf, size_t __nbytes, __off_t __offset);
 
 
-struct rmem {
-    struct sockaddr_in6 *targetIP;
-    struct in6_memaddr *memList;
-    int block_size;
-    int nblocks;
-};
 
 
 struct config myConf;
@@ -63,7 +58,7 @@ struct rmem *rmem_allocate(int nblocks) {
     return r;
 }
 
-void rmem_write(struct rmem *r, int block, char *data ) {
+void rmem_write(struct rmem *r, int block, const char *data ) {
     if(block<0 || block>=r->nblocks) {
         fprintf(stderr,"disk_write: invalid block #%d\n",block);
         abort();

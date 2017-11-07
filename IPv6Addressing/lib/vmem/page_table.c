@@ -2,6 +2,7 @@
 
 #include "page_table.h"
 #include "rmem.h"
+#include "rrmem.h"
 #include "disk.h"
 #include "mem.h"
 
@@ -35,6 +36,65 @@ static void internal_fault_handler( int signum, siginfo_t *info, void *context )
     fprintf(stderr,"segmentation fault at address %p\n",addr);
     abort();
 }
+
+// Remote Raided memory handler
+struct rrmem* rrmem;
+void page_fault_handler_rrmem( struct page_table *pt, int page ) {
+    int i;
+    int frame;
+    int bits;
+
+    pageFaults++;
+    page_table_get_entry(pt, page, &frame, &bits); // check if the page is in memory
+    for(i = 0; i < pt->nframes; i++) { // increment values already in frameState--keeps track of oldest value in frame table
+        if(frameState[i] != 0) {
+            frameState[i]++;
+        }
+    }
+
+    if(bits == 0) { // page is not in memory
+        int emptyFrame = 0;
+        for(i = 0; i < pt->nframes; i++) {
+            // empty frame, we can insert a page
+            if(frameState[i] == 0) {
+                frameState[i] = 1;
+                framePage[i] = page;
+                emptyFrame = 1;
+                page_table_set_entry(pt, page, i, PROT_READ);
+                rrmem_read(rrmem, page, &physmem[i*PAGE_SIZE]);
+                pageReads++;
+                break;
+            }
+        }
+        // first in first out page replacement
+        if (emptyFrame == 0) {
+            int value = 0;
+            for(i = 0; i < pt->nframes; i++) { // get oldest page
+                if(frameState[i] > value) {
+                    value = frameState[i];
+                    frame = i;
+                }
+            }
+            int tempPage = framePage[frame]; // get page currently in frame
+            page_table_get_entry(pt, tempPage, &frame, &bits);
+            if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
+                rrmem_write(rrmem, tempPage, &physmem[frame*PAGE_SIZE]);
+                pageWrites++;
+            }
+            rrmem_read(rrmem, page, &physmem[frame*PAGE_SIZE]);
+            pageReads++;
+            page_table_set_entry(pt, page, frame, PROT_READ);
+            page_table_set_entry(pt, tempPage, frame, 0);
+            frameState[frame] = 1;
+            framePage[frame] = page;
+        }
+    } else { // if page is already in table--need to set write bit
+        page_table_set_entry(pt, page, frame, PROT_READ|PROT_WRITE);
+        frameState[frame] = 1;
+        framePage[frame] = page;
+    }
+}
+
 // TODO: Add compile IFDEFS to save space
 struct rmem* rmem;
 void page_fault_handler_rmem( struct page_table *pt, int page ) {
@@ -278,6 +338,8 @@ void page_table_flush(struct page_table *pt) {
                 disk_write(disk, tempPage, &physmem[frame*PAGE_SIZE]);
             else if (!strcmp(pagingSystem, "rmem"))
                 rmem_write(rmem, tempPage, &physmem[frame*PAGE_SIZE]);
+            else if (!strcmp(pagingSystem, "rrmem"))
+                rrmem_write(rrmem, tempPage, &physmem[frame*PAGE_SIZE]);
             pageWrites++;
         }
         page_table_set_entry(pt, tempPage, frame, PROT_NONE);
@@ -353,6 +415,8 @@ char * page_table_get_physmem( struct page_table *pt ) {
     return pt->physmem;
 }
 
+
+//TODO make a version of this for rrmem
 void set_vmem_config(char *filename) {
     configure_rmem(filename);
 }
@@ -379,6 +443,14 @@ struct page_table *init_virtual_memory(int npages, int nframes, const char* syst
         }
         pt = page_table_create( npages, nframes, page_fault_handler_rmem );
     }
+    else if (!strcmp(pagingSystem, "rrmem")) {
+        rrmem = rrmem_allocate(npages);
+        if(!rrmem) {
+            fprintf(stderr,"couldn't create virtual rrmem: %s\n",strerror(errno));
+            abort();
+        }
+        pt = page_table_create( npages, nframes, page_fault_handler_rrmem );
+    }
     else if (!strcmp(pagingSystem, "disk")) {
         disk = disk_open("myvirtualdisk",npages);
         if(!disk) {
@@ -395,7 +467,7 @@ struct page_table *init_virtual_memory(int npages, int nframes, const char* syst
         pt = page_table_create( npages, nframes, page_fault_handler_mem );
     }
     else {
-        perror("Please specify the correct page table structure (rmem|disk)!");
+        perror("Please specify the correct page table structure (rrmem|rmem|disk)!");
         abort();
     }
 
@@ -421,6 +493,8 @@ void clean_page_table(struct page_table *pt) {
         disk_close(disk);
     else if (!strcmp(pagingSystem, "rmem"))
         rmem_deallocate(rmem);
+    else if (!strcmp(pagingSystem, "rrmem"))
+        rrmem_deallocate(rrmem);
     pageFaults = 0;
     pageReads = 0;
     pageWrites = 0;

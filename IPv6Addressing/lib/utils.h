@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <netdb.h>            // struct addrinfo
 
-#define DEBUG 0
+#define DEBUG 1
 
 #define KRED  "\x1B[31m"
 #define KGRN  "\x1B[32m"

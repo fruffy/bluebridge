@@ -338,7 +338,7 @@ int main(int argc, char *argv[]) {
     printf(RESET);
     //printSendLat();
     free(temp);
-    //close_sockets();
+    close_sockets();
     return 0;
 }
 

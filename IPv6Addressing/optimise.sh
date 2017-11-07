@@ -1,4 +1,6 @@
 #!/bin/bash
+
+# @FRuffy what is the purpose of this script
 ID=`id -u`
 if [ $ID -ne 0 ]; then
    echo "This command must be run as root."

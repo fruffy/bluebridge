@@ -16,6 +16,7 @@ from subprocess import Popen, PIPE
 
 from functools import partial
 
+HOSTS = 5
 
 class BlueBridge(Topo):
     "Simple topology example."
@@ -29,7 +30,10 @@ class BlueBridge(Topo):
         switch = self.addSwitch('s1')
         # Create a network topology of a single switch
         # connected to three nodes.
-        for hostNum in range(1, 4):  # TODO: change back to 1, 4
+        # +------s1------+
+        # |      |       |
+        # h1     h2      h3
+        for hostNum in range(1, HOSTS + 1):  # TODO: change back to 1, 4
             # Add hosts and switches
             host = self.addHost('h' + str(hostNum))
             self.addLink(host, switch)
@@ -47,7 +51,7 @@ def configureHosts(net):
         # Insert host configuration
         configString = "\"INTERFACE=h" + \
             str(hostNum) + \
-            "-eth0\n\HOSTS=0:0:102::,0:0:103::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
+            "-eth0\n\HOSTS=0:0:102::,0:0:103::,0:0:104::,0:0:105::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
             '{0:02x}'.format(hostNum) + "::\n\DEBUG=0\" > ./tmp/config/distMem.cnf"
         host.cmdPrint('echo ' + configString)
 
@@ -110,7 +114,7 @@ def run():
     #                 '{0:02x}'.format(hostNum) + '::/48 dev s1-eth' + str(hostNum))
     # switch.cmdPrint('ifconfig s1-eth' + str(hostNum) +' mtu 5000')
     # Our current "switch"
-    hostNum = 3  # TODO: change back to 3
+    hostNum = HOSTS  # TODO: change back to 3
     i = 1
     while i <= hostNum:
         # Routing entries per port

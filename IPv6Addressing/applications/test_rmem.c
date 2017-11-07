@@ -184,7 +184,7 @@ void grep_program(char *cdata, int length) {
     thread_data_t thr_data[NUM_THREADS];
     char symbol;
     int i =0;
-    FILE *fp = fopen("baskerville.txt", "rb");
+    FILE *fp = fopen("baskervilleShort.txt", "rb");
 
     printf("Storing thingy\n");
     uint64_t rStart = getns();
@@ -234,7 +234,7 @@ void grep_program(char *cdata, int length) {
 int main( int argc, char *argv[] )
 {
     if(argc!=5) {
-        printf("use: virtmem <npages> <nframes> <disk|rmem|mem> <sort|scan|focus|test|grep>\n");
+        printf("use: virtmem <npages> <nframes> <disk|rmem|rrmem|mem> <sort|scan|focus|test|grep>\n");
         return EXIT_FAILURE;
     }
 
@@ -246,6 +246,8 @@ int main( int argc, char *argv[] )
     sync();
     system("echo 3 > /proc/sys/vm/drop_caches");
     if(!strcmp(algo,"rmem"))
+        set_vmem_config("tmp/config/distMem.cnf");
+    else if(!strcmp(algo,"rrmem"))
         set_vmem_config("tmp/config/distMem.cnf");
     struct page_table *pt = init_virtual_memory(npages, nframes, algo);
     char *virtmem = page_table_get_virtmem(pt);

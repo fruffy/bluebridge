@@ -44,6 +44,9 @@ int send_udp6_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targe
     //inet_ntop(AF_INET6,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
     //print_debug("Sending to %s:%d", dst_ip,dst_port);
     uint64_t start = getns(); 
+    printf("addr [cmd:%d] \n",remoteAddr->cmd);
+    printf("addr [subid:%d] \n",remoteAddr->subid);
+    printf("addr [paddr:%d] \n",remoteAddr->paddr);
     cooked_send((struct in6_addr *) remoteAddr, targetIP->sin6_port, sendBuffer, msgBlockSize);
     sendLat += getns() - start;
     send_calls++;

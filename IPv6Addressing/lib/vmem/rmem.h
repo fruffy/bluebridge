@@ -9,6 +9,13 @@ Make all of your changes to main.c instead.
 
 #define BLOCK_SIZE 4096
 
+struct rmem {
+    struct sockaddr_in6 *targetIP;
+    struct in6_memaddr *memList;
+    int block_size;
+    int nblocks;
+};
+
 void configure_rmem(char *filename);
 
 /*

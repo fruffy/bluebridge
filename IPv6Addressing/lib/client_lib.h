@@ -14,4 +14,8 @@ int migrateRemoteMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAd
 struct in6_addr *gen_rdm_IPv6Target();
 void set_host_list(struct in6_addr *host_addrs, int num_hosts);
 
+
+struct in6_addr *get_IPv6Target(uint8_t index);
+int numHosts();
+
 #endif

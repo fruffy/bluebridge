@@ -28,6 +28,17 @@ struct in6_addr *gen_rdm_IPv6Target() {
     return &hostList[rndHost];
 }
 
+/*Returns the IP of a given host*/
+struct in6_addr *get_IPv6Target(uint8_t index) {
+    return &hostList[index];
+}
+
+//return the number of hosts
+int numHosts() {
+    return nhosts;
+}
+
+
 /*
  * Set the list of target hosts and their IP-adresses in our system.
  * Will be replaced by in-switch functionality.
