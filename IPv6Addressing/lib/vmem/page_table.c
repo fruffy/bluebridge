@@ -44,6 +44,11 @@ void page_fault_handler_rmem( struct page_table *pt, int page ) {
 
     pageFaults++;
     page_table_get_entry(pt, page, &frame, &bits); // check if the page is in memory
+/*    printf("Accessing pointer %p\n", &frame);
+    char *pointy = page_table_get_virtmem(pt);
+    printf("Accessing 2332 %p\n", pointy);
+    char *pointy2 = page_table_get_physmem(pt);
+    printf("Accessing adasdad %p\n", pointy2);*/
     for(i = 0; i < pt->nframes; i++) { // increment values already in frameState--keeps track of oldest value in frame table
         if(frameState[i] != 0) {
             frameState[i]++;
@@ -58,8 +63,8 @@ void page_fault_handler_rmem( struct page_table *pt, int page ) {
                 frameState[i] = 1;
                 framePage[i] = page;
                 emptyFrame = 1;
-                page_table_set_entry(pt, page, i, PROT_READ);
                 rmem_read(rmem, page, &physmem[i*PAGE_SIZE]);
+                page_table_set_entry(pt, page, i, PROT_READ);
                 pageReads++;
                 break;
             }
@@ -88,8 +93,8 @@ void page_fault_handler_rmem( struct page_table *pt, int page ) {
         }
     } else { // if page is already in table--need to set write bit
         page_table_set_entry(pt, page, frame, PROT_READ|PROT_WRITE);
-        frameState[frame] = 1;
-        framePage[frame] = page;
+/*        frameState[frame] = 1;
+        framePage[frame] = page;*/
     }
 }
 
@@ -111,11 +116,11 @@ void page_fault_handler_disk( struct page_table *pt, int page) {
         int emptyFrame = 0;
         for(i = 0; i < pt->nframes; i++) {
             if(frameState[i] == 0) { // empty frame
+                disk_read(disk, page, &physmem[i*PAGE_SIZE]);
+                page_table_set_entry(pt, page, i, PROT_READ);
                 frameState[i] = 1;
                 framePage[i] = page;
                 emptyFrame = 1;
-                page_table_set_entry(pt, page, i, PROT_READ);
-                disk_read(disk, page, &physmem[i*PAGE_SIZE]);
                 pageReads++;
                 break;
             }
@@ -138,7 +143,7 @@ void page_fault_handler_disk( struct page_table *pt, int page) {
             disk_read(disk, page, &physmem[frame*PAGE_SIZE]);
             pageReads++;
             page_table_set_entry(pt, page, frame, PROT_READ);
-            page_table_set_entry(pt, tempPage, frame, 0);
+            page_table_set_entry(pt, tempPage, 0, 0);
             frameState[frame] = 1;
             framePage[frame] = page;
         }
@@ -217,7 +222,7 @@ struct page_table *page_table_create( int npages, int nframes, page_fault_handle
 
     the_page_table = pt;
 
-/*
+
     char filename[256];
     sprintf(filename,"/tmp/pmem.%d.%d",getpid(),getuid());
 
@@ -226,16 +231,16 @@ struct page_table *page_table_create( int npages, int nframes, page_fault_handle
 
     ftruncate(pt->fd,PAGE_SIZE*npages);
 
-    unlink(filename);*/
+    unlink(filename);
 
-    //pt->physmem = mmap(0,nframes*PAGE_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,pt->fd,0);
-    pt->physmem = mmap(NULL, nframes*PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+    pt->physmem = mmap(0,nframes*PAGE_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED, pt->fd,0);
+    //pt->physmem = mmap(NULL, nframes*PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
     if (pt->physmem == (void *) MAP_FAILED) perror("mmap"), exit(0);
 
     pt->nframes = nframes;
 
-    //pt->virtmem = mmap(0,npages*PAGE_SIZE,PROT_NONE,MAP_SHARED|MAP_NORESERVE,pt->fd,0);
-    pt->virtmem = mmap(NULL, npages*PAGE_SIZE, PROT_NONE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0);
+    pt->virtmem = mmap(0,npages*PAGE_SIZE,PROT_NONE,MAP_SHARED|MAP_NORESERVE, pt->fd,0);
+    //pt->virtmem = mmap(NULL, npages*PAGE_SIZE, PROT_NONE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0);
     if (pt->virtmem == (void *) MAP_FAILED) perror("mmap"), exit(0);
 
     pt->npages = npages;
