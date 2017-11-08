@@ -210,16 +210,17 @@ void *testing_loop(void *arg) {
     CPU_SET(assigned, &cpuset);
     pthread_setaffinity_np(my_thread, sizeof(cpu_set_t), &cpuset);
     //struct sockaddr_in6 *temp = calloc(1,sizeof(struct sockaddr_in6));//init_rcv_socket(&myConf);
+    set_thread_id_sd(data->tid);
+    set_thread_id_rx(data->tid);
     struct sockaddr_in6 *temp = init_rcv_socket(&myConf);
     temp->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
     init_send_socket(&myConf);
-    set_thread_id_sd(data->tid);
-    set_thread_id_rx(data->tid);
+
     for (int i = 0; i < data->length; i++) {
         struct in6_memaddr *remoteMemory = data->r_addr + i;
         //print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
         print_debug("Creating payload");
-        char *payload= malloc(50);
+        char *payload = malloc(4096);
         snprintf(payload, 50, "HELLO WORLD! MY ID is: %d", data->tid);
         writeRemoteMem(temp, payload, remoteMemory);
         free(payload);
@@ -228,7 +229,7 @@ void *testing_loop(void *arg) {
         struct in6_memaddr *remoteMemory = data->r_addr + i;
         char *test = getRemoteMem(temp, remoteMemory);
         print_debug("Thread: %d, Results of memory store: %s\n",  data->tid, test);
-        char *payload= malloc(50);
+        char *payload = malloc(4096);
         snprintf(payload, 50, "HELLO WORLD! MY ID is: %d", data->tid);
         if (strncmp(test,payload, 50) < 0) {
             print_debug(KRED"ERROR: WRONG RESULT"RESET);
@@ -240,6 +241,7 @@ void *testing_loop(void *arg) {
         struct in6_memaddr *remoteMemory = data->r_addr + i;
         freeRemoteMem(temp, remoteMemory);
     }
+    free(temp);
     printSendLat();
 
     return NULL;
@@ -253,15 +255,15 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
     thread_data_t thr_data[NUM_THREADS];
 
     // Generate a random IPv6 address out of a set of available hosts
-    memcpy(&(targetIP->sin6_addr), gen_rdm_IPv6Target(), sizeof(struct in6_addr));
+
     struct in6_memaddr *r_addr = malloc(NUM_ITERATIONS * sizeof(struct in6_memaddr));
     if(!r_addr)
         perror("Allocation too large");
     
     //struct in6_memaddr r_addr[NUM_ITERATIONS];
     srand(time(NULL));
-
     for (i = 0; i< NUM_ITERATIONS; i++) {
+        memcpy(&(targetIP->sin6_addr), gen_rdm_IPv6Target(), sizeof(struct in6_addr));
         r_addr[i] = allocateRemoteMem(targetIP);
     }
 
@@ -287,6 +289,7 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
 
     /* block until all threads complete */
     for (i = 0; i < NUM_THREADS; i++) {
+        printf("Waiting for my friends...\n");
         pthread_join(thr[i], NULL);
     }
 

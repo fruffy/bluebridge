@@ -84,7 +84,7 @@ struct packetconfig *gen_packet_info(struct config *configstruct) {
 
     // Hop limit (8 bits): default to maximum value
     packetinfo.iphdr.ip6_hops = 255;
-    packetinfo.udphdr.source = configstruct->src_port;
+    packetinfo.udphdr.source = configstruct->src_port + thread_id;
     memcpy (packetinfo.ether_frame + ETH_HDRLEN, &packetinfo.iphdr, IP6_HDRLEN * sizeof (uint8_t));
     memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN, &packetinfo.udphdr, UDP_HDRLEN * sizeof (uint8_t));
     return &packetinfo;
@@ -132,7 +132,7 @@ int init_packetsock_ring(int sd){
     if (setsockopt(sd, SOL_PACKET, PACKET_TX_RING, (void*) &tp, sizeof(tp)))
         RETURN_ERROR(-1, "setsockopt() ring\n");
     int on = 1;
-    setsockopt(sd, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
+    //setsockopt(sd, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
 
     int val = TPACKET_V3;
     setsockopt(sd, SOL_PACKET, PACKET_HDRLEN, &val, sizeof(val));
