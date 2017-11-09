@@ -177,7 +177,7 @@ void *wc(void *arg) {
 
 }
 
-#define NUM_THREADS 1
+#define NUM_THREADS 10
 void wc_program_threads(char *cdata, int length) {
     pthread_t thr[NUM_THREADS];
     int rc;

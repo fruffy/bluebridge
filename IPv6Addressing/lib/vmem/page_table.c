@@ -106,6 +106,11 @@ void page_fault_handler_rmem( struct page_table *pt, int page ) {
 
     pageFaults++;
     page_table_get_entry(pt, page, &frame, &bits); // check if the page is in memory
+/*    printf("Accessing pointer %p\n", &frame);
+    char *pointy = page_table_get_virtmem(pt);
+    printf("Accessing 2332 %p\n", pointy);
+    char *pointy2 = page_table_get_physmem(pt);
+    printf("Accessing adasdad %p\n", pointy2);*/
     for(i = 0; i < pt->nframes; i++) { // increment values already in frameState--keeps track of oldest value in frame table
         if(frameState[i] != 0) {
             frameState[i]++;
@@ -120,8 +125,8 @@ void page_fault_handler_rmem( struct page_table *pt, int page ) {
                 frameState[i] = 1;
                 framePage[i] = page;
                 emptyFrame = 1;
-                page_table_set_entry(pt, page, i, PROT_READ);
                 rmem_read(rmem, page, &physmem[i*PAGE_SIZE]);
+                page_table_set_entry(pt, page, i, PROT_READ);
                 pageReads++;
                 break;
             }
@@ -150,8 +155,8 @@ void page_fault_handler_rmem( struct page_table *pt, int page ) {
         }
     } else { // if page is already in table--need to set write bit
         page_table_set_entry(pt, page, frame, PROT_READ|PROT_WRITE);
-        frameState[frame] = 1;
-        framePage[frame] = page;
+/*        frameState[frame] = 1;
+        framePage[frame] = page;*/
     }
 }
 
@@ -173,11 +178,11 @@ void page_fault_handler_disk( struct page_table *pt, int page) {
         int emptyFrame = 0;
         for(i = 0; i < pt->nframes; i++) {
             if(frameState[i] == 0) { // empty frame
+                disk_read(disk, page, &physmem[i*PAGE_SIZE]);
+                page_table_set_entry(pt, page, i, PROT_READ);
                 frameState[i] = 1;
                 framePage[i] = page;
                 emptyFrame = 1;
-                page_table_set_entry(pt, page, i, PROT_READ);
-                disk_read(disk, page, &physmem[i*PAGE_SIZE]);
                 pageReads++;
                 break;
             }
@@ -200,7 +205,7 @@ void page_fault_handler_disk( struct page_table *pt, int page) {
             disk_read(disk, page, &physmem[frame*PAGE_SIZE]);
             pageReads++;
             page_table_set_entry(pt, page, frame, PROT_READ);
-            page_table_set_entry(pt, tempPage, frame, 0);
+            page_table_set_entry(pt, tempPage, 0, 0);
             frameState[frame] = 1;
             framePage[frame] = page;
         }

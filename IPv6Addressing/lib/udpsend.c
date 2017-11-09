@@ -84,7 +84,7 @@ struct packetconfig *gen_packet_info(struct config *configstruct) {
 
     // Hop limit (8 bits): default to maximum value
     packetinfo.iphdr.ip6_hops = 255;
-    packetinfo.udphdr.source = configstruct->src_port;
+    packetinfo.udphdr.source = configstruct->src_port + thread_id;
     memcpy (packetinfo.ether_frame + ETH_HDRLEN, &packetinfo.iphdr, IP6_HDRLEN * sizeof (uint8_t));
     memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN, &packetinfo.udphdr, UDP_HDRLEN * sizeof (uint8_t));
     return &packetinfo;

@@ -12,7 +12,8 @@
 #include <sys/epoll.h>        // epoll_wait(), epoll_event, epoll_rcv()
 #include <pthread.h>
 #include <semaphore.h>
-
+#include <linux/filter.h>
+#include <sys/types.h>
 
 #include "udpcooked.h"
 #include "utils.h"
@@ -31,7 +32,7 @@ void init_epoll();
 void close_epoll();
 void *get_free_buffer();
 
-
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 struct ep_interface {
     struct sockaddr_ll device;
     uint16_t my_port;
@@ -48,6 +49,8 @@ static __thread struct rcv_ring ring;
 
 static __thread int sd_rcv;
 static __thread int thread_id;
+struct sock_filter code;
+
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
     struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
@@ -65,6 +68,33 @@ struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
 }
 void set_thread_id_rx(int id) {
     thread_id = id;
+}
+void set_packet_filter(int sd, int port) {
+    struct sock_fprog filter;
+    int i, lineCount = 0;
+    char tcpdump_command[512];
+    FILE* tcpdump_output;
+    sprintf(tcpdump_command, "tcpdump dst port %d -ddd", ntohs(port));
+    printf("%s\n",tcpdump_command );
+    if ( (tcpdump_output = popen(tcpdump_command, "r")) == NULL ) {
+        perror("Cannot compile filter using tcpdump.");
+        return;
+    }
+    if ( fscanf(tcpdump_output, "%d\n", &lineCount) < 1 ) {
+        printf("cannot read lineCount.\n");
+        return;
+    }
+    filter.filter = calloc(sizeof(struct sock_filter)*lineCount,1);
+    filter.len = lineCount;
+    for ( i = 0; i < lineCount; i++ ) {
+        if (fscanf(tcpdump_output, "%u %u %u %u\n", (unsigned int *)&(filter.filter[i].code),(unsigned int *) &(filter.filter[i].jt),(unsigned int *) &(filter.filter[i].jf), &(filter.filter[i].k)) < 4 ) {
+            printf("error in reading line number: %d\n", (i+1));
+            free(filter.filter);
+            return;
+        }
+    setsockopt(sd, SOL_SOCKET, SO_ATTACH_FILTER, &filter, sizeof(filter));
+    }
+    pclose(tcpdump_output);
 }
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket_old(struct config *configstruct) {
@@ -179,7 +209,7 @@ int init_socket() {
     //setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
     //setsockopt(sd_rcv, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
     setsockopt(sd_rcv, SOL_PACKET, SO_BUSY_POLL, &on, sizeof(on));
-
+    set_packet_filter(sd_rcv, interface_ep.my_port +thread_id);
     if (-1 == sd_rcv) {
         perror("Could not set socket");
         return EXIT_FAILURE;
@@ -188,6 +218,7 @@ int init_socket() {
         perror("Could not bind socket.");
         return EXIT_FAILURE;
     }
+
     return 0;
 }
 
@@ -276,14 +307,13 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                 char s1[INET6_ADDRSTRLEN];
                 inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
                 inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
-                //printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
-                //printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(interface_ep.my_port), ntohs(udphdr->dest) );
-               
                 if (udphdr->dest == interface_ep.my_port) {
+                //printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
+                //printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(interface_ep.my_port), ntohs(udphdr->dest) );*/
                     struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
                     int isMyID = 1;
                     if (remoteAddr != NULL && !server) {
-/*                        printf("Thread %d Their ID\n", thread_id);
+                        /*printf("Thread %d Their ID\n", thread_id);
                         printNBytes(inAddress, 16);
                         printf("Thread %d MY ID\n", thread_id);
                         printNBytes(remoteAddr, 16);
@@ -301,7 +331,7 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                         next_packet(&ring);
                         return msgBlockSize;
                     }
-                }
+                //}
                 tpacket_hdr->tp_status = TP_STATUS_KERNEL;
                 next_packet(&ring);
            }
