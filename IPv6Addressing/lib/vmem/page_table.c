@@ -75,6 +75,8 @@ void page_fault_handler_rrmem( struct page_table *pt, int page ) {
                     frame = i;
                 }
             }
+            //printf("Physical Mem\n");
+            //printNBytes(&physmem[frame*PAGE_SIZE],PAGE_SIZE);
             int tempPage = framePage[frame]; // get page currently in frame
             page_table_get_entry(pt, tempPage, &frame, &bits);
             if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
@@ -277,7 +279,6 @@ struct page_table *page_table_create( int npages, int nframes, page_fault_handle
 
     the_page_table = pt;
 
-/*
     char filename[256];
     sprintf(filename,"/tmp/pmem.%d.%d",getpid(),getuid());
 
@@ -286,16 +287,16 @@ struct page_table *page_table_create( int npages, int nframes, page_fault_handle
 
     ftruncate(pt->fd,PAGE_SIZE*npages);
 
-    unlink(filename);*/
+    unlink(filename);
 
-    //pt->physmem = mmap(0,nframes*PAGE_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,pt->fd,0);
-    pt->physmem = mmap(NULL, nframes*PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+    pt->physmem = mmap(0,nframes*PAGE_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,pt->fd,0);
+    //pt->physmem = mmap(NULL, nframes*PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
     if (pt->physmem == (void *) MAP_FAILED) perror("mmap"), exit(0);
 
     pt->nframes = nframes;
 
-    //pt->virtmem = mmap(0,npages*PAGE_SIZE,PROT_NONE,MAP_SHARED|MAP_NORESERVE,pt->fd,0);
-    pt->virtmem = mmap(NULL, npages*PAGE_SIZE, PROT_NONE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0);
+    pt->virtmem = mmap(0,npages*PAGE_SIZE,PROT_NONE,MAP_SHARED|MAP_NORESERVE,pt->fd,0);
+    //pt->virtmem = mmap(NULL, npages*PAGE_SIZE, PROT_NONE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0);
     if (pt->virtmem == (void *) MAP_FAILED) perror("mmap"), exit(0);
 
     pt->npages = npages;

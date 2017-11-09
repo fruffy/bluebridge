@@ -45,4 +45,7 @@ Close the virtual disk.
 
 void rrmem_deallocate( struct rrmem *r );
 
+char * parity45(char *data, int size, int stripes);
+void repairStripeFromParity45(char* repair, char **stripes, char *parity, int missing, int numStripes, int size);
+
 #endif

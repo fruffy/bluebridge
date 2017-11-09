@@ -241,11 +241,18 @@ void wc_program(char *cdata, int length) {
     uint64_t rStart = getns();
     if(fp != NULL) {
         while((symbol = getc(fp)) != EOF) {
-        cdata[i] = symbol; 
+        cdata[i] = symbol;
+
+        //printf("%c",cdata[i]);
         i++;
         }
         fclose(fp);
     }
+    int datalen = 8000;
+    printf("PRINTING n-%d data\n",datalen);
+    //printNBytes(cdata,datalen);
+    //sleep(5);
+
     uint64_t latency_store = getns() - rStart;
     printf("Done with storing thingy\n");
     int count = 0, index;
