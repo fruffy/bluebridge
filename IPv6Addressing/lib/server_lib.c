@@ -73,6 +73,7 @@ int allocateMem(struct sockaddr_in6 *targetIP) {
     //TODO: Error handling if we runt out of memory, this will fail
     //do some work, which might goto error
     void *allocated = malloc(BLOCK_SIZE);
+    //void *allocated = calloc(1 ,BLOCK_SIZE);
     //void *allocated = mmap(NULL, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
     //if (allocated == (void *) MAP_FAILED) perror("mmap"), exit(1);
     memset(&allocPointer, 0, IPV6_SIZE);

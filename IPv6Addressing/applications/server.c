@@ -32,7 +32,7 @@ void handleClientRequests(char *receiveBuffer, struct sockaddr_in6 *targetIP, st
         }
         freeMem(targetIP, remoteAddr);
     } else {
-        printf("Cannot match command!\n");
+        printf("Cannot match command %s!\n",remoteAddr->cmd);
         if (send_udp_raw("Hello, world!", 13, targetIP) == -1) {
             perror("ERROR writing to socket");
             exit(1);

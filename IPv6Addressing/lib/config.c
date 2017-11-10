@@ -119,8 +119,7 @@ struct config configure_bluebridge(char *filename, int isServer) {
                     }
                 configstruct.num_hosts = j;
             } else if (i == 2){
-                    memcpy(configstruct.server_port,cfline,strlen(cfline));
-                    strncpy(configstruct.server_port,"5000\n",5);
+                    strncpy(configstruct.server_port,cfline,strlen(cfline));
             } else if (i == 3){
                     set_source_port(&configstruct, isServer,cfline);
             } else if (i == 4){

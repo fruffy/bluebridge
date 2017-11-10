@@ -67,7 +67,7 @@ struct rrmem *rrmem_allocate(int nblocks) {
 
     //initalize soccet connection
     rrmem_init_sockets(r);
-    r->raid=4;
+    r->raid=8;
     r->block_size = BLOCK_SIZE;
     r->nblocks = nblocks;
     fill_rrmem(r);
@@ -86,7 +86,7 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
     // Get pointer to page data in (simulated) physical memory
     // Slice up data based on given raid configuration
     switch (r->raid) {
-        case 4:
+        case 4 :
             assert(numHosts() >= 3);
             int alloc = r->block_size / (numHosts() - 1); //Raid 4
             if (r->block_size % (numHosts() -1) > 0) {
@@ -97,18 +97,6 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
             //printf("Writing to Remote hosts\n");
             char * parity = parity45(data,r->block_size,numHosts()-1);
             memcpy(buf,parity,alloc);
-            /*
-            printf("-----------------------\n");
-            for (int i =0; i< alloc;i++) {
-                printf("%02X ",buf[i]);
-                if (i > 8) {
-                    printf("\n");
-                    break;
-                }
-            }
-            printf("-----------------------\n");
-            printf("\n");
-            */
             for (int i = 0; i<numHosts()-1; i++) {
                 //printf("slice %d\n",i);
                 if (r->block_size % (numHosts() -1) <= i) {
@@ -116,14 +104,6 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
                 }
                 //printf("Writing %d bytes of Data to host %d from loc %d\n",alloc,i,base);
                 memcpy(buf,&(data[base]),alloc);
-                /*
-                for (int i =0; i< alloc;i++) {
-                    printf("%02X ",buf[i]);
-                    if (i > 8) {
-                        printf("\n");
-                        break;
-                    }
-                }*/
                 writeRemoteMem(r->targetIP, buf, &r->rsmem[i].memList[block]);
                 base += alloc;
             }
@@ -136,8 +116,41 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
             memcpy(buf,parity,alloc);
             writeRemoteMem(r->targetIP,buf, &r->rsmem[numHosts() -1].memList[block]);
             //printf("\n\n\n");
-
             break;
+        case 8 :
+            //printf("Writing Raid %d\n",r->raid);
+            assert(numHosts() >= 3);
+            alloc = r->block_size / (numHosts() - 1); //Raid 4
+            if (r->block_size % (numHosts() -1) > 0) {
+                alloc++;
+            }
+            base = 0;
+            char **bufs = malloc(sizeof(char*) *numHosts());
+            char **remoteAddrs = malloc(sizeof(struct in6_memaddr*) * numHosts());
+            parity = parity45(data,r->block_size,numHosts()-1);
+            //char * parity = parity45(data,r->block_size,numHosts()-1);
+            //memcpy(buf[numHosts()-1],parity,alloc);
+            for (int i = 0; i<numHosts()-1; i++) {
+                //printf("mallocing for host %d\n",i);
+                bufs[i] = malloc(sizeof(char) * r->block_size);
+                if (r->block_size % (numHosts() -1) <= i) {
+                    alloc = r->block_size / (numHosts() -1);
+                }
+                //printf("Copying read data to buffers\n");
+                memcpy(bufs[i],&(data[base]),alloc);
+                //printf("Copying Remote Adders\n");
+                remoteAddrs[i] = &r->rsmem[i].memList[block];
+                base += alloc;
+            }
+            //printf("Coping parity\n");
+            bufs[numHosts()-1] = parity;
+            remoteAddrs[numHosts()-1] = &r->rsmem[numHosts()-1].memList[block];
+            //printf("Writing with parallel raid\n");
+            writeRaidMem(r->targetIP,numHosts(),bufs, remoteAddrs);
+            //printf("FINISHED :: Writing with parallel raid\n");
+            break;
+
+
         default:
             printf("Raid %d not implemented FATAL write request\n",r->raid);
             //TODO Free memory and exit
@@ -207,6 +220,43 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
             }
 
             break;
+        case 8:
+            assert(numHosts() >= 3);
+            remoteReads = malloc(sizeof(char*) * numHosts());
+            char **remoteAddrs = malloc(sizeof(struct in6_memaddr*) * numHosts());
+            int missingIndex;
+            for (int i = 0; i<numHosts() ; i++) {
+                remoteReads[i] = malloc(sizeof(char) * r->block_size);
+                remoteAddrs[i] = &r->rsmem[i].memList[block];
+            }
+            //printf("Reading Remotely (Parallel Raid)\n");
+
+            missingIndex = readRaidMem(r->targetIP,numHosts(),remoteReads,remoteAddrs,numHosts());
+
+            alloc = r->block_size / (numHosts() - 1); //Raid 4
+            if (r->block_size % (numHosts() -1) > 0) {
+                alloc++;
+            }
+            base = 0;
+            for (int i = 0; i<numHosts()-1; i++) {
+                if (r->block_size % (numHosts() -1) <= i) {
+                    alloc = r->block_size / (numHosts() -1);
+                }
+                memcpy(&(data[base]),remoteReads[i],alloc);
+                base += alloc;
+            }
+            //printf("PAGE:\n%s\n",data);
+
+            if (!checkParity45(remoteReads,numHosts()-1,remoteReads[numHosts()-1],r->block_size)) {
+                //TODO reissue requests and try again, or correct the
+                //broken page
+                printf("Parity Not correct!!! Crashing");
+                exit(1);
+            }
+
+            //printf("Finished Parallel Raid Read\n");
+            break;
+        
         default:
             printf("Raid %d not implemented FATAL read request\n",r->raid);
             break;
@@ -336,8 +386,10 @@ int rrmem_blocks(struct rrmem *r) {
 }
 
 void rrmem_deallocate(struct rrmem *r) {
-    for (int i = 0; i<r->nblocks; i++){
-        freeRemoteMem(r->targetIP, &r->rsmem[0].memList[i]);
+    for(int i =0; i<numHosts();i++){
+        for (int j = 0; j<r->nblocks; j++){
+            freeRemoteMem(r->targetIP, &r->rsmem[i].memList[j]);
+        }
     }
     close_sockets();
     free(r);

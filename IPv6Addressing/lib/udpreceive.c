@@ -74,7 +74,7 @@ void set_packet_filter(int sd, int port) {
     int i, lineCount = 0;
     char tcpdump_command[512];
     FILE* tcpdump_output;
-    sprintf(tcpdump_command, "tcpdump dst port %d -ddd", ntohs(port));
+    sprintf(tcpdump_command, "tcpdump -i %d dst port %d -ddd", interface_ep.device.sll_ifindex+1,ntohs(port));
     printf("%s\n",tcpdump_command );
     if ( (tcpdump_output = popen(tcpdump_command, "r")) == NULL ) {
         perror("Cannot compile filter using tcpdump.");
@@ -307,7 +307,7 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                 char s1[INET6_ADDRSTRLEN];
                 inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
                 inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
-                if (udphdr->dest == interface_ep.my_port) {
+                //if (udphdr->dest == interface_ep.my_port) {
                 //printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
                 //printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(interface_ep.my_port), ntohs(udphdr->dest) );*/
                     struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
@@ -326,6 +326,13 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                             memcpy(remoteAddr, &iphdr->ip6_dst, IPV6_SIZE);
                         }
                         memcpy(targetIP->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
+                        /*
+                        for (int k=0;k<16;k++) {
+                            printf("%02X ",(int)targetIP->sin6_addr.s6_addr[k]);
+                        }
+                        printf("Received from %02X\n",(int)targetIP->sin6_addr.s6_addr[5]);
+                        printf("Received from (raw) %s\n",&iphdr->ip6_src);
+                        */
                         targetIP->sin6_port = udphdr->source;
                         tpacket_hdr->tp_status = TP_STATUS_KERNEL;
                         next_packet(&ring);
