@@ -40,8 +40,7 @@ struct page_table * page_table_create( int npages, int nframes, page_fault_handl
 
 void page_table_delete( struct page_table *pt );
 
-void page_table_flush(struct page_table *pt);
-
+void page_table_flush();
 /*
 Set the frame number and access bits associated with a page.
 The bits may be any of PROT_READ, PROT_WRITE, or PROT_EXEC logical-ored together.
@@ -88,5 +87,8 @@ struct page_table *init_virtual_memory(int npages, int nframes, const char* algo
 void print_page_faults();
 
 void clean_page_table(struct page_table *pt);
+
+void register_thread();
+
 
 #endif

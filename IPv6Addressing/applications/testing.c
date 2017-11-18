@@ -197,7 +197,7 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
 
 /* create thread argument struct for thr_func() */
 #include <pthread.h>
-#define NUM_THREADS 4
+#define NUM_THREADS 10
 
 typedef struct _thread_data_t {
   int tid;

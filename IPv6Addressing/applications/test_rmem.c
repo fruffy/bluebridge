@@ -153,9 +153,6 @@ int isWord(char prev, char cur) {
     return isspace(cur) && isgraph(prev);
 }
 void *wc(void *arg) {
-/*    struct config myConf = configure_bluebridge("tmp/config/distMem.cnf", 0);
-    init_rcv_socket(&myConf);
-    init_send_socket(&myConf);*/
     printf("Reading from thingy..\n");
     char prev = ' ';
     thread_data_t *data = (thread_data_t *)arg;
@@ -163,15 +160,14 @@ void *wc(void *arg) {
     set_thread_id_tx(data->tid);
     struct config myConf = get_bb_config();
     struct sockaddr_in6 *temp = init_sockets(&myConf);
-    //struct sockaddr_in6 *temp = init_rcv_socket(&myConf);
     temp->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
+    register_thread();
     char *cdata = data->data;
     static __thread int counter = 0;
     for (int index = 0; index < data->length; index++) {
             // TODO: Should also handle \n (i.e. any whitespace)
             //       should also ensure that it's only a word if
             //       there was a non white space character before it.
-
             if (isspace(cdata[index]) && isgraph(prev)) {
                 counter++;
             }
@@ -180,13 +176,11 @@ void *wc(void *arg) {
         }
     printf("Counting Result: %d\n", counter);
     close_sockets();
-    pthread_mutex_lock(&mutex);
     data->count = data->count + counter;
-    pthread_mutex_unlock(&mutex);
     return NULL;
 }
 
-#define NUM_THREADS 4
+#define NUM_THREADS 8
 void wc_program_threads(char *cdata, int length) {
     pthread_t thr[NUM_THREADS];
     int rc;
@@ -214,16 +208,19 @@ void wc_program_threads(char *cdata, int length) {
     pthread_attr_init(&attr);
     int policy;
     pthread_attr_setschedpolicy(&attr, SCHED_RR);
+    page_table_flush();
     for (i = 0; i < NUM_THREADS; i++) {
         thr_data[i].tid = i;
         thr_data[i].count = 0;
         int offset = split * i;
         thr_data[i].data = cdata + offset;
         if (i == NUM_THREADS-1)
-            thr_data[i].length = length - offset;
+            thr_data[i].length = fileLenght - offset;
         else
             thr_data[i].length = split;
-        printf("Total length %d  Thread length %d Actual split %d\n", length, thr_data[i].length, split );
+/*        thr_data[i].length = fileLenght;
+        thr_data[i].data = cdata;*/
+        printf("Total length %.3f  Thread length %.3f Ideal split %.3f\n", (double)fileLenght/BLOCK_SIZE, (double)thr_data[i].length/BLOCK_SIZE, (double)split/BLOCK_SIZE );
         if ((rc = pthread_create(&thr[i], NULL, wc, &thr_data[i]))) {
           fprintf(stderr, "error: pthread_create, rc: %d\n", rc);
         }
