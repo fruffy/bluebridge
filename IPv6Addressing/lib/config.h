@@ -24,6 +24,7 @@ struct config {
     struct in6_addr hosts[40];
 };
 
-struct config configure_bluebridge(char *filename, int isServer);
+struct config set_bb_config(char *filename, int isServer);
+struct config get_bb_config();
 
 #endif

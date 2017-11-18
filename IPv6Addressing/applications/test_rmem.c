@@ -2,8 +2,16 @@
 #include <time.h>
 #include <assert.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <ctype.h>
+
 #include "../lib/vmem/page_table.h"
 #include "../lib/vmem/rmem.h"
+#include "../lib/client_lib.h"
+#include "../lib/utils.h"
 
 #define KRED  "\x1B[31m"
 #define KGRN  "\x1B[32m"
@@ -11,15 +19,6 @@
 #define KMAG  "\x1B[35m"
 #define KCYN  "\x1B[36m"
 #define RESET "\033[0m"
-
-static inline uint64_t getns(void)
-
-{
-    struct timespec ts;
-    int ret = clock_gettime(CLOCK_MONOTONIC, &ts);
-    assert(ret == 0);
-    return (((uint64_t)ts.tv_sec) * 1000000000ULL) + ts.tv_nsec;
-}
 
 static int compare_bytes( const void *pa, const void *pb ) {
     int a = *(char*)pa;
@@ -140,15 +139,6 @@ void simple_test( char *cdata, int length) {
     printf("Write time average...: %lu nano seconds\n", totalW/length);
 }
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <ctype.h>
-#include <pthread.h>
-
-int isWord(char prev, char cur) {
-    return isspace(cur) && isgraph(prev);
-}
 
 /* create thread argument struct for thr_func() */
 typedef struct _thread_data_t {
@@ -157,59 +147,83 @@ typedef struct _thread_data_t {
   int length;
   int count;
 } thread_data_t;
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-
+int isWord(char prev, char cur) {
+    return isspace(cur) && isgraph(prev);
+}
 void *wc(void *arg) {
+/*    struct config myConf = configure_bluebridge("tmp/config/distMem.cnf", 0);
+    init_rcv_socket(&myConf);
+    init_send_socket(&myConf);*/
+    printf("Reading from thingy..\n");
     char prev = ' ';
     thread_data_t *data = (thread_data_t *)arg;
+    set_thread_id_rx(data->tid);
+    set_thread_id_tx(data->tid);
+    struct config myConf = get_bb_config();
+    struct sockaddr_in6 *temp = init_sockets(&myConf);
+    //struct sockaddr_in6 *temp = init_rcv_socket(&myConf);
+    temp->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
     char *cdata = data->data;
-    printf("Hello!\n");
-    printf("%d\n", data->length);
+    static __thread int counter = 0;
     for (int index = 0; index < data->length; index++) {
-        // TODO: Should also handle \n (i.e. any whitespace)
-        //       should also ensure that it's only a word if
-        //       there was a non white space character before it.
-        if (isWord(prev, cdata[index])) {
-            data->count++;
-        }
-        prev = cdata[index];
-    }
+            // TODO: Should also handle \n (i.e. any whitespace)
+            //       should also ensure that it's only a word if
+            //       there was a non white space character before it.
 
+            if (isspace(cdata[index]) && isgraph(prev)) {
+                counter++;
+            }
+            //printf("%c",cdata[index] );
+            prev = cdata[index];
+        }
+    printf("Counting Result: %d\n", counter);
+    close_sockets();
+    pthread_mutex_lock(&mutex);
+    data->count = data->count + counter;
+    pthread_mutex_unlock(&mutex);
+    return NULL;
 }
 
-#define NUM_THREADS 10
+#define NUM_THREADS 4
 void wc_program_threads(char *cdata, int length) {
     pthread_t thr[NUM_THREADS];
     int rc;
     /* create a thread_data_t argument array */
     thread_data_t thr_data[NUM_THREADS];
-    char symbol;
     int i =0;
     FILE *fp = fopen("baskerville.txt", "rb");
-
     printf("Storing thingy\n");
     uint64_t rStart = getns();
     if(fp != NULL) {
+        char symbol;
         while((symbol = getc(fp)) != EOF) {
-        cdata[i] = symbol; 
-        i++;
+            cdata[i] = symbol; 
+            i++;
         }
         fclose(fp);
     }
     int fileLenght = i;
     uint64_t latency_store = getns() - rStart;
     printf("Done with storing thingy\n");
-     
-      /* create threads */
+    int split = fileLenght/NUM_THREADS + (BLOCK_SIZE -fileLenght/NUM_THREADS % BLOCK_SIZE);
+    /* create threads */
+    pthread_attr_t attr;
+
+    pthread_attr_init(&attr);
+    int policy;
+    pthread_attr_setschedpolicy(&attr, SCHED_RR);
     for (i = 0; i < NUM_THREADS; i++) {
-        int split = fileLenght/NUM_THREADS;
         thr_data[i].tid = i;
-        thr_data[i].data = &cdata[split * i];
+        thr_data[i].count = 0;
+        int offset = split * i;
+        thr_data[i].data = cdata + offset;
         if (i == NUM_THREADS-1)
-            thr_data[i].length = length - split * i;
+            thr_data[i].length = length - offset;
         else
             thr_data[i].length = split;
-        printf("%d %d %d\n", length, thr_data[i].length, split );
+        printf("Total length %d  Thread length %d Actual split %d\n", length, thr_data[i].length, split );
         if ((rc = pthread_create(&thr[i], NULL, wc, &thr_data[i]))) {
           fprintf(stderr, "error: pthread_create, rc: %d\n", rc);
         }
@@ -218,17 +232,15 @@ void wc_program_threads(char *cdata, int length) {
     for (i = 0; i < NUM_THREADS; i++) {
         pthread_join(thr[i], NULL);
     }
-    printf("Reading from thingy..\n");
-    rStart = getns();
 
     int count = 0;
     for (i = 0; i < NUM_THREADS; ++i) {
         count += thr_data[i].count;
     }
     printf("Word count: %d\n", count);
-    uint64_t latency_read = getns() - rStart;
     printf("Storing time...: "KGRN"%lu"RESET" micro seconds\n", latency_store/1000);
-    printf("Reading time...: "KGRN"%lu"RESET" micro seconds\n", latency_read/1000);
+    //printf("Reading time...: "KGRN"%lu"RESET" micro seconds\n", latency_read/1000);
+    int latency_read = 0;
     printf("Total time taken: "KGRN"%lu"RESET" micro seconds\n", (latency_read + latency_store)/1000 );
 }
 
@@ -282,8 +294,8 @@ int main( int argc, char *argv[] )
 
     sync();
     system("echo 3 > /proc/sys/vm/drop_caches");
-    if(!strcmp(algo,"rmem"))
-        set_vmem_config("tmp/config/distMem.cnf");
+    set_vmem_config("tmp/config/distMem.cnf");
+    //set_vmem_config("distmem_client.cnf");
     struct page_table *pt = init_virtual_memory(npages, nframes, algo);
     char *virtmem = page_table_get_virtmem(pt);
 
@@ -300,7 +312,7 @@ int main( int argc, char *argv[] )
     } else if(!strcmp(program,"wc")) {
         wc_program(virtmem,npages*PAGE_SIZE);
     } else if(!strcmp(program,"wc_t")) {
-        wc_program(virtmem,npages*PAGE_SIZE);
+        wc_program_threads(virtmem,npages*PAGE_SIZE);
     } else {
         fprintf(stderr,"unknown program: %s\n",argv[4]);
     }

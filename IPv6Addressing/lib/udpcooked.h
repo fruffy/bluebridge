@@ -68,7 +68,7 @@ extern void close_rcv_socket();
 extern int strange_receive();
 extern struct sockaddr_in6 *rx_client_init_socket(struct config *configstruct);
 extern int rxring_mainloop(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server);
-extern void set_thread_id_sd(int id);
+extern void set_thread_id_tx(int id);
 extern void set_thread_id_rx(int id);
 
 #endif

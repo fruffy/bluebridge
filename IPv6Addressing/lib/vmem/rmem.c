@@ -30,7 +30,7 @@ struct rmem {
 
 struct config myConf;
 void configure_rmem(char *filename) {
-    myConf = configure_bluebridge(filename, 0);
+    myConf = set_bb_config(filename, 0);
     set_host_list(myConf.hosts, myConf.num_hosts);
 }
 

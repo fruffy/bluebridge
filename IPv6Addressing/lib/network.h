@@ -23,6 +23,7 @@ int rcv_udp6_raw_id(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 
 extern struct sockaddr_in6 *init_rcv_socket();
 extern struct sockaddr_in6 *init_rcv_socket_old();
 extern void init_send_socket();
+struct sockaddr_in6 *init_sockets(struct config *configstruct);
 extern void close_sockets();
 struct addrinfo* bindSocket(struct addrinfo* p, struct addrinfo* servinfo, int* sockfd);
 

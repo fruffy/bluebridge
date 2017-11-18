@@ -100,6 +100,9 @@ int getMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
     // Send the sendBuffer (entire BLOCK_SIZE) to sock_fd
     // print_debug("Content length %lu will be delivered to client!", strlen((char *)pointer));
     struct in6_memaddr *returnID = (struct in6_memaddr *) (&targetIP->sin6_addr);
+/*    for (int i =0; i<=BLOCK_SIZE; i++) {
+        printf("%c", ((unsigned char *)*(&ipv6Pointer->paddr))[i]);
+    }*/
     returnID->cmd = ipv6Pointer->cmd;
     returnID->paddr = ipv6Pointer->paddr;
     send_udp_raw((void *) *&ipv6Pointer->paddr, BLOCK_SIZE, targetIP);
@@ -121,6 +124,9 @@ int writeMem(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_mema
     //uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
 
     memcpy((void *) *(&ipv6Pointer->paddr), receiveBuffer, BLOCK_SIZE); 
+/*    for (int i =0; i<=BLOCK_SIZE; i++) {
+        printf("%c", ((unsigned char *)*(&ipv6Pointer->paddr))[i]);
+    }*/
     //print_debug("Content length %lu is currently stored at %p!", strlen((char *)pointer), (void*)pointer);
     //print_debug("Content preview (50 bytes): %.50s", (char *)pointer);
 
