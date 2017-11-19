@@ -187,11 +187,13 @@ void *wc(void *arg) {
             //printf("%c",cdata[index] );
             prev = cdata[index];
         }
+    //pthread_mutex_lock(&mutex);
 /*    printf("******Thread %d done with Counting******\n", data->tid);
     page_table_print();
     printf("******Thread %d Counting Result: %d******\n", data->tid, counter);*/
     close_sockets();
     data->count = data->count + counter;
+    //pthread_mutex_unlock(&mutex);
 
     return NULL;
 }
@@ -204,7 +206,7 @@ void wc_program_threads(char *cdata, int length) {
     thread_data_t thr_data[NUM_THREADS];
     int i =0;
     FILE *fp = fopen("baskerville.txt", "rb");
-    printf("Storing thingy\n");
+    printf("Reading in thingy\n");
     uint64_t rStart = getns();
     if(fp != NULL) {
         char symbol;
@@ -216,7 +218,7 @@ void wc_program_threads(char *cdata, int length) {
     }
     int fileLenght = i;
     uint64_t latency_store = getns() - rStart;
-    printf("Done with storing thingy\n");
+    printf("Done with reading thingy\n");
     int split = fileLenght/NUM_THREADS + (BLOCK_SIZE -((fileLenght/NUM_THREADS) % BLOCK_SIZE));
     /* create threads */
     pthread_attr_t attr;
@@ -225,12 +227,12 @@ void wc_program_threads(char *cdata, int length) {
     int policy;
     pthread_attr_setschedpolicy(&attr, SCHED_RR);
     printf("******Done with storing******\n");
-    //page_table_print();
-    clear_frame_table();
+    page_table_print();
+    page_table_flush();
+    //clear_frame_table();
     printf("******Done with cleaning******\n");
-    //page_table_print();
+    page_table_print();
 
-    //page_table_flush();
     for (i = 0; i < NUM_THREADS; i++) {
         thr_data[i].tid = i;
         thr_data[i].count = 0;
@@ -265,27 +267,29 @@ void wc_program_threads(char *cdata, int length) {
 }
 
 void wc_program(char *cdata, int length) {
-    FILE *fp = fopen("baskerville.txt", "rb");
 
-    printf("Storing thingy\n");
+    FILE *fp = fopen("baskerville.txt", "rb");
+    printf("Reading in thingy\n");
     char symbol;
     int i =0;
     uint64_t rStart = getns();
     if(fp != NULL) {
         while((symbol = getc(fp)) != EOF) {
-        cdata[i] = symbol; 
-        i++;
+            cdata[i] = symbol; 
+            i++;
         }
         fclose(fp);
     }
+    int fileLenght = i;
     uint64_t latency_store = getns() - rStart;
-    printf("Done with storing thingy\n");
+    printf("Done with reading thingy\n");
+    page_table_flush();
     int count = 0, index;
     char prev = ' ';
 
     printf("Reading from thingy..\n");
     rStart = getns();
-    for (index = 0; index < length; index++) {
+    for (index = 0; index < fileLenght; index++) {
         // TODO: Should also handle \n (i.e. any whitespace)
         //       should also ensure that it's only a word if
         //       there was a non white space character before it.

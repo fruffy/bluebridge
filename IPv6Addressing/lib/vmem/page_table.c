@@ -121,27 +121,26 @@ void page_fault_handler_rmem(struct page_table *pt, int page) {
 
 struct disk *disk;
 void page_fault_handler_disk(struct page_table *pt, int page) {
-    int i;
-    int frame;
-    int bits;
+    int frame = 0;
+    int bits = 0;
     
     pageFaults++;
 
     page_table_get_entry(pt, page, &frame, &bits); // check if the page is in memory
-    for(i = 0; i < pt->nframes; i++) { // increment values already in frameState--keeps track of oldest value in frame table
+    for(int i = 0; i < pt->nframes; i++) { // increment values already in frameState--keeps track of oldest value in frame table
         if(frameState[i] != 0) {
             frameState[i]++;
         }
     }
     if(bits == 0) { // page is not in memory
         int emptyFrame = 0;
-        for(i = 0; i < pt->nframes; i++) {
+        for(int i = 0; i < pt->nframes; i++) {
             if(frameState[i] == 0) { // empty frame
-                disk_read(disk, page, &physmem[i*PAGE_SIZE]);
-                page_table_set_entry(pt, page, i, PROT_READ);
                 frameState[i] = 1;
                 framePage[i] = page;
                 emptyFrame = 1;
+                page_table_set_entry(pt, page, i, PROT_READ);
+                disk_read(disk, page, &physmem[i*PAGE_SIZE]);
                 pageReads++;
                 break;
             }
@@ -149,30 +148,34 @@ void page_fault_handler_disk(struct page_table *pt, int page) {
         // first in first out page replacement
         if (emptyFrame == 0) {
             int value = 0;
-            for(i = 0; i < pt->nframes; i++) { // get oldest page
+            for(int i = 0; i < pt->nframes; i++) { // get oldest page
                 if(frameState[i] > value) {
                     value = frameState[i];
                     frame = i;
                 }
             }
             int tempPage = framePage[frame]; // get page currently in frame
+            printf("Page we want to evict %d Faulted page %d\n", tempPage, page);
             page_table_get_entry(pt, tempPage, &frame, &bits);
+            printf("Frame number page is in %d Frame number\n", tempPage, page);
             if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
+                page_table_print_entry(pt, tempPage);
                 disk_write(disk, tempPage, &physmem[frame*PAGE_SIZE]);
                 pageWrites++;
             }
             disk_read(disk, page, &physmem[frame*PAGE_SIZE]);
             pageReads++;
             page_table_set_entry(pt, page, frame, PROT_READ);
-            page_table_set_entry(pt, tempPage, 0, PROT_NONE);
+            page_table_set_entry(pt, tempPage, 0, 0);
             frameState[frame] = 1;
             framePage[frame] = page;
         }
     } else { // if page is already in table--need to set write bit
         page_table_set_entry(pt, page, frame, PROT_READ|PROT_WRITE);
-        frameState[frame] = 1;
-        framePage[frame] = page;
+/*        frameState[frame] = 1;
+        framePage[frame] = page;*/
     }
+    printf("************************************\n");
 }
 
 struct mem *mem;
@@ -227,23 +230,21 @@ void page_fault_handler_mem(struct page_table *pt, int page) {
         }
     } else { // if page is already in table--need to set write bit
         page_table_set_entry(pt, page, frame, PROT_READ|PROT_WRITE);
-        frameState[frame] = 1;
-        framePage[frame] = page;
+/*        frameState[frame] = 1;
+        framePage[frame] = page;*/
     }
 }
-static int thread_tracker = 0;
-static uint8_t *offsetPointer;
+//static int thread_tracker = 0;
 void register_thread() {
     //pthread_mutex_lock(&mutex);
     struct page_table *pt = the_page_table;
-    thread_tracker++;
+/*    thread_tracker++;
     if (pt->nframes * thread_tracker > pt->npages) {
         printf("Combined frame availability of threads must not exceed page availability! This will lead to inconsistent results\n");
         exit(1);
-    }
+    }*/
     physmem = mmap(0, pt->nframes*PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, pt->fd,0);
     //physmem = mmap(NULL, pt->nframes*PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
-    //offsetPointer = (physmem + pt->nframes*PAGE_SIZE);
     if (physmem == (void *) MAP_FAILED) perror("mmap"), exit(0);
     //physmem = calloc(pt->nframes, PAGE_SIZE);
     frameState = calloc(pt->nframes, sizeof(int)); // allocate space for array of frameStates
@@ -253,7 +254,6 @@ void register_thread() {
 }
 
 struct page_table *page_table_create(int npages, int nframes, page_fault_handler_t handler) {
-    int i;
     struct sigaction sa;
     struct page_table *pt;
 
@@ -270,7 +270,6 @@ struct page_table *page_table_create(int npages, int nframes, page_fault_handler
     ftruncate(pt->fd,PAGE_SIZE*npages);
 
     unlink(filename);
-    offsetPointer = 0;
     pt->physmem = mmap(0, nframes*PAGE_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED, pt->fd, 0);
     //pt->physmem = mmap(NULL, nframes*PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
     if (pt->physmem == (void *) MAP_FAILED) perror("mmap"), exit(0);
@@ -284,14 +283,14 @@ struct page_table *page_table_create(int npages, int nframes, page_fault_handler
     framePage = calloc(pt->nframes, sizeof(int)); // allocate space for array of frameStates
     pt->npages = npages;
 
-    pt->page_bits = malloc(sizeof(int)*npages);
-    pt->page_mapping = malloc(sizeof(int)*npages);
+    pt->page_bits = calloc(npages, sizeof(int));
+    pt->page_mapping = calloc(npages, sizeof(int));
 
     pt->handler = handler;
     /*printf("The size of our local memory cache is: %d kbyte\n", nframes*PAGE_SIZE/1000);
     printf ("The size of our page table is: %d\n", nframes);
     printf("The size of the virtual memory is: %d kbyte\n", npages*PAGE_SIZE/1000);*/
-    for(i=0;i<pt->npages;i++) pt->page_bits[i] = 0;
+    //for(i=0;i<pt->npages;i++) pt->page_bits[i] = 0;
 
     sa.sa_sigaction = internal_fault_handler;
     sa.sa_flags = SA_SIGINFO;
@@ -324,15 +323,17 @@ void page_table_flush() {
     struct page_table *pt = the_page_table;
     int frame;
     int bits;
-    for(frame = 0; frame < pt->nframes; frame++) { // get oldest page
-        int tempPage = framePage[frame]; // get page we want to kick out
+    for(int i = 0; i < pt->nframes; i++) {
+        int tempPage = framePage[i]; // get page we want to kick out
+        printf("Paging out:\n");
         page_table_get_entry(pt, tempPage, &frame, &bits);
+        page_table_print_entry(pt, tempPage);
         if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
             if (!strcmp(pagingSystem, "disk"))
                 disk_write(disk, tempPage, &physmem[frame*PAGE_SIZE]);
             else if (!strcmp(pagingSystem, "rmem"))
                 rmem_write(rmem, tempPage, &physmem[frame*PAGE_SIZE]);
-            else if (!strcmp(pagingSystem, "rmem"))
+            else if (!strcmp(pagingSystem, "mem"))
                 mem_write(mem, tempPage, &physmem[frame*PAGE_SIZE]);
             pageWrites++;
         }
@@ -356,7 +357,7 @@ void page_table_set_entry(struct page_table *pt, int page, int frame, int bits) 
     pt->page_bits[page] = bits;
     //printf("Thread %lu Setting %d\n",my_thread, page );
 
-    //remap_file_pages(pt->virtmem+page*PAGE_SIZE, PAGE_SIZE, 0, frame, 0);
+    remap_file_pages(pt->virtmem+page*PAGE_SIZE, PAGE_SIZE, 0, frame, 0);
     mprotect(pt->virtmem+page*PAGE_SIZE, PAGE_SIZE, bits);
 }
 
@@ -379,14 +380,13 @@ void page_table_print_entry( struct page_table *pt, int page ) {
     }
 
     int b = pt->page_bits[page];
-    int *address = &framePage[pt->page_mapping[page]];
     printf("page %06d: frame %06d bits %c%c%c, vaddr %p\n",
         page,
         pt->page_mapping[page],
         b&PROT_READ  ? 'r' : '-',
         b&PROT_WRITE ? 'w' : '-',
         b&PROT_EXEC  ? 'x' : '-',
-        (void *)address
+        &pt->virtmem[page*PAGE_SIZE]
     );
 }
 
