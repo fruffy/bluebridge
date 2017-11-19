@@ -124,9 +124,9 @@ int writeMem(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_mema
     //uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
 
     memcpy((void *) *(&ipv6Pointer->paddr), receiveBuffer, BLOCK_SIZE); 
-/*    for (int i =0; i<=BLOCK_SIZE; i++) {
+    for (int i =0; i<=BLOCK_SIZE; i++) {
         printf("%c", ((unsigned char *)*(&ipv6Pointer->paddr))[i]);
-    }*/
+    }
     //print_debug("Content length %lu is currently stored at %p!", strlen((char *)pointer), (void*)pointer);
     //print_debug("Content preview (50 bytes): %.50s", (char *)pointer);
 

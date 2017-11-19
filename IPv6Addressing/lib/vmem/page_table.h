@@ -41,6 +41,9 @@ struct page_table * page_table_create( int npages, int nframes, page_fault_handl
 void page_table_delete( struct page_table *pt );
 
 void page_table_flush();
+void clear_frame_table();
+void set_thread_id_vmem(int t_id);
+
 /*
 Set the frame number and access bits associated with a page.
 The bits may be any of PROT_READ, PROT_WRITE, or PROT_EXEC logical-ored together.
@@ -78,7 +81,7 @@ void page_table_print_entry( struct page_table *pt, int page );
 
 /* Print out the state of every page in a page table. */
 
-void page_table_print( struct page_table *pt );
+void page_table_print();
 
 void set_vmem_config(char *filename);
 
@@ -89,6 +92,8 @@ void print_page_faults();
 void clean_page_table(struct page_table *pt);
 
 void register_thread();
+void register_thread2();
+void init_thread_table(int num_threads);
 
 
 #endif

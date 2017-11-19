@@ -11,18 +11,20 @@
 
 static __thread  int *frameState;     // keeps track of how long a page has been in a frame
 static __thread  int *framePage;      // keeps track of which page is in a frame
-
 static __thread char *physmem;
 static int pageFaults = 0;  // statistics 
 static int pageReads = 0;   // statistics 
 static int pageWrites = 0;  // statistics 
 static const char *pagingSystem;
 static struct page_table *the_page_table = 0;
+static __thread  int thread_id = -1;
 
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-
+void set_thread_id_vmem(int t_id) {
+    thread_id = t_id;
+}
 static void internal_fault_handler( int signum, siginfo_t *info, void *context ) {
 /*    if (frameState == NULL || framePage == NULL) {
         int i;
@@ -36,7 +38,7 @@ static void internal_fault_handler( int signum, siginfo_t *info, void *context )
             framePage[i] = 0;
         }
     }*/
-    pthread_mutex_lock(&mutex);
+    //pthread_mutex_lock(&mutex);
     (void) signum;
     char *addr = info->si_addr;
     (void) context;
@@ -45,22 +47,18 @@ static void internal_fault_handler( int signum, siginfo_t *info, void *context )
 /*        if (!physmem)
             register_thread(pt);*/
         int page = (addr-pt->virtmem) / PAGE_SIZE;
-        pthread_t my_thread = pthread_self();
-        printf("Thread %lu Faulting at %p and page %d \n",my_thread, addr, page);
+        //printf("Thread %d Faulting at %p and page %d \n",thread_id, addr, page);
         if(page>=0 && page<pt->npages) {
             pt->handler(pt, page);
-            pthread_mutex_unlock(&mutex);
+            //pthread_mutex_unlock(&mutex);
             return;
         }
     }
-    pthread_mutex_unlock(&mutex);
+    //pthread_mutex_unlock(&mutex);
     fprintf(stderr,"segmentation fault at address %p\n",addr);
     abort();
 }
-/*Counting Result: 15561
-Counting Result: 14515
-Counting Result: 14417
-Counting Result: 15118*/
+
 // TODO: Add compile IFDEFS to save space
 struct rmem *rmem;
 void page_fault_handler_rmem(struct page_table *pt, int page) {
@@ -232,11 +230,11 @@ void page_fault_handler_mem(struct page_table *pt, int page) {
         frameState[frame] = 1;
         framePage[frame] = page;
     }
-    printf("******** SNAPSHOT ********\n");
-    page_table_print(pt);
 }
 static int thread_tracker = 0;
+static uint8_t *offsetPointer;
 void register_thread() {
+    //pthread_mutex_lock(&mutex);
     struct page_table *pt = the_page_table;
     thread_tracker++;
     if (pt->nframes * thread_tracker > pt->npages) {
@@ -245,11 +243,13 @@ void register_thread() {
     }
     physmem = mmap(0, pt->nframes*PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, pt->fd,0);
     //physmem = mmap(NULL, pt->nframes*PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+    //offsetPointer = (physmem + pt->nframes*PAGE_SIZE);
     if (physmem == (void *) MAP_FAILED) perror("mmap"), exit(0);
     //physmem = calloc(pt->nframes, PAGE_SIZE);
     frameState = calloc(pt->nframes, sizeof(int)); // allocate space for array of frameStates
     framePage = calloc(pt->nframes, sizeof(int)); // allocate space for array of frameStates
-    memset(physmem, 0,pt->nframes*PAGE_SIZE);
+    //memset(physmem, 0,pt->nframes*PAGE_SIZE);
+    //pthread_mutex_unlock(&mutex);
 }
 
 struct page_table *page_table_create(int npages, int nframes, page_fault_handler_t handler) {
@@ -270,9 +270,9 @@ struct page_table *page_table_create(int npages, int nframes, page_fault_handler
     ftruncate(pt->fd,PAGE_SIZE*npages);
 
     unlink(filename);
-
+    offsetPointer = 0;
     pt->physmem = mmap(0, nframes*PAGE_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED, pt->fd, 0);
-/*    pt->physmem = mmap(NULL, nframes*PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);*/
+    //pt->physmem = mmap(NULL, nframes*PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
     if (pt->physmem == (void *) MAP_FAILED) perror("mmap"), exit(0);
     physmem = pt->physmem;
     pt->nframes = nframes;
@@ -280,7 +280,8 @@ struct page_table *page_table_create(int npages, int nframes, page_fault_handler
     pt->virtmem = mmap(0, npages*PAGE_SIZE,PROT_NONE,MAP_SHARED|MAP_NORESERVE, pt->fd, 0);
     //pt->virtmem = mmap(NULL, npages*PAGE_SIZE, PROT_NONE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0);
     //if (pt->virtmem == (void *) MAP_FAILED) perror("mmap"), exit(0);
-
+    frameState = calloc(pt->nframes, sizeof(int)); // allocate space for array of frameStates
+    framePage = calloc(pt->nframes, sizeof(int)); // allocate space for array of frameStates
     pt->npages = npages;
 
     pt->page_bits = malloc(sizeof(int)*npages);
@@ -308,7 +309,17 @@ void page_table_delete(struct page_table *pt) {
     close(pt->fd);
     free(pt);
 }
+void clear_frame_table() {
+    struct page_table *pt = the_page_table;
+    memset(frameState, 0, sizeof(int)*pt->nframes);
+    memset(framePage, 0, sizeof(int)*pt->nframes);
+    memset(pt->page_bits, 0, sizeof(int)*pt->npages);
+    memset(pt->page_mapping, 0, sizeof(int)*pt->npages);
 
+    memset(pt->physmem, 0, pt->nframes* PAGE_SIZE);
+    munmap(pt->physmem,pt->nframes*PAGE_SIZE);
+
+}
 void page_table_flush() {
     struct page_table *pt = the_page_table;
     int frame;
@@ -368,17 +379,19 @@ void page_table_print_entry( struct page_table *pt, int page ) {
     }
 
     int b = pt->page_bits[page];
-
-    printf("page %06d: frame %06d bits %c%c%c\n",
+    int *address = &framePage[pt->page_mapping[page]];
+    printf("page %06d: frame %06d bits %c%c%c, vaddr %p\n",
         page,
         pt->page_mapping[page],
         b&PROT_READ  ? 'r' : '-',
         b&PROT_WRITE ? 'w' : '-',
-        b&PROT_EXEC  ? 'x' : '-'
+        b&PROT_EXEC  ? 'x' : '-',
+        (void *)address
     );
 }
 
-void page_table_print( struct page_table *pt ) {
+void page_table_print() {
+    struct page_table *pt = the_page_table;
     int i;
     for(i=0;i<pt->npages;i++) {
         page_table_print_entry(pt,i);

@@ -31,6 +31,7 @@
 void init_epoll();
 void close_epoll();
 void *get_free_buffer();
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 struct ep_interface {
@@ -52,17 +53,20 @@ static __thread int thread_id;
 
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
+    pthread_mutex_lock(&mutex);
     struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
-    interface_ep.my_port = configstruct->src_port;
-    memset (&interface_ep.device, 0, sizeof (interface_ep.device));
-    if ((interface_ep.device.sll_ifindex = if_nametoindex (configstruct->interface)) == 0) {
-        perror ("if_nametoindex() failed to obtain interface index ");
-        exit (EXIT_FAILURE);
-    }
+    if (!interface_ep.my_port) {
+        interface_ep.my_port = configstruct->src_port;
+        if ((interface_ep.device.sll_ifindex = if_nametoindex (configstruct->interface)) == 0) {
+            perror ("if_nametoindex() failed to obtain interface index ");
+            exit (EXIT_FAILURE);
+        }
 
-    interface_ep.device.sll_family = AF_PACKET;
-    interface_ep.device.sll_protocol = htons (ETH_P_ALL);
+        interface_ep.device.sll_family = AF_PACKET;
+        interface_ep.device.sll_protocol = htons (ETH_P_ALL);
+    }
     init_epoll();
+    pthread_mutex_unlock(&mutex);
     return temp;
 }
 void set_thread_id_rx(int id) {
