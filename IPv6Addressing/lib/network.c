@@ -103,6 +103,12 @@ int rcv_udp6_raw_id(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *
     return numbytes;
 }
 
+struct sockaddr_in6 *init_sockets(struct config *configstruct) {
+    struct sockaddr_in6 * temp = init_rcv_socket(configstruct);
+    init_send_socket(configstruct);
+    return temp;
+}
+
 void close_sockets() {
     close_send_socket();
     close_rcv_socket();

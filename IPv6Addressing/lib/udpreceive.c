@@ -31,6 +31,7 @@
 void init_epoll();
 void close_epoll();
 void *get_free_buffer();
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 struct ep_interface {
@@ -49,21 +50,23 @@ static __thread struct rcv_ring ring;
 
 static __thread int sd_rcv;
 static __thread int thread_id;
-struct sock_filter code;
 
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
+    pthread_mutex_lock(&mutex);
     struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
-    interface_ep.my_port = configstruct->src_port;
-    memset (&interface_ep.device, 0, sizeof (interface_ep.device));
-    if ((interface_ep.device.sll_ifindex = if_nametoindex (configstruct->interface)) == 0) {
-        perror ("if_nametoindex() failed to obtain interface index ");
-        exit (EXIT_FAILURE);
-    }
+    if (!interface_ep.my_port) {
+        interface_ep.my_port = configstruct->src_port;
+        if ((interface_ep.device.sll_ifindex = if_nametoindex (configstruct->interface)) == 0) {
+            perror ("if_nametoindex() failed to obtain interface index ");
+            exit (EXIT_FAILURE);
+        }
 
-    interface_ep.device.sll_family = AF_PACKET;
-    interface_ep.device.sll_protocol = htons (ETH_P_ALL);
+        interface_ep.device.sll_family = AF_PACKET;
+        interface_ep.device.sll_protocol = htons (ETH_P_ALL);
+    }
     init_epoll();
+    pthread_mutex_unlock(&mutex);
     return temp;
 }
 void set_thread_id_rx(int id) {
@@ -75,7 +78,7 @@ void set_packet_filter(int sd, int port) {
     char tcpdump_command[512];
     FILE* tcpdump_output;
     sprintf(tcpdump_command, "tcpdump dst port %d -ddd", ntohs(port));
-    printf("%s\n",tcpdump_command );
+    //printf("%s\n",tcpdump_command );
     if ( (tcpdump_output = popen(tcpdump_command, "r")) == NULL ) {
         perror("Cannot compile filter using tcpdump.");
         return;
@@ -159,6 +162,7 @@ int get_rcv_socket() {
 
 void close_rcv_socket() {
     close(sd_rcv);
+    sd_rcv = -1;
     close_epoll();
 }
 #ifndef PACKET_FANOUT
@@ -209,11 +213,11 @@ int init_socket() {
     //setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
     //setsockopt(sd_rcv, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
     setsockopt(sd_rcv, SOL_PACKET, SO_BUSY_POLL, &on, sizeof(on));
-    set_packet_filter(sd_rcv, interface_ep.my_port +thread_id);
     if (-1 == sd_rcv) {
         perror("Could not set socket");
         return EXIT_FAILURE;
     }
+    set_packet_filter(sd_rcv, htons((ntohs(interface_ep.my_port) + thread_id)));
     if (-1 == bind(sd_rcv, (struct sockaddr *)&interface_ep.device, sizeof(interface_ep.device))) {
         perror("Could not bind socket.");
         return EXIT_FAILURE;
@@ -269,6 +273,8 @@ void next_packet(struct rcv_ring *ring_p) {
 
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
 int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server) {
+    if (sd_rcv <= 0)
+        init_epoll();
     while (1) {
         struct epoll_event events[1024];
         int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 0);
@@ -303,7 +309,7 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                 struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ethhdr + ETH_HDRLEN);
                 struct udphdr *udphdr = (struct udphdr *)((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN);
                 char *payload = ((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
-/*                char s[INET6_ADDRSTRLEN];
+                /*char s[INET6_ADDRSTRLEN];
                 char s1[INET6_ADDRSTRLEN];
                 inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
                 inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);

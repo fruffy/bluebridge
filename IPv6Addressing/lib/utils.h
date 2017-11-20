@@ -34,6 +34,8 @@ int printBytes(char *receiveBuffer);
 
 int printNBytes(void *receiveBuffer, int num);
 
+int printNChars(void *receiveBuffer, int num);
+
 int print_addrInfo(struct addrinfo *result);
 
 int getLine(char *prmpt, char *buff, size_t sz);

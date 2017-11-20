@@ -46,7 +46,7 @@ void handleClientRequests(char *receiveBuffer, struct sockaddr_in6 *targetIP, st
  */
 int main(int argc, char *argv[]) {
 
-    struct config myConf = configure_bluebridge(argv[1], 1);
+    struct config myConf = set_bb_config(argv[1], 1);
 
 //    struct sockaddr_in6 *temp = init_rcv_socket_old(argv[1]);
     struct sockaddr_in6 *targetIP = init_rcv_socket(&myConf);
