@@ -18,7 +18,7 @@ void insertArray(IntArr *a, int element);
 void freeArray(IntArr *a);
 
 typedef struct vertex {
-	int incoming_rank;	// Incoming rank for this vertex
+	double incoming_rank;	// Incoming rank for this vertex
 	int num_edges;		// Number of edges
 	int edge_offset;	// Offset into the edges array
 } vertex;

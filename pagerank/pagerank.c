@@ -89,34 +89,42 @@ void initialize_data(vector* damping_vector, vector* r_vector, matrix*
 }
 
 void usage() {
-	printf("./pagerank <damp factor> <error> <num nodes> <adj mat filename>\n");
+	printf("./pagerank <damp factor> <rounds> <edge filename>\n");
 }
 
-void pagerank(int rounds, int d) {
+void pagerank(int rounds, double d) {
 	double outrank = 0;
 	double alpha = ((double) (1 - d))/((double) num_vertices);
 
 	for (int i = 0; i < rounds; i++) {
 		for (int j = 0; j < num_vertices; j++) {
+			printf("Round: %d, Vertex: %d\n", i, j);
 			outrank = rank[j]/edgenorm[j];
+			printf("Outrank: %f, num_edges: %d\n", outrank, vertices[j].num_edges);
 			for (int k = 0; k < vertices[j].num_edges; k++) {
 				// TODO: check values
 				int edge_index = vertices[j].edge_offset + k;
+				printf("Edge_offset: %d, k: %d, Edge index: %d\n", vertices[j].edge_offset, k, edge_index);
 				int edge_to = edges[edge_index];
-				vertex to_vertex = vertices[edge_to];
-				to_vertex.incoming_rank += outrank;
+				printf("Edge to: %d\n", edge_to);
+				vertex* to_vertex = &vertices[edge_to];
+				printf("to vertex: %p\n", to_vertex);
+				to_vertex->incoming_rank += outrank;
+				printf("to_vertex ir: %f, array ir: %f\n", to_vertex->incoming_rank,
+					vertices[edge_to].incoming_rank);
 			}
 		}
 
 		for (int j = 0; j < num_vertices; j++) {
 			rank[j] = alpha + (d*vertices[j].incoming_rank);
+			printf("Updating rank for %d to %f\n", j, rank[j]);
 		}
 	}
 }
 
 int main(int argc, char** argv) {
 	// Read in arguments (d, err, adj mat)
-	if (argc != 5) {
+	if (argc != 4) {
 		// print usage
 		usage();
 		return -1;
@@ -125,11 +133,21 @@ int main(int argc, char** argv) {
 	char* ptr;
 
 	double d = strtod(argv[1], &ptr); 	// damping factor variable
-	double err = strtod(argv[2], &ptr); 	// error to converge to
-	int N = strtol(argv[3], &ptr, 10); 	// number of nodes
+	int rounds = strtol(argv[2], &ptr, 10);
+	char* filename = argv[3];
 
-	char* filename = argv[4];	// file containing adj mat
+	printf("Parsing file %s\n", filename);
+	parse_file(filename);
 
+	pagerank(rounds, d);
+	//double err = strtod(argv[2], &ptr); 	// error to converge to
+	//int N = strtol(argv[3], &ptr, 10); 	// number of nodes
+
+	//char* filename = argv[4];	// file containing adj mat
+
+
+
+/* OLD CODE
 	// Setup info (damping factor vector, link values, R vector)
 	vector damping_vector, r_vector;
 	matrix link_values;
@@ -159,4 +177,5 @@ int main(int argc, char** argv) {
 	print_vector(&r_vector, "PageRank Results:", 1);
 	printf("Total Iterations: %d\n", iteration);
 	return 0;
+*/
 }
