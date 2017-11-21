@@ -98,26 +98,26 @@ void pagerank(int rounds, double d) {
 
 	for (int i = 0; i < rounds; i++) {
 		for (int j = 0; j < num_vertices; j++) {
-			printf("Round: %d, Vertex: %d\n", i, j);
+			DEBUG_PRINT(("Round: %d, Vertex: %d\n", i, j));
 			outrank = rank[j]/edgenorm[j];
-			printf("Outrank: %f, num_edges: %d\n", outrank, vertices[j].num_edges);
+			DEBUG_PRINT(("Outrank: %f, num_edges: %d\n", outrank, vertices[j].num_edges));
 			for (int k = 0; k < vertices[j].num_edges; k++) {
 				// TODO: check values
 				int edge_index = vertices[j].edge_offset + k;
-				printf("Edge_offset: %d, k: %d, Edge index: %d\n", vertices[j].edge_offset, k, edge_index);
+				DEBUG_PRINT(("Edge_offset: %d, k: %d, Edge index: %d\n", vertices[j].edge_offset, k, edge_index));
 				int edge_to = edges[edge_index];
-				printf("Edge to: %d\n", edge_to);
+				DEBUG_PRINT(("Edge to: %d\n", edge_to));
 				vertex* to_vertex = &vertices[edge_to];
-				printf("to vertex: %p\n", to_vertex);
+				DEBUG_PRINT(("to vertex: %p\n", to_vertex));
 				to_vertex->incoming_rank += outrank;
-				printf("to_vertex ir: %f, array ir: %f\n", to_vertex->incoming_rank,
-					vertices[edge_to].incoming_rank);
+				DEBUG_PRINT(("to_vertex ir: %f, array ir: %f\n", to_vertex->incoming_rank,
+					vertices[edge_to].incoming_rank));
 			}
 		}
 
 		for (int j = 0; j < num_vertices; j++) {
 			rank[j] = alpha + (d*vertices[j].incoming_rank);
-			printf("Updating rank for %d to %f\n", j, rank[j]);
+			DEBUG_PRINT(("Updating rank for %d to %f\n", j, rank[j]));
 		}
 	}
 }
@@ -136,10 +136,16 @@ int main(int argc, char** argv) {
 	int rounds = strtol(argv[2], &ptr, 10);
 	char* filename = argv[3];
 
-	printf("Parsing file %s\n", filename);
+	DEBUG_PRINT(("Parsing file %s\n", filename));
 	parse_file(filename);
 
 	pagerank(rounds, d);
+
+	printf("Results: \n");
+
+	for (int i = 0; i < num_vertices; i++) {
+		printf("\t%d:\t%f\n", i, rank[i]);
+	}
 	//double err = strtod(argv[2], &ptr); 	// error to converge to
 	//int N = strtol(argv[3], &ptr, 10); 	// number of nodes
 

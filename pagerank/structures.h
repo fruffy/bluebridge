@@ -5,6 +5,12 @@
 
 #define DEBUG 0
 
+#if DEBUG
+# define DEBUG_PRINT(x) printf x
+#else
+# define DEBUG_PRINT(x) do {} while (0)
+#endif
+
 typedef struct {
 	int *array;
 	size_t used;

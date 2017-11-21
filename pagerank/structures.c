@@ -27,7 +27,7 @@ void parse_file(char* filename) {
 	// TODO: test function
 	// Read file line by line
 
-	printf("First read (get max and count)\n");
+	DEBUG_PRINT(("First read (get max and count)\n"));
 	FILE* edges_file = fopen(filename, "r");
 	char line[256];
 	int v1, v2;
@@ -45,29 +45,29 @@ void parse_file(char* filename) {
 		count++;
 	}
 
-	printf("Rewinding file\n");
+	DEBUG_PRINT(("Rewinding file\n"));
 	rewind(edges_file);
 
-	printf("Num vertices: %d, Num edges: %d\n", max+1, count);
+	DEBUG_PRINT(("Num vertices: %d, Num edges: %d\n", max+1, count));
 	num_vertices = (max+1);
 
-	printf("Mallocing vs array.\n");
+	DEBUG_PRINT(("Mallocing vs array.\n"));
 	IntArr* vs = (IntArr*) malloc(num_vertices*sizeof(IntArr));
 	
 	for (int i = 0; i < num_vertices; i++) {
 		initArray(&(vs[i]), 100);
 	}
 
-	printf("Mallocing vertices array.\n");
+	DEBUG_PRINT(("Mallocing vertices array.\n"));
 	vertices = (vertex*) malloc(num_vertices*sizeof(vertex));
-	printf("Mallocing edgenorm array.\n");
+	DEBUG_PRINT(("Mallocing edgenorm array.\n"));
 	edgenorm = (double*) malloc(num_vertices*sizeof(double));
-	printf("Mallocing rank array.\n");
+	DEBUG_PRINT(("Mallocing rank array.\n"));
 	rank = (double*) malloc(num_vertices*sizeof(double));
-	printf("Mallocing edges array.\n");
+	DEBUG_PRINT(("Mallocing edges array.\n"));
 	edges = (double*) malloc(count*sizeof(double));
 
-	printf("Second pass of file.\n");
+	DEBUG_PRINT(("Second pass of file.\n"));
 
 	while (fgets(line, sizeof(line), edges_file)) {
 		sscanf(line, "%d\t%d\n", &v1, &v2);
@@ -75,10 +75,10 @@ void parse_file(char* filename) {
 		insertArray(&vs[v1], v2);
 	}
 
-	printf("closing file.\n");
+	DEBUG_PRINT(("closing file.\n"));
 	fclose(edges_file);
 
-	printf("Setting rest of variables.\n");
+	DEBUG_PRINT(("Setting rest of variables.\n"));
 	int k = 0; 
 	for (int i = 0; i < max+1; i++) {
 		rank[i] = 1;
@@ -91,7 +91,7 @@ void parse_file(char* filename) {
 		}
 	}
 
-	printf("Freeing dynamic array.\n");
+	DEBUG_PRINT(("Freeing dynamic array.\n"));
 	for (int i = 0; i < num_vertices; i++) {
 		freeArray(&vs[i]);
 	}
