@@ -13,10 +13,10 @@ void generate_link_data(char* filename, matrix* res, int size) {
 	FILE *adj_mat = fopen(filename, "r");
 
 	// printf("Reading file...\n");
-	int c, r = 0;
+	int r = 0;
 	// For each entry, set entry to 1, go column wise to get sum. 
 	while (!feof(adj_mat)) { // iterate through rows
-		c = 0;
+		int c = 0;
 		char val;
 		do { // iterate through columns
 			val = (char)fgetc(adj_mat);
@@ -38,6 +38,8 @@ void generate_link_data(char* filename, matrix* res, int size) {
 		} while (val != '\n');
 		r++;
 	}
+
+	flose(adj_mat);
 
 	// For each column divide each element by the sum
 	for (int j = 0; j < size; j++) { // columns
@@ -88,6 +90,28 @@ void initialize_data(vector* damping_vector, vector* r_vector, matrix*
 
 void usage() {
 	printf("./pagerank <damp factor> <error> <num nodes> <adj mat filename>\n");
+}
+
+void pagerank(int rounds, int d) {
+	double outrank = 0;
+	double alpha = ((double) (1 - d))/((double) num_vertices);
+
+	for (int i = 0; i < rounds; i++) {
+		for (int j = 0; j < num_vertices; j++) {
+			outrank = rank[j]/edgenorm[j];
+			for (int k = 0; k < vertices[j].num_edges; k++) {
+				// TODO: check values
+				int edge_index = vertices[j].edge_offset + k;
+				int edge_to = edges[edge_index];
+				vertex to_vertex = vertices[edge_to];
+				to_vertex.incoming_rank += outrank;
+			}
+		}
+
+		for (int j = 0; j < num_vertices; j++) {
+			rank[j] = alpha + (d*vertices[j].incoming_rank);
+		}
+	}
 }
 
 int main(int argc, char** argv) {

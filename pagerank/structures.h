@@ -5,6 +5,34 @@
 
 #define DEBUG 0
 
+typedef struct {
+	int *array;
+	size_t used;
+	size_t size;
+} IntArr;
+
+void initArray(IntArr *a, size_t initial_size);
+
+void insertArray(IntArr *a, int element);
+
+void freeArray(IntArr *a);
+
+typedef struct vertex {
+	int incoming_rank;	// Incoming rank for this vertex
+	int num_edges;		// Number of edges
+	int edge_offset;	// Offset into the edges array
+} vertex;
+
+double* edges; 		// An array of all outgoing edges.
+double* edgenorm; 	// number of outgoing edges for vertex j
+vertex* vertices; 	// An array of all vertices in the graph
+double* rank;		// Page rank value for vertex j
+IntArr	ids;		// List of array ids (dynamically growing)
+int 	num_vertices;	// Number of vertices in graph
+
+// Parse file - populate structures using IntArr
+void parse_file(char* filename);
+
 // Vector functions and definition
 typedef struct vector {
 	double* elements;

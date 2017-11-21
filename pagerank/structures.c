@@ -1,5 +1,111 @@
 #import "structures.h"
 
+// Dynamic array functions
+void initArray(IntArr *a, size_t initial_size) {
+	a->array = (int*) malloc(initial_size*sizeof(int));
+	a->used = 0;
+	a->size = initial_size;
+}
+
+void insertArray(IntArr *a, int element) {
+	if (a->used == a->size) {
+		a->size *=2;
+		a->array = (int*) realloc(a->array, a->size*sizeof(int));
+	}
+
+	a->array[a->used++] = element;
+}
+
+void freeArray(IntArr *a) {
+	free(a->array);
+	a->array = NULL;
+	a->used = a->size = 0;
+}
+
+// Util functions
+void parse_file(char* filename) {
+	// TODO: test function
+	// Read file line by line
+	FILE* edges_file = fopen(filename, "r");
+	char line[256];
+	int v1, v2;
+	int max = 0, count = 0;
+
+	while (fgets(line, sizeof(line), edges_file)) {
+		sscanf(line, "%d\t%d\n", &v1, &v2);
+		if (v1 > max) {
+			max = v1;
+		}
+
+		if (v2 > max) {
+			max = v2;
+		}
+		count++;
+	}
+
+	rewind(edges_file);
+
+
+	num_vertices = (max+1);
+
+	IntArr* vs = (IntArr*) malloc(num_vertices*sizeof(IntArr));
+	
+	for (int i = 0; i < num_vertices; i++) {
+		initArray(&(vs[i]), 100);
+	}
+
+	vertices = (vertex*) malloc(num_vertices*sizeof(vertex));
+	edgenorm = (double*) malloc(num_vertices*sizeof(double));
+	rank = (double*) malloc(num_vertices*sizeof(double));
+	edges = (double*) malloc(count*sizeof(double));
+
+	while (fgets(line, sizeof(line), edges_file)) {
+		sscanf(line, "%d\t%d\n", &v1, &v2);
+		vertices[v1].num_edges++;
+		insertArray(&vs[v1], v2);
+	}
+
+	fclose(edges_file);
+
+	int k = 0; 
+	for (int i = 0; i < max+1; i++) {
+		rank[i] = 1;
+		edgenorm[i] = vertices[i].num_edges + 1;
+		vertices[i].edge_offset = k;
+
+		for (int j = 0; j < vs[i].size; j++) {
+			edges[k] = vs[i].array[j];
+			k++;
+		}
+	}
+
+	for (int i = 0; i < num_vertices; i++) {
+		freeArray(&vs[i]);
+	}
+
+	free(vs);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Vector functions
 void init_vector(vector* v, int size) {
 	v->size = (size_t) size;
