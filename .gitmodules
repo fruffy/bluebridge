@@ -4,6 +4,6 @@
 [submodule "IPv6Addressing/ryu"]
 	path = IPv6Addressing/ryu
 	url = https://github.com/osrg/ryu
-[submodule "IPv6Addressing/ndpproxy"]
-	path = IPv6Addressing/ndpproxy
+[submodule "Legacy_Code/ndppd"]
+	path = Legacy_Code/ndppd
 	url = https://github.com/DanielAdolfsson/ndppd
