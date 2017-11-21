@@ -3,7 +3,7 @@
 #include <string.h>
 #include <math.h>
 
-#define DEBUG 0
+#define DEBUG 1
 
 #if DEBUG
 # define DEBUG_PRINT(x) printf x
