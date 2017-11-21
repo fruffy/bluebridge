@@ -80,12 +80,15 @@ void parse_file(char* filename) {
 
 	DEBUG_PRINT(("Setting rest of variables.\n"));
 	int k = 0; 
-	for (int i = 0; i < max+1; i++) {
+	for (int i = 0; i < num_vertices; i++) {
+		DEBUG_PRINT(("Setting vertex: %d\n", i));
 		rank[i] = 1;
 		edgenorm[i] = vertices[i].num_edges + 1;
 		vertices[i].edge_offset = k;
 
-		for (int j = 0; j < vs[i].size; j++) {
+		for (int j = 0; j < vs[i].used; j++) {
+			DEBUG_PRINT(("j: %d, k: %d, i: %d, num_vertices: %d, count: %d\n", j, k,
+				i, num_vertices, count));
 			edges[k] = vs[i].array[j];
 			k++;
 		}
