@@ -1,4 +1,4 @@
-#import "structures.h"
+#include "structures.h"
 
 void generate_link_data(char* filename, matrix* res, int size) {
 	// printf("Generating link data\n");
@@ -39,7 +39,7 @@ void generate_link_data(char* filename, matrix* res, int size) {
 		r++;
 	}
 
-	flose(adj_mat);
+	fclose(adj_mat);
 
 	// For each column divide each element by the sum
 	for (int j = 0; j < size; j++) { // columns

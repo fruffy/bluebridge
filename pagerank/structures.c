@@ -1,4 +1,4 @@
-#import "structures.h"
+#include "structures.h"
 
 // Dynamic array functions
 void initArray(IntArr *a, size_t initial_size) {
