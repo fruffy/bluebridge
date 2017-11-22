@@ -11,7 +11,7 @@
 #include <sys/time.h>
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
 
-const int NUM_ITERATIONS = 10000;
+const int NUM_ITERATIONS = 100000;
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //  1. Check correctness of pointer on server side, it should never segfault.
@@ -26,8 +26,6 @@ const int NUM_ITERATIONS = 10000;
 //  5. Remove unneeded code and print statements
 //      Move all buffers to stack instead of heap.
 //      Check memory leaks
-//  8. Integrate Mihir's asynchronous code and use raw linux threading:
-//      http://nullprogram.com/blog/2015/05/15/
 ///////////////////////////////////////////////////////////////////////////////
 
 //To add the current correct route

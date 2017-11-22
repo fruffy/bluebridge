@@ -139,7 +139,12 @@ void simple_test( char *cdata, int length) {
     printf("Write time total...: %lu micro seconds\n", totalW/1000);
     printf("Write time average...: %lu nano seconds\n", totalW/length);
 }
-
+struct ThreadData {
+    int id;
+    int start, stop;
+    int* array;
+};
+#define NUM_THREADS 8
 
 /* create thread argument struct for thr_func() */
 typedef struct _thread_data_t {
@@ -153,52 +158,49 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 int isWord(char prev, char cur) {
     return isspace(cur) && isgraph(prev);
 }
-static pthread_barrier_t barrier;
 void *wc(void *arg) {
     printf("Reading from thingy..\n");
     char prev = ' ';
     thread_data_t *data = (thread_data_t *)arg;
-    set_thread_id_rx(data->tid);
-    set_thread_id_tx(data->tid);
+    /* Set thread ids */
     set_thread_id_vmem(data->tid);
-    pthread_t my_thread = pthread_self();
+
     /* Set affinity mask to include CPUs 0 to 7 */
     int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
     int assigned = data->tid % num_cores;
-    printf("ASSIGNED THREAD %d to CORE %d\n", data->tid, assigned );
+    pthread_t my_thread = pthread_self();
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(assigned, &cpuset);
     pthread_setaffinity_np(my_thread, sizeof(cpu_set_t), &cpuset);
+    printf("Assigned Thread %d to core %d\n", data->tid, assigned );
+
+    set_thread_id_tx(data->tid);
+    set_thread_id_rx(data->tid);
     struct config myConf = get_bb_config();
     struct sockaddr_in6 *temp = init_sockets(&myConf);
     temp->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
-    register_thread();
+    init_thread();
     char *cdata = data->data;
-    static __thread int counter = 0;
-    static __thread int index = 0;
-    for (index = 0; index < data->length; index++) {
+    for (int i = 0; i < data->length; i++) {
             // TODO: Should also handle \n (i.e. any whitespace)
             //       should also ensure that it's only a word if
             //       there was a non white space character before it.
-            if (isspace(cdata[index]) && isgraph(prev)) {
-                counter++;
+            if (isspace(cdata[i]) && isgraph(prev)) {
+                data->count++;
             }
             //printf("%c",cdata[index] );
-            prev = cdata[index];
+            prev = cdata[i];
         }
-    //pthread_mutex_lock(&mutex);
-/*    printf("******Thread %d done with Counting******\n", data->tid);
+/*    pthread_mutex_lock(&mutex);
+    printf("******Thread %d done with Counting******\n", data->tid);
     page_table_print();
-    printf("******Thread %d Counting Result: %d******\n", data->tid, counter);*/
-    close_sockets();
-    data->count = data->count + counter;
-    //pthread_mutex_unlock(&mutex);
+    printf("******Thread %d Counting Result: %d******\n", data->tid, data->count);
+    pthread_mutex_unlock(&mutex);*/
 
     return NULL;
 }
 
-#define NUM_THREADS 4
 void wc_program_threads(char *cdata, int length) {
     pthread_t thr[NUM_THREADS];
     int rc;
@@ -220,19 +222,15 @@ void wc_program_threads(char *cdata, int length) {
     uint64_t latency_store = getns() - rStart;
     printf("Done with reading thingy\n");
     int split = fileLenght/NUM_THREADS + (BLOCK_SIZE -((fileLenght/NUM_THREADS) % BLOCK_SIZE));
-    /* create threads */
-    pthread_attr_t attr;
-    pthread_barrier_init(&barrier, NULL, NUM_THREADS);
-    pthread_attr_init(&attr);
-    int policy;
-    pthread_attr_setschedpolicy(&attr, SCHED_RR);
+
     printf("******Done with storing******\n");
-    page_table_print();
+    //page_table_print();
     page_table_flush();
     //clear_frame_table();
     printf("******Done with cleaning******\n");
-    page_table_print();
-
+    //page_table_print();
+    //clear_frame_table();
+    register_threads(NUM_THREADS);
     for (i = 0; i < NUM_THREADS; i++) {
         thr_data[i].tid = i;
         thr_data[i].count = 0;
@@ -242,10 +240,7 @@ void wc_program_threads(char *cdata, int length) {
             thr_data[i].length = fileLenght - offset;
         else
             thr_data[i].length = split;
-/*        thr_data[i].length = fileLenght;
-        thr_data[i].data = cdata;*/
         printf("Launching Thread %d\n",i );
-        printf("Offset %p\n",thr_data[i].data);
         printf("Total length %.3f  Thread length %.3f Ideal split %.3f\n", (double)fileLenght/BLOCK_SIZE, (double)thr_data[i].length/BLOCK_SIZE, (double)split/BLOCK_SIZE );
         if ((rc = pthread_create(&thr[i], NULL, wc, &thr_data[i]))) {
           fprintf(stderr, "error: pthread_create, rc: %d\n", rc);
@@ -311,8 +306,9 @@ int main( int argc, char *argv[] )
         return EXIT_FAILURE;
     }
 
-    int npages = atoi(argv[1]);
-    int nframes = atoi(argv[2]);
+    uint64_t npages = atoi(argv[1]);
+    uint64_t nframes = atoi(argv[2]);
+    printf("Pages %lu\n",npages );
     const char *program = argv[4];
     const char *algo = argv[3]; // store algorithm command line argument
 

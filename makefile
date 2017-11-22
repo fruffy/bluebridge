@@ -9,7 +9,7 @@ CFLAGS += -std=gnu11 -pedantic
 
 # CFLAGS += -Wstrict-prototypes -Wmissing-prototypes
 
-LDFLAGS := -lpcap -pthread -lm
+LDFLAGS := -lpcap -pthread -lm -lrt
 
 export MAKE_DIR CC CFLAGS LDFLAGS
 all:

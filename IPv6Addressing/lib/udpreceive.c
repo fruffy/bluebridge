@@ -31,7 +31,7 @@
 void init_epoll();
 void close_epoll();
 void *get_free_buffer();
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+//static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 struct ep_interface {
@@ -53,7 +53,6 @@ static __thread int thread_id;
 
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
-    pthread_mutex_lock(&mutex);
     struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
     if (!interface_ep.my_port) {
         interface_ep.my_port = configstruct->src_port;
@@ -66,7 +65,6 @@ struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
         interface_ep.device.sll_protocol = htons (ETH_P_ALL);
     }
     init_epoll();
-    pthread_mutex_unlock(&mutex);
     return temp;
 }
 void set_thread_id_rx(int id) {
