@@ -99,6 +99,7 @@ int rcv_udp6_raw_id(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *
     return numbytes;
 }
 
+
 struct sockaddr_in6 *init_sockets(struct config *bb_conf) {
     struct sockaddr_in6 * temp = init_rcv_socket(bb_conf);
     init_send_socket(bb_conf);
@@ -109,6 +110,15 @@ struct sockaddr_in6 *init_sockets(struct config *bb_conf) {
 void close_sockets() {
     close_send_socket();
     close_rcv_socket();
+}
+
+void set_net_thread_ids(int t_id) {
+    set_thread_id_tx(t_id);
+    set_thread_id_rx(t_id);
+}
+struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf) {
+    set_net_thread_ids(t_id);
+    return init_sockets(bb_conf);
 }
 
 void printSendLat() {

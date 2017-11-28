@@ -162,11 +162,10 @@ int isWord(char prev, char cur) {
 }
 
 void *wc(void *arg) {
-    printf("Reading from thingy..\n");
     char prev = ' ';
     thread_data_t *data = (thread_data_t *)arg;
 
-    /* Set affinity mask to include CPUs 0 to 7 */
+    // Assign threads to cores
     int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
     int assigned = data->tid % num_cores;
     pthread_t my_thread = pthread_self();
@@ -175,12 +174,13 @@ void *wc(void *arg) {
     CPU_SET(assigned, &cpuset);
     pthread_setaffinity_np(my_thread, sizeof(cpu_set_t), &cpuset);
     printf("Assigned Thread %d to core %d\n", data->tid, assigned );
-
-    set_thread_id_tx(data->tid);
-    set_thread_id_rx(data->tid);
+    
+    // BlueBridge initialization calls for threads
     struct config myConf = get_bb_config();
-    struct sockaddr_in6 *temp = init_sockets(&myConf);
-    init_thread(data->tid);
+    struct sockaddr_in6 *temp = init_net_thread(data->tid, &myConf);
+    init_vmem_thread(data->tid);
+    
+    // Do the actual computation
     char *cdata = data->data;
     for (int i = 0; i < data->length; i++) {
             // TODO: Should also handle \n (i.e. any whitespace)
@@ -189,21 +189,13 @@ void *wc(void *arg) {
             if (isspace(cdata[i]) && isgraph(prev)) {
                 data->count++;
             }
-            //printf("%c",cdata[index] );
             prev = cdata[i];
     }
-/*    pthread_mutex_lock(&mutex);
-    printf("******Thread %d done with Counting******\n", data->tid);
-    page_table_print();
-    printf("******Thread %d Counting Result: %d******\n", data->tid, data->count);
-    pthread_mutex_unlock(&mutex);*/
-
     return NULL;
 }
 
 void wc_program_threads(char *cdata, int length) {
     pthread_t thr[NUM_THREADS];
-    int rc;
     /* create a thread_data_t argument array */
     thread_data_t thr_data[NUM_THREADS];
     int i =0;
@@ -220,13 +212,13 @@ void wc_program_threads(char *cdata, int length) {
     }
     int fileLenght = i;
     uint64_t latency_store = getns() - rStart;
-    printf("Done with reading thingy\n");
-    int split = fileLenght/NUM_THREADS + (BLOCK_SIZE -((fileLenght/NUM_THREADS) % BLOCK_SIZE));
 
     printf("******Done with storing******\n");
-    page_table_flush();
-    printf("******Done with cleaning******\n");
-    register_threads(NUM_THREADS);
+    int split = fileLenght/NUM_THREADS + (BLOCK_SIZE -((fileLenght/NUM_THREADS) % BLOCK_SIZE));
+    // Split the virtual memory table to give each thread its own cache
+    register_vmem_threads(NUM_THREADS);
+    
+    // Split the dataset (more or less works) 
     for (i = 0; i < NUM_THREADS; i++) {
         thr_data[i].tid = i;
         thr_data[i].count = 0;
@@ -238,8 +230,8 @@ void wc_program_threads(char *cdata, int length) {
             thr_data[i].length = split;
         printf("Launching Thread %d\n",i );
         printf("Total length %.3f  Thread length %.3f Ideal split %.3f\n", (double)fileLenght/BLOCK_SIZE, (double)thr_data[i].length/BLOCK_SIZE, (double)split/BLOCK_SIZE );
-        if ((rc = pthread_create(&thr[i], NULL, wc, &thr_data[i]))) {
-          fprintf(stderr, "error: pthread_create, rc: %d\n", rc);
+        if ((pthread_create(&thr[i], NULL, wc, &thr_data[i])) < 0) {
+          perror("error: pthread_create");
         }
     }
     /* block until all threads complete */
@@ -259,28 +251,26 @@ void wc_program_threads(char *cdata, int length) {
 
 void wc_program(char *cdata, int length) {
 
+    // Reading in the file
+    uint64_t i =0;
     FILE *fp = fopen("baskerville.txt", "rb");
     printf("Reading in thingy\n");
-    char symbol;
-    int i =0;
     uint64_t rStart = getns();
     if(fp != NULL) {
+        char symbol;
         while((symbol = getc(fp)) != EOF) {
             cdata[i] = symbol; 
             i++;
         }
         fclose(fp);
     }
-    int fileLenght = i;
+    uint64_t fsize = i;
     uint64_t latency_store = getns() - rStart;
-    printf("Done with reading thingy\n");
-    page_table_flush();
-    int count = 0, index;
     char prev = ' ';
-
+    uint64_t count = 0;
     printf("Reading from thingy..\n");
     rStart = getns();
-    for (index = 0; index < fileLenght; index++) {
+    for (uint64_t index = 0; index < fsize; index++) {
         // TODO: Should also handle \n (i.e. any whitespace)
         //       should also ensure that it's only a word if
         //       there was a non white space character before it.
@@ -290,7 +280,7 @@ void wc_program(char *cdata, int length) {
         prev = cdata[index];
     }
     uint64_t latency_read = getns() - rStart;
-    printf("Word count: %d\n", count);
+    printf("Word count: %lu\n", count);
     printf("Storing time...: "KGRN"%lu"RESET" micro seconds\n", latency_store/1000);
     printf("Reading time...: "KGRN"%lu"RESET" micro seconds\n", latency_read/1000);
     printf("Total time taken: "KGRN"%lu"RESET" micro seconds\n", (latency_read + latency_store)/1000 );

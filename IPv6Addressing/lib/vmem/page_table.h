@@ -43,9 +43,9 @@ void page_table_delete( struct page_table *pt );
 
 void page_table_flush();
 void clear_frame_table();
-void set_thread_id_vmem(int t_id);
-void register_threads();
-void init_thread();
+void register_vmem_threads();
+void init_vmem_thread(int t_id);
+
 void set_vmem_config(char *filename);
 struct page_table *init_virtual_memory(int npages, int nframes, const char* algo);
 void print_page_faults();

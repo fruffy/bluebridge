@@ -24,7 +24,9 @@ extern struct sockaddr_in6 *init_rcv_socket();
 extern struct sockaddr_in6 *init_rcv_socket_old();
 extern void init_send_socket();
 struct sockaddr_in6 *init_sockets(struct config *configstruct);
-extern void close_sockets();
+void close_sockets();
+void set_net_thread_ids(int t_id);
+struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf);
 struct addrinfo* bindSocket(struct addrinfo* p, struct addrinfo* servinfo, int* sockfd);
 
 void printSendLat();

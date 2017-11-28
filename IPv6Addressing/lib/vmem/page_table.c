@@ -263,7 +263,7 @@ struct page_table *init_virtual_memory(int npages, int nframes, const char* syst
     return pt;
 }
 
-void init_thread(int t_id) {
+void init_vmem_thread(int t_id) {
     thread_id = t_id;
     struct page_table *pt = the_page_table;
     startFrame = (t_id) * pt->nframes;
@@ -271,7 +271,8 @@ void init_thread(int t_id) {
     printf("\x1B[3%dm""Thread %d Start Frame %d End Frame %d \n"RESET,t_id+1, t_id, startFrame, endFrame);
 }
 
-void register_threads(int num_threads) {
+void register_vmem_threads(int num_threads) {
+    page_table_flush();
     struct page_table *pt = the_page_table;
     uint64_t frame_space = PAGE_SIZE * (uint64_t) pt->nframes;
     if (frame_space * num_threads > PAGE_SIZE * (uint64_t) pt->npages)
