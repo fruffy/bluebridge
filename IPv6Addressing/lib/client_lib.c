@@ -15,6 +15,7 @@ struct in6_addr *hostList;
 int nhosts;
 static __thread char sendBuffer[BLOCK_SIZE];
 static __thread char receiveBuffer[BLOCK_SIZE];
+static __thread uint8_t round_robin = 0;
 
 /*
  * Generates a random IPv6 address target under specific constraints
@@ -26,6 +27,18 @@ struct in6_addr *gen_rdm_IPv6Target() {
     // Pick a random host
     uint8_t rndHost = rand()% nhosts;
     return &hostList[rndHost];
+}
+
+/*
+ * Generates a random IPv6 address target under specific constraints
+ * This is used by the client to request a pointer from a random server in the network
+ * In future implementations this will be handled by the switch and controller to 
+ * loadbalance. The client will send out a generic request. 
+ */
+struct in6_addr *gen_rr_IPv6Target() {
+    // Pick a random host
+    round_robin  = (round_robin + 1 ) % nhosts;
+    return &hostList[round_robin];
 }
 
 /*
