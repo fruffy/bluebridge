@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <sys/time.h>
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
+#include <sys/resource.h>
 
 const int NUM_ITERATIONS = 10000;
 
@@ -179,12 +180,8 @@ void *testing_loop(void *arg) {
     thread_data_t *data = (thread_data_t *)arg;
 
     uint64_t read_latency[data->length];
-
     uint64_t write_latency[data->length];
-    memset(write_latency, 0, sizeof(uint64_t) * data->length);
-
     uint64_t free_latency[data->length];
-
     pthread_t my_thread = pthread_self();
     /* Set affinity mask to include CPUs 0 to 7 */
     int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
@@ -194,6 +191,7 @@ void *testing_loop(void *arg) {
     CPU_ZERO(&cpuset);
     CPU_SET(assigned, &cpuset);
     pthread_setaffinity_np(my_thread, sizeof(cpu_set_t), &cpuset);
+
     set_thread_id_tx(data->tid);
     set_thread_id_rx(data->tid);
     //struct sockaddr_in6 *temp = calloc(1,sizeof(struct sockaddr_in6));
@@ -262,7 +260,15 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
         r_addr[i] = allocateRemoteMem(targetIP);
         alloc_latency[i] = getns() - start; 
     }
+    pthread_attr_t attr;
+    size_t  stacksize = 0;
 
+    pthread_attr_init( &attr );
+    pthread_attr_getstacksize( &attr, &stacksize );
+    printf("before stacksize : [%lu]\n", stacksize);
+    pthread_attr_setstacksize( &attr, 99800000 );
+    pthread_attr_getstacksize( &attr, &stacksize );
+    printf("after  stacksize : [%lu]\n", stacksize);
     close_sockets();
     //close_send_socket();
     //close_rcv_socket();
@@ -274,9 +280,12 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
         thr_data[i].targetIP =  targetIP;
         thr_data[i].r_addr =  &r_addr[split *i];
         thr_data[i].length = split;
+        struct rlimit limit;
 
+        getrlimit (RLIMIT_STACK, &limit);
+        printf ("\nStack Limit = %ld and %ld max\n", limit.rlim_cur, limit.rlim_max);
         printf("Launching thread %d\n", i );
-        if ((rc = pthread_create(&thr[i], NULL, testing_loop, &thr_data[i]))) {
+        if ((rc = pthread_create(&thr[i],  &attr, testing_loop, &thr_data[i]))) {
           fprintf(stderr, "error: pthread_create, rc: %d\n", rc);
         }
     }

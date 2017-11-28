@@ -153,17 +153,18 @@ typedef struct _thread_data_t {
   int length;
   int count;
 } thread_data_t;
+
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 int isWord(char prev, char cur) {
     return isspace(cur) && isgraph(prev);
 }
+
 void *wc(void *arg) {
     printf("Reading from thingy..\n");
     char prev = ' ';
     thread_data_t *data = (thread_data_t *)arg;
-    /* Set thread ids */
-    set_thread_id_vmem(data->tid);
 
     /* Set affinity mask to include CPUs 0 to 7 */
     int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
@@ -179,8 +180,7 @@ void *wc(void *arg) {
     set_thread_id_rx(data->tid);
     struct config myConf = get_bb_config();
     struct sockaddr_in6 *temp = init_sockets(&myConf);
-    temp->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
-    init_thread();
+    init_thread(data->tid);
     char *cdata = data->data;
     for (int i = 0; i < data->length; i++) {
             // TODO: Should also handle \n (i.e. any whitespace)
@@ -191,7 +191,7 @@ void *wc(void *arg) {
             }
             //printf("%c",cdata[index] );
             prev = cdata[i];
-        }
+    }
 /*    pthread_mutex_lock(&mutex);
     printf("******Thread %d done with Counting******\n", data->tid);
     page_table_print();
@@ -224,12 +224,8 @@ void wc_program_threads(char *cdata, int length) {
     int split = fileLenght/NUM_THREADS + (BLOCK_SIZE -((fileLenght/NUM_THREADS) % BLOCK_SIZE));
 
     printf("******Done with storing******\n");
-    //page_table_print();
     page_table_flush();
-    //clear_frame_table();
     printf("******Done with cleaning******\n");
-    //page_table_print();
-    //clear_frame_table();
     register_threads(NUM_THREADS);
     for (i = 0; i < NUM_THREADS; i++) {
         thr_data[i].tid = i;
@@ -302,7 +298,7 @@ void wc_program(char *cdata, int length) {
 int main( int argc, char *argv[] )
 {
     if(argc!=5) {
-        printf("use: virtmem <npages> <nframes> <disk|rmem|mem> <sort|scan|focus|test|grep>\n");
+        printf("use: virtmem <npages> <nframes> <disk|rmem|mem> <sort|scan|focus|test|wc|wc_t>\n");
         return EXIT_FAILURE;
     }
 

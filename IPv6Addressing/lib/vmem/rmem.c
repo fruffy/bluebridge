@@ -35,9 +35,8 @@ void configure_rmem(char *filename) {
 }
 
 void rmem_init_sockets(struct rmem *r) {
-    r->targetIP = init_rcv_socket(&myConf);
+    r->targetIP = init_sockets(&myConf);
     r->targetIP->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
-    init_send_socket(&myConf);
 }
 
 void fill_rmem(struct rmem *r) {

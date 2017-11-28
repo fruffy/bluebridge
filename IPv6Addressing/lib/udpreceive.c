@@ -34,7 +34,9 @@ void init_epoll();
 void close_epoll();
 void *get_free_buffer();
 int init_socket();
-void set_packet_filter(int sd, char *addr, int port);
+int set_packet_filter(int sd, char *addr, int port);
+int set_fanout();
+
 //static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
@@ -55,7 +57,6 @@ static __thread struct rcv_ring ring;
 
 static __thread int sd_rcv;
 static __thread int thread_id;
-
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
     struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
@@ -77,14 +78,34 @@ struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
         perror("Could not bind socket.");
         exit(1);
     }
+
     return temp;
+}
+
+int set_fanout() {
+    int fanout_group_id = getpid() & 0xffff;
+    if (fanout_group_id) {
+            // PACKET_FANOUT_LB - round robin
+            // PACKET_FANOUT_CPU - send packets to CPU where packet arrived
+            int fanout_type = PACKET_FANOUT_CPU; 
+
+            int fanout_arg = (fanout_group_id | (fanout_type << 16));
+
+            int setsockopt_fanout = setsockopt(sd_rcv, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg));
+
+            if (setsockopt_fanout < 0) {
+                printf("Can't configure fanout\n");
+               return EXIT_FAILURE;
+            }
+    }
+    return EXIT_SUCCESS;
 }
 
 void set_thread_id_rx(int id) {
     thread_id = id;
 }
 
-void set_packet_filter(int sd, char *addr, int port) {
+int set_packet_filter(int sd, char *addr, int port) {
     struct sock_fprog filter;
     int i, lineCount = 0;
     char tcpdump_command[512];
@@ -92,25 +113,24 @@ void set_packet_filter(int sd, char *addr, int port) {
     sprintf(tcpdump_command, "tcpdump dst port %d and ip6 net %s/48 -ddd", ntohs(port), addr);
     printf("Active Filter: %s\n",tcpdump_command );
     if ( (tcpdump_output = popen(tcpdump_command, "r")) == NULL ) {
-        perror("Cannot compile filter using tcpdump.");
-        return;
+        RETURN_ERROR(-1, "Cannot compile filter using tcpdump.");
     }
     if ( fscanf(tcpdump_output, "%d\n", &lineCount) < 1 ) {
-        printf("cannot read lineCount.\n");
-        return;
+        RETURN_ERROR(-1, "cannot read lineCount.");
     }
     filter.filter = calloc(sizeof(struct sock_filter)*lineCount,1);
     filter.len = lineCount;
     for ( i = 0; i < lineCount; i++ ) {
         if (fscanf(tcpdump_output, "%u %u %u %u\n", (unsigned int *)&(filter.filter[i].code),(unsigned int *) &(filter.filter[i].jt),(unsigned int *) &(filter.filter[i].jf), &(filter.filter[i].k)) < 4 ) {
-            printf("error in reading line number: %d\n", (i+1));
             free(filter.filter);
-            return;
-        }
+            RETURN_ERROR(-1, "fscanf: error in reading");
+    }
     setsockopt(sd, SOL_SOCKET, SO_ATTACH_FILTER, &filter, sizeof(filter));
     }
     pclose(tcpdump_output);
+    return EXIT_SUCCESS;
 }
+
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket_old(struct config *configstruct) {
 
@@ -180,7 +200,6 @@ void close_rcv_socket() {
 
 int setup_packet_mmap() {
 
-    int fanout_arg;
     struct tpacket_req tpacket_req = {
         .tp_block_size = BLOCKSIZE,
         .tp_block_nr = CONF_RING_BLOCKS,
@@ -221,6 +240,7 @@ int init_socket() {
         perror("Could not set socket");
         return EXIT_FAILURE;
     }
+
     return 0;
 }
 
@@ -269,6 +289,7 @@ void next_packet(struct rcv_ring *ring_p) {
 }
 
 int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server) {
+
     while (1) {
         struct epoll_event events[1024];
         int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 0);
@@ -303,21 +324,19 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                 struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ethhdr + ETH_HDRLEN);
                 struct udphdr *udphdr = (struct udphdr *)((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN);
                 char *payload = ((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
-/*                char s[INET6_ADDRSTRLEN];
-                char s1[INET6_ADDRSTRLEN];
-                inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
-                inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
-                printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
-                printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(interface_ep.my_port), ntohs(udphdr->dest) );*/
-                //if (udphdr->dest == interface_ep.my_port) {
+                //char s[INET6_ADDRSTRLEN];
+                //char s1[INET6_ADDRSTRLEN];
+                //inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
+                //inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
+                //printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
+                //printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(interface_ep.my_port), ntohs(udphdr->dest) );
                     struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
                     int isMyID = 1;
                     if (remoteAddr != NULL && !server) {
-/*                        printf("Thread %d Their ID\n", thread_id);
-                        printNBytes(inAddress, 16);
-                        printf("Thread %d MY ID\n", thread_id);
-                        printNBytes(remoteAddr, 16);
-                        printf("Action!\n");*/
+                        //printf("Thread %d Their ID\n", thread_id);
+                        //printNBytes(inAddress, 16);
+                        //printf("Thread %d MY ID\n", thread_id);
+                        //printNBytes(remoteAddr, 16)
                         isMyID = (inAddress->cmd == remoteAddr->cmd) && (inAddress->paddr == remoteAddr->paddr);
                     }
                     if (isMyID) {
@@ -331,7 +350,6 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                         next_packet(&ring);
                         return msgBlockSize;
                     }
-                //}
                 tpacket_hdr->tp_status = TP_STATUS_KERNEL;
                 next_packet(&ring);
            }

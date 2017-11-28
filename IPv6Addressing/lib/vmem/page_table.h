@@ -46,6 +46,12 @@ void clear_frame_table();
 void set_thread_id_vmem(int t_id);
 void register_threads();
 void init_thread();
+void set_vmem_config(char *filename);
+struct page_table *init_virtual_memory(int npages, int nframes, const char* algo);
+void print_page_faults();
+void clean_page_table(struct page_table *pt);
+void init_thread_table(int num_threads);
+
 /*
 Set the frame number and access bits associated with a page.
 The bits may be any of PROT_READ, PROT_WRITE, or PROT_EXEC logical-ored together.
@@ -86,17 +92,5 @@ void page_table_print_entry( struct page_table *pt, int page );
 void page_table_print();
 void frame_table_print();
 void frame_table_print_entry();
-void set_vmem_config(char *filename);
-
-struct page_table *init_virtual_memory(int npages, int nframes, const char* algo);
-
-void print_page_faults();
-
-void clean_page_table(struct page_table *pt);
-
-void register_thread();
-void register_thread2();
-void init_thread_table(int num_threads);
-
 
 #endif
