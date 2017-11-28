@@ -10,6 +10,8 @@
 #include <errno.h>            // errno, perror()
 #include <sys/mman.h>         // mmap()
 #include <sys/epoll.h>        // epoll_wait(), epoll_event, epoll_rcv()
+#include <arpa/inet.h>        // inet_pton() and inet_ntop()
+
 #include <pthread.h>
 
 #include "udpcooked.h"
@@ -44,6 +46,7 @@ static __thread char *ring;
 static __thread int ring_offset = 0;
 static __thread int thread_id;
 struct config *sd_conf;
+
 //static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct packetconfig *gen_packet_info(struct config *configstruct) {
@@ -320,7 +323,7 @@ int send_mmap(unsigned const char *pkt, int pktlen) {
 }
     return (void*) ec_send;
 }*/
-#include <arpa/inet.h>
+
 int cooked_send(struct in6_addr *dst_addr, int dst_port, char *data, int datalen) {
     /*if (sd_send <= 0)
         init_send_socket(sd_conf);

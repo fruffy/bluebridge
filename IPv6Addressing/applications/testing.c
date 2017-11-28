@@ -11,7 +11,7 @@
 #include <sys/time.h>
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
 
-const int NUM_ITERATIONS = 100000;
+const int NUM_ITERATIONS = 10000;
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //  1. Check correctness of pointer on server side, it should never segfault.
@@ -108,89 +108,60 @@ void print_times(uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* writ
 }
 
 void basicOperations(struct sockaddr_in6 *targetIP) {
-    uint64_t *alloc_latency = malloc(sizeof(uint64_t) * NUM_ITERATIONS);
-    assert(alloc_latency);
-    memset(alloc_latency, 0, sizeof(uint64_t) * NUM_ITERATIONS);
+    uint64_t *alloc_latency = calloc(sizeof(uint64_t), NUM_ITERATIONS);
+    uint64_t *read_latency = calloc(sizeof(uint64_t), NUM_ITERATIONS);
+    uint64_t *write_latency = calloc(sizeof(uint64_t), NUM_ITERATIONS);
+    uint64_t *free_latency = calloc(sizeof(uint64_t), NUM_ITERATIONS);
 
-    uint64_t *read_latency = malloc(sizeof(uint64_t) * NUM_ITERATIONS);
-    assert(read_latency);
-    memset(read_latency, 0, sizeof(uint64_t) * NUM_ITERATIONS);
+    struct config myConf = get_bb_config();
+    struct in6_memaddr *r_addr = malloc(NUM_ITERATIONS * sizeof(struct in6_memaddr));
+    if(!r_addr)
+        perror("Allocation too large");
 
-    uint64_t *write_latency = malloc(sizeof(uint64_t) * NUM_ITERATIONS);
-
-    assert(write_latency);
-    memset(write_latency, 0, sizeof(uint64_t) * NUM_ITERATIONS);
-
-    uint64_t *free_latency = malloc(sizeof(uint64_t) * NUM_ITERATIONS);
-    assert(free_latency);
-    memset(free_latency, 0, sizeof(uint64_t) * NUM_ITERATIONS);
     int i;
-    // Initialize remotePointers array
-    struct LinkedPointer *rootPointer = (struct LinkedPointer *) malloc( sizeof(struct LinkedPointer));
-    struct LinkedPointer *nextPointer = rootPointer;
-    //init the root element
-    nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
-    // Generate a random IPv6 address out of a set of available hosts
-    struct in6_addr *ipv6Pointer = gen_rdm_IPv6Target();
-    memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-    nextPointer->AddrString = allocateRemoteMem(targetIP);
+    //struct in6_memaddr r_addr[NUM_ITERATIONS];
     srand(time(NULL));
-    for (i = 0; i < NUM_ITERATIONS; i++) {
-        nextPointer = nextPointer->Pointer;
-        nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
-        // Generate a random IPv6 address out of a set of available hosts
-        struct in6_addr *ipv6Pointer = gen_rdm_IPv6Target();
-        memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+    for (i = 0; i< NUM_ITERATIONS; i++) {
+       // Generate a random IPv6 address out of a set of available hosts
+        //memcpy(&(targetIP->sin6_addr), gen_rdm_IPv6Target(), sizeof(struct in6_addr));
+        memcpy(&(targetIP->sin6_addr), gen_IPv6Target(i % myConf.num_hosts), sizeof(struct in6_addr));
         uint64_t start = getns(); 
-        nextPointer->AddrString = allocateRemoteMem(targetIP);
+        r_addr[i] = allocateRemoteMem(targetIP);
         alloc_latency[i] = getns() - start; 
     }
-    // don't point to garbage
-    // temp fix
-    nextPointer->Pointer = NULL;
-    i = 1;
-    srand(time(NULL));
-    nextPointer = rootPointer;
-    while(nextPointer != NULL)  {
 
-        print_debug("Iteration %d", i);
-        struct in6_memaddr remoteMemory = nextPointer->AddrString;
+    for (i = 0; i < NUM_ITERATIONS; i++) {
+        struct in6_memaddr remoteMemory = r_addr[i];
         //print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
         print_debug("Creating payload");
-        char *payload= malloc(50);
-        memcpy(payload,"Hello World!", 10);
-
+        char *payload = malloc(4096);
+        snprintf(payload, 50, "HELLO WORLD! How are you? %d", i);
         uint64_t wStart = getns();
         writeRemoteMem(targetIP, payload, &remoteMemory);
         write_latency[i - 1] = getns() - wStart;
+        free(payload);
+    }
+    for (i = 0; i < NUM_ITERATIONS; i++) {
+        struct in6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
         char *test = getRemoteMem(targetIP, &remoteMemory);
         read_latency[i - 1] = getns() - rStart;
-
+        char *payload = malloc(4096);
+        snprintf(payload, 50, "HELLO WORLD! How are you? %d", i);
         print_debug("Results of memory store: %.50s", test);
-        if (strncmp(test,"Hello World!", 10) < 0) {
+        if (strncmp(test, payload, 50) < 0) {
             print_debug(KRED"ERROR: WRONG RESULT"RESET);
             exit(1);
         }
+        free(payload);
+    }
+    for (i = 0; i < NUM_ITERATIONS; i++) {
+        struct in6_memaddr remoteMemory = r_addr[i];
         uint64_t fStart = getns();
         freeRemoteMem(targetIP, &remoteMemory);
         free_latency[i-1] = getns() - fStart;
-        free(payload);
-        nextPointer = nextPointer->Pointer;
-        i++;
-    }
-    nextPointer = rootPointer;
-    while (nextPointer != NULL) {
-        rootPointer = nextPointer; 
-        nextPointer = nextPointer->Pointer;
-        free (rootPointer);
     }
     print_times(alloc_latency, read_latency, write_latency, free_latency, NUM_ITERATIONS);
-
-    free(alloc_latency);
-    free(write_latency);
-    free(read_latency);
-    free(free_latency);
 }
 
 /* create thread argument struct for thr_func() */
@@ -276,10 +247,7 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
     /* create a thread_data_t argument array */
     thread_data_t thr_data[NUM_THREADS];
 
-    uint64_t *alloc_latency = malloc(sizeof(uint64_t) * NUM_ITERATIONS);
-    assert(alloc_latency);
-    memset(alloc_latency, 0, sizeof(uint64_t) * NUM_ITERATIONS);
-    // Generate a random IPv6 address out of a set of available hosts
+    uint64_t *alloc_latency = calloc(sizeof(uint64_t), NUM_ITERATIONS);
 
     struct in6_memaddr *r_addr = malloc(NUM_ITERATIONS * sizeof(struct in6_memaddr));
     if(!r_addr)
@@ -288,6 +256,7 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
     //struct in6_memaddr r_addr[NUM_ITERATIONS];
     srand(time(NULL));
     for (i = 0; i< NUM_ITERATIONS; i++) {
+       // Generate a random IPv6 address out of a set of available hosts
         memcpy(&(targetIP->sin6_addr), gen_rdm_IPv6Target(), sizeof(struct in6_addr));
         uint64_t start = getns(); 
         r_addr[i] = allocateRemoteMem(targetIP);
@@ -362,9 +331,9 @@ int main(int argc, char *argv[]) {
 
     struct timeval st, et;
     gettimeofday(&st,NULL);
-    //basicOperations(temp);
-    basic_op_threads(temp);
-    //gettimeofday(&et,NULL);
+    basicOperations(temp);
+    //basic_op_threads(temp);
+    gettimeofday(&et,NULL);
     int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
     printf("Total Time: %d micro seconds\n",elapsed);
     printf(KRED "Finished\n");

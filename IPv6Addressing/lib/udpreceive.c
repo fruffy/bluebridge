@@ -10,6 +10,8 @@
 #include <errno.h>            // errno, perror()
 #include <sys/mman.h>         // mmap()
 #include <sys/epoll.h>        // epoll_wait(), epoll_event, epoll_rcv()
+#include <arpa/inet.h>        // inet_pton() and inet_ntop()
+
 #include <pthread.h>
 #include <semaphore.h>
 #include <linux/filter.h>
@@ -31,12 +33,15 @@
 void init_epoll();
 void close_epoll();
 void *get_free_buffer();
+int init_socket();
+void set_packet_filter(int sd, char *addr, int port);
 //static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 struct ep_interface {
     struct sockaddr_ll device;
     uint16_t my_port;
+    char my_addr[INET6_ADDRSTRLEN];
 };
 struct rcv_ring {
     struct tpacket_hdr *first_tpacket_hdr;
@@ -54,6 +59,7 @@ static __thread int thread_id;
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
     struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
+    inet_ntop(AF_INET6, &configstruct->src_addr, interface_ep.my_addr, INET6_ADDRSTRLEN);
     if (!interface_ep.my_port) {
         interface_ep.my_port = configstruct->src_port;
         if ((interface_ep.device.sll_ifindex = if_nametoindex (configstruct->interface)) == 0) {
@@ -64,19 +70,27 @@ struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
         interface_ep.device.sll_family = AF_PACKET;
         interface_ep.device.sll_protocol = htons (ETH_P_ALL);
     }
+    init_socket();
+    set_packet_filter(sd_rcv, interface_ep.my_addr, htons((ntohs(interface_ep.my_port) + thread_id)));
     init_epoll();
+    if (-1 == bind(sd_rcv, (struct sockaddr *)&interface_ep.device, sizeof(interface_ep.device))) {
+        perror("Could not bind socket.");
+        exit(1);
+    }
     return temp;
 }
+
 void set_thread_id_rx(int id) {
     thread_id = id;
 }
-void set_packet_filter(int sd, int port) {
+
+void set_packet_filter(int sd, char *addr, int port) {
     struct sock_fprog filter;
     int i, lineCount = 0;
     char tcpdump_command[512];
     FILE* tcpdump_output;
-    sprintf(tcpdump_command, "tcpdump dst port %d -ddd", ntohs(port));
-    //printf("%s\n",tcpdump_command );
+    sprintf(tcpdump_command, "tcpdump dst port %d and ip6 net %s/48 -ddd", ntohs(port), addr);
+    printf("Active Filter: %s\n",tcpdump_command );
     if ( (tcpdump_output = popen(tcpdump_command, "r")) == NULL ) {
         perror("Cannot compile filter using tcpdump.");
         return;
@@ -163,13 +177,7 @@ void close_rcv_socket() {
     sd_rcv = -1;
     close_epoll();
 }
-#ifndef PACKET_FANOUT
-# define PACKET_FANOUT          18
-# define PACKET_FANOUT_HASH     0
-# define PACKET_FANOUT_LB       1
-#endif
-static int fanout_type;
-static int fanout_id;
+
 int setup_packet_mmap() {
 
     int fanout_arg;
@@ -187,9 +195,7 @@ int setup_packet_mmap() {
     if (setsockopt(sd_rcv, SOL_PACKET, PACKET_RX_RING, &tpacket_req, sizeof tpacket_req)) {
         return -1;
     }
-    fanout_arg = (fanout_id | (fanout_type << 16));
-    setsockopt(sd_rcv, SOL_PACKET, PACKET_FANOUT_LB,
-             &fanout_arg, sizeof(fanout_arg));
+
     mapped_memory = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, sd_rcv, 0);
 
     if (MAP_FAILED == mapped_memory) {
@@ -215,18 +221,11 @@ int init_socket() {
         perror("Could not set socket");
         return EXIT_FAILURE;
     }
-    set_packet_filter(sd_rcv, htons((ntohs(interface_ep.my_port) + thread_id)));
-    if (-1 == bind(sd_rcv, (struct sockaddr *)&interface_ep.device, sizeof(interface_ep.device))) {
-        perror("Could not bind socket.");
-        return EXIT_FAILURE;
-    }
-
     return 0;
 }
 
 void init_epoll() {
 
-    init_socket();
     if (setup_packet_mmap()) {
         close(sd_rcv);
         exit(1);
@@ -269,10 +268,7 @@ void next_packet(struct rcv_ring *ring_p) {
    ring_p->tpacket_i = (ring_p->tpacket_i + 1) % ring_p->tpacket_req.tp_frame_nr;
 }
 
-#include <arpa/inet.h>        // inet_pton() and inet_ntop()
 int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server) {
-    if (sd_rcv <= 0)
-        init_epoll();
     while (1) {
         struct epoll_event events[1024];
         int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 0);
@@ -288,11 +284,11 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
                 struct tpacket_hdr *tpacket_hdr = get_packet(&ring);
-                if ( tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
+/*                if ( tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
                     if (!server)
                         next_packet(&ring);
                     continue;
-                }
+                }*/
                 
                 //struct sockaddr_ll *sockaddr_ll = NULL;
                 if (tpacket_hdr->tp_status & TP_STATUS_COPY) {
@@ -307,7 +303,7 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                 struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ethhdr + ETH_HDRLEN);
                 struct udphdr *udphdr = (struct udphdr *)((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN);
                 char *payload = ((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
-                /*char s[INET6_ADDRSTRLEN];
+/*                char s[INET6_ADDRSTRLEN];
                 char s1[INET6_ADDRSTRLEN];
                 inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
                 inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
@@ -317,7 +313,7 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                     struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
                     int isMyID = 1;
                     if (remoteAddr != NULL && !server) {
-                        /*printf("Thread %d Their ID\n", thread_id);
+/*                        printf("Thread %d Their ID\n", thread_id);
                         printNBytes(inAddress, 16);
                         printf("Thread %d MY ID\n", thread_id);
                         printNBytes(remoteAddr, 16);
