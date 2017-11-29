@@ -295,6 +295,8 @@ struct page_table *page_table_create(int npages, int nframes, page_fault_handler
     struct page_table *pt;
     printf("%d \n", npages );
     uint64_t page_space = PAGE_SIZE * (uint64_t) npages;
+    uint64_t frame_space = PAGE_SIZE * (uint64_t) nframes;
+
     printf("%lu \n", page_space );
 
     pt = malloc(sizeof(struct page_table));
@@ -309,7 +311,7 @@ struct page_table *page_table_create(int npages, int nframes, page_fault_handler
     ftruncate(pt->fd, page_space);
 
     //unlink(filename);
-    pt->physmem = mmap64(0, nframes*PAGE_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED, pt->fd, 0);
+    pt->physmem = mmap64(0,frame_space,PROT_READ|PROT_WRITE,MAP_SHARED, pt->fd, 0);
 
     if (pt->physmem == (void *) MAP_FAILED) perror("frame mmap"), exit(0);
     pt->nframes = nframes;
