@@ -34,7 +34,7 @@ struct rrmem {
 
 struct config myConf;
 void configure_rrmem(char *filename) {
-    myConf = configure_bluebridge(filename, 0);
+    myConf = set_bb_config(filename, 0);
     set_host_list(myConf.hosts, myConf.num_hosts);
 }
 
@@ -108,12 +108,12 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
                 //printf("Copying read data to buffers\n");
                 memcpy(bufs[i],&(data[base]),alloc);
                 //printf("Copying Remote Adders\n");
-                remoteAddrs[i] = &r->rsmem[i].memList[block];
+                remoteAddrs[i] = (char *)&r->rsmem[i].memList[block];
                 base += alloc;
             }
             //printf("Coping parity\n");
             bufs[numHosts()-1] = parity;
-            remoteAddrs[numHosts()-1] = &r->rsmem[numHosts()-1].memList[block];
+            remoteAddrs[numHosts()-1] = (char *)&r->rsmem[numHosts()-1].memList[block];
             //printf("Writing with parallel raid\n");
             writeRaidMem(r->targetIP,numHosts(),bufs, remoteAddrs);
             //printf("FINISHED :: Writing with parallel raid\n");

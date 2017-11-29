@@ -64,7 +64,7 @@ void page_fault_handler_rrmem( struct page_table *pt, int page ) {
                 framePage[i] = page;
                 emptyFrame = 1;
                 page_table_set_entry(pt, page, i, PROT_READ);
-                rrmem_read(rrmem, page, &physmem[i*PAGE_SIZE]);
+                rrmem_read(rrmem, page, &pt->physmem[i*PAGE_SIZE]);
                 pageReads++;
                 break;
             }
@@ -83,10 +83,10 @@ void page_fault_handler_rrmem( struct page_table *pt, int page ) {
             int tempPage = framePage[frame]; // get page currently in frame
             page_table_get_entry(pt, tempPage, &frame, &bits);
             if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
-                rrmem_write(rrmem, tempPage, &physmem[frame*PAGE_SIZE]);
+                rrmem_write(rrmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
                 pageWrites++;
             }
-            rrmem_read(rrmem, page, &physmem[frame*PAGE_SIZE]);
+            rrmem_read(rrmem, page, &pt->physmem[frame*PAGE_SIZE]);
             pageReads++;
             page_table_set_entry(pt, page, frame, PROT_READ);
             page_table_set_entry(pt, tempPage, frame, 0);
@@ -412,7 +412,7 @@ void page_table_flush() {
             else if (!strcmp(pagingSystem, "mem"))
                 mem_write(mem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
             else if (!strcmp(pagingSystem, "rrmem"))
-                rrmem_write(rrmem, tempPage, &physmem[frame*PAGE_SIZE]);
+                rrmem_write(rrmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
             pageWrites++;
         }
         page_table_set_entry(pt, tempPage, frame, PROT_NONE);
