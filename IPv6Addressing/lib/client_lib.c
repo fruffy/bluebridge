@@ -119,20 +119,31 @@ int writeRemoteMem(struct sockaddr_in6 *targetIP, char *payload, struct in6_mema
 //Returns the missing raid read -1 if everything is read
 int readRaidMem(struct sockaddr_in6 *targetIP, int hosts, char **bufs, struct in6_memaddr **remoteAddrs, int needed) {
     int host;
+    int *found = malloc(sizeof(int)*hosts);
+    for (int i=0;i<hosts;i++) {
+        found[i] = 0;
+    }
     //memcpy(sendBuffer + size, remoteAddr, IPV6_SIZE);
     print_debug("******GET DATA******");
     for (int i=0; i<hosts;i++) {
         remoteAddrs[i]->cmd =  GET_CMD;
         send_udp6_raw(sendBuffer, BLOCK_SIZE, targetIP, remoteAddrs[i]);
     }
-    for (int i=0; i <hosts;i++) {
+    for (int i=0; i <needed;i++) {
         //TODO check a list to ensure that the correct messages are
         //being acked
         //TODO timeout or something if a failure occurs here
         rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
-        host = (int)targetIP->sin6_addr.s6_addr[5];
+        host = (int)targetIP->sin6_addr.s6_addr[5]-2;
         //printf("Read From %d\n",(int)targetIP->sin6_addr.s6_addr[5]);
-        memcpy(bufs[host-2],receiveBuffer,BLOCK_SIZE);
+        memcpy(bufs[host],receiveBuffer,BLOCK_SIZE);
+        printf("%d ",host);
+        found[host] = 1;
+    }
+    for (int i=0;i<hosts;i++) {
+        if (found[i] == 0) {
+            return i;
+        }
     }
     return -1;
 }
