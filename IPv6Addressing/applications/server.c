@@ -1,6 +1,11 @@
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
+#include <sys/resource.h>
+
+static int NUM_THREADS = 1;
 
 #include "../lib/server_lib.h"
 #include "../lib/utils.h"
@@ -45,21 +50,39 @@ void handleClientRequests(char *receiveBuffer, struct sockaddr_in6 *targetIP, st
  * Blocks waiting for connections.
  */
 int main(int argc, char *argv[]) {
+    
+    // Example Call: ./applications/bin/server -c tmp/config/distMem.cnf
+    int c; 
+    struct config myConf;
+    while ((c = getopt (argc, argv, "c:i:t:")) != -1) { 
+    switch (c) 
+      { 
+      case 'c':
+        myConf = set_bb_config(optarg, 1);
+        break;
+      case 't': 
+        NUM_THREADS = atoi(optarg); 
+        break;
+      case '?': 
+          fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+          printf("usage: -c config -t num_threads -i num_iterations>\n");
+        return 1; 
+      default: 
+        abort (); 
+      } 
+    }
+    printf("Running server with %d threads \n", NUM_THREADS );
 
-    struct config myConf = set_bb_config(argv[1], 1);
+    struct sockaddr_in6 *targetIP = init_sockets(&myConf);
 
-//    struct sockaddr_in6 *temp = init_rcv_socket_old(argv[1]);
-    struct sockaddr_in6 *targetIP = init_rcv_socket(&myConf);
-    init_send_socket(&myConf);
    // Start waiting for connections
-    struct in6_memaddr *remoteAddr = malloc(sizeof(struct in6_memaddr));
+    struct in6_memaddr remoteAddr;
     char receiveBuffer[BLOCK_SIZE];
     while (1) {
         //TODO: Error handling (numbytes = -1)
-        rcv_udp6_raw(receiveBuffer, BLOCK_SIZE, targetIP, remoteAddr);
-        handleClientRequests(receiveBuffer, targetIP, remoteAddr);
+        rcv_udp6_raw(receiveBuffer, BLOCK_SIZE, targetIP, &remoteAddr);
+        handleClientRequests(receiveBuffer, targetIP, &remoteAddr);
     }
-    free (remoteAddr);
     close_sockets();
     return 0;
 }

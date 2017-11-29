@@ -78,7 +78,6 @@ struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
         perror("Could not bind socket.");
         exit(1);
     }
-
     return temp;
 }
 
@@ -232,10 +231,10 @@ int setup_packet_mmap() {
 int init_socket() {
     sd_rcv = socket(AF_PACKET, SOCK_RAW|SOCK_NONBLOCK, htons(ETH_P_ALL));
 
-    const int on = 1;
+    //const int on = 1;
     //setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
     //setsockopt(sd_rcv, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
-    setsockopt(sd_rcv, SOL_PACKET, SO_BUSY_POLL, &on, sizeof(on));
+    //setsockopt(sd_rcv, SOL_PACKET, SO_BUSY_POLL, &on, sizeof(on));
     if (-1 == sd_rcv) {
         perror("Could not set socket");
         return EXIT_FAILURE;
@@ -274,19 +273,14 @@ void close_epoll() {
     munmap(ring.first_tpacket_hdr, ring.mapped_memory_size);
 }
 
-
 struct tpacket_hdr *get_packet(struct rcv_ring *ring_p) {
     return (void *)((char *)ring_p->first_tpacket_hdr + ring_p->tpacket_i * ring_p->tpacket_req.tp_frame_size);
 }
 
-/*struct sockaddr_ll * get_sockaddr_ll(struct tpacket_hdr * tpacket_hdr) {
-    return (struct sockaddr_ll *) ((char *) tpacket_hdr) + TPACKET_ALIGN(sizeof *tpacket_hdr);
-}
-*/
-
 void next_packet(struct rcv_ring *ring_p) {
    ring_p->tpacket_i = (ring_p->tpacket_i + 1) % ring_p->tpacket_req.tp_frame_nr;
 }
+
 int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server) {
 
     while (1) {
@@ -297,13 +291,11 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
                 struct tpacket_hdr *tpacket_hdr = get_packet(&ring);
-/*                if ( tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
+                if ( tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
                     if (!server)
                         next_packet(&ring);
                     continue;
                 }
-                */
-                //struct sockaddr_ll *sockaddr_ll = NULL;
                 if (tpacket_hdr->tp_status & TP_STATUS_COPY) {
                     next_packet(&ring);
                     continue;
@@ -332,18 +324,18 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                         isMyID = (inAddress->cmd == remoteAddr->cmd) && (inAddress->paddr == remoteAddr->paddr);
                     }*/
 //                    if (isMyID) {
-                        memcpy(receiveBuffer, payload, msgBlockSize);
-                        if (remoteAddr != NULL && server) {
-                            memcpy(remoteAddr, &iphdr->ip6_dst, IPV6_SIZE);
-                        }
-                        memcpy(targetIP->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
-                        targetIP->sin6_port = udphdr->source;
-                        tpacket_hdr->tp_status = TP_STATUS_KERNEL;
-                        next_packet(&ring);
-                        return msgBlockSize;
-//                    }
+                memcpy(receiveBuffer, payload, msgBlockSize);
+                if (remoteAddr != NULL && server) {
+                    memcpy(remoteAddr, &iphdr->ip6_dst, IPV6_SIZE);
+                }
+                memcpy(targetIP->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
+                targetIP->sin6_port = udphdr->source;
                 tpacket_hdr->tp_status = TP_STATUS_KERNEL;
                 next_packet(&ring);
+                return msgBlockSize;
+//                    }
+/*                tpacket_hdr->tp_status = TP_STATUS_KERNEL;
+                next_packet(&ring);*/
            }
         }
     }

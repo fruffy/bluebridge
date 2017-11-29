@@ -288,20 +288,21 @@ void wc_program(char *cdata, int length) {
 int main( int argc, char *argv[] )
 {
     if(argc!=5) {
-        printf("use: virtmem <npages> <nframes> <disk|rmem|mem> <sort|scan|focus|test|wc|wc_t>\n");
+        printf("use: rmem_test config <npages> <nframes> <disk|rmem|mem> <sort|scan|focus|test|wc|wc_t>\n");
         return EXIT_FAILURE;
     }
 
-    uint64_t npages = atoi(argv[1]);
-    uint64_t nframes = atoi(argv[2]);
+    uint64_t npages = atoi(argv[2]);
+    uint64_t nframes = atoi(argv[3]);
     printf("Pages %lu\n",npages );
-    const char *program = argv[4];
-    const char *algo = argv[3]; // store algorithm command line argument
+    const char *algo = argv[4]; // store algorithm command line argument
+    const char *program = argv[5];
 
     //sync();
     //system("echo 3 > /proc/sys/vm/drop_caches");
-    set_vmem_config("tmp/config/distMem.cnf");
+    //set_vmem_config("tmp/config/distMem.cnf");
     //set_vmem_config("distmem_client.cnf");
+    set_vmem_config(argv[1]);
     struct page_table *pt = init_virtual_memory(npages, nframes, algo);
     char *virtmem = page_table_get_virtmem(pt);
 

@@ -4,8 +4,8 @@ srcDir = $(ROOT_DIR)/applications
 objDir = $(srcDir)/obj
 binDir = $(srcDir)/bin
 libDir = $(ROOT_DIR)/lib
-app := server testing test_rmem
-#userfaultfd_measure_pagefault dsm_wc rmem_test 
+app := server testing rmem_test
+#userfaultfd_measure_pagefault dsm_wc
 
 # CC = gcc
 # #CFlags += -c -Wextra -Werror -Wall -g3

@@ -3,7 +3,6 @@
 #include "../lib/utils.h"
 
 #include <unistd.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -320,7 +319,8 @@ int main(int argc, char *argv[]) {
         NUM_THREADS = atoi(optarg); 
         break;
       case '?': 
-          fprintf (stderr, "Unknown option `-%c'.\n", optopt); 
+          fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+          printf("usage: -c config -t num_threads -i num_iterations>\n");
         return 1; 
       default: 
         abort (); 
