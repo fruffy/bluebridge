@@ -6,7 +6,7 @@
 #include "network.h"
 #include "config.h"
 
-static char sendBuffer[BLOCK_SIZE];
+static __thread char sendBuffer[BLOCK_SIZE];
 
 
 
@@ -72,6 +72,7 @@ struct in6_memaddr allocPointer; // Keep this struct global as we reaccess it ma
 int allocateMem(struct sockaddr_in6 *targetIP) {
     //TODO: Error handling if we runt out of memory, this will fail
     //do some work, which might goto error
+    //void *allocated = calloc(BLOCK_SIZE, sizeof(char));
     void *allocated = malloc(BLOCK_SIZE);
     //void *allocated = calloc(1 ,BLOCK_SIZE);
     //void *allocated = mmap(NULL, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
@@ -101,6 +102,9 @@ int getMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
     // Send the sendBuffer (entire BLOCK_SIZE) to sock_fd
     // print_debug("Content length %lu will be delivered to client!", strlen((char *)pointer));
     struct in6_memaddr *returnID = (struct in6_memaddr *) (&targetIP->sin6_addr);
+/*    for (int i =0; i<=BLOCK_SIZE; i++) {
+        printf("%c", ((unsigned char *)*(&ipv6Pointer->paddr))[i]);
+    }*/
     returnID->cmd = ipv6Pointer->cmd;
     returnID->paddr = ipv6Pointer->paddr;
     send_udp_raw((void *) *&ipv6Pointer->paddr, BLOCK_SIZE, targetIP);

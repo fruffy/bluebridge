@@ -12,6 +12,7 @@
 #include <ucontext.h>
 #include <string.h>
 #include <errno.h>
+#include <stdint.h>
 
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
@@ -40,7 +41,16 @@ struct page_table * page_table_create( int npages, int nframes, page_fault_handl
 
 void page_table_delete( struct page_table *pt );
 
-void page_table_flush(struct page_table *pt);
+void page_table_flush();
+void clear_frame_table();
+void register_vmem_threads();
+void init_vmem_thread(int t_id);
+
+void set_vmem_config(char *filename);
+struct page_table *init_virtual_memory(int npages, int nframes, const char* algo);
+void print_page_faults();
+void clean_page_table(struct page_table *pt);
+void init_thread_table(int num_threads);
 
 /*
 Set the frame number and access bits associated with a page.
@@ -79,14 +89,8 @@ void page_table_print_entry( struct page_table *pt, int page );
 
 /* Print out the state of every page in a page table. */
 
-void page_table_print( struct page_table *pt );
-
-void set_vmem_config(char *filename);
-
-struct page_table *init_virtual_memory(int npages, int nframes, const char* algo);
-
-void print_page_faults();
-
-void clean_page_table(struct page_table *pt);
+void page_table_print();
+void frame_table_print();
+void frame_table_print_entry();
 
 #endif

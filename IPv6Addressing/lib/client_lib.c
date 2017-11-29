@@ -40,6 +40,17 @@ int numHosts() {
 
 
 /*
+ * Generates a random IPv6 address target under specific constraints
+ * This is used by the client to request a pointer from a random server in the network
+ * In future implementations this will be handled by the switch and controller to 
+ * loadbalance. The client will send out a generic request. 
+ */
+struct in6_addr *gen_IPv6Target(int offset) {
+    // Pick a random host
+    return &hostList[offset];
+}
+
+/*
  * Set the list of target hosts and their IP-adresses in our system.
  * Will be replaced by in-switch functionality.
  */

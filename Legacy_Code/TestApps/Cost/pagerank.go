@@ -3,12 +3,12 @@ package main
 import (
 	"bufio"
 	"encoding/gob"
+	//"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path"
-	"runtime"
 	"runtime/pprof"
 	"sort"
 	"strconv"
@@ -127,18 +127,19 @@ func main() {
 		//Time each page rank
 		start := time.Now()
 		if *multiThread {
-			pageRankMulti(*itt)
+			pageRankMulti(*itt, i+1)
 		} else {
 			pageRank3(*itt)
 		}
+		//printPages()
 		dir := time.Now().Sub(start)
-		fmt.Printf("Rounds %d Duration %f\n", *itt, dir.Seconds())
+		fmt.Printf("%d,%d,%f\n", *itt, i+1, dir.Seconds())
 		total += dir.Seconds()
 	}
 	fmt.Printf("Average time %f\n", total/float64(*tests))
 }
 
-func pageRank2(rounds int) {
+func pageRank3(rounds int) {
 	fmt.Println("Single Threaded pagerank")
 	var outrank float32
 	var alpha = (1 - DAMP) / float32(len(pages))
@@ -147,10 +148,13 @@ func pageRank2(rounds int) {
 			outrank = rank[j] / edgenorm[j]
 			for k := 0; k < apages[ids[j]].Num_edges; k++ {
 				apages[edges[apages[ids[j]].Edge_offset+k]].Incomming_rank += outrank
+				//alpha = outrank
 			}
 		}
 		for j := 0; j < len(ids); j++ {
+
 			rank[j] = alpha + (DAMP * apages[ids[j]].Incomming_rank)
+			//outrank = alpha
 		}
 	}
 }
@@ -160,32 +164,30 @@ const (
 	UPDATE
 )
 
-func pageRankMulti(rounds int) {
-	commands := make([]chan int, runtime.NumCPU())
+func pageRankMulti(rounds, cpus int) {
+	commands := make([]chan int, cpus)
+	var outstanding int
 	for i := range commands {
 		commands[i] = make(chan int, 1)
 	}
-	done := make(chan bool, runtime.NumCPU())
-	work := len(ids) / runtime.NumCPU()
+	done := make(chan bool, cpus)
+	work := len(ids) / cpus
 	i := 0
-	//launch threads
-	for i = 0; i < runtime.NumCPU()-1; i++ {
-		go pageRankWorker2(commands[i], done, work*i, work*(i+1))
+	for i = 0; i < cpus-1; i++ {
+		go pageRankWorker(commands[i], done, work*i, work*(i+1))
 	}
-	go pageRankWorker2(commands[i], done, work*i, len(ids))
-	//control super steps
+	go pageRankWorker(commands[i], done, work*i, len(ids))
 	for i = 0; i < rounds; i++ {
-		outstanding := 0
 		for j := range commands {
 			commands[j] <- SENDMSG
 		}
-		for outstanding = runtime.Num.CPU; outstanding > 0;outstanding-- {
+		for outstanding = cpus; outstanding > 0; outstanding-- {
 			<-done
 		}
 		for j := range commands {
 			commands[j] <- UPDATE
 		}
-		for outstanding > 0 {
+		for outstanding = cpus; outstanding > 0; outstanding-- {
 			<-done
 		}
 	}
@@ -211,22 +213,20 @@ func pageRankWorker(commandChan chan int, done chan bool, start, stop int) {
 			done <- true
 		}
 	}
+
 }
 
 func pageRankWorker2(commandChan chan int, done chan bool, start, stop int) {
 	var outrank float32
 	var edgeSum float32
-	var alpha = (1 - DAMP) / float32(len(pages))
+	var alpha = (1 - DAMP) / float32(len(ids))
 	for {
 		switch <-commandChan {
 		case SENDMSG:
 			for j := start; j < stop; j++ {
 				outrank = rank[j] / edgenorm[j]
 				for k := 0; k < apages[ids[j]].Num_edges; k++ {
-					//apages[edges[apages[ids[j]].Edge_offset+k]].Incomming_rank += outrank
 					edgeRank[apages[ids[j]].Edge_offset+k] = outrank
-					edgeSum = outrank
-
 				}
 			}
 			done <- true
@@ -324,6 +324,7 @@ func parseFile(filename string) {
 			k++
 		}
 	}
+
 	WriteToFiles(base)
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
@@ -353,14 +354,14 @@ func WriteToFiles(filename string) {
 func writeFile(filename string, item interface{}) {
 	f, err := os.Create(filename)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Unabe to create cache file %s:%s", filename, err.Error())
 	}
 	defer f.Close()
 	enc := gob.NewEncoder(f)
 	//enc := json.NewEncoder(f)
 	err = enc.Encode(item)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Unabe to encode cache file %s:%s", filename, err.Error())
 	}
 }
 

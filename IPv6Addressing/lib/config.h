@@ -1,8 +1,6 @@
 #ifndef PROJECT_CONFIG
 #define PROJECT_CONFIG
 
-#define _GNU_SOURCE
-
 #include <linux/if_packet.h>  // struct sockaddr_ll (see man 7 packet)
 #include <netinet/ip.h>       // IP_MAXPACKET (which is 65535)
 #include <netinet/ip6.h>    // struct ip6_hdr
@@ -24,6 +22,7 @@ struct config {
     struct in6_addr hosts[40];
 };
 
-struct config configure_bluebridge(char *filename, int isServer);
+struct config set_bb_config(char *filename, int isServer);
+struct config get_bb_config();
 
 #endif

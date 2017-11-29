@@ -83,8 +83,6 @@ struct in6_memaddr *send_id_udp6_raw(char *sendBuffer, int msgBlockSize, struct 
 int rcv_udp6_raw(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     uint64_t start = getns(); 
     int numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 1);
-//     int numbytes = cooked_receive(receiveBuffer, msgBlockSize, targetIP, ipv6Pointer);
-
     rcvLat += getns() - start;
     rcv_calls++;
     return numbytes;
@@ -99,11 +97,17 @@ int rcv_udp6_raw(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *tar
 int rcv_udp6_raw_id(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     uint64_t start = getns();
     int numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 0);
-//     int numbytes = cooked_receive(receiveBuffer, msgBlockSize, targetIP, ipv6Pointer);
-
     rcvLat += getns() - start;
     rcv_calls++;
     return numbytes;
+}
+
+
+struct sockaddr_in6 *init_sockets(struct config *bb_conf) {
+    struct sockaddr_in6 * temp = init_rcv_socket(bb_conf);
+    init_send_socket(bb_conf);
+    temp->sin6_port = htons(strtol(bb_conf->server_port, (char **)NULL, 10));
+    return temp;
 }
 
 void close_sockets() {
@@ -111,7 +115,19 @@ void close_sockets() {
     close_rcv_socket();
 }
 
+void set_net_thread_ids(int t_id) {
+    set_thread_id_tx(t_id);
+    set_thread_id_rx(t_id);
+}
+struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf, int isServer) {
+    if (!isServer)
+        set_net_thread_ids(t_id);
+    return init_sockets(bb_conf);
+}
+
 void printSendLat() {
+    if (send_calls == 0 || rcv_calls == 0)
+        return;
     printf("Average Sending Time %lu ns\n", (sendLat)/send_calls );
     printf("Average Receive Time %lu ns\n", (rcvLat)/rcv_calls );
 

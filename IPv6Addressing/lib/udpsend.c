@@ -10,6 +10,8 @@
 #include <errno.h>            // errno, perror()
 #include <sys/mman.h>         // mmap()
 #include <sys/epoll.h>        // epoll_wait(), epoll_event, epoll_rcv()
+#include <arpa/inet.h>        // inet_pton() and inet_ntop()
+
 #include <pthread.h>
 
 #include "udpcooked.h"
@@ -43,12 +45,14 @@ static __thread struct packetconfig packetinfo;
 static __thread char *ring;
 static __thread int ring_offset = 0;
 static __thread int thread_id;
+struct config *sd_conf;
+
 //static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct packetconfig *gen_packet_info(struct config *configstruct) {
 
     // Allocate memory for various arrays.
-
+    sd_conf = configstruct;
     // Find interface index from interface name and store index in
     // struct sockaddr_ll device, which will be used as an argument of sendto().
     memset (&packetinfo.device, 0, sizeof (packetinfo.device));
@@ -84,7 +88,8 @@ struct packetconfig *gen_packet_info(struct config *configstruct) {
 
     // Hop limit (8 bits): default to maximum value
     packetinfo.iphdr.ip6_hops = 255;
-    packetinfo.udphdr.source = configstruct->src_port + thread_id;
+    //printf("Setting Source UDP to %d \n",ntohs(configstruct->src_port) + thread_id );
+    packetinfo.udphdr.source = htons(ntohs(configstruct->src_port) + thread_id);
     memcpy (packetinfo.ether_frame + ETH_HDRLEN, &packetinfo.iphdr, IP6_HDRLEN * sizeof (uint8_t));
     memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN, &packetinfo.udphdr, UDP_HDRLEN * sizeof (uint8_t));
     return &packetinfo;
@@ -180,14 +185,13 @@ int init_packetsock() {
         perror("pthread_create() failed\n");
         abort();
     }*/
-
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
 
 int get_send_socket() {
     return sd_send;
 }
-void set_thread_id_sd(int id) {
+void set_thread_id_tx(int id) {
     thread_id = id;
 }
 int close_send_socket() {
@@ -205,17 +209,18 @@ int close_send_socket() {
 
     return 0;
 }
-
-void init_send_socket(struct config *configstruct) {
-    gen_packet_info(configstruct);
+void init_sd_socket() {
     init_packetsock();
     if (-1 == bind(sd_send, (struct sockaddr *)&packetinfo.device, sizeof(packetinfo.device))) {
         perror("Send: Could not bind socket.");
         exit(1);
-    }    
-    printf("My Socket %d \n", sd_send);
-    printf("MY RIng %p\n", ring );
+    }
+}
 
+
+void init_send_socket(struct config *configstruct) {
+    gen_packet_info(configstruct);
+    init_sd_socket();
 }
 
 // DEPRECATED
@@ -278,7 +283,6 @@ int send_mmap(unsigned const char *pkt, int pktlen) {
     while (1) {
         if (sendto(sd_send, NULL, 0, MSG_DONTWAIT, (struct sockaddr *)NULL, sizeof(struct sockaddr_ll)) < 0) {
             perror( "sendto failed");
-            sleep(1);
             printf("Retrying....\n");
         } else {
             return 0;
@@ -319,8 +323,12 @@ int send_mmap(unsigned const char *pkt, int pktlen) {
 }
     return (void*) ec_send;
 }*/
-#include <arpa/inet.h>
+
 int cooked_send(struct in6_addr *dst_addr, int dst_port, char *data, int datalen) {
+    /*if (sd_send <= 0)
+        init_send_socket(sd_conf);
+    if (get_rcv_socket() <= 0)
+        init_epoll();*/
     //pthread_mutex_lock(&mutex);
     //unsigned char ether_frame[datalen + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN];
     //memcpy(ether_frame, packetinfo.ether_frame,datalen + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN );
@@ -351,7 +359,7 @@ int cooked_send(struct in6_addr *dst_addr, int dst_port, char *data, int datalen
     }*/
 /*    char dst_ip[INET6_ADDRSTRLEN];
     inet_ntop(AF_INET6,&iphdr->ip6_dst, dst_ip, sizeof dst_ip);
-    printf("Sending to part two %s\n", dst_ip);*/
+    printf("Sending to part two %s::%d\n", dst_ip, ntohs(udphdr->dest));*/
     send_mmap(packetinfo.ether_frame, frame_length);
     //pthread_mutex_unlock(&mutex);
     return EXIT_SUCCESS;

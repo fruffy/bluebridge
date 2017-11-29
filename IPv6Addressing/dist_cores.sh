@@ -1,18 +1,5 @@
 #!/bin/bash
 
-# @FRuffy what is the purpose of this script
-ID=`id -u`
-if [ $ID -ne 0 ]; then
-   echo "This command must be run as root."
-   exit 1
-fi
-ethtool -N enp66s0f0 rx-flow-hash udp6 sdfn
-ethtool -C enp66s0f0 rx-usecs 0
-#sudo ethtool --offload  enp66s0f0  rx on tx on
-ethtool -A enp66s0f0 autoneg off rx off tx off
-ip6tables -t raw -I PREROUTING 1 --src 0:0:100::/40 -j NOTRACK
-ip6tables -I INPUT 1 --src 0:0:100::/40 -j ACCEPT
-
 ncpus=`grep -ciw ^processor /proc/cpuinfo`
 test "$ncpus" -gt 1 || exit 1
 n=0

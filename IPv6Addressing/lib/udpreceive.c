@@ -10,6 +10,8 @@
 #include <errno.h>            // errno, perror()
 #include <sys/mman.h>         // mmap()
 #include <sys/epoll.h>        // epoll_wait(), epoll_event, epoll_rcv()
+#include <arpa/inet.h>        // inet_pton() and inet_ntop()
+
 #include <pthread.h>
 #include <semaphore.h>
 #include <linux/filter.h>
@@ -31,11 +33,17 @@
 void init_epoll();
 void close_epoll();
 void *get_free_buffer();
+int init_socket();
+int set_packet_filter(int sd, char *addr, int port);
+int set_fanout();
+
+//static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 struct ep_interface {
     struct sockaddr_ll device;
     uint16_t my_port;
+    char my_addr[INET6_ADDRSTRLEN];
 };
 struct rcv_ring {
     struct tpacket_hdr *first_tpacket_hdr;
@@ -49,53 +57,79 @@ static __thread struct rcv_ring ring;
 
 static __thread int sd_rcv;
 static __thread int thread_id;
-struct sock_filter code;
-
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
     struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
-    interface_ep.my_port = configstruct->src_port;
-    memset (&interface_ep.device, 0, sizeof (interface_ep.device));
-    if ((interface_ep.device.sll_ifindex = if_nametoindex (configstruct->interface)) == 0) {
-        perror ("if_nametoindex() failed to obtain interface index ");
-        exit (EXIT_FAILURE);
-    }
+    inet_ntop(AF_INET6, &configstruct->src_addr, interface_ep.my_addr, INET6_ADDRSTRLEN);
+    if (!interface_ep.my_port) {
+        interface_ep.my_port = configstruct->src_port;
+        if ((interface_ep.device.sll_ifindex = if_nametoindex (configstruct->interface)) == 0) {
+            perror ("if_nametoindex() failed to obtain interface index ");
+            exit (EXIT_FAILURE);
+        }
 
-    interface_ep.device.sll_family = AF_PACKET;
-    interface_ep.device.sll_protocol = htons (ETH_P_ALL);
+        interface_ep.device.sll_family = AF_PACKET;
+        interface_ep.device.sll_protocol = htons (ETH_P_ALL);
+    }
+    init_socket();
+    set_packet_filter(sd_rcv, interface_ep.my_addr, htons((ntohs(interface_ep.my_port) + thread_id)));
     init_epoll();
+    if (-1 == bind(sd_rcv, (struct sockaddr *)&interface_ep.device, sizeof(interface_ep.device))) {
+        perror("Could not bind socket.");
+        exit(1);
+    }
     return temp;
 }
+
+int set_fanout() {
+    int fanout_group_id = getpid() & 0xffff;
+    if (fanout_group_id) {
+            // PACKET_FANOUT_LB - round robin
+            // PACKET_FANOUT_CPU - send packets to CPU where packet arrived
+            int fanout_type = PACKET_FANOUT_CPU; 
+
+            int fanout_arg = (fanout_group_id | (fanout_type << 16));
+
+            int setsockopt_fanout = setsockopt(sd_rcv, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg));
+
+            if (setsockopt_fanout < 0) {
+                printf("Can't configure fanout\n");
+               return EXIT_FAILURE;
+            }
+    }
+    return EXIT_SUCCESS;
+}
+
 void set_thread_id_rx(int id) {
     thread_id = id;
 }
-void set_packet_filter(int sd, int port) {
+
+int set_packet_filter(int sd, char *addr, int port) {
     struct sock_fprog filter;
     int i, lineCount = 0;
     char tcpdump_command[512];
     FILE* tcpdump_output;
-    sprintf(tcpdump_command, "tcpdump -i %d dst port %d -ddd", interface_ep.device.sll_ifindex+1,ntohs(port));
-    printf("%s\n",tcpdump_command );
+    sprintf(tcpdump_command, "tcpdump dst port %d and ip6 net %s/48 -ddd", ntohs(port), addr);
+    printf("Active Filter: %s\n",tcpdump_command );
     if ( (tcpdump_output = popen(tcpdump_command, "r")) == NULL ) {
-        perror("Cannot compile filter using tcpdump.");
-        return;
+        RETURN_ERROR(-1, "Cannot compile filter using tcpdump.");
     }
     if ( fscanf(tcpdump_output, "%d\n", &lineCount) < 1 ) {
-        printf("cannot read lineCount.\n");
-        return;
+        RETURN_ERROR(-1, "cannot read lineCount.");
     }
     filter.filter = calloc(sizeof(struct sock_filter)*lineCount,1);
     filter.len = lineCount;
     for ( i = 0; i < lineCount; i++ ) {
         if (fscanf(tcpdump_output, "%u %u %u %u\n", (unsigned int *)&(filter.filter[i].code),(unsigned int *) &(filter.filter[i].jt),(unsigned int *) &(filter.filter[i].jf), &(filter.filter[i].k)) < 4 ) {
-            printf("error in reading line number: %d\n", (i+1));
             free(filter.filter);
-            return;
-        }
+            RETURN_ERROR(-1, "fscanf: error in reading");
+    }
     setsockopt(sd, SOL_SOCKET, SO_ATTACH_FILTER, &filter, sizeof(filter));
     }
     pclose(tcpdump_output);
+    return EXIT_SUCCESS;
 }
+
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket_old(struct config *configstruct) {
 
@@ -159,18 +193,12 @@ int get_rcv_socket() {
 
 void close_rcv_socket() {
     close(sd_rcv);
+    sd_rcv = -1;
     close_epoll();
 }
-#ifndef PACKET_FANOUT
-# define PACKET_FANOUT          18
-# define PACKET_FANOUT_HASH     0
-# define PACKET_FANOUT_LB       1
-#endif
-static int fanout_type;
-static int fanout_id;
+
 int setup_packet_mmap() {
 
-    int fanout_arg;
     struct tpacket_req tpacket_req = {
         .tp_block_size = BLOCKSIZE,
         .tp_block_nr = CONF_RING_BLOCKS,
@@ -185,9 +213,7 @@ int setup_packet_mmap() {
     if (setsockopt(sd_rcv, SOL_PACKET, PACKET_RX_RING, &tpacket_req, sizeof tpacket_req)) {
         return -1;
     }
-    fanout_arg = (fanout_id | (fanout_type << 16));
-    setsockopt(sd_rcv, SOL_PACKET, PACKET_FANOUT_LB,
-             &fanout_arg, sizeof(fanout_arg));
+
     mapped_memory = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, sd_rcv, 0);
 
     if (MAP_FAILED == mapped_memory) {
@@ -205,17 +231,12 @@ int setup_packet_mmap() {
 int init_socket() {
     sd_rcv = socket(AF_PACKET, SOCK_RAW|SOCK_NONBLOCK, htons(ETH_P_ALL));
 
-    const int on = 1;
+    //const int on = 1;
     //setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
     //setsockopt(sd_rcv, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
-    setsockopt(sd_rcv, SOL_PACKET, SO_BUSY_POLL, &on, sizeof(on));
-    set_packet_filter(sd_rcv, interface_ep.my_port +thread_id);
+    //setsockopt(sd_rcv, SOL_PACKET, SO_BUSY_POLL, &on, sizeof(on));
     if (-1 == sd_rcv) {
         perror("Could not set socket");
-        return EXIT_FAILURE;
-    }
-    if (-1 == bind(sd_rcv, (struct sockaddr *)&interface_ep.device, sizeof(interface_ep.device))) {
-        perror("Could not bind socket.");
         return EXIT_FAILURE;
     }
 
@@ -224,7 +245,6 @@ int init_socket() {
 
 void init_epoll() {
 
-    init_socket();
     if (setup_packet_mmap()) {
         close(sd_rcv);
         exit(1);
@@ -253,33 +273,20 @@ void close_epoll() {
     munmap(ring.first_tpacket_hdr, ring.mapped_memory_size);
 }
 
-
 struct tpacket_hdr *get_packet(struct rcv_ring *ring_p) {
     return (void *)((char *)ring_p->first_tpacket_hdr + ring_p->tpacket_i * ring_p->tpacket_req.tp_frame_size);
 }
-
-/*struct sockaddr_ll * get_sockaddr_ll(struct tpacket_hdr * tpacket_hdr) {
-    return (struct sockaddr_ll *) ((char *) tpacket_hdr) + TPACKET_ALIGN(sizeof *tpacket_hdr);
-}
-*/
 
 void next_packet(struct rcv_ring *ring_p) {
    ring_p->tpacket_i = (ring_p->tpacket_i + 1) % ring_p->tpacket_req.tp_frame_nr;
 }
 
-#include <arpa/inet.h>        // inet_pton() and inet_ntop()
 int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server) {
+
     while (1) {
         struct epoll_event events[1024];
         int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 0);
-        if (num_events == -1)  {
-            if (errno == EINTR)  {
-                perror("epoll_wait returned -1");
-                break;
-            }
-            perror("error");
-            continue;
-        }
+
         for (int i = 0; i < num_events; i++)  {
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
@@ -289,8 +296,6 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                         next_packet(&ring);
                     continue;
                 }
-                
-                //struct sockaddr_ll *sockaddr_ll = NULL;
                 if (tpacket_hdr->tp_status & TP_STATUS_COPY) {
                     next_packet(&ring);
                     continue;
@@ -307,40 +312,30 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                 char s1[INET6_ADDRSTRLEN];
                 inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
                 inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
-                //if (udphdr->dest == interface_ep.my_port) {
-                //printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
-                //printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(interface_ep.my_port), ntohs(udphdr->dest) );*/
-                    struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
+                printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
+                printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(interface_ep.my_port), ntohs(udphdr->dest) );*/
+/*                    struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
                     int isMyID = 1;
                     if (remoteAddr != NULL && !server) {
-                        /*printf("Thread %d Their ID\n", thread_id);
-                        printNBytes(inAddress, 16);
-                        printf("Thread %d MY ID\n", thread_id);
-                        printNBytes(remoteAddr, 16);
-                        printf("Action!\n");*/
+                        //printf("Thread %d Their ID\n", thread_id);
+                        //printNBytes(inAddress, 16);
+                        //printf("Thread %d MY ID\n", thread_id);
+                        //printNBytes(remoteAddr, 16)
                         isMyID = (inAddress->cmd == remoteAddr->cmd) && (inAddress->paddr == remoteAddr->paddr);
-                    }
-                    if (isMyID) {
-                        memcpy(receiveBuffer, payload, msgBlockSize);
-                        if (remoteAddr != NULL && server) {
-                            memcpy(remoteAddr, &iphdr->ip6_dst, IPV6_SIZE);
-                        }
-                        memcpy(targetIP->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
-                        /*
-                        for (int k=0;k<16;k++) {
-                            printf("%02X ",(int)targetIP->sin6_addr.s6_addr[k]);
-                        }
-                        printf("Received from %02X\n",(int)targetIP->sin6_addr.s6_addr[5]);
-                        printf("Received from (raw) %s\n",&iphdr->ip6_src);
-                        */
-                        targetIP->sin6_port = udphdr->source;
-                        tpacket_hdr->tp_status = TP_STATUS_KERNEL;
-                        next_packet(&ring);
-                        return msgBlockSize;
-                    }
-                //}
+                    }*/
+//                    if (isMyID) {
+                memcpy(receiveBuffer, payload, msgBlockSize);
+                if (remoteAddr != NULL && server) {
+                    memcpy(remoteAddr, &iphdr->ip6_dst, IPV6_SIZE);
+                }
+                memcpy(targetIP->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
+                targetIP->sin6_port = udphdr->source;
                 tpacket_hdr->tp_status = TP_STATUS_KERNEL;
                 next_packet(&ring);
+                return msgBlockSize;
+//                    }
+/*                tpacket_hdr->tp_status = TP_STATUS_KERNEL;
+                next_packet(&ring);*/
            }
         }
     }

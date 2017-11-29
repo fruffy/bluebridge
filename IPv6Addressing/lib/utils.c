@@ -84,6 +84,23 @@ int printNBytes(void *receiveBuffer, int num) {
 	printf("\n");
 	return i;
 }
+
+/*
+ * Print reverse byte buffer including specified length
+ */
+int printNChars(void *receiveBuffer, int num) {
+	int i;
+
+	// for (i = num-1; i>=0; i--) {
+	// 	printf("%02x", (unsigned char) receiveBuffer[i]);
+	// }
+	for (i =0; i<=num-1; i++) {
+		printf("%c", ((unsigned char *)receiveBuffer)[i]);
+	}
+	printf("\n");
+	return i;
+}
+
 /*
  * Prints a formatted representation of the addrinfo structure
  * https://msdn.microsoft.com/en-us/library/windows/desktop/ms737530(v=vs.85).aspx

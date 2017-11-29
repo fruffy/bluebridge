@@ -25,14 +25,13 @@ extern ssize_t pwrite (int __fd, const void *__buf, size_t __nbytes, __off_t __o
 
 struct config myConf;
 void configure_rmem(char *filename) {
-    myConf = configure_bluebridge(filename, 0);
+    myConf = set_bb_config(filename, 0);
     set_host_list(myConf.hosts, myConf.num_hosts);
 }
 
 void rmem_init_sockets(struct rmem *r) {
-    r->targetIP = init_rcv_socket(&myConf);
+    r->targetIP = init_sockets(&myConf);
     r->targetIP->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
-    init_send_socket(&myConf);
 }
 
 void fill_rmem(struct rmem *r) {

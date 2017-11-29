@@ -49,7 +49,7 @@ void mem_write(struct mem *r, int block, char *data) {
         abort();
     }
     // Get pointer to page data in (simulated) physical memory
-    memcpy(r->memList[block],data, r->block_size);
+    memcpy(r->memList[block], data, r->block_size);
 }
 
 void mem_read(struct mem *r, int block, char *data) {

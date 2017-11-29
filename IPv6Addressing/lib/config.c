@@ -22,16 +22,17 @@ struct in6_ifreq {
     __u32 ifr6_prefixlen;
     unsigned int ifr6_ifindex;
 };
+struct config bb_config;
 
-int set_interface_ip(struct config *configstruct) {
+int set_interface_ip(struct config *config) {
     struct ifreq ifr;
     struct in6_ifreq ifr6;
     int fd = socket(PF_INET6, SOCK_DGRAM, IPPROTO_IP);
 
-    strncpy(ifr.ifr_name, configstruct->interface, IFNAMSIZ);
+    strncpy(ifr.ifr_name, config->interface, IFNAMSIZ);
     //struct sockaddr_in6* addr = (struct sockaddr_in6*) &ifr.ifr6_addr;
     ifr.ifr_addr.sa_family = AF_INET6;
-    //memcpy(&addr->sin6_addr, &configstruct->src_addr, IPV6_SIZE);
+    //memcpy(&addr->sin6_addr, &config->src_addr, IPV6_SIZE);
     if(ioctl(fd, SIOCGIFHWADDR, &ifr) < 0) {
         perror("SIOCGIFHWADDR");
     }
@@ -41,14 +42,14 @@ int set_interface_ip(struct config *configstruct) {
     if (ioctl(fd, SIOGIFINDEX, &ifr) < 0) {
         perror("SIOGIFINDEX");
     }
-    memcpy(&ifr6.ifr6_addr, &configstruct->src_addr,
+    memcpy(&ifr6.ifr6_addr, &config->src_addr,
                sizeof(struct in6_addr));
     ifr6.ifr6_ifindex = ifr.ifr_ifindex;
     ifr6.ifr6_prefixlen = 64;
     if (ioctl(fd, SIOCSIFADDR, &ifr6) < 0) {
         perror("SIOCSIFADDR");
     }
-    strncpy(ifr.ifr_name, configstruct->interface, IFNAMSIZ);
+    strncpy(ifr.ifr_name, config->interface, IFNAMSIZ);
     ifr.ifr_flags |= (IFF_UP | IFF_RUNNING);
     if(ioctl(fd, SIOCSIFFLAGS, &ifr) != 0) {
         perror("SIOCSIFFLAGS");
@@ -61,11 +62,11 @@ int set_interface_ip(struct config *configstruct) {
     return EXIT_SUCCESS;
 }
 
-int set_source_port(struct config *configstruct, int isServer, char *src_port) {
+int set_source_port(struct config *config, int isServer, char *src_port) {
     int port = 0;
     if (isServer) {
         printf("Setting up server port...\n");
-        port = atoi(configstruct->server_port);
+        port = atoi(config->server_port);
     } else if (atoi(src_port)){
         port = atoi(src_port);
     }
@@ -82,20 +83,18 @@ int set_source_port(struct config *configstruct, int isServer, char *src_port) {
             close(sd_temp);
             return EXIT_FAILURE;
         } else {
-            configstruct->src_port = htons(sin.sin6_port);
+            config->src_port = htons(sin.sin6_port);
             close(sd_temp);
         }
     } else {
-        configstruct->src_port = htons(port);
+        config->src_port = htons(port);
     }
     return EXIT_SUCCESS;
 }
 
 #define DELIM "="
 #define SEP ","
-struct config configure_bluebridge(char *filename, int isServer) {
-    struct config configstruct;
-
+struct config set_bb_config(char *filename, int isServer) {
     printf("Opening...%s\n",filename );
     FILE *file = fopen (filename, "r");
     if (file != NULL) {
@@ -107,47 +106,50 @@ struct config configure_bluebridge(char *filename, int isServer) {
             cfline = cfline + strlen(DELIM);
             cfline[strcspn(cfline, "\n")] = 0;
             if (i == 0){
-                    memcpy(configstruct.interface,cfline,20);
+                    memcpy(bb_config.interface,cfline,20);
             } else if (i == 1){
                 char *token;
                 token = strtok(cfline, SEP);
                 int j = 0;
                 while (token != NULL) {
-                        inet_pton(AF_INET6, token, configstruct.hosts[j].s6_addr);
+                        inet_pton(AF_INET6, token, bb_config.hosts[j].s6_addr);
                         token = strtok (NULL, ",");
                         j++;
                     }
-                configstruct.num_hosts = j;
+                bb_config.num_hosts = j;
             } else if (i == 2){
-                    strncpy(configstruct.server_port,cfline,strlen(cfline));
+                    strncpy(bb_config.server_port,cfline,strlen(cfline));
             } else if (i == 3){
-                    set_source_port(&configstruct, isServer,cfline);
+                    set_source_port(&bb_config, isServer,cfline);
             } else if (i == 4){
-                    inet_pton(AF_INET6, cfline, configstruct.src_addr.s6_addr);
+                    inet_pton(AF_INET6, cfline, bb_config.src_addr.s6_addr);
             } else if (i == 5){
-                    configstruct.debug = atoi(cfline);
+                    bb_config.debug = atoi(cfline);
             }
             i++;
         }
         printf("Loading Config...\n");
-        printf("*** Interface %s\n", configstruct.interface);
-        printf("*** Server port %s\n", configstruct.server_port);
-        printf("*** Client port %d\n", ntohs(configstruct.src_port));
-        printf("*** Debug active? %d\n", configstruct.debug);
-        printf("*** %d target hosts:\t ", configstruct.num_hosts);
-        for (int j =0; j < configstruct.num_hosts; j++) {
+        printf("*** Interface %s\n", bb_config.interface);
+        printf("*** Server port %s\n", bb_config.server_port);
+        printf("*** Client port %d\n", ntohs(bb_config.src_port));
+        printf("*** Debug active? %d\n", bb_config.debug);
+        printf("*** %d target hosts:\t ", bb_config.num_hosts);
+        for (int j =0; j < bb_config.num_hosts; j++) {
             char s[INET6_ADDRSTRLEN];
-            inet_ntop(AF_INET6, &configstruct.hosts[j], s, sizeof s);
+            inet_ntop(AF_INET6, &bb_config.hosts[j], s, sizeof s);
             printf("%s ",s);
         }
         printf("\n");
         printf("Setting interface IP...\n");
-        set_interface_ip(&configstruct);
-
+        set_interface_ip(&bb_config);
         fclose(file);
-        return configstruct;
+        return bb_config;
     } else {
         perror("Could not find or open file!");
         exit(1);
     }
+}
+
+struct config get_bb_config(){
+    return bb_config;
 }

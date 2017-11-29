@@ -143,13 +143,26 @@ func pageRank2(rounds int) {
 	var outrank float32
 	var alpha = (1 - DAMP) / float32(len(pages))
 	for i := 0; i < rounds; i++ {
+		// ids is a list of vertex ids (usually ids[0] = 0 ... ids[n] = n)
 		for j := 0; j < len(ids); j++ {
+			// edgenorm is the number of outgoing links for j
+			// rank the previous iteration's page rank for j
 			outrank = rank[j] / edgenorm[j]
+			// for each outgoing edge of j
 			for k := 0; k < apages[ids[j]].Num_edges; k++ {
+				// apages is a list of all pages
+				// edges is a list of all outgoing edges per page (why we have an offset)
+				// Update the incoming rank on that edge
+				//		apages[ids[j]].Edge_offset+k is the index of an outgoing edge
+				//		edge[blah] is an index of a page in apages
+
+				// incoming rank = (old_rank)/(# of j outgoing edges) which is M*R(t)
 				apages[edges[apages[ids[j]].Edge_offset+k]].Incomming_rank += outrank
 			}
 		}
+		// for each page
 		for j := 0; j < len(ids); j++ {
+			// Update page j's rank with alpha (normalization) + damp * incoming rank
 			rank[j] = alpha + (DAMP * apages[ids[j]].Incomming_rank)
 		}
 	}

@@ -3,15 +3,16 @@
 #include "../lib/utils.h"
 
 #include <unistd.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
 #include <sys/time.h>
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
-
-const int NUM_ITERATIONS = 10000;
+#include <sys/resource.h>
+#include <pthread.h>
+static int NUM_THREADS = 1;
+static int NUM_ITERATIONS;
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //  1. Check correctness of pointer on server side, it should never segfault.
@@ -26,8 +27,6 @@ const int NUM_ITERATIONS = 10000;
 //  5. Remove unneeded code and print statements
 //      Move all buffers to stack instead of heap.
 //      Check memory leaks
-//  8. Integrate Mihir's asynchronous code and use raw linux threading:
-//      http://nullprogram.com/blog/2015/05/15/
 ///////////////////////////////////////////////////////////////////////////////
 
 //To add the current correct route
@@ -39,7 +38,7 @@ struct LinkedPointer {
 };
 
 
-void print_times( uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* write_latency, uint64_t* free_latency){
+void print_times(uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* write_latency, uint64_t* free_latency, int length){
     /*FILE *allocF = fopen("alloc_latency.csv", "w");
     if (allocF == NULL) {
         printf("Error opening file!\n");
@@ -87,107 +86,90 @@ void print_times( uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* wri
     uint64_t write_total = 0;
     uint64_t free_total = 0;
 
-    for (i = 0; i < NUM_ITERATIONS; i++) {
-        alloc_total += (unsigned long long) alloc_latency[i];
-        read_total += (unsigned long long) read_latency[i];
-        write_total += (unsigned long long) write_latency[i];
-        free_total += (unsigned long long) free_latency[i];
+    for (i = 0; i < length; i++) {
+        if (alloc_latency != NULL)
+            alloc_total += (unsigned long long) alloc_latency[i];
+        if (read_latency != NULL)
+            read_total += (unsigned long long) read_latency[i];
+        if (write_latency != NULL)
+            write_total += (unsigned long long) write_latency[i];
+        if (free_latency != NULL)
+            free_total += (unsigned long long) free_latency[i];
     }
-    printf("Average allocate latency: "KRED"%lu us\n"RESET, alloc_total/ (NUM_ITERATIONS*1000));
-    printf("Average read latency: "KRED"%lu us\n"RESET, read_total/ (NUM_ITERATIONS*1000));
-    printf("Average write latency: "KRED"%lu us\n"RESET, write_total/ (NUM_ITERATIONS*1000));
-    printf("Average free latency: "KRED"%lu us\n"RESET, free_total/ (NUM_ITERATIONS*1000));
+
+    if (alloc_latency != NULL)
+        printf("Average allocate latency: "KRED"%lu us\n"RESET, alloc_total/ (length*1000));
+    if (read_latency != NULL)
+        printf("Average read latency: "KRED"%lu us\n"RESET, read_total/ (length*1000));
+    if (write_latency != NULL)
+        printf("Average write latency: "KRED"%lu us\n"RESET, write_total/ (length*1000));
+    if (free_latency != NULL)
+        printf("Average free latency: "KRED"%lu us\n"RESET, free_total/ (length*1000));
+
 }
 
 void basicOperations(struct sockaddr_in6 *targetIP) {
-    uint64_t *alloc_latency = malloc(sizeof(uint64_t) * NUM_ITERATIONS);
-    assert(alloc_latency);
-    memset(alloc_latency, 0, sizeof(uint64_t) * NUM_ITERATIONS);
+    uint64_t *alloc_latency = calloc(sizeof(uint64_t), NUM_ITERATIONS);
+    uint64_t *read_latency = calloc(sizeof(uint64_t), NUM_ITERATIONS);
+    uint64_t *write_latency = calloc(sizeof(uint64_t), NUM_ITERATIONS);
+    uint64_t *free_latency = calloc(sizeof(uint64_t), NUM_ITERATIONS);
 
-    uint64_t *read_latency = malloc(sizeof(uint64_t) * NUM_ITERATIONS);
-    assert(read_latency);
-    memset(read_latency, 0, sizeof(uint64_t) * NUM_ITERATIONS);
+    struct config myConf = get_bb_config();
+    struct in6_memaddr *r_addr = malloc(NUM_ITERATIONS * sizeof(struct in6_memaddr));
+    if(!r_addr)
+        perror("Allocation too large");
 
-    uint64_t *write_latency = malloc(sizeof(uint64_t) * NUM_ITERATIONS);
-
-    assert(write_latency);
-    memset(write_latency, 0, sizeof(uint64_t) * NUM_ITERATIONS);
-
-    uint64_t *free_latency = malloc(sizeof(uint64_t) * NUM_ITERATIONS);
-    assert(free_latency);
-    memset(free_latency, 0, sizeof(uint64_t) * NUM_ITERATIONS);
     int i;
-    // Initialize remotePointers array
-    struct LinkedPointer *rootPointer = (struct LinkedPointer *) malloc( sizeof(struct LinkedPointer));
-    struct LinkedPointer *nextPointer = rootPointer;
-    //init the root element
-    nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
-    // Generate a random IPv6 address out of a set of available hosts
-    struct in6_addr *ipv6Pointer = gen_rdm_IPv6Target();
-    memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-    nextPointer->AddrString = allocateRemoteMem(targetIP);
+    //struct in6_memaddr r_addr[NUM_ITERATIONS];
     srand(time(NULL));
-    for (i = 0; i < NUM_ITERATIONS; i++) {
-        nextPointer = nextPointer->Pointer;
-        nextPointer->Pointer = (struct LinkedPointer * ) malloc( sizeof(struct LinkedPointer));
-        // Generate a random IPv6 address out of a set of available hosts
-        struct in6_addr *ipv6Pointer = gen_rdm_IPv6Target();
-        memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+    for (i = 0; i< NUM_ITERATIONS; i++) {
+       // Generate a random IPv6 address out of a set of available hosts
+        //memcpy(&(targetIP->sin6_addr), gen_rdm_IPv6Target(), sizeof(struct in6_addr));
+        memcpy(&(targetIP->sin6_addr), gen_IPv6Target(i % myConf.num_hosts), sizeof(struct in6_addr));
         uint64_t start = getns(); 
-        nextPointer->AddrString = allocateRemoteMem(targetIP);
+        r_addr[i] = allocateRemoteMem(targetIP);
         alloc_latency[i] = getns() - start; 
     }
-    // don't point to garbage
-    // temp fix
-    nextPointer->Pointer = NULL;
-    i = 1;
-    srand(time(NULL));
-    nextPointer = rootPointer;
-    while(nextPointer != NULL)  {
 
-        print_debug("Iteration %d", i);
-        struct in6_memaddr remoteMemory = nextPointer->AddrString;
+    for (i = 0; i < NUM_ITERATIONS; i++) {
+        struct in6_memaddr remoteMemory = r_addr[i];
         //print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
         print_debug("Creating payload");
-        char *payload= malloc(50);
-        memcpy(payload,"Hello World!", 10);
-
+        char *payload = malloc(4096);
+        snprintf(payload, 50, "HELLO WORLD! How are you? %d", i);
         uint64_t wStart = getns();
         writeRemoteMem(targetIP, payload, &remoteMemory);
         write_latency[i - 1] = getns() - wStart;
+        free(payload);
+    }
+    for (i = 0; i < NUM_ITERATIONS; i++) {
+        struct in6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
         char *test = getRemoteMem(targetIP, &remoteMemory);
         read_latency[i - 1] = getns() - rStart;
-
+        char *payload = malloc(4096);
+        snprintf(payload, 50, "HELLO WORLD! How are you? %d", i);
         print_debug("Results of memory store: %.50s", test);
-        if (strncmp(test,"Hello World!", 10) < 0) {
+        if (strncmp(test, payload, 50) < 0) {
             print_debug(KRED"ERROR: WRONG RESULT"RESET);
             exit(1);
         }
+        free(payload);
+    }
+    for (i = 0; i < NUM_ITERATIONS; i++) {
+        struct in6_memaddr remoteMemory = r_addr[i];
         uint64_t fStart = getns();
         freeRemoteMem(targetIP, &remoteMemory);
         free_latency[i-1] = getns() - fStart;
-        free(payload);
-        nextPointer = nextPointer->Pointer;
-        i++;
     }
-    nextPointer = rootPointer;
-    while (nextPointer != NULL) {
-        rootPointer = nextPointer; 
-        nextPointer = nextPointer->Pointer;
-        free (rootPointer);
-    }
-    print_times(alloc_latency, read_latency, write_latency, free_latency);
-
-    free(alloc_latency);
-    free(write_latency);
+    print_times(alloc_latency, read_latency, write_latency, free_latency, NUM_ITERATIONS);
+/*    free(alloc_latency);
     free(read_latency);
-    free(free_latency);
+    free(write_latency);
+    free(free_latency);*/
 }
 
-/* create thread argument struct for thr_func() */
-#include <pthread.h>
-#define NUM_THREADS 4
+
 
 typedef struct _thread_data_t {
   int tid;
@@ -195,55 +177,64 @@ typedef struct _thread_data_t {
   struct sockaddr_in6 *targetIP;
   int length;
 } thread_data_t;
-struct config myConf;
-void *testing_loop(void *arg) {
 
+void *testing_loop(void *arg) {
     thread_data_t *data = (thread_data_t *)arg;
 
-    pthread_t my_thread = pthread_self();
-    /* Set affinity mask to include CPUs 0 to 7 */
+    // Allocate measurement arrays
+    uint64_t read_latency[data->length];
+    uint64_t write_latency[data->length];
+    uint64_t free_latency[data->length];
+
+    // Assign threads to cores
     int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
     int assigned = data->tid % num_cores;
-    printf("ASSIGNED THREAD %d to CORE %d\n", data->tid, assigned );
+    pthread_t my_thread = pthread_self();
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(assigned, &cpuset);
     pthread_setaffinity_np(my_thread, sizeof(cpu_set_t), &cpuset);
-    //struct sockaddr_in6 *temp = calloc(1,sizeof(struct sockaddr_in6));//init_rcv_socket(&myConf);
-    set_thread_id_sd(data->tid);
-    set_thread_id_rx(data->tid);
-    struct sockaddr_in6 *temp = init_rcv_socket(&myConf);
-    temp->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
-    init_send_socket(&myConf);
-
+    printf("Assigned Thread %d to core %d\n", data->tid, assigned );
+    
+    // Initialize BlueBridge
+    struct config myConf = get_bb_config();
+    struct sockaddr_in6 *temp = init_net_thread(data->tid, &myConf, 0);
+    
+    // WRITE TEST
     for (int i = 0; i < data->length; i++) {
         struct in6_memaddr *remoteMemory = data->r_addr + i;
         //print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
         print_debug("Creating payload");
-        char *payload = malloc(4096);
+        char payload[4096];
         snprintf(payload, 50, "HELLO WORLD! MY ID is: %d", data->tid);
+        uint64_t wStart = getns();
         writeRemoteMem(temp, payload, remoteMemory);
-        free(payload);
+        write_latency[i - 1] = getns() - wStart;
     }
+    // GET TEST
     for (int i = 0; i < data->length; i++) {
         struct in6_memaddr *remoteMemory = data->r_addr + i;
+        uint64_t rStart = getns();
         char *test = getRemoteMem(temp, remoteMemory);
+        read_latency[i - 1] = getns() - rStart;
         print_debug("Thread: %d, Results of memory store: %s\n",  data->tid, test);
-        char *payload = malloc(4096);
+        char payload[4096];
         snprintf(payload, 50, "HELLO WORLD! MY ID is: %d", data->tid);
         if (strncmp(test,payload, 50) < 0) {
             print_debug(KRED"ERROR: WRONG RESULT"RESET);
             exit(1);
         }
-        free(payload);
     }
+    // FREE TEST
     for (int i = 0; i < data->length; i++) {
         struct in6_memaddr *remoteMemory = data->r_addr + i;
+        uint64_t fStart = getns();
         freeRemoteMem(temp, remoteMemory);
+        free_latency[i-1] = getns() - fStart;
     }
     free(temp);
     printSendLat();
-
+    print_times(NULL, read_latency, write_latency, free_latency, data->length);
     return NULL;
 }
 
@@ -254,7 +245,7 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
     /* create a thread_data_t argument array */
     thread_data_t thr_data[NUM_THREADS];
 
-    // Generate a random IPv6 address out of a set of available hosts
+    uint64_t *alloc_latency = calloc(sizeof(uint64_t), NUM_ITERATIONS);
 
     struct in6_memaddr *r_addr = malloc(NUM_ITERATIONS * sizeof(struct in6_memaddr));
     if(!r_addr)
@@ -263,16 +254,25 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
     //struct in6_memaddr r_addr[NUM_ITERATIONS];
     srand(time(NULL));
     for (i = 0; i< NUM_ITERATIONS; i++) {
+       // Generate a random IPv6 address out of a set of available hosts
         memcpy(&(targetIP->sin6_addr), gen_rdm_IPv6Target(), sizeof(struct in6_addr));
+        uint64_t start = getns(); 
         r_addr[i] = allocateRemoteMem(targetIP);
+        alloc_latency[i] = getns() - start; 
     }
+    pthread_attr_t attr;
+    size_t  stacksize = 0;
 
-   close_sockets();
-   //close_send_socket();
-   //close_rcv_socket();
-   /* create threads */
-
-
+    pthread_attr_init( &attr );
+    pthread_attr_getstacksize( &attr, &stacksize );
+    printf("before stacksize : [%lu]\n", stacksize);
+    pthread_attr_setstacksize( &attr, 99800000 );
+    pthread_attr_getstacksize( &attr, &stacksize );
+    printf("after  stacksize : [%lu]\n", stacksize);
+    close_sockets();
+    //close_send_socket();
+    //close_rcv_socket();
+    /* create threads */
     for (i = 0; i < NUM_THREADS; i++) {
         int rc;
         int split = NUM_ITERATIONS/NUM_THREADS;
@@ -280,19 +280,26 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
         thr_data[i].targetIP =  targetIP;
         thr_data[i].r_addr =  &r_addr[split *i];
         thr_data[i].length = split;
+        struct rlimit limit;
 
+        getrlimit (RLIMIT_STACK, &limit);
+        printf ("\nStack Limit = %ld and %ld max\n", limit.rlim_cur, limit.rlim_max);
         printf("Launching thread %d\n", i );
-        if ((rc = pthread_create(&thr[i], NULL, testing_loop, &thr_data[i]))) {
+        if ((rc = pthread_create(&thr[i],  &attr, testing_loop, &thr_data[i]))) {
           fprintf(stderr, "error: pthread_create, rc: %d\n", rc);
         }
     }
-
     /* block until all threads complete */
     for (i = 0; i < NUM_THREADS; i++) {
-        printf("Waiting for my friends...\n");
+        printf("Thread %d Waiting for my friends...\n", i);
         pthread_join(thr[i], NULL);
     }
-
+    long alloc_total = 0;
+    for (i = 0; i < NUM_ITERATIONS; i++) {
+            alloc_total += (unsigned long long) alloc_latency[i];
+    }
+    printf("Average allocate latency: "KRED"%lu us\n"RESET, alloc_total/ (NUM_ITERATIONS*1000));
+    free(alloc_latency);
 }
 
 /*
@@ -300,46 +307,46 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
  * Allows user to issue commands on the command line.
  */
 int main(int argc, char *argv[]) {
-
-    
-    //specify interactive or automatic client mode
-    int isAutoMode = 1;
-    //Socket operator variables
-    
-    int c;
-    opterr = 0;
-    while ((c = getopt (argc, argv, ":i")) != -1) {
-    switch (c)
-      {
-      case 'i':
-        isAutoMode = 0;
+    // Example Call:
+    //./applications/bin/testing -c ./tmp/config/distMem.cnf -t 4 -i 10000
+    int c; 
+    struct config myConf;
+    while ((c = getopt (argc, argv, "c:i:t:")) != -1) { 
+    switch (c) 
+      { 
+      case 'c':
+        myConf = set_bb_config(optarg, 0);
         break;
-      case '?':
+      case 'i':
+        NUM_ITERATIONS = atoi(optarg);
+        break;
+      case 't': 
+        NUM_THREADS = atoi(optarg); 
+        break;
+      case '?': 
           fprintf (stderr, "Unknown option `-%c'.\n", optopt);
-        return 1;
-      default:
-        abort ();
-      }
-    }
-    myConf = configure_bluebridge(argv[1], 0);
-
-    struct sockaddr_in6 *temp = init_rcv_socket(&myConf);
-//    struct sockaddr_in6 *temp = init_rcv_socket_old(argv[2]);
-    temp->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
-
-    init_send_socket(&myConf);
+          printf("usage: -c config -t num_threads -i num_iterations>\n");
+        return 1; 
+      default: 
+        abort (); 
+      } 
+    } 
+    printf("Running test with %d threads and %d iterations.\n", NUM_THREADS, NUM_ITERATIONS );
+    struct sockaddr_in6 *temp = init_sockets(&myConf);
     set_host_list(myConf.hosts, myConf.num_hosts);
 
     struct timeval st, et;
     gettimeofday(&st,NULL);
-    basicOperations(temp);
-    //basic_op_threads(temp);
+    if (NUM_THREADS > 1)
+        basic_op_threads(temp);
+    else
+        basicOperations(temp);
     gettimeofday(&et,NULL);
     int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
     printf("Total Time: %d micro seconds\n",elapsed);
     printf(KRED "Finished\n");
     printf(RESET);
-    //printSendLat();
+    printSendLat();
     free(temp);
     close_sockets();
     return 0;
