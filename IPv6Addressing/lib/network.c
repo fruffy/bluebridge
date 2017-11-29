@@ -122,6 +122,8 @@ struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf) {
 }
 
 void printSendLat() {
+    if (send_calls == 0 || rcv_calls == 0)
+        return;
     printf("Average Sending Time %lu ns\n", (sendLat)/send_calls );
     printf("Average Receive Time %lu ns\n", (rcvLat)/rcv_calls );
 

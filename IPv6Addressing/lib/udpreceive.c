@@ -287,20 +287,12 @@ struct tpacket_hdr *get_packet(struct rcv_ring *ring_p) {
 void next_packet(struct rcv_ring *ring_p) {
    ring_p->tpacket_i = (ring_p->tpacket_i + 1) % ring_p->tpacket_req.tp_frame_nr;
 }
-
 int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server) {
 
     while (1) {
         struct epoll_event events[1024];
         int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 0);
-        if (num_events == -1)  {
-            if (errno == EINTR)  {
-                perror("epoll_wait returned -1");
-                break;
-            }
-            perror("error");
-            continue;
-        }
+
         for (int i = 0; i < num_events; i++)  {
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
@@ -309,8 +301,8 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                     if (!server)
                         next_packet(&ring);
                     continue;
-                }*/
-                
+                }
+                */
                 //struct sockaddr_ll *sockaddr_ll = NULL;
                 if (tpacket_hdr->tp_status & TP_STATUS_COPY) {
                     next_packet(&ring);
@@ -330,7 +322,7 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                 //inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
                 //printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
                 //printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(interface_ep.my_port), ntohs(udphdr->dest) );
-                    struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
+/*                    struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
                     int isMyID = 1;
                     if (remoteAddr != NULL && !server) {
                         //printf("Thread %d Their ID\n", thread_id);
@@ -338,8 +330,8 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                         //printf("Thread %d MY ID\n", thread_id);
                         //printNBytes(remoteAddr, 16)
                         isMyID = (inAddress->cmd == remoteAddr->cmd) && (inAddress->paddr == remoteAddr->paddr);
-                    }
-                    if (isMyID) {
+                    }*/
+//                    if (isMyID) {
                         memcpy(receiveBuffer, payload, msgBlockSize);
                         if (remoteAddr != NULL && server) {
                             memcpy(remoteAddr, &iphdr->ip6_dst, IPV6_SIZE);
@@ -349,7 +341,7 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                         tpacket_hdr->tp_status = TP_STATUS_KERNEL;
                         next_packet(&ring);
                         return msgBlockSize;
-                    }
+//                    }
                 tpacket_hdr->tp_status = TP_STATUS_KERNEL;
                 next_packet(&ring);
            }

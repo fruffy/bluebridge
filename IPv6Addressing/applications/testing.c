@@ -11,8 +11,9 @@
 #include <sys/time.h>
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
 #include <sys/resource.h>
-
-const int NUM_ITERATIONS = 10000;
+#include <pthread.h>
+static int NUM_THREADS = 1;
+static int NUM_ITERATIONS;
 
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //  1. Check correctness of pointer on server side, it should never segfault.
@@ -165,9 +166,7 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
     print_times(alloc_latency, read_latency, write_latency, free_latency, NUM_ITERATIONS);
 }
 
-/* create thread argument struct for thr_func() */
-#include <pthread.h>
-#define NUM_THREADS 8
+
 
 typedef struct _thread_data_t {
   int tid;
@@ -176,56 +175,53 @@ typedef struct _thread_data_t {
   int length;
 } thread_data_t;
 void *testing_loop(void *arg) {
-
     thread_data_t *data = (thread_data_t *)arg;
 
+    // Allocate measurement arrays
     uint64_t read_latency[data->length];
     uint64_t write_latency[data->length];
     uint64_t free_latency[data->length];
-    pthread_t my_thread = pthread_self();
-    /* Set affinity mask to include CPUs 0 to 7 */
+
+    // Assign threads to cores
     int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
     int assigned = data->tid % num_cores;
-    printf("ASSIGNED THREAD %d to CORE %d\n", data->tid, assigned );
+    pthread_t my_thread = pthread_self();
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(assigned, &cpuset);
     pthread_setaffinity_np(my_thread, sizeof(cpu_set_t), &cpuset);
-
-    set_thread_id_tx(data->tid);
-    set_thread_id_rx(data->tid);
-    //struct sockaddr_in6 *temp = calloc(1,sizeof(struct sockaddr_in6));
+    printf("Assigned Thread %d to core %d\n", data->tid, assigned );
+    
+    // Initialize BlueBridge
     struct config myConf = get_bb_config();
-    struct sockaddr_in6 *temp = init_sockets(&myConf);
-    //struct sockaddr_in6 *temp = init_rcv_socket(&myConf);
-    temp->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
-    //init_send_socket(&myConf);
-
+    struct sockaddr_in6 *temp = init_net_thread(data->tid, &myConf);
+    
+    // WRITE TEST
     for (int i = 0; i < data->length; i++) {
         struct in6_memaddr *remoteMemory = data->r_addr + i;
         //print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
         print_debug("Creating payload");
-        char *payload = malloc(4096);
+        char payload[4096];
         snprintf(payload, 50, "HELLO WORLD! MY ID is: %d", data->tid);
         uint64_t wStart = getns();
         writeRemoteMem(temp, payload, remoteMemory);
         write_latency[i - 1] = getns() - wStart;
-        free(payload);
     }
+    // GET TEST
     for (int i = 0; i < data->length; i++) {
         struct in6_memaddr *remoteMemory = data->r_addr + i;
         uint64_t rStart = getns();
         char *test = getRemoteMem(temp, remoteMemory);
         read_latency[i - 1] = getns() - rStart;
         print_debug("Thread: %d, Results of memory store: %s\n",  data->tid, test);
-        char *payload = malloc(4096);
+        char payload[4096];
         snprintf(payload, 50, "HELLO WORLD! MY ID is: %d", data->tid);
         if (strncmp(test,payload, 50) < 0) {
             print_debug(KRED"ERROR: WRONG RESULT"RESET);
             exit(1);
         }
-        free(payload);
     }
+    // FREE TEST
     for (int i = 0; i < data->length; i++) {
         struct in6_memaddr *remoteMemory = data->r_addr + i;
         uint64_t fStart = getns();
@@ -299,7 +295,6 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
             alloc_total += (unsigned long long) alloc_latency[i];
     }
     printf("Average allocate latency: "KRED"%lu us\n"RESET, alloc_total/ (NUM_ITERATIONS*1000));
-
     free(alloc_latency);
 }
 
@@ -308,46 +303,45 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
  * Allows user to issue commands on the command line.
  */
 int main(int argc, char *argv[]) {
-
-    
-    //specify interactive or automatic client mode
-    int isAutoMode = 1;
-    //Socket operator variables
-    
-    int c;
-    opterr = 0;
-    while ((c = getopt (argc, argv, ":i")) != -1) {
-    switch (c)
-      {
-      case 'i':
-        isAutoMode = 0;
+    // Example Call:
+    //./applications/bin/testing -c ./tmp/config/distMem.cnf -t 4 -i 10000
+    int c; 
+    struct config myConf;
+    while ((c = getopt (argc, argv, "c:i:t:")) != -1) { 
+    switch (c) 
+      { 
+      case 'c':
+        myConf = set_bb_config(optarg, 0);
         break;
-      case '?':
-          fprintf (stderr, "Unknown option `-%c'.\n", optopt);
-        return 1;
-      default:
-        abort ();
-      }
-    }
-    struct config myConf = set_bb_config(argv[1], 0);
-
-    //struct sockaddr_in6 *temp = init_rcv_socket(&myConf);
-    //init_send_socket(&myConf);
-    //struct sockaddr_in6 *temp = init_rcv_socket_old(argv[2]);
+      case 'i':
+        NUM_ITERATIONS = atoi(optarg);
+        break;
+      case 't': 
+        NUM_THREADS = atoi(optarg); 
+        break;
+      case '?': 
+          fprintf (stderr, "Unknown option `-%c'.\n", optopt); 
+        return 1; 
+      default: 
+        abort (); 
+      } 
+    } 
+    printf("Running test with %d threads and %d iterations.\n", NUM_THREADS, NUM_ITERATIONS );
     struct sockaddr_in6 *temp = init_sockets(&myConf);
-    temp->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
     set_host_list(myConf.hosts, myConf.num_hosts);
 
     struct timeval st, et;
     gettimeofday(&st,NULL);
-    basicOperations(temp);
-    //basic_op_threads(temp);
+    if (NUM_THREADS > 1)
+        basic_op_threads(temp);
+    else
+        basicOperations(temp);
     gettimeofday(&et,NULL);
     int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
     printf("Total Time: %d micro seconds\n",elapsed);
     printf(KRED "Finished\n");
     printf(RESET);
-    //printSendLat();
+    printSendLat();
     free(temp);
     //close_sockets();
     return 0;

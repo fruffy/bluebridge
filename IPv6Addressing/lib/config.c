@@ -142,7 +142,6 @@ struct config set_bb_config(char *filename, int isServer) {
         printf("\n");
         printf("Setting interface IP...\n");
         set_interface_ip(&bb_config);
-
         fclose(file);
         return bb_config;
     } else {
