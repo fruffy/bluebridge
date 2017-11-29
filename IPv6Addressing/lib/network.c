@@ -116,8 +116,9 @@ void set_net_thread_ids(int t_id) {
     set_thread_id_tx(t_id);
     set_thread_id_rx(t_id);
 }
-struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf) {
-    set_net_thread_ids(t_id);
+struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf, int isServer) {
+    if (!isServer)
+        set_net_thread_ids(t_id);
     return init_sockets(bb_conf);
 }
 

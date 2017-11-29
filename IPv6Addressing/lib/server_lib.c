@@ -6,7 +6,7 @@
 #include "network.h"
 #include "config.h"
 
-static char sendBuffer[BLOCK_SIZE];
+static __thread char sendBuffer[BLOCK_SIZE];
 
 
 

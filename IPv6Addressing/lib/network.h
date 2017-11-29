@@ -29,7 +29,7 @@ void set_net_thread_ids(int t_id);*/
 
 struct sockaddr_in6 *init_sockets(struct config *configstruct);
 void close_sockets();
-struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf);
+struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf, int isServer);
 
 void printSendLat();
 #endif

@@ -160,7 +160,7 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 int isWord(char prev, char cur) {
     return isspace(cur) && isgraph(prev);
 }
-
+// Wiki 1000227250  6508938585 64552443006
 void *wc(void *arg) {
     char prev = ' ';
     thread_data_t *data = (thread_data_t *)arg;
@@ -177,7 +177,7 @@ void *wc(void *arg) {
     
     // BlueBridge initialization calls for threads
     struct config myConf = get_bb_config();
-    struct sockaddr_in6 *temp = init_net_thread(data->tid, &myConf);
+    struct sockaddr_in6 *temp = init_net_thread(data->tid, &myConf, 0);
     init_vmem_thread(data->tid);
     
     // Do the actual computation
@@ -253,7 +253,9 @@ void wc_program(char *cdata, int length) {
 
     // Reading in the file
     uint64_t i =0;
-    FILE *fp = fopen("baskerville.txt", "rb");
+    //FILE *fp = fopen("baskerville.txt", "rb");
+    FILE *fp = fopen("~/huge_wiki.xml", "rb");
+
     printf("Reading in thingy\n");
     uint64_t rStart = getns();
     if(fp != NULL) {
@@ -287,7 +289,7 @@ void wc_program(char *cdata, int length) {
 }
 int main( int argc, char *argv[] )
 {
-    if(argc!=5) {
+    if(argc!=6) {
         printf("use: rmem_test config <npages> <nframes> <disk|rmem|mem> <sort|scan|focus|test|wc|wc_t>\n");
         return EXIT_FAILURE;
     }

@@ -163,6 +163,10 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
         free_latency[i-1] = getns() - fStart;
     }
     print_times(alloc_latency, read_latency, write_latency, free_latency, NUM_ITERATIONS);
+/*    free(alloc_latency);
+    free(read_latency);
+    free(write_latency);
+    free(free_latency);*/
 }
 
 
@@ -173,6 +177,7 @@ typedef struct _thread_data_t {
   struct sockaddr_in6 *targetIP;
   int length;
 } thread_data_t;
+
 void *testing_loop(void *arg) {
     thread_data_t *data = (thread_data_t *)arg;
 
@@ -193,7 +198,7 @@ void *testing_loop(void *arg) {
     
     // Initialize BlueBridge
     struct config myConf = get_bb_config();
-    struct sockaddr_in6 *temp = init_net_thread(data->tid, &myConf);
+    struct sockaddr_in6 *temp = init_net_thread(data->tid, &myConf, 0);
     
     // WRITE TEST
     for (int i = 0; i < data->length; i++) {
