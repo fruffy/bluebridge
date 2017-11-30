@@ -335,8 +335,8 @@ void init_pr(char *cdata, int length) {
     // Reading in the file
 	printf("First read (get max and count)\n");
     uint64_t i =0;
-    //FILE *fp = fopen("baskerville.txt", "rb");
-    FILE *fp = fopen("web-Google.txt", "rb");
+    FILE *fp = fopen("tiny.txt", "rb");
+    //FILE *fp = fopen("web-Google.txt", "rb");
 	char line[256];
 	int v1, v2;
 	int max = 0, count = 0;
