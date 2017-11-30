@@ -118,7 +118,6 @@ int set_packet_filter(int sd, char *addr, char *interfaceName, int port) {
         RETURN_ERROR(-1, "Cannot compile filter using tcpdump.");
     }
     if ( fscanf(tcpdump_output, "%d\n", &lineCount) < 1 ) {
-        printf("dump output:\n%d\n",tcpdump_output);
         RETURN_ERROR(-1, "cannot read lineCount.");
     }
     filter.filter = calloc(sizeof(struct sock_filter)*lineCount,1);

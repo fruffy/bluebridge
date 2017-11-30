@@ -297,5 +297,6 @@ IPv6Addressing/myvirtualdisk
 */tiny.txt
 
 ovs/
-
+tags
+myvirtualdisk
 *.sw[op]

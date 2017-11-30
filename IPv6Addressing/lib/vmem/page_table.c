@@ -319,9 +319,16 @@ struct page_table *init_virtual_memory(int npages, int nframes, const char* syst
             abort();
         }
         pt = page_table_create(npages, nframes, page_fault_handler_mem);
+    } else if (!strcmp(pagingSystem, "rrmem")) {
+        rrmem = rrmem_allocate(npages);
+        if(!rrmem) {
+            fprintf(stderr,"couldn't create virtual rrmem: %s\n",strerror(errno));
+            abort();
+        }
+        pt = page_table_create(npages, nframes, page_fault_handler_rrmem);
     }
     else {
-        perror("Please specify the correct page table structure (rmem|disk)!");
+        printf("Error: Please specify the correct page table structure (rmem|disk|mem|rrmem)!");
         abort();
     }
 
