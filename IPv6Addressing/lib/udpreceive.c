@@ -34,7 +34,7 @@ void init_epoll();
 void close_epoll();
 void *get_free_buffer();
 int init_socket();
-int set_packet_filter(int sd, char *addr, int port);
+int set_packet_filter(int sd, char *addr, char* interfaceName, int port);
 int set_fanout();
 
 //static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -71,8 +71,11 @@ struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
         interface_ep.device.sll_family = AF_PACKET;
         interface_ep.device.sll_protocol = htons (ETH_P_ALL);
     }
+    interface_ep.device.sll_ifindex = if_nametoindex (configstruct->interface);
+    printf("interface name: %s\n",configstruct->interface);
+    printf("ip:%d\n",interface_ep.device.sll_ifindex);
     init_socket();
-    set_packet_filter(sd_rcv, interface_ep.my_addr, htons((ntohs(interface_ep.my_port) + thread_id)));
+    set_packet_filter(sd_rcv, interface_ep.my_addr, configstruct->interface,htons((ntohs(interface_ep.my_port) + thread_id)));
     init_epoll();
     if (-1 == bind(sd_rcv, (struct sockaddr *)&interface_ep.device, sizeof(interface_ep.device))) {
         perror("Could not bind socket.");
@@ -104,17 +107,18 @@ void set_thread_id_rx(int id) {
     thread_id = id;
 }
 
-int set_packet_filter(int sd, char *addr, int port) {
+int set_packet_filter(int sd, char *addr, char *interfaceName, int port) {
     struct sock_fprog filter;
     int i, lineCount = 0;
     char tcpdump_command[512];
     FILE* tcpdump_output;
-    sprintf(tcpdump_command, "tcpdump dst port %d and ip6 net %s/48 -ddd", ntohs(port), addr);
+    sprintf(tcpdump_command, "tcpdump -i %s dst port %d and ip6 net %s/48 -ddd",interfaceName, ntohs(port), addr);
     printf("Active Filter: %s\n",tcpdump_command );
     if ( (tcpdump_output = popen(tcpdump_command, "r")) == NULL ) {
         RETURN_ERROR(-1, "Cannot compile filter using tcpdump.");
     }
     if ( fscanf(tcpdump_output, "%d\n", &lineCount) < 1 ) {
+        printf("dump output:\n%d\n",tcpdump_output);
         RETURN_ERROR(-1, "cannot read lineCount.");
     }
     filter.filter = calloc(sizeof(struct sock_filter)*lineCount,1);
@@ -308,12 +312,14 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                 struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ethhdr + ETH_HDRLEN);
                 struct udphdr *udphdr = (struct udphdr *)((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN);
                 char *payload = ((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
+                /*
                 char s[INET6_ADDRSTRLEN];
                 char s1[INET6_ADDRSTRLEN];
                 inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
                 inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
                 printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
                 printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(interface_ep.my_port), ntohs(udphdr->dest) );
+                */
 /*                    struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
                     int isMyID = 1;
                     if (remoteAddr != NULL && !server) {

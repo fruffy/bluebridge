@@ -49,7 +49,7 @@ void page_fault_handler_rrmem( struct page_table *pt, int page ) {
 
     pageFaults++;
     page_table_get_entry(pt, page, &frame, &bits); // check if the page is in memory
-    for(i = 0; i < pt->nframes; i++) { // increment values already in frameState--keeps track of oldest value in frame table
+    for(i = startFrame; i < endFrame; i++) { // increment values already in frameState--keeps track of oldest value in frame table
         if(frameState[i] != 0) {
             frameState[i]++;
         }
@@ -57,7 +57,7 @@ void page_fault_handler_rrmem( struct page_table *pt, int page ) {
 
     if(bits == 0) { // page is not in memory
         int emptyFrame = 0;
-        for(i = 0; i < pt->nframes; i++) {
+        for(i = startFrame; i < endFrame; i++) {
             // empty frame, we can insert a page
             if(frameState[i] == 0) {
                 frameState[i] = 1;
@@ -72,7 +72,7 @@ void page_fault_handler_rrmem( struct page_table *pt, int page ) {
         // first in first out page replacement
         if (emptyFrame == 0) {
             int value = 0;
-            for(i = 0; i < pt->nframes; i++) { // get oldest page
+            for(i = startFrame; i < endFrame; i++) { // get oldest page
                 if(frameState[i] > value) {
                     value = frameState[i];
                     frame = i;
@@ -296,6 +296,14 @@ struct page_table *init_virtual_memory(int npages, int nframes, const char* syst
             abort();
         }
         pt = page_table_create(npages, nframes, page_fault_handler_rmem);
+    }
+    else if (!strcmp(pagingSystem, "rrmem")) {
+        rrmem = rrmem_allocate(npages);
+        if(!rrmem) {
+            fprintf(stderr,"couldn't create virtual rrmem: %s\n",strerror(errno));
+            abort();
+        }
+        pt = page_table_create(npages, nframes, page_fault_handler_rrmem);
     }
     else if (!strcmp(pagingSystem, "disk")) {
         disk = disk_open("myvirtualdisk", npages);

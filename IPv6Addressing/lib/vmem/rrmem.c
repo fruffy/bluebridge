@@ -177,7 +177,7 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
                 memcpy(&(data[base]),remoteReads[i],alloc);
                 base += alloc;
             }
-            printf("PAGE:\n%s\n",data);
+            //printf("PAGE:\n%s\n",data);
 
 
             //Temporary, recovery mechanism, attempt to rebuild a page

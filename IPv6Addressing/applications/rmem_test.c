@@ -290,7 +290,7 @@ void wc_program(char *cdata, int length) {
 int main( int argc, char *argv[] )
 {
     if(argc!=6) {
-        printf("use: rmem_test config <npages> <nframes> <disk|rmem|mem> <sort|scan|focus|test|wc|wc_t>\n");
+        printf("use: rmem_test config <npages> <nframes> <disk|rmem|rrmem|mem> <sort|scan|focus|test|wc|wc_t>\n");
         return EXIT_FAILURE;
     }
 
