@@ -118,7 +118,6 @@ int set_packet_filter(int sd, char *addr, char *interfaceName, int port) {
         RETURN_ERROR(-1, "Cannot compile filter using tcpdump.");
     }
     if ( fscanf(tcpdump_output, "%d\n", &lineCount) < 1 ) {
-        printf("dump output:\n%d\n",tcpdump_output);
         RETURN_ERROR(-1, "cannot read lineCount.");
     }
     filter.filter = calloc(sizeof(struct sock_filter)*lineCount,1);
@@ -289,7 +288,7 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
 
     while (1) {
         struct epoll_event events[1024];
-        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 0);
+        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 1);
 
         for (int i = 0; i < num_events; i++)  {
             struct epoll_event *event = &events[i];

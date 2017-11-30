@@ -294,5 +294,6 @@ IPv6Addressing/applications/bin/
 IPv6Addressing/myvirtualdisk
 
 ovs/
-
+tags
+myvirtualdisk
 *.sw[op]

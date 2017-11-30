@@ -100,7 +100,6 @@ char *getRemoteMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr
     // Prep message
     //memcpy(sendBuffer, GET_CMD, size);
     remoteAddr->cmd =  GET_CMD;
-0
     //memcpy(sendBuffer + size, remoteAddr, IPV6_SIZE);
     print_debug("******GET DATA******");
     // Send request and store response
@@ -161,9 +160,10 @@ int readRaidMem(struct sockaddr_in6 *targetIP, int hosts, char **bufs, struct in
 
 int writeRaidMem(struct sockaddr_in6 *targetIP, int hosts, char **payload, struct in6_memaddr **remoteAddrs) {
     int host;
+
     for (int i=0; i <hosts;i++) {
         //printf("sending write request packet %d\n",i);
-        remoteAddrs[i]->cmd =  WRITE_CMD;
+        remoteAddrs[i]->cmd =  GET_CMD;
         send_udp6_raw(payload[i], BLOCK_SIZE, targetIP, remoteAddrs[i]);
         //printf("FINISHED sending write request packet %d\n",i);
     }

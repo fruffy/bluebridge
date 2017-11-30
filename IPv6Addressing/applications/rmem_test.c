@@ -253,8 +253,9 @@ void wc_program(char *cdata, int length) {
 
     // Reading in the file
     uint64_t i =0;
-    //FILE *fp = fopen("baskerville.txt", "rb");
-    FILE *fp = fopen("~/huge_wiki.xml", "rb");
+    FILE *fp = fopen("baskerville.txt", "rb");
+    //FILE *fp = fopen("~/huge_wiki.xml", "rb");
+    //FILE *fp = fopen("~/file.txt", "rb");
 
     printf("Reading in thingy\n");
     uint64_t rStart = getns();

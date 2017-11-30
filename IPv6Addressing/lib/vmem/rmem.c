@@ -57,7 +57,7 @@ struct rmem *rmem_allocate(int nblocks) {
     return r;
 }
 
-void rmem_write(struct rmem *r, int block, const char *data ) {
+void rmem_write(struct rmem *r, int block, char *data ) {
     if(block<0 || block>=r->nblocks) {
         fprintf(stderr,"disk_write: invalid block #%d\n",block);
         abort();

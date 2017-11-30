@@ -21,7 +21,7 @@ Make all of your changes to main.c instead.
 
 extern ssize_t pread (int __fd, void *__buf, size_t __nbytes, __off_t __offset);
 extern ssize_t pwrite (int __fd, const void *__buf, size_t __nbytes, __off_t __offset);
-
+int checkParity45(char **stripes, int numStripes, char * parity, int size);
 //trrmem is a temporary implementation of raid memory
 struct rrmem {
     struct sockaddr_in6 *targetIP;
@@ -115,7 +115,7 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
             bufs[numHosts()-1] = parity;
             remoteAddrs[numHosts()-1] = (char *)&r->rsmem[numHosts()-1].memList[block];
             //printf("Writing with parallel raid\n");
-            writeRaidMem(r->targetIP,numHosts(),bufs, remoteAddrs);
+            writeRaidMem(r->targetIP,numHosts(),bufs, (struct in6_memaddr**)remoteAddrs);
             //printf("FINISHED :: Writing with parallel raid\n");
             break;
 
@@ -141,11 +141,11 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
             int missingIndex;
             for (int i = 0; i<numHosts() ; i++) {
                 remoteReads[i] = malloc(sizeof(char) * r->block_size);
-                remoteAddrs[i] = &r->rsmem[i].memList[block];
+                remoteAddrs[i] = (char*) &r->rsmem[i].memList[block];
             }
             //printf("Reading Remotely (Parallel Raid)\n");
 
-            missingIndex = readRaidMem(r->targetIP,numHosts(),remoteReads,remoteAddrs,numHosts());
+            missingIndex = readRaidMem(r->targetIP,numHosts(),remoteReads,(struct in6_memaddr**)remoteAddrs,numHosts());
             //missingIndex = readRaidMem(r->targetIP,numHosts(),remoteReads,remoteAddrs,numHosts() - 1);
             if (missingIndex == -1) {
                 printf("All stripes retrieved checking for correctness\n");
@@ -301,7 +301,7 @@ int checkParity45(char **stripes, int numStripes, char * parity, int size) {
     int alloc = size / numStripes;
     for (int i=0; i< alloc; i++) {
         char paritybyte = 0;
-        int base = 0;
+        //int base = 0;
         for (int j=0;j<numStripes;j++) {
             //this may seem like inverted access but i'm checking
             //across stripes
