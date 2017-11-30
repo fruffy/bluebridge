@@ -177,7 +177,8 @@ double euclidean_norm_vector(vector* v) {
 		res += v->elements[i]*v->elements[i];
 	}
 
-	return sqrt(res);
+	//return sqrt(res);
+    return 0.0;
 }
 
 // Matrix functions

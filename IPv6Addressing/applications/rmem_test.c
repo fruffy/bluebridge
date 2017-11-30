@@ -287,6 +287,189 @@ void wc_program(char *cdata, int length) {
     printf("Reading time...: "KGRN"%lu"RESET" micro seconds\n", latency_read/1000);
     printf("Total time taken: "KGRN"%lu"RESET" micro seconds\n", (latency_read + latency_store)/1000 );
 }
+//pagerank structures
+typedef struct {
+	int *array;
+	size_t used;
+	size_t size;
+} IntArr;
+
+typedef struct vertex {
+	double incoming_rank;	// Incoming rank for this vertex
+	int num_edges;		// Number of edges
+	int edge_offset;	// Offset into the edges array
+} vertex;
+
+double* edges; 		// An array of all outgoing edges.
+double* edgenorm; 	// number of outgoing edges for vertex j
+vertex* vertices; 	// An array of all vertices in the graph
+double* rank;		// Page rank value for vertex j
+IntArr	ids;		// List of array ids (dynamically growing)
+int 	num_vertices;	// Number of vertices in graph\
+
+// Dynamic array functions
+void initArray(IntArr *a, size_t initial_size) {
+	a->array = (int*) malloc(initial_size*sizeof(int));
+	a->used = 0;
+	a->size = initial_size;
+}
+
+void insertArray(IntArr *a, int element) {
+	if (a->used == a->size) {
+		a->size *=2;
+		a->array = (int*) realloc(a->array, a->size*sizeof(int));
+	}
+
+	a->array[a->used++] = element;
+}
+
+void freeArray(IntArr *a) {
+	free(a->array);
+	a->array = NULL;
+	a->used = a->size = 0;
+}
+
+
+void init_pr(char *cdata, int length) {
+    // Reading in the file
+	printf("First read (get max and count)\n");
+    uint64_t i =0;
+    //FILE *fp = fopen("baskerville.txt", "rb");
+    FILE *fp = fopen("web-Google.txt", "rb");
+	char line[256];
+	int v1, v2;
+	int max = 0, count = 0;
+
+    printf("starting measure loop");
+    assert(fp != NULL);
+	while (fgets(line, sizeof(line), fp)) {
+		sscanf(line, "%d\t%d\n", &v1, &v2);
+		if (v1 > max) {
+			max = v1;
+		}
+
+		if (v2 > max) {
+			max = v2;
+		}
+		count++;
+	}
+    printf("Edges: %d Verticies:%d\n",count,max);
+
+	printf(("Rewinding file\n"));
+	rewind(fp);
+
+	printf("Num vertices: %d, Num edges: %d\n", max+1, count);
+	num_vertices = (max+1);
+
+    int offset = 0;
+    printf("sizeof char %d\n",sizeof(char));
+
+	printf("Mallocing vs array.\n");
+
+	IntArr* vs = (IntArr*) malloc(num_vertices*sizeof(IntArr));
+	
+	for (int i = 0; i < num_vertices; i++) {
+		initArray(&(vs[i]), 100);
+	}
+
+	printf("Mallocing vertices array.\n");
+	vertices = (vertex*) &(cdata[offset]);
+    offset += num_vertices*sizeof(vertex);
+	printf("Mallocing edgenorm array.\n");
+	edgenorm = (double*) &(cdata[offset]);
+    offset += num_vertices*sizeof(double);
+	printf("Mallocing rank array.\n");
+	rank = (double*) &(cdata[offset]);
+    offset += num_vertices*sizeof(double);
+	printf("Mallocing edges array.\n");
+	edges = (double*) &(cdata[offset]);
+    offset += count*sizeof(double);
+
+	//printf(("Second pass of file.\n");
+	printf("Second pass of file.\n");
+
+    int counter = 0;
+    printf("\n");
+	while (fgets(line, sizeof(line), fp)) {
+		sscanf(line, "%d\t%d\n", &v1, &v2);
+		vertices[v1].num_edges++;
+		insertArray(&vs[v1], v2);
+        counter++;
+        if (counter % 10000 == 0) {
+            printf("\r%d/%d scanned\t",counter,count);
+        }
+	}
+
+	printf("closing file.\n");
+	fclose(fp);
+
+	printf("Setting rest of variables.\n");
+	int k = 0; 
+	for (int i = 0; i < num_vertices; i++) {
+		printf("Setting vertex: %d\n", i);
+		rank[i] = 1;
+		edgenorm[i] = vertices[i].num_edges + 1;
+		vertices[i].edge_offset = k;
+
+		for (int j = 0; j < vs[i].used; j++) {
+			printf("j: %d, k: %d, i: %d, num_vertices: %d, count: %d\n", j, k,
+				i, num_vertices, count);
+			edges[k] = vs[i].array[j];
+			k++;
+		}
+	}
+
+	printf("Freeing dynamic array.\n");
+	for (int i = 0; i < num_vertices; i++) {
+		freeArray(&vs[i]);
+	}
+
+	free(vs);
+
+
+    //Actually do some page rank
+}
+
+void pagerank(int rounds, double d) {
+	double outrank = 0;
+	double alpha = ((double) (1 - d))/((double) num_vertices);
+
+	for (int i = 0; i < rounds; i++) {
+		for (int j = 0; j < num_vertices; j++) {
+			printf("Round: %d, Vertex: %d\n", i, j);
+			outrank = rank[j]/edgenorm[j];
+			printf("Outrank: %f, num_edges: %d\n", outrank, vertices[j].num_edges);
+			for (int k = 0; k < vertices[j].num_edges; k++) {
+				// TODO: check values
+				int edge_index = vertices[j].edge_offset + k;
+				//printf("Edge_offset: %d, k: %d, Edge index: %d\n", vertices[j].edge_offset, k, edge_index);
+				int edge_to = edges[edge_index];
+				//printf("Edge to: %d\n", edge_to);
+				vertex* to_vertex = &vertices[edge_to];
+				//printf("to vertex: %p\n", to_vertex);
+				to_vertex->incoming_rank += outrank;
+				//printf("to_vertex ir: %f, array ir: %f\n", to_vertex->incoming_rank,
+				//	vertices[edge_to].incoming_rank);
+			}
+		}
+
+		for (int j = 0; j < num_vertices; j++) {
+			rank[j] = alpha + (d*vertices[j].incoming_rank);
+			printf("Updating rank for %d to %f\n", j, rank[j]);
+		}
+	}
+}
+
+void pr_program(char *cdata, int length) {
+    init_pr(cdata,length);
+    int rounds = 20;
+    double damp = 0.8;
+    pagerank(rounds,damp);
+}
+
+
+
+
 int main( int argc, char *argv[] )
 {
     if(argc!=6) {
@@ -322,6 +505,8 @@ int main( int argc, char *argv[] )
         wc_program(virtmem,npages*PAGE_SIZE);
     } else if(!strcmp(program,"wc_t")) {
         wc_program_threads(virtmem,npages*PAGE_SIZE);
+    } else if(!strcmp(program,"pr")) {
+        pr_program(virtmem,npages*PAGE_SIZE);
     } else {
         fprintf(stderr,"unknown program: %s\n",argv[4]);
     }
