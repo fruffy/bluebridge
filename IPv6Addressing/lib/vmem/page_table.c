@@ -15,9 +15,9 @@
 static int *frameState;     // keeps track of how long a page has been in a frame
 static int *framePage;      // keeps track of which page is in a frame
 static struct page_table *the_page_table = 0;
-static struct hash *hashTable = NULL;
-static struct lruList *lruList = NULL;
-static struct freqList *freqList = NULL;
+static __thread struct hash *hashTable = NULL;
+static __thread struct lruList *lruList = NULL;
+static __thread struct freqList *freqList = NULL;
 static int pageFaults = 0;  // statistics 
 static int pageReads = 0;   // statistics 
 static int pageWrites = 0;  // statistics 
