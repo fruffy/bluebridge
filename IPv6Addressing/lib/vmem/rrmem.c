@@ -321,7 +321,7 @@ int checkParity45(char (*stripes)[MAX_HOSTS][BLOCK_SIZE], int numStripes, char (
             paritybyte = paritybyte ^ (*stripes)[i][alloc];
         }
         if (paritybyte != (*parity)[alloc]) {
-            printf("Fault on final byte %d : Calculated Parity Byte %02x != %02x written parity\n",alloc,paritybyte,parity[alloc]);
+            printf("Fault on final byte %d : Calculated Parity Byte %02x != %02x written parity\n",alloc,paritybyte,*parity[alloc]);
             return 0;
         }
     }
