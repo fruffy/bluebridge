@@ -165,9 +165,8 @@ int writeRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_H
 
     for (int i=0; i <hosts;i++) {
         //printf("sending write request packet %d\n",i);
-        remoteAddrs[i]->cmd =  GET_CMD;
+        remoteAddrs[i]->cmd = WRITE_CMD;
         //printf("Sending Page UDP\n");
-        //printf("sending:%s \n",&((*payload)[i]));
         send_udp6_raw((char*)&((*payload)[i]), BLOCK_SIZE, targetIP, remoteAddrs[i]);
         //printf("FINISHED sending write request packet %d\n",i);
     }

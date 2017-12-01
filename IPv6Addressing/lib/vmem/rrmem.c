@@ -124,6 +124,7 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
 }
 
 char rbufs [MAX_HOSTS][BLOCK_SIZE];
+struct in6_memaddr *rremoteAddrs[MAX_HOSTS];
 void rrmem_read( struct rrmem *r, int block, char *data ) {
     if(block<0 || block>=r->nblocks) {
         fprintf(stderr,"disk_read: invalid block #%d\n",block);
@@ -132,15 +133,14 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
     switch (r->raid) {
         case 4:
             assert(numHosts() >= 3 && numHosts() <= MAX_HOSTS);
-            char **remoteAddrs = malloc(sizeof(struct in6_memaddr*) * numHosts());
             int missingIndex;
             for (int i = 0; i<numHosts() ; i++) {
                 //remoteReads[i] = malloc(sizeof(char) * r->block_size);
-                remoteAddrs[i] = (char*) &r->rsmem[i].memList[block];
+                rremoteAddrs[i] = &r->rsmem[i].memList[block];
             }
             //printf("Reading Remotely (Parallel Raid)\n");
 
-            missingIndex = readRaidMem(r->targetIP,numHosts(),&rbufs,(struct in6_memaddr**)remoteAddrs,numHosts());
+            missingIndex = readRaidMem(r->targetIP,numHosts(),&rbufs,(struct in6_memaddr**)rremoteAddrs,numHosts());
             //missingIndex = readRaidMem(r->targetIP,numHosts(),remoteReads,remoteAddrs,numHosts() - 1);
             if (missingIndex == -1) {
                 //printf("All stripes retrieved checking for correctness\n");
