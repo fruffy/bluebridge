@@ -473,27 +473,28 @@ void pr_program(char *cdata, int length) {
 
 int main( int argc, char *argv[] )
 {
-    if(argc!=6) {
-        printf("use: rmem_test config <npages> <nframes> <disk|rmem|rrmem|mem> <sort|scan|focus|test|wc|wc_t>\n");
+    if(argc!=7) {
+        printf("use: rmem_test config <npages> <nframes> <disk|rmem|rrmem|mem> <fifo|lru|lfu|rand> <sort|scan|focus|test|wc|wc_t>\n");
         return EXIT_FAILURE;
     }
 
     uint64_t npages = atoi(argv[2]);
     uint64_t nframes = atoi(argv[3]);
     printf("Pages %lu\n",npages );
-    const char *algo = argv[4]; // store algorithm command line argument
-    const char *program = argv[5];
+    const char *system = argv[4]; 
+    const char *algo = argv[5]; 
+    const char *program = argv[6];
 
     //sync();
     //system("echo 3 > /proc/sys/vm/drop_caches");
     //set_vmem_config("tmp/config/distMem.cnf");
     //set_vmem_config("distmem_client.cnf");
     set_vmem_config(argv[1]);
-    struct page_table *pt = init_virtual_memory(npages, nframes, algo);
+    struct page_table *pt = init_virtual_memory(npages, nframes, system, algo);
     char *virtmem = page_table_get_virtmem(pt);
 
 
-    printf("Running "KRED"%s"RESET" benchmark...\n", algo);
+    printf("Running "KRED"%s"RESET" benchmark...\n", system);
     if(!strcmp(program,"sort")) {
         sort_program(virtmem,npages*PAGE_SIZE);
     } else if(!strcmp(program,"scan")) {
@@ -509,7 +510,7 @@ int main( int argc, char *argv[] )
     } else if(!strcmp(program,"pr")) {
         pr_program(virtmem,npages*PAGE_SIZE);
     } else {
-        fprintf(stderr,"unknown program: %s\n",argv[4]);
+        fprintf(stderr,"unknown program: %s\n",program);
     }
     if (strcmp(algo,"mem")) {
         print_page_faults();

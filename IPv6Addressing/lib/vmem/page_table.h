@@ -47,7 +47,7 @@ void register_vmem_threads();
 void init_vmem_thread(int t_id);
 
 void set_vmem_config(char *filename);
-struct page_table *init_virtual_memory(int npages, int nframes, const char* algo);
+struct page_table *init_virtual_memory(int npages, int nframes, const char* system, const char* algo);
 void print_page_faults();
 void clean_page_table(struct page_table *pt);
 void init_thread_table(int num_threads);
@@ -92,5 +92,65 @@ void page_table_print_entry( struct page_table *pt, int page );
 void page_table_print();
 void frame_table_print();
 void frame_table_print_entry();
+
+struct hashNode {
+	int key;
+	int frame;
+	struct hashNode *next;
+	void *listNodePointer;
+};
+
+struct lruListNode{
+	int key;
+	struct lruListNode *next;
+	struct lruListNode *prev;
+};
+
+struct hash {
+	struct hashNode *head;
+	int count;
+};
+
+struct lruList{
+	struct lruListNode *head;
+	struct lruListNode *tail;
+	int count;
+};
+
+struct freqListNode{
+	int useCount;
+	struct freqListNode *next;
+	struct freqListNode *prev;
+	struct lfuListNode *head;
+	struct lfuListNode *tail;
+};
+
+struct lfuListNode{
+	int key;
+	struct lfuListNode *next;
+	struct lfuListNode *prev;
+	struct freqListNode *parent;
+};
+
+struct freqList{
+	struct freqListNode *head;
+	int count;
+};
+
+void deleteLRU(int *page, int *frame);
+
+void deleteLFU(int *page, int *frame);
+
+void* getHashNode(int key);
+
+struct lruListNode *createlruListNode(int key);
+
+void moveListNodeToFront(struct lruListNode *node);
+
+void moveNodeToNextFreq(struct lfuListNode *node);
+
+struct lfuListNode *createlfuListNode(int key);
+
+void insertHashNode(int key,int frame, void* listNode);
 
 #endif
