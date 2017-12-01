@@ -8,6 +8,7 @@ Make all of your changes to main.c instead.
 #define RRMEM_H
 
 #define BLOCK_SIZE 4096
+#include "../client_lib.h"
 
 void configure_rrmem(char *filename);
 
@@ -45,7 +46,8 @@ Close the virtual disk.
 
 void rrmem_deallocate( struct rrmem *r );
 
-char * parity45(char *data, int size, int stripes);
-void repairStripeFromParity45(char* repair, char **stripes, char *parity, int missing, int numStripes, int size);
+void parity45(char *data, int size, int stripes, char *parity);
+void repairStripeFromParity45(char (*repair)[BLOCK_SIZE], char (*stripes)[MAX_HOSTS][BLOCK_SIZE], char (*parity)[BLOCK_SIZE], int missing, int numStripes, int size);
+int checkParity45(char (*stripes)[MAX_HOSTS][BLOCK_SIZE], int numStripes, char (*parity)[BLOCK_SIZE], int size);
 
 #endif

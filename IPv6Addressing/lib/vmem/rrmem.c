@@ -19,9 +19,9 @@ Make all of your changes to main.c instead.
 #include "rrmem.h"
 #include "../utils.h"
 
+
 extern ssize_t pread (int __fd, void *__buf, size_t __nbytes, __off_t __offset);
 extern ssize_t pwrite (int __fd, const void *__buf, size_t __nbytes, __off_t __offset);
-int checkParity45(char **stripes, int numStripes, char * parity, int size);
 //trrmem is a temporary implementation of raid memory
 struct rrmem {
     struct sockaddr_in6 *targetIP;
@@ -30,6 +30,7 @@ struct rrmem {
     int block_size;
     int nblocks;
 };
+
 
 
 struct config myConf;
@@ -74,48 +75,42 @@ struct rrmem *rrmem_allocate(int nblocks) {
     return r;
 }
 
+char wbufs [MAX_HOSTS][BLOCK_SIZE];
+struct in6_memaddr *wremoteAddrs[MAX_HOSTS];
 void rrmem_write(struct rrmem *r, int block, char *data ) {
-    /*
-    for (int i=0;i<r->block_size;i++){
-        printf("%02x",data[i]);
-    }*/
     if(block<0 || block>=r->nblocks) {
         fprintf(stderr,"rr_write: invalid block #%d\n",block);
         abort();
     }
     // Get pointer to page data in (simulated) physical memory
     // Slice up data based on given raid configuration
+    //char parity [PAGE_SIZE];
     switch (r->raid) {
         case 4 :
             //printf("Writing Raid %d\n",r->raid);
-            assert(numHosts() >= 3);
+            assert(numHosts() >= 3 && numHosts() <= MAX_HOSTS);
             int alloc = r->block_size / (numHosts() - 1); //Raid 4
             if (r->block_size % (numHosts() -1) > 0) {
                 alloc++;
             }
             int base = 0;
-            char **bufs = malloc(sizeof(char*) *numHosts());
-            char **remoteAddrs = malloc(sizeof(struct in6_memaddr*) * numHosts());
-            char *parity = parity45(data,r->block_size,numHosts()-1);
-            //char * parity = parity45(data,r->block_size,numHosts()-1);
-            //memcpy(buf[numHosts()-1],parity,alloc);
+            //struct in6_memaddr **remoteAddrs = malloc(sizeof(struct in6_memaddr*) * numHosts());
+            //calculate parity
+            parity45(data,r->block_size,numHosts()-1,(char *)&wbufs[numHosts()-1]);
             for (int i = 0; i<numHosts()-1; i++) {
-                //printf("mallocing for host %d\n",i);
-                bufs[i] = malloc(sizeof(char) * r->block_size);
                 if (r->block_size % (numHosts() -1) <= i) {
                     alloc = r->block_size / (numHosts() -1);
                 }
                 //printf("Copying read data to buffers\n");
-                memcpy(bufs[i],&(data[base]),alloc);
+                memcpy(&wbufs[i],&(data[base]),alloc);
                 //printf("Copying Remote Adders\n");
-                remoteAddrs[i] = (char *)&r->rsmem[i].memList[block];
+                wremoteAddrs[i] = &r->rsmem[i].memList[block];
                 base += alloc;
             }
-            //printf("Coping parity\n");
-            bufs[numHosts()-1] = parity;
-            remoteAddrs[numHosts()-1] = (char *)&r->rsmem[numHosts()-1].memList[block];
+            wremoteAddrs[numHosts()-1] = &r->rsmem[numHosts()-1].memList[block];
             //printf("Writing with parallel raid\n");
-            writeRaidMem(r->targetIP,numHosts(),bufs, (struct in6_memaddr**)remoteAddrs);
+            //printf("Writing Remote\n");
+            writeRaidMem(r->targetIP,numHosts(),&wbufs, (struct in6_memaddr**)wremoteAddrs);
             //printf("FINISHED :: Writing with parallel raid\n");
             break;
 
@@ -128,6 +123,7 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
     }
 }
 
+char rbufs [MAX_HOSTS][BLOCK_SIZE];
 void rrmem_read( struct rrmem *r, int block, char *data ) {
     if(block<0 || block>=r->nblocks) {
         fprintf(stderr,"disk_read: invalid block #%d\n",block);
@@ -135,21 +131,20 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
     }
     switch (r->raid) {
         case 4:
-            assert(numHosts() >= 3);
-            char **remoteReads = malloc(sizeof(char*) * numHosts());
+            assert(numHosts() >= 3 && numHosts() <= MAX_HOSTS);
             char **remoteAddrs = malloc(sizeof(struct in6_memaddr*) * numHosts());
             int missingIndex;
             for (int i = 0; i<numHosts() ; i++) {
-                remoteReads[i] = malloc(sizeof(char) * r->block_size);
+                //remoteReads[i] = malloc(sizeof(char) * r->block_size);
                 remoteAddrs[i] = (char*) &r->rsmem[i].memList[block];
             }
             //printf("Reading Remotely (Parallel Raid)\n");
 
-            missingIndex = readRaidMem(r->targetIP,numHosts(),remoteReads,(struct in6_memaddr**)remoteAddrs,numHosts());
+            missingIndex = readRaidMem(r->targetIP,numHosts(),&rbufs,(struct in6_memaddr**)remoteAddrs,numHosts());
             //missingIndex = readRaidMem(r->targetIP,numHosts(),remoteReads,remoteAddrs,numHosts() - 1);
             if (missingIndex == -1) {
-                printf("All stripes retrieved checking for correctness\n");
-                if (!checkParity45(remoteReads,numHosts()-1,remoteReads[numHosts()-1],r->block_size)) {
+                //printf("All stripes retrieved checking for correctness\n");
+                if (!checkParity45(&rbufs,numHosts()-1,&(rbufs[numHosts()-1]),r->block_size)) {
                     //TODO reissue requests and try again, or correct the
                     //broken page
                     printf("Parity Not correct!!! Crashing");
@@ -159,9 +154,7 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
                 printf("parity missing, just keep going without correctness\n");
             } else {
                 printf("missing page %d, repairing from parity\n", missingIndex);
-                char * repair = malloc(sizeof(char) * r->block_size);
-                repairStripeFromParity45(repair,remoteReads,remoteReads[numHosts()-1],missingIndex,numHosts()-1,r->block_size);
-                remoteReads[missingIndex] = repair;
+                repairStripeFromParity45(&rbufs[missingIndex],&rbufs,&rbufs[numHosts()-1],missingIndex,numHosts()-1,r->block_size);
                 printf("repair complete\n");
             }
 
@@ -174,7 +167,7 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
                 if (r->block_size % (numHosts() -1) <= i) {
                     alloc = r->block_size / (numHosts() -1);
                 }
-                memcpy(&(data[base]),remoteReads[i],alloc);
+                memcpy(&(data[base]),&(rbufs[i]),alloc);
                 base += alloc;
             }
             //printf("PAGE:\n%s\n",data);
@@ -224,7 +217,7 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
 }
 
 //stripes are assumed to be ordered
-void repairStripeFromParity45(char* repair, char **stripes, char *parity, int missing, int numStripes, int size) {
+void repairStripeFromParity45(char (*repair)[BLOCK_SIZE], char (*stripes)[MAX_HOSTS][BLOCK_SIZE], char (*parity)[BLOCK_SIZE], int missing, int numStripes, int size) {
     int alloc = size / numStripes;
     for (int i=0; i< alloc; i++) {
         char repairbyte = 0;
@@ -232,10 +225,10 @@ void repairStripeFromParity45(char* repair, char **stripes, char *parity, int mi
             //this may seem like inverted access but i'm checking
             //across stripes
             if ( j != missing ) {
-                repairbyte = repairbyte ^ stripes[j][i];
+                repairbyte = repairbyte ^ (*stripes)[j][i];
             }
         }
-        repair[i] = repairbyte ^ parity[i];
+        (*repair)[i] = repairbyte ^ (*parity)[i];
     }
     //This is only called if the page size does not evenly divide
     //across strips, and the missing page is one of the larger stripes
@@ -243,25 +236,26 @@ void repairStripeFromParity45(char* repair, char **stripes, char *parity, int mi
         char repairbyte = 0;
         for (int i=0; i<size%numStripes;i++) {
             if ( i != missing)  {
-                repairbyte = repairbyte ^ stripes[i][alloc];
+                repairbyte = repairbyte ^ (*stripes)[i][alloc];
             }
         }
-        repair[alloc] = repairbyte ^ parity[alloc];
+        (*repair)[alloc] = repairbyte ^ (*parity)[alloc];
     }
     return;
     
 }
 
 
-char * parity45(char *data, int size, int stripes) {
+void parity45(char *data, int size, int stripes, char *parity) {
     //Malloc the correct ammount of space for the parity
     int alloc = size / stripes;
+    /*
     char * parity;
     if (size %stripes > 0) {
         parity = malloc(sizeof(char) * (alloc + 1));
     } else {
         parity = malloc(sizeof(char) * alloc);
-    }
+    }*/
 
     //calculate the majority of the parity (final byte may not be
     //calculated
@@ -293,11 +287,11 @@ char * parity45(char *data, int size, int stripes) {
         }
         parity[alloc] = paritybyte;
     }
-    return parity;
+    return;
 }
 
 //Here stripes are assumed to be in order from biggest to smallest
-int checkParity45(char **stripes, int numStripes, char * parity, int size) {
+int checkParity45(char (*stripes)[MAX_HOSTS][BLOCK_SIZE], int numStripes, char (*parity)[BLOCK_SIZE], int size) {
     int alloc = size / numStripes;
     for (int i=0; i< alloc; i++) {
         char paritybyte = 0;
@@ -305,15 +299,15 @@ int checkParity45(char **stripes, int numStripes, char * parity, int size) {
         for (int j=0;j<numStripes;j++) {
             //this may seem like inverted access but i'm checking
             //across stripes
-            paritybyte = paritybyte ^ stripes[j][i];
+            paritybyte = paritybyte ^ (*stripes)[j][i];
             /*
             if (i == 0) {
                 printf("CHECK index :%d stripe:%d byte:%02x TransParity:%02x CompParity:%02x \n",j, i ,stripes[j][i],paritybyte,parity[i]);
             }
             */
         }
-        if (paritybyte != parity[i]) {
-            printf("Fault on byte %d : Calculated Parity Byte %02x != %02x written parity\n",i,paritybyte,parity[i]);
+        if (paritybyte != (*parity)[i]) {
+            printf("Fault on byte %d : Calculated Parity Byte %02x != %02x written parity\n",i,paritybyte,(*parity)[i]);
             return 0;
         }
     }
@@ -324,9 +318,9 @@ int checkParity45(char **stripes, int numStripes, char * parity, int size) {
         char paritybyte = 0;
         for (int i=0; i<size%numStripes;i++) {
             //printf("CHECK index:%d stripe:%d byte:%02x TransParity:%02x \n",alloc, i ,stripes[i][alloc],paritybyte);
-            paritybyte = paritybyte ^ stripes[i][alloc];
+            paritybyte = paritybyte ^ (*stripes)[i][alloc];
         }
-        if (paritybyte != parity[alloc]) {
+        if (paritybyte != (*parity)[alloc]) {
             printf("Fault on final byte %d : Calculated Parity Byte %02x != %02x written parity\n",alloc,paritybyte,parity[alloc]);
             return 0;
         }

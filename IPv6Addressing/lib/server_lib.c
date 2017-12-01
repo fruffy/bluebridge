@@ -118,7 +118,6 @@ int getMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
  * Writes a piece of memory?
  */
 int writeMem(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
-
     //print_debug("Data received (first 50 bytes): %.50s", dataToWrite);
     //uint64_t *pointer = &ipv6Pointer->paddr;
     //uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);

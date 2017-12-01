@@ -333,6 +333,7 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                 if (remoteAddr != NULL && server) {
                     memcpy(remoteAddr, &iphdr->ip6_dst, IPV6_SIZE);
                 }
+                //printf("rec: %s\n",receiveBuffer);
                 memcpy(targetIP->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
                 targetIP->sin6_port = udphdr->source;
                 tpacket_hdr->tp_status = TP_STATUS_KERNEL;

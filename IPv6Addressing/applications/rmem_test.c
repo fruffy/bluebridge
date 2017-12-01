@@ -363,7 +363,7 @@ void init_pr(char *cdata, int length) {
 	num_vertices = (max+1);
 
     int offset = 0;
-    printf("sizeof char %d\n",sizeof(char));
+    printf("sizeof char %lu\n",sizeof(char));
 
 	printf("Mallocing vs array.\n");
 
