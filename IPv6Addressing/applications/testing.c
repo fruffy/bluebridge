@@ -115,21 +115,23 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
     uint64_t *free_latency = calloc(sizeof(uint64_t), NUM_ITERATIONS);
 
     struct config myConf = get_bb_config();
-    struct in6_memaddr *r_addr = malloc(NUM_ITERATIONS * sizeof(struct in6_memaddr));
-    if(!r_addr)
-        perror("Allocation too large");
+    //struct in6_memaddr *r_addr = malloc(NUM_ITERATIONS * sizeof(struct in6_memaddr));
+    //if(!r_addr)
+    //    perror("Allocation too large");
 
     int i;
     //struct in6_memaddr r_addr[NUM_ITERATIONS];
     srand(time(NULL));
-    for (i = 0; i< NUM_ITERATIONS; i++) {
+/*    for (i = 0; i< NUM_ITERATIONS; i++) {
        // Generate a random IPv6 address out of a set of available hosts
         //memcpy(&(targetIP->sin6_addr), gen_rdm_IPv6Target(), sizeof(struct in6_addr));
         memcpy(&(targetIP->sin6_addr), gen_IPv6Target(i % myConf.num_hosts), sizeof(struct in6_addr));
         uint64_t start = getns(); 
-        r_addr[i] = allocateRemoteMem(targetIP);
+        r_addr[i] = allocate_rmem(targetIP);
         alloc_latency[i] = getns() - start; 
-    }
+    }*/
+    memcpy(&(targetIP->sin6_addr), gen_IPv6Target(i % myConf.num_hosts), sizeof(struct in6_addr));
+    struct in6_memaddr *r_addr = allocate_rmem_bulk(targetIP, NUM_ITERATIONS);
 
     for (i = 0; i < NUM_ITERATIONS; i++) {
         struct in6_memaddr remoteMemory = r_addr[i];
@@ -138,14 +140,14 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
         char *payload = malloc(4096);
         snprintf(payload, 50, "HELLO WORLD! How are you? %d", i);
         uint64_t wStart = getns();
-        writeRemoteMem(targetIP, payload, &remoteMemory);
+        write_rmem(targetIP, payload, &remoteMemory);
         write_latency[i - 1] = getns() - wStart;
         free(payload);
     }
     for (i = 0; i < NUM_ITERATIONS; i++) {
         struct in6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
-        char *test = getRemoteMem(targetIP, &remoteMemory);
+        char *test = get_rmem(targetIP, &remoteMemory);
         read_latency[i - 1] = getns() - rStart;
         char *payload = malloc(4096);
         snprintf(payload, 50, "HELLO WORLD! How are you? %d", i);
@@ -156,12 +158,14 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
         }
         free(payload);
     }
-    for (i = 0; i < NUM_ITERATIONS; i++) {
+    free_rmem(targetIP, &r_addr[0]);
+
+/*    for (i = 0; i < NUM_ITERATIONS; i++) {
         struct in6_memaddr remoteMemory = r_addr[i];
         uint64_t fStart = getns();
-        freeRemoteMem(targetIP, &remoteMemory);
+        free_rmem(targetIP, &remoteMemory);
         free_latency[i-1] = getns() - fStart;
-    }
+    }*/
     print_times(alloc_latency, read_latency, write_latency, free_latency, NUM_ITERATIONS);
 /*    free(alloc_latency);
     free(read_latency);
@@ -208,14 +212,14 @@ void *testing_loop(void *arg) {
         char payload[4096];
         snprintf(payload, 50, "HELLO WORLD! MY ID is: %d", data->tid);
         uint64_t wStart = getns();
-        writeRemoteMem(temp, payload, remoteMemory);
+        write_rmem(temp, payload, remoteMemory);
         write_latency[i - 1] = getns() - wStart;
     }
     // GET TEST
     for (int i = 0; i < data->length; i++) {
         struct in6_memaddr *remoteMemory = data->r_addr + i;
         uint64_t rStart = getns();
-        char *test = getRemoteMem(temp, remoteMemory);
+        char *test = get_rmem(temp, remoteMemory);
         read_latency[i - 1] = getns() - rStart;
         print_debug("Thread: %d, Results of memory store: %s\n",  data->tid, test);
         char payload[4096];
@@ -229,7 +233,7 @@ void *testing_loop(void *arg) {
     for (int i = 0; i < data->length; i++) {
         struct in6_memaddr *remoteMemory = data->r_addr + i;
         uint64_t fStart = getns();
-        freeRemoteMem(temp, remoteMemory);
+        free_rmem(temp, remoteMemory);
         free_latency[i-1] = getns() - fStart;
     }
     free(temp);
@@ -257,7 +261,7 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
        // Generate a random IPv6 address out of a set of available hosts
         memcpy(&(targetIP->sin6_addr), gen_rdm_IPv6Target(), sizeof(struct in6_addr));
         uint64_t start = getns(); 
-        r_addr[i] = allocateRemoteMem(targetIP);
+        r_addr[i] = allocate_rmem(targetIP);
         alloc_latency[i] = getns() - start; 
     }
     pthread_attr_t attr;

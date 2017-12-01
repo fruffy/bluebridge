@@ -1,6 +1,8 @@
+#define _GNU_SOURCE
 #include <stdio.h>            // printf() and sprintf()
 #include <stdlib.h>           // free(), alloc, and calloc()
 #include <string.h>           // strcpy, memset(), and memcpy()
+#include <sys/mman.h>         // mmap()
 
 #include "utils.h"
 #include "network.h"
@@ -69,7 +71,7 @@ struct in6_addr getIPv6FromPointer(uint64_t pointer) {
  * Allocates local memory and exposes it to a client requesting it
  */
 struct in6_memaddr allocPointer; // Keep this struct global as we reaccess it many times
-int allocateMem(struct sockaddr_in6 *targetIP) {
+int allocate_mem(struct sockaddr_in6 *targetIP) {
     //TODO: Error handling if we runt out of memory, this will fail
     //do some work, which might goto error
     //void *allocated = calloc(BLOCK_SIZE, sizeof(char));
@@ -80,6 +82,7 @@ int allocateMem(struct sockaddr_in6 *targetIP) {
     memset(&allocPointer, 0, IPV6_SIZE);
     memcpy(&allocPointer.paddr, &allocated, POINTER_SIZE);
     memcpy(&allocPointer.subid, &SUBNET_ID, 2);
+
     //struct in6_addr ipv6Pointer; = getIPv6FromPointer((uint64_t) &allocated);
     memcpy(sendBuffer, "ACK", 3);
     memcpy(sendBuffer+3, &allocPointer, IPV6_SIZE); 
@@ -89,9 +92,31 @@ int allocateMem(struct sockaddr_in6 *targetIP) {
 }
 
 /*
+ * TODO: explain.
+ * Allocates local memory and exposes it to a client requesting it
+ */
+#include <arpa/inet.h>
+struct in6_memaddr allocPointer; // Keep this struct global as we reaccess it many times
+int allocate_mem_bulk( struct sockaddr_in6 *targetIP, uint64_t size) {
+    //TODO: Error handling if we runt out of memory, this will fail
+    //do some work, which might goto error
+    //void *allocated = mmap64(NULL, BLOCK_SIZE*size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+    char *allocated = calloc(size ,BLOCK_SIZE);
+    //if (allocated == (void *) MAP_FAILED) perror("mmap"), exit(1);
+    memset(&allocPointer, 0, IPV6_SIZE);
+    memcpy(&allocPointer.paddr, &allocated, POINTER_SIZE);
+    memcpy(&allocPointer.subid, &SUBNET_ID, 2);
+    memcpy(sendBuffer, "ACK", 3);
+    memcpy(sendBuffer+3, &allocPointer, IPV6_SIZE); 
+    send_udp_raw(sendBuffer, BLOCK_SIZE, targetIP);
+    return EXIT_SUCCESS;
+}
+
+
+/*
  * Gets memory and sends it
  */
-int getMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
+int get_mem(struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
 
     //uint64_t *pointer = &ipv6Pointer->paddr;
     //memcpy(&pointer,addr.s6_addr+IPV6_SIZE-POINTER_SIZE, POINTER_SIZE);
@@ -117,7 +142,8 @@ int getMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
  * TODO: explain.
  * Writes a piece of memory?
  */
-int writeMem(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
+int write_mem(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
+
     //print_debug("Data received (first 50 bytes): %.50s", dataToWrite);
     //uint64_t *pointer = &ipv6Pointer->paddr;
     //uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
@@ -141,7 +167,7 @@ int writeMem(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_mema
  * TODO: explain.
  * This is freeing target memory?
  */
-int freeMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
+int free_mem(struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
     //uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);    
     //uint64_t *pointer = &ipv6Pointer->paddr;
     //print_debug("Content stored at %p has been freed!", (void*)pointer);

@@ -7,11 +7,12 @@
 #include "network.h"
 
 
-struct in6_memaddr allocateRemoteMem(struct sockaddr_in6 *targetIP);
-int writeRemoteMem(struct sockaddr_in6 *targetIP, char *payload,  struct in6_memaddr *remoteAddr);
-int freeRemoteMem(struct sockaddr_in6 *targetIP,  struct in6_memaddr *remoteAddr);
-char *getRemoteMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
-int migrateRemoteMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int machineID);
+struct in6_memaddr allocate_rmem(struct sockaddr_in6 *targetIP);
+struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *targetIP, uint64_t size);
+int write_rmem(struct sockaddr_in6 *targetIP, char *payload,  struct in6_memaddr *remoteAddr);
+int free_rmem(struct sockaddr_in6 *targetIP,  struct in6_memaddr *remoteAddr);
+char *get_rmem(struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
+//int migrateRemoteMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int machineID);
 
 
 int writeRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remoteAddrs);

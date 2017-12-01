@@ -40,7 +40,7 @@ void fill_rmem(struct rmem *r) {
         // Generate a random IPv6 address out of a set of available hosts
         struct in6_addr *ipv6Pointer = gen_rdm_IPv6Target();
         memcpy(&(r->targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-        memList[i] = allocateRemoteMem(r->targetIP);
+        memList[i] = allocate_rmem(r->targetIP);
     }
     r->memList = memList;
 }
@@ -63,7 +63,7 @@ void rmem_write(struct rmem *r, int block, char *data ) {
         abort();
     }
     // Get pointer to page data in (simulated) physical memory
-    writeRemoteMem(r->targetIP, data, &r->memList[block]);
+    write_rmem(r->targetIP, data, &r->memList[block]);
 }
 
 void rmem_read( struct rmem *r, int block, char *data ) {
@@ -72,7 +72,7 @@ void rmem_read( struct rmem *r, int block, char *data ) {
         abort();
     }
     // Get pointer to page data in (simulated) physical memory
-    memcpy(data, getRemoteMem(r->targetIP, &r->memList[block]), r->block_size);
+    memcpy(data, get_rmem(r->targetIP, &r->memList[block]), r->block_size);
 
 }
 
@@ -82,7 +82,7 @@ int rmem_blocks(struct rmem *r) {
 
 void rmem_deallocate(struct rmem *r) {
     for (int i = 0; i<r->nblocks; i++){
-        freeRemoteMem(r->targetIP, &r->memList[i]);
+        free_rmem(r->targetIP, &r->memList[i]);
     }
     close_sockets();
     free(r);

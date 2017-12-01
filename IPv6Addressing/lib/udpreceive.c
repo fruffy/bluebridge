@@ -16,6 +16,7 @@
 #include <semaphore.h>
 #include <linux/filter.h>
 #include <sys/types.h>
+#include <sys/timerfd.h>
 
 #include "udpcooked.h"
 #include "utils.h"
@@ -81,6 +82,7 @@ struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
         perror("Could not bind socket.");
         exit(1);
     }
+
     return temp;
 }
 
@@ -345,7 +347,7 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
            }
         }
     }
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer){
