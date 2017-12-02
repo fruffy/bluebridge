@@ -196,38 +196,39 @@ void wc_program_threads(char *cdata, int length, const char *input) {
     pthread_t thr[NUM_THREADS];
     /* create a thread_data_t argument array */
     thread_data_t thr_data[NUM_THREADS];
-    int i =0;
-    FILE *fp = fopen(input, "rb");
+    uint64_t j =0;
+    FILE *fp = fopen("baskerville.txt", "rb");
     printf("Reading in text file\n");
     uint64_t rStart = getns();
     if(fp != NULL) {
         char symbol;
         while((symbol = getc(fp)) != EOF) {
-            cdata[i] = symbol; 
-            i++;
+            cdata[j] = symbol; 
+            j++;
         }
         fclose(fp);
     }
-    int fileLenght = i;
+    uint64_t fileLength = j;
     uint64_t latency_store = getns() - rStart;
 
     printf("******Done with storing******\n");
-    int split = fileLenght/NUM_THREADS + (BLOCK_SIZE -((fileLenght/NUM_THREADS) % BLOCK_SIZE));
+    uint64_t split = fileLength/NUM_THREADS + (BLOCK_SIZE -((fileLength/NUM_THREADS) % BLOCK_SIZE)) ;
     // Split the virtual memory table to give each thread its own cache
     register_vmem_threads(NUM_THREADS);
     
-    // Split the dataset (more or less works) 
+    // Split the dataset (more or less works)
+    int i; 
     for (i = 0; i < NUM_THREADS; i++) {
         thr_data[i].tid = i;
         thr_data[i].count = 0;
-        int offset = split * i;
+        uint64_t offset = split * i;
         thr_data[i].data = cdata + offset;
         if (i == NUM_THREADS-1)
-            thr_data[i].length = fileLenght - offset;
+            thr_data[i].length = fileLength - offset;
         else
             thr_data[i].length = split;
         printf("Launching Thread %d\n",i );
-        printf("Total length %.3f  Thread length %.3f Ideal split %.3f\n", (double)fileLenght/BLOCK_SIZE, (double)thr_data[i].length/BLOCK_SIZE, (double)split/BLOCK_SIZE );
+        printf("Total length %.3f  Thread length %.3f Ideal split %.3f\n", (double)fileLength/BLOCK_SIZE, (double)thr_data[i].length/BLOCK_SIZE, (double)split/BLOCK_SIZE );
         if ((pthread_create(&thr[i], NULL, wc, &thr_data[i])) < 0) {
           perror("error: pthread_create");
         }
@@ -469,7 +470,7 @@ void pr_program(char *cdata, int length, const char *input) {
 int main( int argc, char *argv[] )
 {
     if(argc!=8) {
-        printf("use: rmem_test config <npages> <nframes> <disk|rmem|rrmem|mem> <fifo|lru|lfu|rand> <sort|scan|focus|test|wc|wc_t>\n");
+        printf("use: rmem_test config <npages> <nframes> <disk|rmem|rrmem|mem> <fifo|ffifo|lru|lfu|rand> <sort|scan|focus|test|wc|wc_t> inputFile\n");
         return EXIT_FAILURE;
     }
     set_vmem_config(argv[1]);

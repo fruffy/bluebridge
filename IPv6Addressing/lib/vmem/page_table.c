@@ -16,11 +16,11 @@ static int *frameState;     // keeps track of how long a page has been in a fram
 static int *framePage;      // keeps track of which page is in a frame
 static struct page_table *the_page_table = 0;
 static __thread struct hash *hashTable = NULL;
-static __thread struct lruList *lruList = NULL;
+static __thread struct dllList *dllList = NULL;
 static __thread struct freqList *freqList = NULL;
-static int pageFaults = 0;  // statistics 
-static int pageReads = 0;   // statistics 
-static int pageWrites = 0;  // statistics 
+static uint64_t pageFaults = 0;  // statistics 
+static uint64_t pageReads = 0;   // statistics 
+static uint64_t pageWrites = 0;  // statistics 
 static int pagingSystem;
 static int replacementPolicy;
 static const int MEM_PAGING = 0;
@@ -31,9 +31,11 @@ static const int FIFO = 0;
 static const int LRU = 1;
 static const int LFU = 2;
 static const int RAND = 3;
+static const int FFIFO = 4;
 static __thread int thread_id;
 static __thread int startFrame;
 static __thread int endFrame;
+static __thread int count;
 
 
 struct mem *mem;
@@ -47,9 +49,9 @@ static void internal_fault_handler(int signum, siginfo_t *info, void *context) {
     (void) context;
     struct page_table *pt = the_page_table;
     if(pt) {
-        int page = (addr-pt->virtmem) / PAGE_SIZE;
+        uint64_t page = (addr-pt->virtmem) / PAGE_SIZE;
         //printf("\x1B[3%dm""Thread %d Faulting at %p and page %d \n"RESET,thread_id+1,thread_id, addr, page);
-        if(page>=0 && page<pt->npages) {
+        if(page<pt->npages) {
             pt->handler(pt, page);
             return;
         }
@@ -58,119 +60,90 @@ static void internal_fault_handler(int signum, siginfo_t *info, void *context) {
     abort();
 }
 
-void LRU_page_fault_handler( struct page_table *pt, int page ) {
+void readData(uint64_t page, char *data) {
+    if (pagingSystem == MEM_PAGING)
+        mem_read(mem, page, data);
+    else if (pagingSystem == RMEM_PAGING)
+        rmem_read(rmem, page, data);
+    else if (pagingSystem == DISK_PAGING)
+        disk_read(disk, page, data);
+    else if (pagingSystem == RRMEM_PAGING)
+         rrmem_read(rrmem, page, data);
+    pageReads++;
+}
+
+void writeData(uint64_t page, char *data) {
+    if (pagingSystem == MEM_PAGING)
+        mem_write(mem, page, data);
+    else if (pagingSystem == RMEM_PAGING)
+        rmem_write(rmem, page, data);
+    else if (pagingSystem == DISK_PAGING)
+        disk_write(disk, page, data);
+    else if (pagingSystem == RRMEM_PAGING)
+        rrmem_write(rrmem, page, data);
+    pageWrites++;
+}
+
+void LRU_page_fault_handler(struct page_table *pt, uint64_t page) {
     int frame;
     int bits;
 
     pageFaults++;
     page_table_get_entry(pt, page, &frame, &bits); // check if the page is in memory
     if(bits == 0) { // page is not in memory
-        if(lruList->count < pt->nframes)
-        {
-            int i = lruList->count + startFrame;
-            insertHashNode(page,createlruListNode(page));
+        if(dllList->count < pt->nframes) {
+            int i = dllList->count + startFrame;
+            insertHashNode(page,createdllListNode(page));
             page_table_set_entry(pt, page, i, PROT_READ);
-            if (pagingSystem == MEM_PAGING)
-                mem_read(mem, page, &pt->physmem[i*PAGE_SIZE]);
-            else if (pagingSystem == RMEM_PAGING)
-                rmem_read(rmem, page, &pt->physmem[i*PAGE_SIZE]);
-            else if (pagingSystem == DISK_PAGING)
-                disk_read(disk, page, &pt->physmem[i*PAGE_SIZE]);
-            else if (pagingSystem == RRMEM_PAGING)
-                 rrmem_read(rrmem, page, &pt->physmem[i*PAGE_SIZE]);
-            pageReads++;
+            readData(page,&pt->physmem[i*PAGE_SIZE]);
         }
-        else
-        {
-            int tempPage;
+        else {
+            uint64_t tempPage;
             deleteLRU(&tempPage);
             page_table_get_entry(pt, tempPage, &frame, &bits);
-            if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
-                if (pagingSystem == MEM_PAGING)
-                    mem_write(mem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == RMEM_PAGING)
-                    rmem_write(rmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == DISK_PAGING)
-                    disk_write(disk, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == RRMEM_PAGING)
-                    rrmem_write(rrmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                pageWrites++;
-            }
-            if (pagingSystem == MEM_PAGING)
-                mem_read(mem, page, &pt->physmem[frame*PAGE_SIZE]);
-            else if (pagingSystem == RMEM_PAGING)
-                rmem_read(rmem, page, &pt->physmem[frame*PAGE_SIZE]);
-            else if (pagingSystem == DISK_PAGING)
-                disk_read(disk, page, &pt->physmem[frame*PAGE_SIZE]);
-            else if (pagingSystem == RRMEM_PAGING)
-                rrmem_read(rrmem, page, &pt->physmem[frame*PAGE_SIZE]);
-            pageReads++;
+            if(bits == (PROT_READ|PROT_WRITE)) // if page has been written
+                writeData(tempPage,&pt->physmem[frame*PAGE_SIZE]);
+
+            readData(page,&pt->physmem[frame*PAGE_SIZE]);
             page_table_set_entry(pt, page, frame, PROT_READ);
             page_table_set_entry(pt, tempPage, frame, 0);
-            insertHashNode(page,createlruListNode(page));
+            insertHashNode(page,createdllListNode(page));
         }
     } else { // if page is already in table--need to set write bit
         moveListNodeToFront(getHashNode(page));
         page_table_set_entry(pt, page, frame, PROT_READ|PROT_WRITE);
     }
 
-    /*struct lruListNode *temp = lruList->head;
-    for(int i = 0; i < lruList->count; i++)
+    /*struct dllListNode *temp = dllList->head;
+    for(int i = 0; i < dllList->count; i++)
     {
-        printf("%d, ",temp->key);
+        printf("%" PRIu64 ", ",temp->key);
         temp = temp->next;
     }
     printf("\n\n");*/
 }
 
-void LFU_page_fault_handler( struct page_table *pt, int page ) {
+void LFU_page_fault_handler(struct page_table *pt, uint64_t page) {
     int frame;
     int bits;
 
     pageFaults++;
     page_table_get_entry(pt, page, &frame, &bits); // check if the page is in memory
     if(bits == 0) { // page is not in memory
-        if(freqList->count < pt->nframes)
-        {
+        if(freqList->count < pt->nframes) {
             int i = freqList->count + startFrame;
             insertHashNode(page,createlfuListNode(page));
             page_table_set_entry(pt, page, i, PROT_READ);
-            if (pagingSystem == MEM_PAGING)
-                mem_read(mem, page, &pt->physmem[i*PAGE_SIZE]);
-            else if (pagingSystem == RMEM_PAGING)
-                rmem_read(rmem, page, &pt->physmem[i*PAGE_SIZE]);
-            else if (pagingSystem == DISK_PAGING)
-                disk_read(disk, page, &pt->physmem[i*PAGE_SIZE]);
-            else if (pagingSystem == RRMEM_PAGING)
-                rrmem_read(rrmem, page, &pt->physmem[i*PAGE_SIZE]);
-            pageReads++;
+            readData(page,&pt->physmem[i*PAGE_SIZE]);
         }
-        else
-        {
-            int tempPage;
+        else {
+            uint64_t tempPage;
             deleteLFU(&tempPage);
             page_table_get_entry(pt, tempPage, &frame, &bits);
-            if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
-                if (pagingSystem == MEM_PAGING)
-                    mem_write(mem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == RMEM_PAGING)
-                    rmem_write(rmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == DISK_PAGING)
-                    disk_write(disk, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == RRMEM_PAGING)
-                    rrmem_write(rrmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                pageWrites++;
-            }
-            if (pagingSystem == MEM_PAGING)
-                mem_read(mem, page, &pt->physmem[frame*PAGE_SIZE]);
-            else if (pagingSystem == RMEM_PAGING)
-                rmem_read(rmem, page, &pt->physmem[frame*PAGE_SIZE]);
-            else if (pagingSystem == DISK_PAGING)
-                disk_read(disk, page, &pt->physmem[frame*PAGE_SIZE]);
-            else if (pagingSystem == RRMEM_PAGING)
-                rrmem_read(rrmem, page, &pt->physmem[frame*PAGE_SIZE]);
+            if(bits == (PROT_READ|PROT_WRITE)) // if page has been written
+                writeData(tempPage,&pt->physmem[frame*PAGE_SIZE]);
 
-            pageReads++;
+            readData(page,&pt->physmem[frame*PAGE_SIZE]);
             page_table_set_entry(pt, page, frame, PROT_READ);
             page_table_set_entry(pt, tempPage, frame, 0);
             insertHashNode(page,createlfuListNode(page));
@@ -199,7 +172,7 @@ void LFU_page_fault_handler( struct page_table *pt, int page ) {
     printf("\n\n");*/
 }
 
-void FIFO_page_fault_handler( struct page_table *pt, int page ) {
+void FIFO_page_fault_handler( struct page_table *pt, uint64_t page ) {
     int i;
     int frame;
     int bits;
@@ -221,16 +194,7 @@ void FIFO_page_fault_handler( struct page_table *pt, int page ) {
                 framePage[i] = page;
                 emptyFrame = 1;
                 page_table_set_entry(pt, page, i, PROT_READ);
-
-                if (pagingSystem == MEM_PAGING)
-                    mem_read(mem, page, &pt->physmem[i*PAGE_SIZE]);
-                else if (pagingSystem == RMEM_PAGING)
-                    rmem_read(rmem, page, &pt->physmem[i*PAGE_SIZE]);
-                else if (pagingSystem == DISK_PAGING)
-                    disk_read(disk, page, &pt->physmem[i*PAGE_SIZE]);
-                else if (pagingSystem == RRMEM_PAGING)
-                    rrmem_read(rrmem, page, &pt->physmem[i*PAGE_SIZE]);
-                pageReads++;
+                readData(page,&pt->physmem[i*PAGE_SIZE]);
                 break;
             }
         }
@@ -243,30 +207,13 @@ void FIFO_page_fault_handler( struct page_table *pt, int page ) {
                     frame = i;
                 }
             }
-            int tempPage = framePage[frame]; // get page currently in frame
+            uint64_t tempPage = framePage[frame]; // get page currently in frame
             page_table_get_entry(pt, tempPage, &frame, &bits);
             if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
-                if (pagingSystem == MEM_PAGING)
-                    mem_write(mem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == RMEM_PAGING)
-                    rmem_write(rmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == DISK_PAGING)
-                    disk_write(disk, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == RRMEM_PAGING)
-                    rrmem_write(rrmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                pageWrites++;
+                writeData(tempPage,&pt->physmem[frame*PAGE_SIZE]);
             }
 
-            if (pagingSystem == MEM_PAGING)
-                mem_read(mem, page, &pt->physmem[frame*PAGE_SIZE]);
-            else if (pagingSystem == RMEM_PAGING)
-                rmem_read(rmem, page, &pt->physmem[frame*PAGE_SIZE]);
-            else if (pagingSystem == DISK_PAGING)
-                disk_read(disk, page, &pt->physmem[frame*PAGE_SIZE]);
-            else if (pagingSystem == RRMEM_PAGING)
-                rrmem_read(rrmem, page, &pt->physmem[frame*PAGE_SIZE]);
-
-            pageReads++;
+            readData(page,&pt->physmem[frame*PAGE_SIZE]);
             page_table_set_entry(pt, page, frame, PROT_READ);
             page_table_set_entry(pt, tempPage, frame, 0);
             frameState[frame] = 1;
@@ -279,76 +226,83 @@ void FIFO_page_fault_handler( struct page_table *pt, int page ) {
     }
 }
 
-void RAND_page_fault_handler( struct page_table *pt, int page ) {
-    int i;
+void RAND_page_fault_handler( struct page_table *pt, uint64_t page ) {
     int frame;
     int bits;
 
     pageFaults++;
     page_table_get_entry(pt, page, &frame, &bits); // check if the page is in memory
     if(bits == 0) { // page is not in memory
-        int emptyFrame = 0;
-        for(i = startFrame; i < endFrame; i++) {
-            // empty frame, we can insert a page
-            if(frameState[i] == 0) {
-                frameState[i] = 1;
-                framePage[i] = page;
-                emptyFrame = 1;
-                page_table_set_entry(pt, page, i, PROT_READ);
-
-                if (pagingSystem == MEM_PAGING)
-                    mem_read(mem, page, &pt->physmem[i*PAGE_SIZE]);
-                else if (pagingSystem == RMEM_PAGING)
-                    rmem_read(rmem, page, &pt->physmem[i*PAGE_SIZE]);
-                else if (pagingSystem == DISK_PAGING)
-                    disk_read(disk, page, &pt->physmem[i*PAGE_SIZE]);
-                else if (pagingSystem == RRMEM_PAGING)
-                    rrmem_read(rrmem, page, &pt->physmem[i*PAGE_SIZE]);
-                pageReads++;
-                break;
-            }
+        if(count < pt->nframes) { //There is a free frame
+            int i = count + startFrame;
+            insertHashNode(page,NULL);
+            page_table_set_entry(pt, page, i, PROT_READ);
+            readData(page,&pt->physmem[i*PAGE_SIZE]);
+            count++;
         }
-        // randomly remove a page
-        if (emptyFrame == 0) {
-            frame = (rand() % pt->nframes) + startFrame;
-            int tempPage = framePage[frame]; // get page currently in frame
-            page_table_get_entry(pt, tempPage, &frame, &bits);
-            if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
-                if (pagingSystem == MEM_PAGING)
-                    mem_write(mem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == RMEM_PAGING)
-                    rmem_write(rmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == DISK_PAGING)
-                    disk_write(disk, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == RRMEM_PAGING)
-                    rrmem_write(rrmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                pageWrites++;
+        else {
+            int randIndex = rand() % pt->nframes; // randomly remove a page
+            while(hashTable[randIndex].head == NULL)
+            {
+                randIndex++;
+                if(randIndex > pt->nframes-1)
+                    randIndex = 0;
             }
+            uint64_t tempPage = hashTable[randIndex].head->key;
+            page_table_get_entry(pt, tempPage, &frame, &bits);
+            if(bits == (PROT_READ|PROT_WRITE)) // if page has been written
+                writeData(tempPage,&pt->physmem[frame*PAGE_SIZE]);
 
-            if (pagingSystem == MEM_PAGING)
-                mem_read(mem, page, &pt->physmem[frame*PAGE_SIZE]);
-            else if (pagingSystem == RMEM_PAGING)
-                rmem_read(rmem, page, &pt->physmem[frame*PAGE_SIZE]);
-            else if (pagingSystem == DISK_PAGING)
-                disk_read(disk, page, &pt->physmem[frame*PAGE_SIZE]);
-            else if (pagingSystem == RRMEM_PAGING)
-                rrmem_read(rrmem, page, &pt->physmem[frame*PAGE_SIZE]);
-
-            pageReads++;
+            readData(page,&pt->physmem[frame*PAGE_SIZE]);
             page_table_set_entry(pt, page, frame, PROT_READ);
             page_table_set_entry(pt, tempPage, frame, 0);
-            frameState[frame] = 1;
-            framePage[frame] = page;
+            deleteHashNode(tempPage);
+            insertHashNode(page, NULL);
         }
-    } else { // if page is already in table--need to set write bit
+    } else  // if page is already in table--need to set write bit
         page_table_set_entry(pt, page, frame, PROT_READ|PROT_WRITE);
-        frameState[frame] = 1;
-        framePage[frame] = page;
+}
+
+void FFIFO_page_fault_handler( struct page_table *pt, uint64_t page ) {
+    int frame;
+    int bits;
+
+    pageFaults++;
+    page_table_get_entry(pt, page, &frame, &bits); // check if the page is in memory
+    if(bits == 0) { // page is not in memory
+        if(dllList->count < pt->nframes) {
+            int i = dllList->count + startFrame;
+            insertHashNode(page,createdllListNode(page));
+            page_table_set_entry(pt, page, i, PROT_READ);
+            readData(page,&pt->physmem[i*PAGE_SIZE]);
+        }
+        else {
+            uint64_t tempPage = dllList->tail->key;
+            deleteHashNode(tempPage);
+            deletedllListNode(dllList->tail);
+            page_table_get_entry(pt, tempPage, &frame, &bits);
+            if(bits == (PROT_READ|PROT_WRITE)) // if page has been written
+                writeData(tempPage,&pt->physmem[frame*PAGE_SIZE]);
+
+            readData(page,&pt->physmem[frame*PAGE_SIZE]);
+            page_table_set_entry(pt, page, frame, PROT_READ);
+            page_table_set_entry(pt, tempPage, frame, 0);
+            insertHashNode(page,createdllListNode(page));
+        }
+    } else  // if page is already in table--need to set write bit
+        page_table_set_entry(pt, page, frame, PROT_READ|PROT_WRITE);
+    
+    /*struct dllListNode *temp = dllList->head;
+    for(int i = 0; i < dllList->count; i++)
+    {
+        printf("%" PRIu64 ", ",temp->key);
+        temp = temp->next;
     }
+    printf("\n\n");*/
 }
 
 
-struct page_table *init_virtual_memory(int npages, int nframes, const char* system, const char* algo) {
+struct page_table *init_virtual_memory(uint64_t npages, int nframes, const char* system, const char* algo) {
     struct page_table *pt;
     if (!strcmp(system, "mem"))
         pagingSystem = MEM_PAGING;
@@ -363,16 +317,17 @@ struct page_table *init_virtual_memory(int npages, int nframes, const char* syst
         abort();
     }
 
-    if (!strcmp(algo, "fifo"))
-    	replacementPolicy = FIFO;
+    if (!strcmp(algo, "ffifo"))
+    	replacementPolicy = FFIFO;
+    else if (!strcmp(algo, "fifo"))
+        replacementPolicy = FIFO;
     else if (!strcmp(algo, "lru"))
     	replacementPolicy = LRU;
     else if (!strcmp(algo, "lfu"))
     	replacementPolicy = LFU;
     else if (!strcmp(algo, "rand"))
     	replacementPolicy = RAND;
-    else
-    {
+    else {
     	perror("Please specify the correct page replacement policy (fifo|lru|lfu|rand)!!");
         abort();
     }
@@ -397,8 +352,7 @@ struct page_table *init_virtual_memory(int npages, int nframes, const char* syst
             abort();
         }
     } 
-    else if(pagingSystem == RRMEM_PAGING)
-    {
+    else if(pagingSystem == RRMEM_PAGING) {
         rrmem = rrmem_allocate(npages);
         if(!rrmem) {
             fprintf(stderr,"couldn't create virtual rrmem: %s\n",strerror(errno));
@@ -406,8 +360,7 @@ struct page_table *init_virtual_memory(int npages, int nframes, const char* syst
         }
     }
 
-    if(replacementPolicy == FIFO)
-    {
+    if(replacementPolicy == FIFO) {
         int i;
         frameState = calloc(nframes, sizeof(int)); // allocate space for array of frameStates
         for(i = 0; i < nframes; i++) 
@@ -417,30 +370,27 @@ struct page_table *init_virtual_memory(int npages, int nframes, const char* syst
             framePage[i] = 0;
         pt = page_table_create( npages, nframes, FIFO_page_fault_handler );
     }
-    else if(replacementPolicy == LRU)
-    {
+    else if(replacementPolicy == LRU) {
     	hashTable = (struct hash *) calloc(nframes, sizeof(struct hash));
-        lruList = (struct lruList*) calloc(nframes, sizeof(struct lruListNode));
-        lruList->count = 0;
+        dllList = (struct dllList*) calloc(nframes, sizeof(struct dllListNode));
+        dllList->count = 0;
         pt = page_table_create( npages, nframes, LRU_page_fault_handler );
     }
-    else if(replacementPolicy == LFU)
-    {
+    else if(replacementPolicy == LFU) {
         hashTable = (struct hash *) calloc(nframes, sizeof(struct hash));
         freqList = (struct freqList*) calloc(nframes, sizeof(struct lfuListNode));
         freqList->count = 0;
         pt = page_table_create( npages, nframes, LFU_page_fault_handler );
     }
-    else if(replacementPolicy == RAND)
-    {
-        int i;
-        frameState = calloc(nframes, sizeof(int)); // allocate space for array of frameStates
-        for(i = 0; i < nframes; i++) 
-            frameState[i] = 0;
-        framePage = calloc(nframes, sizeof(int)); // allocate space for array of framePages
-        for(i = 0; i < nframes; i++) 
-            framePage[i] = 0;
+    else if(replacementPolicy == RAND) {
+        hashTable = (struct hash *) calloc(nframes, sizeof(struct hash));
         pt = page_table_create( npages, nframes, RAND_page_fault_handler );
+    }
+    else if(replacementPolicy == FFIFO) {
+        hashTable = (struct hash *) calloc(nframes, sizeof(struct hash));
+        dllList = (struct dllList*) calloc(nframes, sizeof(struct dllListNode));
+        dllList->count = 0;
+        pt = page_table_create( npages, nframes, FFIFO_page_fault_handler );
     }
 
     if(!pt) {
@@ -456,17 +406,18 @@ void init_vmem_thread(int t_id) {
     startFrame = (t_id) * pt->nframes;
     endFrame = (t_id + 1) * pt->nframes;
     printf("\x1B[3%dm""Thread %d Start Frame %d End Frame %d \n"RESET,t_id+1, t_id, startFrame, endFrame);
-    if(replacementPolicy == LRU)
-    {
+    if(replacementPolicy == LRU || replacementPolicy == FFIFO) {
         hashTable = (struct hash *) calloc(pt->nframes, sizeof(struct hash));
-        lruList = (struct lruList*) calloc(pt->nframes, sizeof(struct lruListNode));
-        lruList->count = 0;
+        dllList = (struct dllList*) calloc(pt->nframes, sizeof(struct dllListNode));
+        dllList->count = 0;
     }
-    else if(replacementPolicy == LFU)
-    {
+    else if(replacementPolicy == LFU) {
         hashTable = (struct hash *) calloc(pt->nframes, sizeof(struct hash));
         freqList = (struct freqList*) calloc(pt->nframes, sizeof(struct lfuListNode));
         freqList->count = 0;
+    }
+    else if(replacementPolicy == RAND) {
+        hashTable = (struct hash *) calloc(pt->nframes, sizeof(struct hash));
     }
 }
 
@@ -481,8 +432,7 @@ void register_vmem_threads(int num_threads) {
     if (pt->physmem == (void *) MAP_FAILED) perror("mmap"), exit(0);
     //int err = posix_fallocate(pt->fd, pt->nframes*PAGE_SIZE, pt->nframes*PAGE_SIZE * (n_threads));
     //if (err < 0) perror("fallocate"), exit(0);
-    if (replacementPolicy == FIFO || replacementPolicy == RAND)
-    {
+    if (replacementPolicy == FIFO) {
     	frameState = realloc(frameState, pt->nframes*num_threads*sizeof(int));
     	if (!frameState) perror("realloc"), free(frameState), exit(0);
     	framePage = realloc(framePage, pt->nframes*num_threads*sizeof(int));
@@ -492,7 +442,7 @@ void register_vmem_threads(int num_threads) {
     }
 }
 
-struct page_table *page_table_create(int npages, int nframes, page_fault_handler_t handler) {
+struct page_table *page_table_create(uint64_t npages, int nframes, page_fault_handler_t handler) {
     struct sigaction sa;
     struct page_table *pt;
     uint64_t page_space = PAGE_SIZE * (uint64_t) npages;
@@ -536,62 +486,58 @@ void page_table_flush() {
     struct page_table *pt = the_page_table;
     int frame;
     int bits;
-    if(replacementPolicy == FIFO || replacementPolicy == RAND) {
+    if(replacementPolicy == FIFO) {
         for(int i = 0; i < pt->nframes; i++) { 
-            int tempPage = framePage[i]; // get page we want to kick out 
+            uint64_t tempPage = framePage[i]; // get page we want to kick out 
             page_table_get_entry(pt, tempPage, &frame, &bits);
-            if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
-                if (pagingSystem == DISK_PAGING)
-                    disk_write(disk, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == RMEM_PAGING)
-                    rmem_write(rmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == MEM_PAGING)
-                    mem_write(mem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == RRMEM_PAGING)
-                    rrmem_write(rrmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                pageWrites++;
-            }
+            if(bits == (PROT_READ|PROT_WRITE)) // if page has been written
+                writeData(tempPage,&pt->physmem[frame*PAGE_SIZE]);
+
             page_table_set_entry(pt, tempPage, frame, PROT_NONE);
             frameState[frame] = 0;
         }
     }
-    else if(replacementPolicy == LRU) {
-        while(lruList->count > 0) {
-            int tempPage;
+    else if(replacementPolicy == LRU || replacementPolicy == FFIFO) {
+        while(dllList->count > 0) {
+            uint64_t tempPage;
             deleteLRU(&tempPage);
             page_table_get_entry(pt, tempPage, &frame, &bits);
-            if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
-                if (pagingSystem == DISK_PAGING)
-                    disk_write(disk, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == RMEM_PAGING)
-                    rmem_write(rmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == MEM_PAGING)
-                    mem_write(mem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == RRMEM_PAGING)
-                    rrmem_write(rrmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                pageWrites++;
-            }
+            if(bits == (PROT_READ|PROT_WRITE))  // if page has been written
+                writeData(tempPage,&pt->physmem[frame*PAGE_SIZE]);
+            
             page_table_set_entry(pt, tempPage, frame, PROT_NONE);
         }
     }
     else if(replacementPolicy == LFU) {
         while(freqList->count > 0) {
-            int tempPage;
+            uint64_t tempPage;
             deleteLFU(&tempPage);
             page_table_get_entry(pt, tempPage, &frame, &bits);
-            if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
-                if (pagingSystem == DISK_PAGING)
-                    disk_write(disk, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == RMEM_PAGING)
-                    rmem_write(rmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == MEM_PAGING)
-                    mem_write(mem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                else if (pagingSystem == RRMEM_PAGING)
-                    rrmem_write(rrmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                pageWrites++;
-            }
+            if(bits == (PROT_READ|PROT_WRITE))  // if page has been written
+                writeData(tempPage,&pt->physmem[frame*PAGE_SIZE]);
+            
             page_table_set_entry(pt, tempPage, frame, PROT_NONE);
         }
+    }
+    else if(replacementPolicy == RAND)
+    {
+        struct hashNode *currNode; 
+        for(int i = 0; i < pt->nframes; i++) { 
+            if (hashTable[i].count == 0) 
+                continue; 
+            currNode = hashTable[i].head; 
+            if (!currNode) 
+                continue; 
+            while (currNode != NULL) { 
+                int tempPage = currNode->key; 
+                page_table_get_entry(pt, tempPage, &frame, &bits); 
+                if(bits == (PROT_READ|PROT_WRITE))  // if page has been written 
+                    writeData(tempPage,&pt->physmem[frame*PAGE_SIZE]); 
+                page_table_set_entry(pt, tempPage, frame, PROT_NONE);
+                deleteHashNode(tempPage); 
+                currNode = hashTable[i].head;
+            }
+        } 
     }
 }
 
@@ -604,9 +550,9 @@ void page_table_delete(struct page_table *pt) {
     free(pt);
 }
 
-void page_table_set_entry(struct page_table *pt, int page, int frame, int bits) {
-    if(page<0 || page>=pt->npages) {
-        fprintf(stderr,"page_table_set_entry: illegal page #%d\n",page);
+void page_table_set_entry(struct page_table *pt, uint64_t page, int frame, int bits) {
+    if(page>=pt->npages) {
+        fprintf(stderr,"page_table_set_entry: illegal page #%" PRIu64 "\n",page);
         abort();
     }
 
@@ -621,23 +567,23 @@ void page_table_set_entry(struct page_table *pt, int page, int frame, int bits) 
     mprotect(pt->virtmem+page*PAGE_SIZE, PAGE_SIZE, bits);
 }
 
-void page_table_get_entry(struct page_table *pt, int page, int *frame, int *bits) {
-    if(page<0 || page>=pt->npages) {
-        fprintf(stderr,"page_table_get_entry: illegal page #%d\n",page);
+void page_table_get_entry(struct page_table *pt, uint64_t page, int *frame, int *bits) {
+    if(page>=pt->npages) {
+        fprintf(stderr,"page_table_get_entry: illegal page #%" PRIu64 "\n",page);
         abort();
     }
     *frame = pt->page_mapping[page];
     *bits = pt->page_bits[page];
 }
 
-void page_table_print_entry(struct page_table *pt, int page) {
-    if(page<0 || page>=pt->npages) {
-        fprintf(stderr,"page_table_print_entry: illegal page #%d\n",page);
+void page_table_print_entry(struct page_table *pt, uint64_t page) {
+    if(page>=pt->npages) {
+        fprintf(stderr,"page_table_print_entry: illegal page #%" PRIu64 "\n",page);
         abort();
     }
 
     int b = pt->page_bits[page];
-    printf("page %06d: frame %06d bits %c%c%c, vaddr %p\n",
+    printf("page %06" PRIu64 ": frame %06d bits %c%c%c, vaddr %p\n",
         page,
         pt->page_mapping[page],
         b&PROT_READ  ? 'r' : '-',
@@ -649,7 +595,7 @@ void page_table_print_entry(struct page_table *pt, int page) {
 
 void page_table_print() {
     struct page_table *pt = the_page_table;
-    int i;
+    uint64_t i;
     for(i=0;i<pt->npages;i++) {
         page_table_print_entry(pt,i);
     }
@@ -676,7 +622,7 @@ int page_table_get_nframes(struct page_table *pt) {
     return pt->nframes;
 }
 
-int page_table_get_npages(struct page_table *pt) {
+uint64_t page_table_get_npages(struct page_table *pt) {
     return pt->npages;
 }
 
@@ -695,12 +641,12 @@ void set_vmem_config(char *filename) {
 }
 
 void print_page_faults() {
-    printf("page faults: %d     reads: %d     writes: %d\n", pageFaults, pageReads, pageWrites);
+    printf("page faults: %" PRIu64 "     reads: %" PRIu64 "     writes: %" PRIu64 "\n", pageFaults, pageReads, pageWrites);
 }
 
 void clean_page_table(struct page_table *pt) {
     free(hashTable);
-    free(lruList);
+    free(dllList);
     free(freqList);
     free(framePage);
     free(frameState);
@@ -717,39 +663,33 @@ void clean_page_table(struct page_table *pt) {
 }
 
 
-struct lruListNode *createlruListNode(int key)
-{
-    struct lruListNode *newnode;
-    newnode = (struct lruListNode *) malloc(sizeof(struct lruListNode));
+struct dllListNode *createdllListNode(uint64_t key) {
+    struct dllListNode *newnode;
+    newnode = (struct dllListNode *) malloc(sizeof(struct dllListNode));
     newnode->key = key;
     newnode->prev = NULL;
-    newnode->next = lruList->head;
-    if (lruList->count > 0)
-    {
-        lruList->head->prev = newnode;
-    }
+    newnode->next = dllList->head;
+    if (dllList->count > 0)
+        dllList->head->prev = newnode;
     else
-        lruList->tail = newnode;
-    lruList->head = newnode;
-    lruList->count++;
+        dllList->tail = newnode;
+    dllList->head = newnode;
+    dllList->count++;
     return newnode;
 }
 
-struct lfuListNode *createlfuListNode(int key)
-{
+struct lfuListNode *createlfuListNode(uint64_t key) {
     struct lfuListNode *newnode;
     newnode = (struct lfuListNode *) malloc(sizeof(struct lfuListNode));
     newnode->key = key;
     newnode->next = NULL;
     newnode->prev = NULL;
-    if (freqList->head != NULL && freqList->head->useCount == 0)
-    {
+    if (freqList->head != NULL && freqList->head->useCount == 0) {
         newnode->next = freqList->head->head;
         freqList->head->head->prev = newnode;
         freqList->head->head = newnode;
     }
-    else
-    {
+    else {
         struct freqListNode *newFreqNode;
         newFreqNode = (struct freqListNode *) malloc(sizeof(struct freqListNode));
         newFreqNode->useCount = 0;
@@ -757,8 +697,7 @@ struct lfuListNode *createlfuListNode(int key)
         newFreqNode->tail = newnode;
         newFreqNode->next = NULL;
         newFreqNode->prev = NULL;
-        if (freqList->head != NULL)
-        {
+        if (freqList->head != NULL) {
             freqList->head->prev = newFreqNode;
             newFreqNode->next = freqList->head;
         }
@@ -769,33 +708,28 @@ struct lfuListNode *createlfuListNode(int key)
     return newnode;
 }
 
-void moveListNodeToFront(struct lruListNode *node)
-{
-    if(lruList->head == node)
+void moveListNodeToFront(struct dllListNode *node) {
+    if(dllList->head == node)
         return;
     if (node->prev != NULL)
         node->prev->next = node->next;
     if (node->next != NULL)
         node->next->prev = node->prev;
-    node->next = lruList->head;
-    if(lruList-> tail == node)
-        lruList->tail = node->prev;
+    node->next = dllList->head;
+    if(dllList-> tail == node)
+        dllList->tail = node->prev;
     node->prev = NULL;
-    if (lruList->count > 1)
-    
-        lruList->head->prev = node;
-    else
-    {
-        lruList->head = node;
-        lruList->tail = node;
+    if (dllList->count > 1)
+        dllList->head->prev = node;
+    else {
+        dllList->head = node;
+        dllList->tail = node;
     }
-    lruList->head = node;
+    dllList->head = node;
 }
 
-void moveNodeToNextFreq(struct lfuListNode *node)
-{
-    if (node->parent->next == NULL) //Check if the next freq exists, if not make it
-    {
+void moveNodeToNextFreq(struct lfuListNode *node) {
+    if (node->parent->next == NULL) { //Check if the next freq exists, if not make it
         struct freqListNode *newFreqNode;
         newFreqNode = (struct freqListNode *) malloc(sizeof(struct freqListNode));
         newFreqNode->useCount = node->parent->useCount+1;
@@ -805,10 +739,8 @@ void moveNodeToNextFreq(struct lfuListNode *node)
         newFreqNode->tail = NULL;
         newFreqNode->next = NULL;
         newFreqNode->prev = node->parent;
-
     }
-    else if (node->parent->next->useCount > node->parent->useCount + 1) //check if next frequency is +1
-    {
+    else if (node->parent->next->useCount > node->parent->useCount + 1) { //check if next frequency is +1
         struct freqListNode *newFreqNode;
         newFreqNode = (struct freqListNode *) malloc(sizeof(struct freqListNode));
         newFreqNode->useCount = node->parent->useCount + 1;
@@ -839,8 +771,7 @@ void moveNodeToNextFreq(struct lfuListNode *node)
     if (node->parent->tail == NULL)
         node->parent->tail = node;
 
-    if (temp->head == NULL)
-    {
+    if (temp->head == NULL) {
         if (temp == freqList->head)
             freqList->head = temp->next;
         if (temp->prev != NULL)
@@ -852,22 +783,20 @@ void moveNodeToNextFreq(struct lfuListNode *node)
 }
 
 
-void deletelruListNode(struct lruListNode *node)
-{
-    if (node == lruList->head)
-        lruList->head = node->next;
-    if (node == lruList->tail)
-        lruList->tail = node->prev;
+void deletedllListNode(struct dllListNode *node) {
+    if (node == dllList->head)
+        dllList->head = node->next;
+    if (node == dllList->tail)
+        dllList->tail = node->prev;
     if (node->prev != NULL)
         node->prev->next = node->next;
     if (node->next != NULL)
         node->next->prev = node->prev;
-    lruList->count--;
+    dllList->count--;
     free(node);
 }
 
-void deletelfuListNode(struct lfuListNode *node)
-{
+void deletelfuListNode(struct lfuListNode *node) {
     if (node == node->parent->head)
         node->parent->head = node->next;
     if (node == node->parent->tail)
@@ -876,8 +805,7 @@ void deletelfuListNode(struct lfuListNode *node)
         node->prev->next = node->next;
     if (node->next != NULL)
         node->next->prev = node->prev;
-    if (node->parent->head == NULL)
-    {
+    if (node->parent->head == NULL) {
         if (node->parent == freqList->head)
             freqList->head = node->parent->next;
         node->parent->prev = node->parent->next;
@@ -887,7 +815,7 @@ void deletelfuListNode(struct lfuListNode *node)
     freqList->count--;
 }
 
-struct hashNode * createHashNode(int key) {
+struct hashNode * createHashNode(uint64_t key) {
     struct hashNode *newnode;
     newnode = (struct hashNode *) malloc(sizeof(struct hashNode));
     newnode->key = key;
@@ -895,12 +823,11 @@ struct hashNode * createHashNode(int key) {
     return newnode;
 }
 
-int hashFunction(int key)
-{
+int hashFunction(uint64_t key) {
     return key % the_page_table->nframes;
 }
 
-void insertHashNode(int key, void* listnodePointer) {
+void insertHashNode(uint64_t key, void* listnodePointer) {
     int hashIndex = hashFunction(key);
     struct hashNode *newnode = createHashNode(key);
     newnode->listNodePointer = listnodePointer;
@@ -918,7 +845,7 @@ void insertHashNode(int key, void* listnodePointer) {
     return;
 }
 
-void deleteHashNode(int key) {
+void deleteHashNode(uint64_t key) {
     // find the bucket using hash index
     int hashIndex = hashFunction(key);
     struct hashNode *temp, *myNode;
@@ -944,7 +871,7 @@ void deleteHashNode(int key) {
     }
 }
 
-void* getHashNode(int key) {
+void* getHashNode(uint64_t key) {
     int hashIndex = hashFunction(key);
     struct hashNode *myNode;
     myNode = hashTable[hashIndex].head;
@@ -958,22 +885,16 @@ void* getHashNode(int key) {
     return myNode->listNodePointer;
 }
 
-void deleteLRU(int *page)
-{
-    *page = -1;
-    if (lruList->tail != NULL)
-    {
-        *page = lruList->tail->key;
-        deleteHashNode(lruList->tail->key);
-        deletelruListNode(lruList->tail);
+void deleteLRU(uint64_t *page) {
+    if (dllList->tail != NULL) {
+        *page = dllList->tail->key;
+        deleteHashNode(dllList->tail->key);
+        deletedllListNode(dllList->tail);
     }
 }
 
-void deleteLFU(int *page)
-{
-    *page = -1;
-    if (freqList->head != NULL)
-    {
+void deleteLFU(uint64_t *page) {
+    if (freqList->head != NULL) {
         *page = freqList->head->tail->key;
         deleteHashNode(freqList->head->tail->key);
         deletelfuListNode(freqList->head->tail);
