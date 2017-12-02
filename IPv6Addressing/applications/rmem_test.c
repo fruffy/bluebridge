@@ -477,7 +477,7 @@ int main( int argc, char *argv[] )
         printf("use: rmem_test config <npages> <nframes> <disk|rmem|rrmem|mem> <fifo|lru|lfu|rand> <sort|scan|focus|test|wc|wc_t>\n");
         return EXIT_FAILURE;
     }
-
+    set_vmem_config(argv[1]);
     uint64_t npages = atoi(argv[2]);
     uint64_t nframes = atoi(argv[3]);
     printf("Pages %lu\n",npages );
@@ -489,10 +489,8 @@ int main( int argc, char *argv[] )
     //system("echo 3 > /proc/sys/vm/drop_caches");
     //set_vmem_config("tmp/config/distMem.cnf");
     //set_vmem_config("distmem_client.cnf");
-    set_vmem_config(argv[1]);
     struct page_table *pt = init_virtual_memory(npages, nframes, system, algo);
-    char *virtmem = page_table_get_virtmem(pt);
-
+    char *virtmem = pt->virtmem;
 
     printf("Running "KRED"%s"RESET" benchmark...\n", system);
     if(!strcmp(program,"sort")) {

@@ -70,18 +70,18 @@ struct rmem *rmem_allocate(int nblocks) {
     return r;
 }
 
-void rmem_write(struct rmem *r, int block, char *data ) {
-    if(block<0 || block>=r->nblocks) {
-        fprintf(stderr,"disk_write: invalid block #%d\n",block);
+void rmem_write(struct rmem *r, uint64_t block, char *data ) {
+    if(block>=r->nblocks) {
+        fprintf(stderr,"disk_write: invalid block #%lu\n",block);
         abort();
     }
     // Get pointer to page data in (simulated) physical memory
     write_rmem(r->targetIP, data, &r->memList[block]);
 }
 
-void rmem_read( struct rmem *r, int block, char *data ) {
-    if(block<0 || block>=r->nblocks) {
-        fprintf(stderr,"disk_read: invalid block #%d\n",block);
+void rmem_read( struct rmem *r, uint64_t block, char *data ) {
+    if(block>=r->nblocks) {
+        fprintf(stderr,"disk_read: invalid block #%lu\n",block);
         abort();
     }
     // Get pointer to page data in (simulated) physical memory
@@ -89,7 +89,7 @@ void rmem_read( struct rmem *r, int block, char *data ) {
 
 }
 
-int rmem_blocks(struct rmem *r) {
+uint64_t rmem_blocks(struct rmem *r) {
     return r->nblocks;
 }
 
