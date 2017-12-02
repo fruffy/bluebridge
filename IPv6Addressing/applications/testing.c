@@ -108,6 +108,7 @@ void print_times(uint64_t* alloc_latency, uint64_t* read_latency, uint64_t* writ
 
 }
 
+
 void basicOperations(struct sockaddr_in6 *targetIP) {
     uint64_t *alloc_latency = calloc(sizeof(uint64_t), NUM_ITERATIONS);
     uint64_t *read_latency = calloc(sizeof(uint64_t), NUM_ITERATIONS);
@@ -119,7 +120,7 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
     //if(!r_addr)
     //    perror("Allocation too large");
 
-    int i;
+    int i = 0;
     //struct in6_memaddr r_addr[NUM_ITERATIONS];
     srand(time(NULL));
 /*    for (i = 0; i< NUM_ITERATIONS; i++) {
@@ -130,8 +131,21 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
         r_addr[i] = allocate_rmem(targetIP);
         alloc_latency[i] = getns() - start; 
     }*/
-    memcpy(&(targetIP->sin6_addr), gen_IPv6Target(i % myConf.num_hosts), sizeof(struct in6_addr));
-    struct in6_memaddr *r_addr = allocate_rmem_bulk(targetIP, NUM_ITERATIONS);
+    struct in6_memaddr *r_addr = malloc(sizeof(struct in6_memaddr) * NUM_ITERATIONS);
+    uint64_t split = NUM_ITERATIONS/myConf.num_hosts;
+    int length;
+    for (int i = 0; i < myConf.num_hosts; i++) {
+        uint64_t offset = split * i;
+        if (i == myConf.num_hosts-1)
+            length = NUM_ITERATIONS - offset;
+        else 
+            length = split;
+        struct in6_addr *ipv6Pointer = gen_IPv6Target(i);
+        memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+        struct in6_memaddr *temp = allocate_rmem_bulk(targetIP, length);
+        memcpy(&r_addr[offset],temp,length *sizeof(struct in6_memaddr) );
+        free(temp);
+    }
 
     for (i = 0; i < NUM_ITERATIONS; i++) {
         struct in6_memaddr remoteMemory = r_addr[i];
@@ -188,7 +202,6 @@ void *testing_loop(void *arg) {
     // Allocate measurement arrays
     uint64_t read_latency[data->length];
     uint64_t write_latency[data->length];
-    uint64_t free_latency[data->length];
 
     // Assign threads to cores
     int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
@@ -229,16 +242,9 @@ void *testing_loop(void *arg) {
             exit(1);
         }
     }
-    // FREE TEST
-    for (int i = 0; i < data->length; i++) {
-        struct in6_memaddr *remoteMemory = data->r_addr + i;
-        uint64_t fStart = getns();
-        free_rmem(temp, remoteMemory);
-        free_latency[i-1] = getns() - fStart;
-    }
-    free(temp);
+
     printSendLat();
-    print_times(NULL, read_latency, write_latency, free_latency, data->length);
+    print_times(NULL, read_latency, write_latency, NULL, data->length);
     return NULL;
 }
 
@@ -248,20 +254,36 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
     int i;
     /* create a thread_data_t argument array */
     thread_data_t thr_data[NUM_THREADS];
+    struct config myConf = get_bb_config();
+    uint64_t alloc_latency[myConf.num_hosts];
+    uint64_t free_latency[myConf.num_hosts];
 
-    uint64_t *alloc_latency = calloc(sizeof(uint64_t), NUM_ITERATIONS);
-
-    struct in6_memaddr *r_addr = malloc(NUM_ITERATIONS * sizeof(struct in6_memaddr));
-    if(!r_addr)
-        perror("Allocation too large");
-    
     //struct in6_memaddr r_addr[NUM_ITERATIONS];
     srand(time(NULL));
-    for (i = 0; i< NUM_ITERATIONS; i++) {
+/*    struct in6_memaddr *r_addr = malloc(NUM_ITERATIONS * sizeof(struct in6_memaddr));
+    if(!r_addr)
+        perror("Allocation too large");*/
+/*    for (i = 0; i< NUM_ITERATIONS; i++) {
        // Generate a random IPv6 address out of a set of available hosts
         memcpy(&(targetIP->sin6_addr), gen_rdm_IPv6Target(), sizeof(struct in6_addr));
-        uint64_t start = getns(); 
         r_addr[i] = allocate_rmem(targetIP);
+        alloc_latency[i] = getns() - start; 
+    }*/
+    struct in6_memaddr *r_addr = malloc(sizeof(struct in6_memaddr) * NUM_ITERATIONS);
+    uint64_t split = NUM_ITERATIONS/myConf.num_hosts;
+    int length;
+    for (int i = 0; i < myConf.num_hosts; i++) {
+        uint64_t start = getns(); 
+        uint64_t offset = split * i;
+        if (i == myConf.num_hosts-1)
+            length = NUM_ITERATIONS - offset;
+        else 
+            length = split;
+        struct in6_addr *ipv6Pointer = gen_IPv6Target(i);
+        memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+        struct in6_memaddr *temp = allocate_rmem_bulk(targetIP, length);
+        memcpy(&r_addr[offset],temp,length * sizeof(struct in6_memaddr) );
+        free(temp);
         alloc_latency[i] = getns() - start; 
     }
     pthread_attr_t attr;
@@ -273,7 +295,7 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
     pthread_attr_setstacksize( &attr, 99800000 );
     pthread_attr_getstacksize( &attr, &stacksize );
     printf("after  stacksize : [%lu]\n", stacksize);
-    close_sockets();
+    //close_sockets();
     //close_send_socket();
     //close_rcv_socket();
     /* create threads */
@@ -298,12 +320,25 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
         printf("Thread %d Waiting for my friends...\n", i);
         pthread_join(thr[i], NULL);
     }
-    long alloc_total = 0;
-    for (i = 0; i < NUM_ITERATIONS; i++) {
-            alloc_total += (unsigned long long) alloc_latency[i];
+
+    // FREE TEST
+    for (int i = 0; i < myConf.num_hosts; i++) {
+        uint64_t fStart = getns();
+        uint64_t offset = split * i;
+        free_rmem(targetIP, &r_addr[offset]);
+        free_latency[i] = getns() - fStart;
     }
-    printf("Average allocate latency: "KRED"%lu us\n"RESET, alloc_total/ (NUM_ITERATIONS*1000));
-    free(alloc_latency);
+    long alloc_total = 0;
+    long free_total = 0;
+
+    for (i = 0; i < myConf.num_hosts; i++) {
+            alloc_total += (unsigned long long) alloc_latency[i];
+            free_total += (unsigned long long) free_latency[i];
+    }
+    printf("Average allocate latency: "KRED"%lu us\n"RESET, alloc_total/ (myConf.num_hosts*1000));
+    printf("Average free latency: "KRED"%lu us\n"RESET, free_total/ (myConf.num_hosts*1000));
+
+    close_sockets();
 }
 
 /*
@@ -352,7 +387,7 @@ int main(int argc, char *argv[]) {
     printf(RESET);
     printSendLat();
     free(temp);
-    close_sockets();
+    //close_sockets();
     return 0;
 }
 
