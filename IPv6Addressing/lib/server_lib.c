@@ -12,12 +12,11 @@ static __thread char sendBuffer[BLOCK_SIZE];
 
 
 
-
 /*
  * Frees global memory
  */
 // DEPRECATED 
-char *varadr_char[1000];
+/*char *varadr_char[1000];
 int countchar = 0;
 int cleanMemory() {
     int i;
@@ -27,12 +26,12 @@ int cleanMemory() {
 
     return EXIT_SUCCESS;
 }
-
+*/
 /*
  * Adds a character to the global memory
  */
 // DEPRECATED 
-int addchar(char* charadr) {
+/*int addchar(char* charadr) {
     if (charadr == NULL ) {
         perror("\nError when trying to allocate a pointer! \n");
         cleanMemory();
@@ -41,37 +40,37 @@ int addchar(char* charadr) {
     varadr_char[countchar] = charadr;
     countchar++;
     return EXIT_SUCCESS;
-}
+}*/
 
 /*
  * Get a POINTER_SIZE pointer from an IPV6_SIZE ip address 
  */
 // DEPRECATED 
-uint64_t getPointerFromIPv6(struct in6_addr addr) {
+/*uint64_t getPointerFromIPv6(struct in6_addr addr) {
     uint64_t pointer;
     memcpy(&pointer,addr.s6_addr+IPV6_SIZE-POINTER_SIZE, POINTER_SIZE);
     return pointer;
 }
-
+*/
 /*
  * Convert a POINTER_SIZE bit pointer to a IPV6_SIZE bit IPv6 address\
  * (beginning at the POINTER_SIZEth bit)
  */
 // DEPRECATED 
-struct in6_addr getIPv6FromPointer(uint64_t pointer) {
+/*struct in6_addr getIPv6FromPointer(uint64_t pointer) {
     struct in6_addr *newAddr = (struct in6_addr *) calloc(1, sizeof(struct in6_addr));
     // printf("Memcpy in getIPv6FromPointer\n");
     memcpy(newAddr->s6_addr+IPV6_SIZE-POINTER_SIZE, (char *)pointer, POINTER_SIZE);
     memcpy(newAddr->s6_addr+4,&SUBNET_ID,2);
     return *newAddr;
-}
+}*/
 
 /*
  * TODO: explain.
  * Allocates local memory and exposes it to a client requesting it
  */
-struct in6_memaddr allocPointer; // Keep this struct global as we reaccess it many times
 int allocate_mem(struct sockaddr_in6 *targetIP) {
+    struct in6_memaddr allocPointer;
     //TODO: Error handling if we runt out of memory, this will fail
     //do some work, which might goto error
     //void *allocated = calloc(BLOCK_SIZE, sizeof(char));
@@ -95,9 +94,8 @@ int allocate_mem(struct sockaddr_in6 *targetIP) {
  * TODO: explain.
  * Allocates local memory and exposes it to a client requesting it
  */
-#include <arpa/inet.h>
-struct in6_memaddr allocPointer; // Keep this struct global as we reaccess it many times
 int allocate_mem_bulk( struct sockaddr_in6 *targetIP, uint64_t size) {
+    struct in6_memaddr allocPointer;
     //TODO: Error handling if we runt out of memory, this will fail
     //do some work, which might goto error
     //void *allocated = mmap64(NULL, BLOCK_SIZE*size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
@@ -117,7 +115,6 @@ int allocate_mem_bulk( struct sockaddr_in6 *targetIP, uint64_t size) {
  * Gets memory and sends it
  */
 int get_mem(struct sockaddr_in6 *targetIP, struct in6_memaddr *ipv6Pointer) {
-
     //uint64_t *pointer = &ipv6Pointer->paddr;
     //memcpy(&pointer,addr.s6_addr+IPV6_SIZE-POINTER_SIZE, POINTER_SIZE);
     //uint64_t pointer1 = getPointerFromIPv6(*ipv6Pointer);

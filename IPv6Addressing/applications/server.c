@@ -18,7 +18,6 @@ static int NUM_THREADS = 1;
  * TODO: get message format
  */
 void handleClientRequests(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
-    char *splitResponse;
     // Switch on the client command
     if (remoteAddr->cmd == ALLOC_CMD) {
         print_debug("******ALLOCATE******");
@@ -103,9 +102,14 @@ void threaded_server(){
     pthread_attr_setstacksize( &attr, 99800000 );
     pthread_attr_getstacksize( &attr, &stacksize );
     printf("after  stacksize : [%lu]\n", stacksize);
+
+    pthread_attr_init(&attr);
+
+    if(pthread_attr_setschedpolicy(&attr, SCHED_RR) != 0)
+        fprintf(stderr, "Unable to set policy.\n");
+
     for (i = 0; i < NUM_THREADS; i++) {
         int rc;
-
         thr_data[i].tid =  i;
         struct rlimit limit;
         getrlimit (RLIMIT_STACK, &limit);

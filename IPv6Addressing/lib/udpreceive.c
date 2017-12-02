@@ -321,29 +321,29 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                 printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
                 printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(interface_ep.my_port), ntohs(udphdr->dest) );
                 */
-/*                    struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
-                    int isMyID = 1;
-                    if (remoteAddr != NULL && !server) {
-                        //printf("Thread %d Their ID\n", thread_id);
-                        //printNBytes(inAddress, 16);
-                        //printf("Thread %d MY ID\n", thread_id);
-                        //printNBytes(remoteAddr, 16)
-                        isMyID = (inAddress->cmd == remoteAddr->cmd) && (inAddress->paddr == remoteAddr->paddr);
-                    }*/
-//                    if (isMyID) {
-                memcpy(receiveBuffer, payload, msgBlockSize);
-                if (remoteAddr != NULL && server) {
-                    memcpy(remoteAddr, &iphdr->ip6_dst, IPV6_SIZE);
+                struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
+                int isMyID = 1;
+                if (remoteAddr != NULL && !server) {
+                    //printf("Thread %d Their ID\n", thread_id);
+                    //printNBytes(inAddress, 16);
+                    //printf("Thread %d MY ID\n", thread_id);
+                    //printNBytes(remoteAddr, 16)
+                    isMyID = (inAddress->cmd == remoteAddr->cmd) && (inAddress->paddr == remoteAddr->paddr);
                 }
-                //printf("rec: %s\n",receiveBuffer);
-                memcpy(targetIP->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
-                targetIP->sin6_port = udphdr->source;
+                if (isMyID) {
+                    memcpy(receiveBuffer, payload, msgBlockSize);
+                    if (remoteAddr != NULL && server) {
+                        memcpy(remoteAddr, &iphdr->ip6_dst, IPV6_SIZE);
+                    }
+                    //printf("rec: %s\n",receiveBuffer);
+                    memcpy(targetIP->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
+                    targetIP->sin6_port = udphdr->source;
+                    tpacket_hdr->tp_status = TP_STATUS_KERNEL;
+                    next_packet(&ring);
+                    return msgBlockSize;
+                }
                 tpacket_hdr->tp_status = TP_STATUS_KERNEL;
                 next_packet(&ring);
-                return msgBlockSize;
-//                    }
-/*                tpacket_hdr->tp_status = TP_STATUS_KERNEL;
-                next_packet(&ring);*/
            }
         }
     }
