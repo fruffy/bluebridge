@@ -154,8 +154,6 @@ typedef struct _thread_data_t {
   int count;
 } thread_data_t;
 
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
 
 int isWord(char prev, char cur) {
     return isspace(cur) && isgraph(prev);
@@ -194,13 +192,13 @@ void *wc(void *arg) {
     return NULL;
 }
 
-void wc_program_threads(char *cdata, int length) {
+void wc_program_threads(char *cdata, int length, const char *input) {
     pthread_t thr[NUM_THREADS];
     /* create a thread_data_t argument array */
     thread_data_t thr_data[NUM_THREADS];
     int i =0;
-    FILE *fp = fopen("baskerville.txt", "rb");
-    printf("Reading in thingy\n");
+    FILE *fp = fopen(input, "rb");
+    printf("Reading in text file\n");
     uint64_t rStart = getns();
     if(fp != NULL) {
         char symbol;
@@ -249,15 +247,12 @@ void wc_program_threads(char *cdata, int length) {
     printf("Total time taken: "KGRN"%lu"RESET" micro seconds\n", (latency_read + latency_store)/1000 );
 }
 
-void wc_program(char *cdata, int length) {
+void wc_program(char *cdata, int length, const char *input) {
 
     // Reading in the file
     uint64_t i =0;
-    FILE *fp = fopen("baskerville.txt", "rb");
-    //FILE *fp = fopen("~/huge_wiki.xml", "rb");
-    //FILE *fp = fopen("~/file.txt", "rb");
-
-    printf("Reading in thingy\n");
+    FILE *fp = fopen(input, "rb");
+    printf("Reading in text file\n");
     uint64_t rStart = getns();
     if(fp != NULL) {
         char symbol;
@@ -331,11 +326,11 @@ void freeArray(IntArr *a) {
 }
 
 
-void init_pr(char *cdata, int length) {
+void init_pr(char *cdata, int length, const char* input) {
     // Reading in the file
 	printf("First read (get max and count)\n");
     uint64_t i =0;
-    FILE *fp = fopen("tiny.txt", "rb");
+    FILE *fp = fopen(input, "rb");
     //FILE *fp = fopen("web-Google.txt", "rb");
 	char line[256];
 	int v1, v2;
@@ -461,11 +456,11 @@ void pagerank(int rounds, double d) {
 	}
 }
 
-void pr_program(char *cdata, int length) {
-    init_pr(cdata,length);
+void pr_program(char *cdata, int length, const char *input) {
+    init_pr(cdata, length, input);
     int rounds = 20;
     double damp = 0.8;
-    pagerank(rounds,damp);
+    pagerank(rounds, damp);
 }
 
 
@@ -473,7 +468,7 @@ void pr_program(char *cdata, int length) {
 
 int main( int argc, char *argv[] )
 {
-    if(argc!=7) {
+    if(argc!=8) {
         printf("use: rmem_test config <npages> <nframes> <disk|rmem|rrmem|mem> <fifo|lru|lfu|rand> <sort|scan|focus|test|wc|wc_t>\n");
         return EXIT_FAILURE;
     }
@@ -484,6 +479,7 @@ int main( int argc, char *argv[] )
     const char *system = argv[4]; 
     const char *algo = argv[5]; 
     const char *program = argv[6];
+    const char *input = argv[7];
 
     //sync();
     //system("echo 3 > /proc/sys/vm/drop_caches");
@@ -502,11 +498,11 @@ int main( int argc, char *argv[] )
     } else if(!strcmp(program,"test")) {
         simple_test(virtmem,npages*PAGE_SIZE);
     } else if(!strcmp(program,"wc")) {
-        wc_program(virtmem,npages*PAGE_SIZE);
+        wc_program(virtmem,npages*PAGE_SIZE, input);
     } else if(!strcmp(program,"wc_t")) {
-        wc_program_threads(virtmem,npages*PAGE_SIZE);
+        wc_program_threads(virtmem,npages*PAGE_SIZE, input);
     } else if(!strcmp(program,"pr")) {
-        pr_program(virtmem,npages*PAGE_SIZE);
+        pr_program(virtmem,npages*PAGE_SIZE, input);
     } else {
         fprintf(stderr,"unknown program: %s\n",program);
     }
