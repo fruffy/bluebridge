@@ -95,7 +95,6 @@ void frame_table_print_entry();
 
 struct hashNode {
 	int key;
-	int frame;
 	struct hashNode *next;
 	void *listNodePointer;
 };
@@ -137,9 +136,9 @@ struct freqList{
 	int count;
 };
 
-void deleteLRU(int *page, int *frame);
+void deleteLRU(int *page);
 
-void deleteLFU(int *page, int *frame);
+void deleteLFU(int *page);
 
 void* getHashNode(int key);
 
@@ -151,6 +150,6 @@ void moveNodeToNextFreq(struct lfuListNode *node);
 
 struct lfuListNode *createlfuListNode(int key);
 
-void insertHashNode(int key,int frame, void* listNode);
+void insertHashNode(int key, void* listNode);
 
 #endif
