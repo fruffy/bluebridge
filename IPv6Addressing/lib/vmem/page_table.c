@@ -536,8 +536,7 @@ void page_table_flush() {
     struct page_table *pt = the_page_table;
     int frame;
     int bits;
-    if(replacementPolicy == FIFO || replacementPolicy == RAND)
-    {
+    if(replacementPolicy == FIFO || replacementPolicy == RAND) {
         for(int i = 0; i < pt->nframes; i++) { 
             int tempPage = framePage[i]; // get page we want to kick out 
             page_table_get_entry(pt, tempPage, &frame, &bits);
@@ -556,66 +555,42 @@ void page_table_flush() {
             frameState[frame] = 0;
         }
     }
-    else if(replacementPolicy == LRU)
-    {
-        struct hashNode *currNode;
-        for(int i = 0; i < pt->nframes; i++) {
-            if (hashTable[i].count == 0)
-                continue;
-            currNode = hashTable[i].head;
-            if (!currNode)
-                continue;
-            while (currNode != NULL) {
-                int tempPage = currNode->key;
-                page_table_get_entry(pt, tempPage, &frame, &bits);
-
-                if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
-                    if (pagingSystem == DISK_PAGING)
-                        disk_write(disk, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                    else if (pagingSystem == RMEM_PAGING)
-                        rmem_write(rmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                    else if (pagingSystem == MEM_PAGING)
-                        mem_write(mem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                    else if (pagingSystem == RRMEM_PAGING)
-                        rrmem_write(rrmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                    pageWrites++;
-                }
-                int temp;
-                deleteLRU(&temp);
-                page_table_set_entry(pt, tempPage, frame, PROT_NONE);
-                currNode = currNode->next;
+    else if(replacementPolicy == LRU) {
+        while(lruList->count > 0) {
+            int tempPage;
+            deleteLRU(&tempPage);
+            page_table_get_entry(pt, tempPage, &frame, &bits);
+            if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
+                if (pagingSystem == DISK_PAGING)
+                    disk_write(disk, tempPage, &pt->physmem[frame*PAGE_SIZE]);
+                else if (pagingSystem == RMEM_PAGING)
+                    rmem_write(rmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
+                else if (pagingSystem == MEM_PAGING)
+                    mem_write(mem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
+                else if (pagingSystem == RRMEM_PAGING)
+                    rrmem_write(rrmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
+                pageWrites++;
             }
+            page_table_set_entry(pt, tempPage, frame, PROT_NONE);
         }
     }
-    else if(replacementPolicy == LFU)
-    {
-        struct hashNode *currNode;
-        for(int i = 0; i < pt->nframes; i++) {
-            if (hashTable[i].count == 0)
-                continue;
-            currNode = hashTable[i].head;
-            if (!currNode)
-                continue;
-            while (currNode != NULL) {
-                int tempPage = currNode->key;
-                page_table_get_entry(pt, tempPage, &frame, &bits);
-
-                if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
-                    if (pagingSystem == DISK_PAGING)
-                        disk_write(disk, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                    else if (pagingSystem == RMEM_PAGING)
-                        rmem_write(rmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                    else if (pagingSystem == MEM_PAGING)
-                        mem_write(mem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                    else if (pagingSystem == RRMEM_PAGING)
-                        rrmem_write(rrmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
-                    pageWrites++;
-                }
-                page_table_set_entry(pt, tempPage, frame, PROT_NONE);
-                int temp;
-                deleteLFU(&temp);
-                currNode = currNode->next;
+    else if(replacementPolicy == LFU) {
+        while(freqList->count > 0) {
+            int tempPage;
+            deleteLFU(&tempPage);
+            page_table_get_entry(pt, tempPage, &frame, &bits);
+            if(bits == (PROT_READ|PROT_WRITE)) { // if page has been written
+                if (pagingSystem == DISK_PAGING)
+                    disk_write(disk, tempPage, &pt->physmem[frame*PAGE_SIZE]);
+                else if (pagingSystem == RMEM_PAGING)
+                    rmem_write(rmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
+                else if (pagingSystem == MEM_PAGING)
+                    mem_write(mem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
+                else if (pagingSystem == RRMEM_PAGING)
+                    rrmem_write(rrmem, tempPage, &pt->physmem[frame*PAGE_SIZE]);
+                pageWrites++;
             }
+            page_table_set_entry(pt, tempPage, frame, PROT_NONE);
         }
     }
 }
