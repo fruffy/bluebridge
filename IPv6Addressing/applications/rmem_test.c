@@ -197,7 +197,7 @@ void wc_program_threads(char *cdata, int length, const char *input) {
     /* create a thread_data_t argument array */
     thread_data_t thr_data[NUM_THREADS];
     uint64_t j =0;
-    FILE *fp = fopen("baskerville.txt", "rb");
+     FILE *fp = fopen(input, "rb"); 
     printf("Reading in text file\n");
     uint64_t rStart = getns();
     if(fp != NULL) {
