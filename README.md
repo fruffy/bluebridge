@@ -1,2 +1,2 @@
-# CPSC538W
-Repository for the CPSC538W class project.
+# BlueBridge
+A distributed shared memory system intended to simplify large-scale computing for scientists and researchers.

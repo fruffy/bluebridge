@@ -8,12 +8,13 @@ Make all of your changes to main.c instead.
 #define RMEM_H
 
 #define BLOCK_SIZE 4096
+#include <stdint.h>
 
 struct rmem {
     struct sockaddr_in6 *targetIP;
     struct in6_memaddr *memList;
     int block_size;
-    int nblocks;
+    uint64_t nblocks;
 };
 
 void configure_rmem(char *filename);
@@ -30,7 +31,7 @@ Write exactly BLOCK_SIZE bytes to a given block on the virtual disk.
 and "data" is a pointer to the data to write.
 */
 
-void rmem_write( struct rmem *r, int block, char *data );
+void rmem_write( struct rmem *r, uint64_t block, char *data );
 
 /*
 Read exactly BLOCK_SIZE bytes from a given block on the virtual disk.
@@ -38,13 +39,13 @@ Read exactly BLOCK_SIZE bytes from a given block on the virtual disk.
 and "data" is a pointer to where the data will be placed.
 */
 
-void rmem_read( struct rmem *r, int block, char *data );
+void rmem_read( struct rmem *r, uint64_t block, char *data );
 
 /*
 Return the number of blocks in the virtual disk.
 */
 
-int rmem_blocks( struct rmem *r );
+uint64_t rmem_blocks( struct rmem *r );
 
 /*
 Close the virtual disk.

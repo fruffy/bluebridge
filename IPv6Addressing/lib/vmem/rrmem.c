@@ -53,7 +53,7 @@ void fill_rrmem(struct rrmem *r) {
         struct in6_addr *ipv6Pointer = get_IPv6Target(i);
         memcpy(&(r->targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
         for (int j = 0; j<r->nblocks; j++) {
-            memList[j] = allocateRemoteMem(r->targetIP);
+            memList[j] = allocate_rmem(r->targetIP);
         }
         hostlist[i].memList = memList;
     }
@@ -321,7 +321,7 @@ int checkParity45(char (*stripes)[MAX_HOSTS][BLOCK_SIZE], int numStripes, char (
             paritybyte = paritybyte ^ (*stripes)[i][alloc];
         }
         if (paritybyte != (*parity)[alloc]) {
-            printf("Fault on final byte %d : Calculated Parity Byte %02x != %02x written parity\n",alloc,paritybyte,parity[alloc]);
+            printf("Fault on final byte %d : Calculated Parity Byte %02x != %02x written parity\n",alloc,paritybyte,*parity[alloc]);
             return 0;
         }
     }
@@ -340,7 +340,7 @@ int rrmem_blocks(struct rrmem *r) {
 void rrmem_deallocate(struct rrmem *r) {
     for(int i =0; i<numHosts();i++){
         for (int j = 0; j<r->nblocks; j++){
-            freeRemoteMem(r->targetIP, &r->rsmem[i].memList[j]);
+            free_rmem(r->targetIP, &r->rsmem[i].memList[j]);
         }
     }
     close_sockets();

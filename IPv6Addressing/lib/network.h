@@ -12,6 +12,8 @@
 #define GET_CMD         03
 #define FREE_CMD        04
 #define GET_ADDR_CMD    05
+#define ALLOC_BULK_CMD  06
+
 #define CMD_SIZE        02
 
 

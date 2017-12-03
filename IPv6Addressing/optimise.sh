@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # @FRuffy what is the purpose of this script
+sudo sysctl vm.swappiness=0
 ID=`id -u`
 if [ $ID -ne 0 ]; then
    echo "This command must be run as root."
