@@ -50,7 +50,7 @@ static void internal_fault_handler(int signum, siginfo_t *info, void *context) {
     struct page_table *pt = the_page_table;
     if(pt) {
         uint64_t page = (addr-pt->virtmem) / PAGE_SIZE;
-        //printf("\x1B[3%dm""Thread %d Faulting at %p and page %d \n"RESET,thread_id+1,thread_id, addr, page);
+        printf("\x1B[3%dm""Thread %d Faulting at %p and page %lu \n"RESET,thread_id+1,thread_id, addr, page);
         if(page<pt->npages) {
             pt->handler(pt, page);
             return;
@@ -542,8 +542,10 @@ void page_table_flush() {
 }
 
 void page_table_delete(struct page_table *pt) {
-    munmap(pt->virtmem,pt->npages*PAGE_SIZE);
-    munmap(pt->physmem,pt->nframes*PAGE_SIZE);
+    uint64_t page_space = PAGE_SIZE * (uint64_t) pt->npages;
+    uint64_t frame_space = PAGE_SIZE * (uint64_t) pt->nframes;
+    munmap(pt->virtmem,page_space);
+    munmap(pt->physmem,frame_space);
     free(pt->page_bits);
     free(pt->page_mapping);
     close(pt->fd);

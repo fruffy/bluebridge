@@ -97,7 +97,12 @@ void rmem_deallocate(struct rmem *r) {
 /*    for (int i = 0; i<r->nblocks; i++){
         free_rmem(r->targetIP, &r->memList[i]);
     }*/
-    free_rmem(r->targetIP, &r->memList[0]);
+    //free_rmem(r->targetIP, &r->memList[0]);
+    uint64_t split = r->nblocks/myConf.num_hosts;
+    for (int i = 0; i < myConf.num_hosts; i++) {
+        uint64_t offset = split * i;
+        free_rmem(r->targetIP, &r->memList[offset]);
+    }
     close_sockets();
     free(r);
 }

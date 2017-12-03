@@ -456,7 +456,7 @@ int main( int argc, char *argv[] )
     set_vmem_config(argv[1]);
     uint64_t npages = atoi(argv[2]);
     uint64_t nframes = atoi(argv[3]);
-    printf("Pages %lu\n",npages );
+    printf("Pages %lu\n", npages);
     const char *system = argv[4]; 
     const char *algo = argv[5]; 
     const char *program = argv[6];
