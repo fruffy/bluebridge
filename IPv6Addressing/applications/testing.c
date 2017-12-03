@@ -192,7 +192,6 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
         if ((rc = pthread_create(&thr[i],  &attr, testing_loop, &thr_data[i]))) {
           fprintf(stderr, "error: pthread_create, rc: %d\n", rc);
         }
-        printf("JHELLO\n");
     }
     /* block until all threads complete */
     for (i = 0; i < NUM_THREADS; i++) {

@@ -14,12 +14,7 @@
 #include "../lib/client_lib.h"
 #include "../lib/utils.h"
 
-#define KRED  "\x1B[31m"
-#define KGRN  "\x1B[32m"
-#define KYEL  "\x1B[33m"
-#define KMAG  "\x1B[35m"
-#define KCYN  "\x1B[36m"
-#define RESET "\033[0m"
+#define NUM_THREADS 8
 
 static int compare_bytes( const void *pa, const void *pb ) {
     int a = *(char*)pa;
@@ -118,34 +113,6 @@ void scan_program( char *cdata, int length) {
     printf("Total time taken: "KGRN"%lu"RESET" micro seconds\n", (latency_read + latency_write)/1000 );
 }
 
-void simple_test( char *cdata, int length) {
-    unsigned char *data = (unsigned char *) cdata;
-    uint64_t totalR = 0;
-    uint64_t totalW = 0;
-
-    printf("%d iterations\n", length);
-    for (int i = 0; i< length; i++) {
-        uint64_t rStart = getns();
-        data[i] = i;
-        totalR += getns() - rStart;
-    }
-    for (int i = 0; i< length; i++) {
-        uint64_t wStart = getns();
-        data[i] = data[i]+1;
-        totalW += getns() - wStart;
-    }
-    printf("Read time total...: %lu micro seconds\n", totalR/1000);
-    printf("Read time average...: %lu nano seconds\n", totalR/length);
-    printf("Write time total...: %lu micro seconds\n", totalW/1000);
-    printf("Write time average...: %lu nano seconds\n", totalW/length);
-}
-struct ThreadData {
-    int id;
-    int start, stop;
-    int* array;
-};
-#define NUM_THREADS 8
-
 /* create thread argument struct for thr_func() */
 typedef struct _thread_data_t {
   int tid;
@@ -196,7 +163,7 @@ void wc_program_threads(char *cdata, int npages, int nframes, const char *input)
     pthread_t thr[NUM_THREADS];
     /* create a thread_data_t argument array */
     thread_data_t thr_data[NUM_THREADS];
-    int i = 0;
+    uint64_t i = 0;
     FILE *fp = fopen(input, "rb");
     printf("Reading in text file\n");
     uint64_t rStart = getns();
@@ -208,33 +175,38 @@ void wc_program_threads(char *cdata, int npages, int nframes, const char *input)
         }
         fclose(fp);
     }
-    int fileLenght = i;
+    uint64_t fileLenght = i;
     uint64_t latency_store = getns() - rStart;
 
     printf("******Done with storing******\n");
-    int split = fileLenght/NUM_THREADS + (BLOCK_SIZE -((fileLenght/NUM_THREADS) % BLOCK_SIZE));
+    uint64_t split = fileLenght/NUM_THREADS + (BLOCK_SIZE -((fileLenght/NUM_THREADS) % BLOCK_SIZE));
     // Split the virtual memory table to give each thread its own cache
     register_vmem_threads(NUM_THREADS);
     pthread_attr_t attr;
     uint64_t  stacksize = 0;
 
-    pthread_attr_init( &attr );
+/*    pthread_attr_init( &attr );
     pthread_attr_getstacksize( &attr, &stacksize );
     printf("before stacksize : [%lu]\n", stacksize);
     pthread_attr_setstacksize( &attr, stacksize + (uint64_t) nframes/NUM_THREADS * PAGE_SIZE );
     pthread_attr_getstacksize( &attr, &stacksize );
     printf("after  stacksize : [%lu]\n", stacksize);
+    */
+    pthread_attr_init( &attr );
+    pthread_attr_getstacksize( &attr, &stacksize );
+    pthread_attr_setstacksize( &attr, 99800000 );
+    pthread_attr_getstacksize( &attr, &stacksize );
     // Split the dataset (more or less works) 
     for (i = 0; i < NUM_THREADS; i++) {
         thr_data[i].tid = i;
         thr_data[i].count = 0;
-        int offset = split * i;
+        uint64_t offset = split * i;
         thr_data[i].data = cdata + offset;
         if (i == NUM_THREADS-1)
             thr_data[i].length = fileLenght - offset;
         else
             thr_data[i].length = split;
-        printf("Launching Thread %d\n",i );
+        printf("Launching Thread %lu\n", i );
         printf("Total length %.3f  Thread length %.3f Ideal split %.3f\n", (double)fileLenght/BLOCK_SIZE, (double)thr_data[i].length/BLOCK_SIZE, (double)split/BLOCK_SIZE );
         if ((pthread_create(&thr[i], NULL, wc, &thr_data[i])) < 0) {
           perror("error: pthread_create");
@@ -251,7 +223,7 @@ void wc_program_threads(char *cdata, int npages, int nframes, const char *input)
     printf("Word count: %d\n", count);
     printf("Storing time...: "KGRN"%lu"RESET" micro seconds\n", latency_store/1000);
     //printf("Reading time...: "KGRN"%lu"RESET" micro seconds\n", latency_read/1000);
-    int latency_read = 0;
+    uint64_t latency_read = 0;
     printf("Total time taken: "KGRN"%lu"RESET" micro seconds\n", (latency_read + latency_store)/1000 );
 }
 
@@ -294,175 +266,175 @@ void wc_program(char *cdata, int npages, int nframes, const char *input) {
 
 //pagerank structures
 typedef struct {
-	int *array;
-	size_t used;
-	size_t size;
+    int *array;
+    size_t used;
+    size_t size;
 } IntArr;
 
 typedef struct vertex {
-	double incoming_rank;	// Incoming rank for this vertex
-	int num_edges;		// Number of edges
-	int edge_offset;	// Offset into the edges array
+    double incoming_rank;   // Incoming rank for this vertex
+    int num_edges;      // Number of edges
+    int edge_offset;    // Offset into the edges array
 } vertex;
 
-double* edges; 		// An array of all outgoing edges.
-double* edgenorm; 	// number of outgoing edges for vertex j
-vertex* vertices; 	// An array of all vertices in the graph
-double* rank;		// Page rank value for vertex j
-IntArr	ids;		// List of array ids (dynamically growing)
-int 	num_vertices;	// Number of vertices in graph\
+double* edges;      // An array of all outgoing edges.
+double* edgenorm;   // number of outgoing edges for vertex j
+vertex* vertices;   // An array of all vertices in the graph
+double* rank;       // Page rank value for vertex j
+IntArr  ids;        // List of array ids (dynamically growing)
+int     num_vertices;   // Number of vertices in graph\
 
 // Dynamic array functions
 void initArray(IntArr *a, size_t initial_size) {
-	a->array = (int*) malloc(initial_size*sizeof(int));
-	a->used = 0;
-	a->size = initial_size;
+    a->array = (int*) malloc(initial_size*sizeof(int));
+    a->used = 0;
+    a->size = initial_size;
 }
 
 void insertArray(IntArr *a, int element) {
-	if (a->used == a->size) {
-		a->size *=2;
-		a->array = (int*) realloc(a->array, a->size*sizeof(int));
-	}
+    if (a->used == a->size) {
+        a->size *=2;
+        a->array = (int*) realloc(a->array, a->size*sizeof(int));
+    }
 
-	a->array[a->used++] = element;
+    a->array[a->used++] = element;
 }
 
 void freeArray(IntArr *a) {
-	free(a->array);
-	a->array = NULL;
-	a->used = a->size = 0;
+    free(a->array);
+    a->array = NULL;
+    a->used = a->size = 0;
 }
 
 
 void init_pr(char *cdata, int length, const char* input) {
     // Reading in the file
-	printf("First read (get max and count)\n");
+    printf("First read (get max and count)\n");
     uint64_t i =0;
     FILE *fp = fopen(input, "rb");
     //FILE *fp = fopen("web-Google.txt", "rb");
-	char line[256];
-	int v1, v2;
-	int max = 0, count = 0;
+    char line[256];
+    int v1, v2;
+    int max = 0, count = 0;
 
     printf("starting measure loop");
     assert(fp != NULL);
-	while (fgets(line, sizeof(line), fp)) {
-		sscanf(line, "%d\t%d\n", &v1, &v2);
-		if (v1 > max) {
-			max = v1;
-		}
+    while (fgets(line, sizeof(line), fp)) {
+        sscanf(line, "%d\t%d\n", &v1, &v2);
+        if (v1 > max) {
+            max = v1;
+        }
 
-		if (v2 > max) {
-			max = v2;
-		}
-		count++;
-	}
+        if (v2 > max) {
+            max = v2;
+        }
+        count++;
+    }
     printf("Edges: %d Verticies:%d\n",count,max);
 
-	printf(("Rewinding file\n"));
-	rewind(fp);
+    printf(("Rewinding file\n"));
+    rewind(fp);
 
-	printf("Num vertices: %d, Num edges: %d\n", max+1, count);
-	num_vertices = (max+1);
+    printf("Num vertices: %d, Num edges: %d\n", max+1, count);
+    num_vertices = (max+1);
 
     int offset = 0;
     printf("sizeof char %lu\n",sizeof(char));
 
-	printf("Mallocing vs array.\n");
+    printf("Mallocing vs array.\n");
 
-	IntArr* vs = (IntArr*) malloc(num_vertices*sizeof(IntArr));
-	
-	for (int i = 0; i < num_vertices; i++) {
-		initArray(&(vs[i]), 100);
-	}
+    IntArr* vs = (IntArr*) malloc(num_vertices*sizeof(IntArr));
+    
+    for (int i = 0; i < num_vertices; i++) {
+        initArray(&(vs[i]), 100);
+    }
 
-	printf("Mallocing vertices array.\n");
-	vertices = (vertex*) &(cdata[offset]);
+    printf("Mallocing vertices array.\n");
+    vertices = (vertex*) &(cdata[offset]);
     offset += num_vertices*sizeof(vertex);
-	printf("Mallocing edgenorm array.\n");
-	edgenorm = (double*) &(cdata[offset]);
+    printf("Mallocing edgenorm array.\n");
+    edgenorm = (double*) &(cdata[offset]);
     offset += num_vertices*sizeof(double);
-	printf("Mallocing rank array.\n");
-	rank = (double*) &(cdata[offset]);
+    printf("Mallocing rank array.\n");
+    rank = (double*) &(cdata[offset]);
     offset += num_vertices*sizeof(double);
-	printf("Mallocing edges array.\n");
-	edges = (double*) &(cdata[offset]);
+    printf("Mallocing edges array.\n");
+    edges = (double*) &(cdata[offset]);
     offset += count*sizeof(double);
 
-	//printf(("Second pass of file.\n");
-	printf("Second pass of file.\n");
+    //printf(("Second pass of file.\n");
+    printf("Second pass of file.\n");
 
     int counter = 0;
     printf("\n");
-	while (fgets(line, sizeof(line), fp)) {
-		sscanf(line, "%d\t%d\n", &v1, &v2);
-		vertices[v1].num_edges++;
-		insertArray(&vs[v1], v2);
+    while (fgets(line, sizeof(line), fp)) {
+        sscanf(line, "%d\t%d\n", &v1, &v2);
+        vertices[v1].num_edges++;
+        insertArray(&vs[v1], v2);
         counter++;
         if (counter % 10000 == 0) {
             printf("\r%d/%d scanned\t",counter,count);
         }
-	}
+    }
 
-	printf("closing file.\n");
-	fclose(fp);
+    printf("closing file.\n");
+    fclose(fp);
 
-	printf("Setting rest of variables.\n");
-	int k = 0; 
-	for (int i = 0; i < num_vertices; i++) {
-		printf("Setting vertex: %d\n", i);
-		rank[i] = 1;
-		edgenorm[i] = vertices[i].num_edges + 1;
-		vertices[i].edge_offset = k;
+    printf("Setting rest of variables.\n");
+    int k = 0; 
+    for (int i = 0; i < num_vertices; i++) {
+        printf("Setting vertex: %d\n", i);
+        rank[i] = 1;
+        edgenorm[i] = vertices[i].num_edges + 1;
+        vertices[i].edge_offset = k;
 
-		for (int j = 0; j < vs[i].used; j++) {
-			printf("j: %d, k: %d, i: %d, num_vertices: %d, count: %d\n", j, k,
-				i, num_vertices, count);
-			edges[k] = vs[i].array[j];
-			k++;
-		}
-	}
+        for (int j = 0; j < vs[i].used; j++) {
+            printf("j: %d, k: %d, i: %d, num_vertices: %d, count: %d\n", j, k,
+                i, num_vertices, count);
+            edges[k] = vs[i].array[j];
+            k++;
+        }
+    }
 
-	printf("Freeing dynamic array.\n");
-	for (int i = 0; i < num_vertices; i++) {
-		freeArray(&vs[i]);
-	}
+    printf("Freeing dynamic array.\n");
+    for (int i = 0; i < num_vertices; i++) {
+        freeArray(&vs[i]);
+    }
 
-	free(vs);
+    free(vs);
 
 
     //Actually do some page rank
 }
 
 void pagerank(int rounds, double d) {
-	double outrank = 0;
-	double alpha = ((double) (1 - d))/((double) num_vertices);
+    double outrank = 0;
+    double alpha = ((double) (1 - d))/((double) num_vertices);
 
-	for (int i = 0; i < rounds; i++) {
-		for (int j = 0; j < num_vertices; j++) {
-			printf("Round: %d, Vertex: %d\n", i, j);
-			outrank = rank[j]/edgenorm[j];
-			printf("Outrank: %f, num_edges: %d\n", outrank, vertices[j].num_edges);
-			for (int k = 0; k < vertices[j].num_edges; k++) {
-				// TODO: check values
-				int edge_index = vertices[j].edge_offset + k;
-				//printf("Edge_offset: %d, k: %d, Edge index: %d\n", vertices[j].edge_offset, k, edge_index);
-				int edge_to = edges[edge_index];
-				//printf("Edge to: %d\n", edge_to);
-				vertex* to_vertex = &vertices[edge_to];
-				//printf("to vertex: %p\n", to_vertex);
-				to_vertex->incoming_rank += outrank;
-				//printf("to_vertex ir: %f, array ir: %f\n", to_vertex->incoming_rank,
-				//	vertices[edge_to].incoming_rank);
-			}
-		}
+    for (int i = 0; i < rounds; i++) {
+        for (int j = 0; j < num_vertices; j++) {
+            printf("Round: %d, Vertex: %d\n", i, j);
+            outrank = rank[j]/edgenorm[j];
+            printf("Outrank: %f, num_edges: %d\n", outrank, vertices[j].num_edges);
+            for (int k = 0; k < vertices[j].num_edges; k++) {
+                // TODO: check values
+                int edge_index = vertices[j].edge_offset + k;
+                //printf("Edge_offset: %d, k: %d, Edge index: %d\n", vertices[j].edge_offset, k, edge_index);
+                int edge_to = edges[edge_index];
+                //printf("Edge to: %d\n", edge_to);
+                vertex* to_vertex = &vertices[edge_to];
+                //printf("to vertex: %p\n", to_vertex);
+                to_vertex->incoming_rank += outrank;
+                //printf("to_vertex ir: %f, array ir: %f\n", to_vertex->incoming_rank,
+                //  vertices[edge_to].incoming_rank);
+            }
+        }
 
-		for (int j = 0; j < num_vertices; j++) {
-			rank[j] = alpha + (d*vertices[j].incoming_rank);
-			printf("Updating rank for %d to %f\n", j, rank[j]);
-		}
-	}
+        for (int j = 0; j < num_vertices; j++) {
+            rank[j] = alpha + (d*vertices[j].incoming_rank);
+            printf("Updating rank for %d to %f\n", j, rank[j]);
+        }
+    }
 }
 
 void pr_program(char *cdata, int length, const char *input) {
@@ -504,8 +476,6 @@ int main( int argc, char *argv[] )
         scan_program(virtmem,npages*PAGE_SIZE);
     } else if(!strcmp(program,"focus")) {
         focus_program(virtmem,npages*PAGE_SIZE);
-    } else if(!strcmp(program,"test")) {
-        simple_test(virtmem,npages*PAGE_SIZE);
     } else if(!strcmp(program,"wc")) {
         wc_program(virtmem, npages, nframes, input);
     } else if(!strcmp(program,"wc_t")) {
