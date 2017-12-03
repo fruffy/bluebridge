@@ -22,7 +22,6 @@ extern ssize_t pwrite (int __fd, const void *__buf, size_t __nbytes, __off_t __o
 
 
 
-
 struct config myConf;
 void configure_rmem(char *filename) {
     myConf = set_bb_config(filename, 0);

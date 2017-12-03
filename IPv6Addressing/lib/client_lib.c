@@ -160,7 +160,7 @@ int readRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*bufs)[MAX_HOSTS
     return -1;
 }
 
-int writeRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remoteAddrs) {
+int writeRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remoteAddrs, int needed) {
     int host;
 
     for (int i=0; i <hosts;i++) {
@@ -170,7 +170,7 @@ int writeRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_H
         send_udp6_raw((char*)&((*payload)[i]), BLOCK_SIZE, targetIP, remoteAddrs[i]);
         //printf("FINISHED sending write request packet %d\n",i);
     }
-    for (int i=0; i <hosts;i++) {
+    for (int i=0; i <needed;i++) {
         //TODO check a list to ensure that the correct messages are
         //being acked
         //TODO timeout or something if a failure occurs here

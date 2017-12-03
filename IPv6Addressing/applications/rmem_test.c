@@ -330,13 +330,17 @@ void freeArray(IntArr *a) {
 	a->used = a->size = 0;
 }
 
+const int readcache = 0;
+const int writecache = 1;
 
+void cacheFile(char *name, int size, void *value);
+void readCache(char *name, int size, void *value);
 void init_pr(char *cdata, int length) {
     // Reading in the file
 	printf("First read (get max and count)\n");
     uint64_t i =0;
-    FILE *fp = fopen("tiny.txt", "rb");
-    //FILE *fp = fopen("web-Google.txt", "rb");
+    //FILE *fp = fopen("tiny.txt", "rb");
+    FILE *fp = fopen("wiki-Vote.txt", "rb");
 	char line[256];
 	int v1, v2;
 	int max = 0, count = 0;
@@ -373,7 +377,7 @@ void init_pr(char *cdata, int length) {
 		initArray(&(vs[i]), 100);
 	}
 
-	printf("Mallocing vertices array.\n");
+	printf("Mallocing vertices array.\nV");
 	vertices = (vertex*) &(cdata[offset]);
     offset += num_vertices*sizeof(vertex);
 	printf("Mallocing edgenorm array.\n");
@@ -386,49 +390,89 @@ void init_pr(char *cdata, int length) {
 	edges = (double*) &(cdata[offset]);
     offset += count*sizeof(double);
 
-	//printf(("Second pass of file.\n");
-	printf("Second pass of file.\n");
+    if (readcache) {
+        printf("reading from cache");
+        readCache("vertexes.bin",num_vertices*sizeof(vertex),(void*)vertices);
+        readCache("edgenorm.bin",num_vertices*sizeof(double),(void*)edgenorm);
+        readCache("rank.bin",num_vertices*sizeof(double),(void*)rank);
+        readCache("edges.bin",count*sizeof(double),(void*)edges);
+    } else {
+        //printf(("Second pass of file.\n");
+        printf("Parsing file on Second pass of file.\n");
 
-    int counter = 0;
-    printf("\n");
-	while (fgets(line, sizeof(line), fp)) {
-		sscanf(line, "%d\t%d\n", &v1, &v2);
-		vertices[v1].num_edges++;
-		insertArray(&vs[v1], v2);
-        counter++;
-        if (counter % 10000 == 0) {
-            printf("\r%d/%d scanned\t",counter,count);
+        int counter = 0;
+        printf("\n");
+        while (fgets(line, sizeof(line), fp)) {
+            sscanf(line, "%d\t%d\n", &v1, &v2);
+            vertices[v1].num_edges++;
+            insertArray(&vs[v1], v2);
+            counter++;
+            if (counter % 1000 == 0) {
+                printf("\r%d/%d scanned\t",counter,count);
+            }
         }
-	}
 
-	printf("closing file.\n");
-	fclose(fp);
+        printf("closing file.\n");
+        fclose(fp);
 
-	printf("Setting rest of variables.\n");
-	int k = 0; 
-	for (int i = 0; i < num_vertices; i++) {
-		printf("Setting vertex: %d\n", i);
-		rank[i] = 1;
-		edgenorm[i] = vertices[i].num_edges + 1;
-		vertices[i].edge_offset = k;
+        printf("Setting rest of variables.\n");
+        int k = 0; 
+        for (int i = 0; i < num_vertices; i++) {
+            printf("Setting vertex: %d\n", i);
+            rank[i] = 1;
+            edgenorm[i] = vertices[i].num_edges + 1;
+            vertices[i].edge_offset = k;
 
-		for (int j = 0; j < vs[i].used; j++) {
-			printf("j: %d, k: %d, i: %d, num_vertices: %d, count: %d\n", j, k,
-				i, num_vertices, count);
-			edges[k] = vs[i].array[j];
-			k++;
-		}
-	}
+            for (int j = 0; j < vs[i].used; j++) {
+                //printf("j: %d, k: %d, i: %d, num_vertices: %d, count:
+                //%d\n", j, k, i, num_vertices, count);
+                edges[k] = vs[i].array[j];
+                k++;
+            }
+        }
 
-	printf("Freeing dynamic array.\n");
-	for (int i = 0; i < num_vertices; i++) {
-		freeArray(&vs[i]);
-	}
+        printf("Freeing dynamic array.\n");
+        for (int i = 0; i < num_vertices; i++) {
+            freeArray(&vs[i]);
+        }
+    }
+    
+    //CACHING
+    if (writecache) {
+        cacheFile("vertexes.bin",num_vertices*sizeof(vertex),(void*)vertices);
+        cacheFile("edgenorm.bin",num_vertices*sizeof(double),(void*)edgenorm);
+        cacheFile("rank.bin",num_vertices*sizeof(double),(void*)rank);
+        cacheFile("edges.bin",count*sizeof(double),(void*)edges);
+    }
 
 	free(vs);
 
 
     //Actually do some page rank
+}
+
+void cacheFile(char *name, int size, void *value) {
+        printf("writing to file %s\n",name);
+        FILE *fptr;
+        if((fptr = fopen(name,"w")) == NULL) {
+            printf("Error opening file\n");
+            exit(1);
+        }
+        fwrite(value, size,1,fptr);
+        fclose(fptr);
+        return;
+}
+
+void readCache(char *name, int size, void *value) {
+        printf("reading from cache file %s\n",name);
+        FILE *fptr;
+        if((fptr = fopen(name,"r")) == NULL) {
+            printf("Error opening file\n");
+            exit(1);
+        }
+        fread(value,size,1,fptr);
+        fclose(fptr);
+        return;
 }
 
 void pagerank(int rounds, double d) {

@@ -110,7 +110,7 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
             wremoteAddrs[numHosts()-1] = &r->rsmem[numHosts()-1].memList[block];
             //printf("Writing with parallel raid\n");
             //printf("Writing Remote\n");
-            writeRaidMem(r->targetIP,numHosts(),&wbufs, (struct in6_memaddr**)wremoteAddrs);
+            writeRaidMem(r->targetIP,numHosts(),&wbufs, (struct in6_memaddr**)wremoteAddrs,numHosts());
             //printf("FINISHED :: Writing with parallel raid\n");
             break;
 
@@ -148,7 +148,7 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
                     //TODO reissue requests and try again, or correct the
                     //broken page
                     printf("Parity Not correct!!! Crashing");
-                    exit(1);
+                    //exit(1);
                 }
             } else if (missingIndex == (numHosts() - 1)) {
                 printf("parity missing, just keep going without correctness\n");
@@ -170,7 +170,7 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
                 memcpy(&(data[base]),&(rbufs[i]),alloc);
                 base += alloc;
             }
-            //printf("PAGE:\n%s\n",data);
+            printf("PAGE:\n%s\n",data);
 
 
             //Temporary, recovery mechanism, attempt to rebuild a page

@@ -299,4 +299,5 @@ IPv6Addressing/myvirtualdisk
 ovs/
 tags
 myvirtualdisk
-*.sw[op]
+*.sw*
+*.bin
