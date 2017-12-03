@@ -13,7 +13,7 @@
 #include <time.h>
 
 static int *frameState;     // keeps track of how long a page has been in a frame
-static int *framePage;      // keeps track of which page is in a frame
+static uint64_t *framePage;      // keeps track of which page is in a frame
 static struct page_table *the_page_table = 0;
 static __thread struct hash *hashTable = NULL;
 static __thread struct dllList *dllList = NULL;
@@ -33,9 +33,9 @@ static const int LFU = 2;
 static const int RAND = 3;
 static const int FFIFO = 4;
 static __thread int thread_id;
-static __thread int startFrame;
-static __thread int endFrame;
-static __thread int count;
+static __thread uint64_t startFrame;
+static __thread uint64_t endFrame;
+static __thread uint64_t count;
 
 
 struct mem *mem;
@@ -85,14 +85,14 @@ void writeData(uint64_t page, char *data) {
 }
 
 void LRU_page_fault_handler(struct page_table *pt, uint64_t page) {
-    int frame;
+    uint64_t frame;
     int bits;
 
     pageFaults++;
     page_table_get_entry(pt, page, &frame, &bits); // check if the page is in memory
     if(bits == 0) { // page is not in memory
         if(dllList->count < pt->nframes) {
-            int i = dllList->count + startFrame;
+            uint64_t i = dllList->count + startFrame;
             insertHashNode(page,createdllListNode(page));
             page_table_set_entry(pt, page, i, PROT_READ);
             readData(page,&pt->physmem[i*PAGE_SIZE]);
@@ -115,7 +115,7 @@ void LRU_page_fault_handler(struct page_table *pt, uint64_t page) {
     }
 
     /*struct dllListNode *temp = dllList->head;
-    for(int i = 0; i < dllList->count; i++)
+    for(uint64_t i = 0; i < dllList->count; i++)
     {
         printf("%" PRIu64 ", ",temp->key);
         temp = temp->next;
@@ -124,14 +124,14 @@ void LRU_page_fault_handler(struct page_table *pt, uint64_t page) {
 }
 
 void LFU_page_fault_handler(struct page_table *pt, uint64_t page) {
-    int frame;
+    uint64_t frame;
     int bits;
 
     pageFaults++;
     page_table_get_entry(pt, page, &frame, &bits); // check if the page is in memory
     if(bits == 0) { // page is not in memory
         if(freqList->count < pt->nframes) {
-            int i = freqList->count + startFrame;
+            uint64_t i = freqList->count + startFrame;
             insertHashNode(page,createlfuListNode(page));
             page_table_set_entry(pt, page, i, PROT_READ);
             readData(page,&pt->physmem[i*PAGE_SIZE]);
@@ -154,15 +154,15 @@ void LFU_page_fault_handler(struct page_table *pt, uint64_t page) {
     }
 
     /*struct freqListNode *fListnode = freqList->head;
-    int i = 0;
+    uint64_t i = 0;
     if (fListnode != NULL)
         while (fListnode != NULL)
         {
-            printf("index: %d | use cnt %d:", i, fListnode->useCount);
+            printf("index: %" PRIu64 " | use cnt %" PRIu64 ":", i, fListnode->useCount);
             struct lfuListNode *lfuListNode = fListnode->head;
             while (lfuListNode != NULL)
             {
-                printf("%d, ", lfuListNode->key);
+                printf("%" PRIu64 ", ", lfuListNode->key);
                 lfuListNode = lfuListNode->next;
             }
             fListnode = fListnode->next;
@@ -173,8 +173,8 @@ void LFU_page_fault_handler(struct page_table *pt, uint64_t page) {
 }
 
 void FIFO_page_fault_handler( struct page_table *pt, uint64_t page ) {
-    int i;
-    int frame;
+    uint64_t i;
+    uint64_t frame;
     int bits;
 
     pageFaults++;
@@ -186,7 +186,7 @@ void FIFO_page_fault_handler( struct page_table *pt, uint64_t page ) {
     }
 
     if(bits == 0) { // page is not in memory
-        int emptyFrame = 0;
+        uint64_t emptyFrame = 0;
         for(i = startFrame; i < endFrame; i++) {
             // empty frame, we can insert a page
             if(frameState[i] == 0) {
@@ -227,21 +227,21 @@ void FIFO_page_fault_handler( struct page_table *pt, uint64_t page ) {
 }
 
 void RAND_page_fault_handler( struct page_table *pt, uint64_t page ) {
-    int frame;
+    uint64_t frame;
     int bits;
 
     pageFaults++;
     page_table_get_entry(pt, page, &frame, &bits); // check if the page is in memory
     if(bits == 0) { // page is not in memory
         if(count < pt->nframes) { //There is a free frame
-            int i = count + startFrame;
+            uint64_t i = count + startFrame;
             insertHashNode(page,NULL);
             page_table_set_entry(pt, page, i, PROT_READ);
             readData(page,&pt->physmem[i*PAGE_SIZE]);
             count++;
         }
         else {
-            int randIndex = rand() % pt->nframes; // randomly remove a page
+            uint64_t randIndex = rand() % pt->nframes; // randomly remove a page
             while(hashTable[randIndex].head == NULL)
             {
                 randIndex++;
@@ -264,14 +264,14 @@ void RAND_page_fault_handler( struct page_table *pt, uint64_t page ) {
 }
 
 void FFIFO_page_fault_handler( struct page_table *pt, uint64_t page ) {
-    int frame;
+    uint64_t frame;
     int bits;
 
     pageFaults++;
     page_table_get_entry(pt, page, &frame, &bits); // check if the page is in memory
     if(bits == 0) { // page is not in memory
         if(dllList->count < pt->nframes) {
-            int i = dllList->count + startFrame;
+            uint64_t i = dllList->count + startFrame;
             insertHashNode(page,createdllListNode(page));
             page_table_set_entry(pt, page, i, PROT_READ);
             readData(page,&pt->physmem[i*PAGE_SIZE]);
@@ -293,7 +293,7 @@ void FFIFO_page_fault_handler( struct page_table *pt, uint64_t page ) {
         page_table_set_entry(pt, page, frame, PROT_READ|PROT_WRITE);
     
     /*struct dllListNode *temp = dllList->head;
-    for(int i = 0; i < dllList->count; i++)
+    for(uint64_t i = 0; i < dllList->count; i++)
     {
         printf("%" PRIu64 ", ",temp->key);
         temp = temp->next;
@@ -302,7 +302,7 @@ void FFIFO_page_fault_handler( struct page_table *pt, uint64_t page ) {
 }
 
 
-struct page_table *init_virtual_memory(uint64_t npages, int nframes, const char* system, const char* algo) {
+struct page_table *init_virtual_memory(uint64_t npages, uint64_t nframes, const char* system, const char* algo) {
     struct page_table *pt;
     if (!strcmp(system, "mem"))
         pagingSystem = MEM_PAGING;
@@ -361,11 +361,11 @@ struct page_table *init_virtual_memory(uint64_t npages, int nframes, const char*
     }
 
     if(replacementPolicy == FIFO) {
-        int i;
+        uint64_t i;
         frameState = calloc(nframes, sizeof(int)); // allocate space for array of frameStates
         for(i = 0; i < nframes; i++) 
             frameState[i] = 0;
-        framePage = calloc(nframes, sizeof(int)); // allocate space for array of framePages
+        framePage = calloc(nframes, sizeof(uint64_t)); // allocate space for array of framePages
         for(i = 0; i < nframes; i++) 
             framePage[i] = 0;
         pt = page_table_create( npages, nframes, FIFO_page_fault_handler );
@@ -405,7 +405,7 @@ void init_vmem_thread(int t_id) {
     struct page_table *pt = the_page_table;
     startFrame = (t_id) * pt->nframes;
     endFrame = (t_id + 1) * pt->nframes;
-    printf("\x1B[3%dm""Thread %d Start Frame %d End Frame %d \n"RESET,t_id+1, t_id, startFrame, endFrame);
+    printf("\x1B[3%dm""Thread %d Start Frame %" PRIu64 " End Frame %" PRIu64 " \n"RESET,t_id+1, t_id, startFrame, endFrame);
     if(replacementPolicy == LRU || replacementPolicy == FFIFO) {
         hashTable = (struct hash *) calloc(pt->nframes, sizeof(struct hash));
         dllList = (struct dllList*) calloc(pt->nframes, sizeof(struct dllListNode));
@@ -435,14 +435,14 @@ void register_vmem_threads(int num_threads) {
     if (replacementPolicy == FIFO) {
     	frameState = realloc(frameState, pt->nframes*num_threads*sizeof(int));
     	if (!frameState) perror("realloc"), free(frameState), exit(0);
-    	framePage = realloc(framePage, pt->nframes*num_threads*sizeof(int));
+    	framePage = realloc(framePage, pt->nframes*num_threads*sizeof(uint64_t));
     	if (!framePage) perror("realloc"), free(framePage), exit(0);
     	memset(frameState, 0, pt->nframes*num_threads*sizeof(int));
-    	memset(framePage, 0, pt->nframes*num_threads*sizeof(int));
+    	memset(framePage, 0, pt->nframes*num_threads*sizeof(uint64_t));
     }
 }
 
-struct page_table *page_table_create(uint64_t npages, int nframes, page_fault_handler_t handler) {
+struct page_table *page_table_create(uint64_t npages, uint64_t nframes, page_fault_handler_t handler) {
     struct sigaction sa;
     struct page_table *pt;
     uint64_t page_space = PAGE_SIZE * (uint64_t) npages;
@@ -471,7 +471,7 @@ struct page_table *page_table_create(uint64_t npages, int nframes, page_fault_ha
     pt->npages = npages;
 
     pt->page_bits = calloc(npages, sizeof(int));
-    pt->page_mapping = calloc(npages, sizeof(int));
+    pt->page_mapping = calloc(npages, sizeof(uint64_t));
     //printf("Allocations %p %p %p %p %p %p \n", pt->virtmem, pt->physmem, frameState, framePage, pt->page_bits, pt->page_mapping);
     pt->handler = handler;
     sa.sa_sigaction = internal_fault_handler;
@@ -484,10 +484,10 @@ struct page_table *page_table_create(uint64_t npages, int nframes, page_fault_ha
 
 void page_table_flush() {
     struct page_table *pt = the_page_table;
-    int frame;
+    uint64_t frame;
     int bits;
     if(replacementPolicy == FIFO) {
-        for(int i = 0; i < pt->nframes; i++) { 
+        for(uint64_t i = 0; i < pt->nframes; i++) { 
             uint64_t tempPage = framePage[i]; // get page we want to kick out 
             page_table_get_entry(pt, tempPage, &frame, &bits);
             if(bits == (PROT_READ|PROT_WRITE)) // if page has been written
@@ -522,14 +522,14 @@ void page_table_flush() {
     else if(replacementPolicy == RAND)
     {
         struct hashNode *currNode; 
-        for(int i = 0; i < pt->nframes; i++) { 
+        for(uint64_t i = 0; i < pt->nframes; i++) { 
             if (hashTable[i].count == 0) 
                 continue; 
             currNode = hashTable[i].head; 
             if (!currNode) 
                 continue; 
             while (currNode != NULL) { 
-                int tempPage = currNode->key; 
+                uint64_t tempPage = currNode->key; 
                 page_table_get_entry(pt, tempPage, &frame, &bits); 
                 if(bits == (PROT_READ|PROT_WRITE))  // if page has been written 
                     writeData(tempPage,&pt->physmem[frame*PAGE_SIZE]); 
@@ -550,14 +550,14 @@ void page_table_delete(struct page_table *pt) {
     free(pt);
 }
 
-void page_table_set_entry(struct page_table *pt, uint64_t page, int frame, int bits) {
+void page_table_set_entry(struct page_table *pt, uint64_t page, uint64_t frame, int bits) {
     if(page>=pt->npages) {
         fprintf(stderr,"page_table_set_entry: illegal page #%" PRIu64 "\n",page);
         abort();
     }
 
     if(frame<startFrame || frame>=endFrame) {
-        fprintf(stderr,"page_table_set_entry: illegal frame #%d\n",frame);
+        fprintf(stderr,"page_table_set_entry: illegal frame #%" PRIu64 "\n",frame);
         abort();
     }
     pt->page_mapping[page] = frame;
@@ -567,7 +567,7 @@ void page_table_set_entry(struct page_table *pt, uint64_t page, int frame, int b
     mprotect(pt->virtmem+page*PAGE_SIZE, PAGE_SIZE, bits);
 }
 
-void page_table_get_entry(struct page_table *pt, uint64_t page, int *frame, int *bits) {
+void page_table_get_entry(struct page_table *pt, uint64_t page, uint64_t *frame, int *bits) {
     if(page>=pt->npages) {
         fprintf(stderr,"page_table_get_entry: illegal page #%" PRIu64 "\n",page);
         abort();
@@ -583,7 +583,7 @@ void page_table_print_entry(struct page_table *pt, uint64_t page) {
     }
 
     int b = pt->page_bits[page];
-    printf("page %06" PRIu64 ": frame %06d bits %c%c%c, vaddr %p\n",
+    printf("page %06" PRIu64 ": frame %06" PRIu64 " bits %c%c%c, vaddr %p\n",
         page,
         pt->page_mapping[page],
         b&PROT_READ  ? 'r' : '-',
@@ -600,8 +600,8 @@ void page_table_print() {
         page_table_print_entry(pt,i);
     }
 }
-void frame_table_print_entry(struct page_table *pt, int frame) {
-    printf("frame %06d: page %06d state %d, vaddr %p\n",
+void frame_table_print_entry(struct page_table *pt, uint64_t frame) {
+    printf("frame %06" PRIu64 ": page %06" PRIu64 " state %d, vaddr %p\n",
         frame,
         framePage[frame],
         frameState[frame],
@@ -612,13 +612,13 @@ void frame_table_print_entry(struct page_table *pt, int frame) {
 void frame_table_print(int num_threads) {
     if (!num_threads) num_threads =1;
     struct page_table *pt = the_page_table;
-    int i;
+    uint64_t i;
     for(i=0;i<pt->nframes*num_threads;i++) {
         frame_table_print_entry(pt, i);
     }
 }
 
-int page_table_get_nframes(struct page_table *pt) {
+uint64_t page_table_get_nframes(struct page_table *pt) {
     return pt->nframes;
 }
 
@@ -823,12 +823,12 @@ struct hashNode * createHashNode(uint64_t key) {
     return newnode;
 }
 
-int hashFunction(uint64_t key) {
+uint64_t hashFunction(uint64_t key) {
     return key % the_page_table->nframes;
 }
 
 void insertHashNode(uint64_t key, void* listnodePointer) {
-    int hashIndex = hashFunction(key);
+    uint64_t hashIndex = hashFunction(key);
     struct hashNode *newnode = createHashNode(key);
     newnode->listNodePointer = listnodePointer;
     // head of list for the bucket with index hashIndex
@@ -847,7 +847,7 @@ void insertHashNode(uint64_t key, void* listnodePointer) {
 
 void deleteHashNode(uint64_t key) {
     // find the bucket using hash index
-    int hashIndex = hashFunction(key);
+    uint64_t hashIndex = hashFunction(key);
     struct hashNode *temp, *myNode;
     // get the list head from current bucket
     myNode = hashTable[hashIndex].head;
@@ -872,7 +872,7 @@ void deleteHashNode(uint64_t key) {
 }
 
 void* getHashNode(uint64_t key) {
-    int hashIndex = hashFunction(key);
+    uint64_t hashIndex = hashFunction(key);
     struct hashNode *myNode;
     myNode = hashTable[hashIndex].head;
     if (!myNode) 

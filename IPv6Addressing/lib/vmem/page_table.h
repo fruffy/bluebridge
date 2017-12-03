@@ -24,8 +24,8 @@ struct page_table {
     char *virtmem;
     uint64_t npages;
     char *physmem;
-    int nframes;
-    int *page_mapping;
+    uint64_t nframes;
+    uint64_t *page_mapping;
     int *page_bits;
     page_fault_handler_t handler;
 };
@@ -35,7 +35,7 @@ struct page_table {
 that is "npages" big and a physical memory that is "nframes" big
  When a page fault occurs, the routine pointed to by "handler" will be called. */
 
-struct page_table * page_table_create( uint64_t npages, int nframes, page_fault_handler_t handler );
+struct page_table * page_table_create( uint64_t npages, uint64_t nframes, page_fault_handler_t handler );
 
 /* Delete a page table and the corresponding virtual and physical memories. */
 
@@ -47,7 +47,7 @@ void register_vmem_threads();
 void init_vmem_thread(int t_id);
 
 void set_vmem_config(char *filename);
-struct page_table *init_virtual_memory(uint64_t npages, int nframes, const char* system, const char* algo);
+struct page_table *init_virtual_memory(uint64_t npages, uint64_t nframes, const char* system, const char* algo);
 void print_page_faults();
 void clean_page_table(struct page_table *pt);
 void init_thread_table(int num_threads);
@@ -57,7 +57,7 @@ Set the frame number and access bits associated with a page.
 The bits may be any of PROT_READ, PROT_WRITE, or PROT_EXEC logical-ored together.
 */
 
-void page_table_set_entry( struct page_table *pt, uint64_t page, int frame, int bits );
+void page_table_set_entry( struct page_table *pt, uint64_t page, uint64_t frame, int bits );
 
 /*
 Get the frame number and access bits associated with a page.
@@ -65,7 +65,7 @@ Get the frame number and access bits associated with a page.
 The bits may be any of PROT_READ, PROT_WRITE, or PROT_EXEC logical-ored together.
 */
 
-void page_table_get_entry( struct page_table *pt, uint64_t page, int *frame, int *bits );
+void page_table_get_entry( struct page_table *pt, uint64_t page, uint64_t *frame, int *bits );
 
 /* Return a pointer to the start of the virtual memory associated with a page table. */
 
@@ -77,7 +77,7 @@ char * page_table_get_physmem( struct page_table *pt );
 
 /* Return the total number of frames in the physical memory. */
 
-int page_table_get_nframes( struct page_table *pt );
+uint64_t page_table_get_nframes( struct page_table *pt );
 
 /* Return the total number of pages in the virtual memory. */
 
@@ -113,11 +113,11 @@ struct hash {
 struct dllList {
 	struct dllListNode *head;
 	struct dllListNode *tail;
-	int count;
+	uint64_t count;
 };
 
 struct freqListNode {
-	int useCount;
+	uint64_t useCount;
 	struct freqListNode *next;
 	struct freqListNode *prev;
 	struct lfuListNode *head;
@@ -133,7 +133,7 @@ struct lfuListNode {
 
 struct freqList {
 	struct freqListNode *head;
-	int count;
+	uint64_t count;
 };
 
 void deleteLRU(uint64_t *page);
