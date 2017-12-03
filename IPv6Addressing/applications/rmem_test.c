@@ -192,11 +192,11 @@ void *wc(void *arg) {
     return NULL;
 }
 
-void wc_program_threads(char *cdata, int length, const char *input) {
+void wc_program_threads(char *cdata, int npages, int nframes, const char *input) {
     pthread_t thr[NUM_THREADS];
     /* create a thread_data_t argument array */
     thread_data_t thr_data[NUM_THREADS];
-    int i =0;
+    int i = 0;
     FILE *fp = fopen(input, "rb");
     printf("Reading in text file\n");
     uint64_t rStart = getns();
@@ -215,7 +215,15 @@ void wc_program_threads(char *cdata, int length, const char *input) {
     int split = fileLenght/NUM_THREADS + (BLOCK_SIZE -((fileLenght/NUM_THREADS) % BLOCK_SIZE));
     // Split the virtual memory table to give each thread its own cache
     register_vmem_threads(NUM_THREADS);
-    
+    pthread_attr_t attr;
+    uint64_t  stacksize = 0;
+
+    pthread_attr_init( &attr );
+    pthread_attr_getstacksize( &attr, &stacksize );
+    printf("before stacksize : [%lu]\n", stacksize);
+    pthread_attr_setstacksize( &attr, stacksize + (uint64_t) nframes/NUM_THREADS * PAGE_SIZE );
+    pthread_attr_getstacksize( &attr, &stacksize );
+    printf("after  stacksize : [%lu]\n", stacksize);
     // Split the dataset (more or less works) 
     for (i = 0; i < NUM_THREADS; i++) {
         thr_data[i].tid = i;
@@ -247,7 +255,7 @@ void wc_program_threads(char *cdata, int length, const char *input) {
     printf("Total time taken: "KGRN"%lu"RESET" micro seconds\n", (latency_read + latency_store)/1000 );
 }
 
-void wc_program(char *cdata, int length, const char *input) {
+void wc_program(char *cdata, int npages, int nframes, const char *input) {
 
     // Reading in the file
     uint64_t i =0;
@@ -283,6 +291,7 @@ void wc_program(char *cdata, int length, const char *input) {
     printf("Reading time...: "KGRN"%lu"RESET" micro seconds\n", latency_read/1000);
     printf("Total time taken: "KGRN"%lu"RESET" micro seconds\n", (latency_read + latency_store)/1000 );
 }
+
 //pagerank structures
 typedef struct {
 	int *array;
@@ -498,9 +507,9 @@ int main( int argc, char *argv[] )
     } else if(!strcmp(program,"test")) {
         simple_test(virtmem,npages*PAGE_SIZE);
     } else if(!strcmp(program,"wc")) {
-        wc_program(virtmem,npages*PAGE_SIZE, input);
+        wc_program(virtmem, npages, nframes, input);
     } else if(!strcmp(program,"wc_t")) {
-        wc_program_threads(virtmem,npages*PAGE_SIZE, input);
+        wc_program_threads(virtmem, npages, nframes, input);
     } else if(!strcmp(program,"pr")) {
         pr_program(virtmem,npages*PAGE_SIZE, input);
     } else {
