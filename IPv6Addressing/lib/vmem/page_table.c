@@ -50,7 +50,7 @@ static void internal_fault_handler(int signum, siginfo_t *info, void *context) {
     struct page_table *pt = the_page_table;
     if(pt) {
         uint64_t page = (addr-pt->virtmem) / PAGE_SIZE;
-        //printf("\x1B[3%dm""Thread %d Faulting at %p and page %d \n"RESET,thread_id+1,thread_id, addr, page);
+        //printf("\x1B[3%dm""Thread %d Faulting at %p and page %lu \n"RESET,thread_id+1,thread_id, addr, page);
         if(page<pt->npages) {
             pt->handler(pt, page);
             return;
@@ -301,9 +301,21 @@ void FFIFO_page_fault_handler( struct page_table *pt, uint64_t page ) {
     printf("\n\n");*/
 }
 
+void sigterm(){
+    printf("Intercepting SIGINT\n");
+    struct page_table *pt = the_page_table;
+    clean_page_table(pt);
+}
 
 struct page_table *init_virtual_memory(uint64_t npages, uint64_t nframes, const char* system, const char* algo) {
     struct page_table *pt;
+    struct sigaction action;
+    memset(&action, 0, sizeof(struct sigaction));
+    action.sa_handler = sigterm;
+    sigaction(SIGTERM, &action, NULL);
+    sigaction(SIGBUS, &action, NULL);
+    sigaction(SIGKILL, &action, NULL);
+    sigaction(SIGINT, &action, NULL);
     if (!strcmp(system, "mem"))
         pagingSystem = MEM_PAGING;
     else if (!strcmp(system, "rmem"))
@@ -405,6 +417,7 @@ void init_vmem_thread(int t_id) {
     struct page_table *pt = the_page_table;
     startFrame = (t_id) * pt->nframes;
     endFrame = (t_id + 1) * pt->nframes;
+    rmem_init_thread_sockets(thread_id);
     printf("\x1B[3%dm""Thread %d Start Frame %" PRIu64 " End Frame %" PRIu64 " \n"RESET,t_id+1, t_id, startFrame, endFrame);
     if(replacementPolicy == LRU || replacementPolicy == FFIFO) {
         hashTable = (struct hash *) calloc(pt->nframes, sizeof(struct hash));
@@ -423,6 +436,7 @@ void init_vmem_thread(int t_id) {
 
 void register_vmem_threads(int num_threads) {
     page_table_flush();
+    close_sockets();
     struct page_table *pt = the_page_table;
     uint64_t frame_space = PAGE_SIZE * (uint64_t) pt->nframes;
     if (frame_space * num_threads > PAGE_SIZE * (uint64_t) pt->npages)
@@ -541,9 +555,15 @@ void page_table_flush() {
     }
 }
 
+void close_thread_sockets() {
+    rmem_close_thread_sockets();
+}
+
 void page_table_delete(struct page_table *pt) {
-    munmap(pt->virtmem,pt->npages*PAGE_SIZE);
-    munmap(pt->physmem,pt->nframes*PAGE_SIZE);
+    uint64_t page_space = PAGE_SIZE * (uint64_t) pt->npages;
+    uint64_t frame_space = PAGE_SIZE * (uint64_t) pt->nframes;
+    munmap(pt->virtmem,page_space);
+    munmap(pt->physmem,frame_space);
     free(pt->page_bits);
     free(pt->page_mapping);
     close(pt->fd);
@@ -650,7 +670,6 @@ void clean_page_table(struct page_table *pt) {
     free(freqList);
     free(framePage);
     free(frameState);
-    page_table_delete(pt);
     if (pagingSystem == DISK_PAGING)
         disk_close(disk);
     else if (pagingSystem == RMEM_PAGING)
@@ -660,6 +679,7 @@ void clean_page_table(struct page_table *pt) {
     pageFaults = 0;
     pageReads = 0;
     pageWrites = 0;
+    page_table_delete(pt);
 }
 
 

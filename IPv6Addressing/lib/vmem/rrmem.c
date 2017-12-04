@@ -113,7 +113,7 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
             wremoteAddrs[numHosts()-1] = &r->rsmem[numHosts()-1].memList[block];
             //printf("Writing with parallel raid\n");
             //printf("Writing Remote\n");
-            writeRaidMem(r->targetIP,numHosts(),&wbufs, (struct in6_memaddr**)wremoteAddrs,numHosts());
+            writeRaidMem(r->targetIP,numHosts(),&wbufs, (struct in6_memaddr**)wremoteAddrs,numHosts()-1);
             //printf("FINISHED :: Writing with parallel raid\n");
             break;
 
@@ -145,7 +145,8 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
                 rremoteAddrs[i] = &r->rsmem[i].memList[block];
             }
             //printf("Reading Remotely (Parallel Raid)\n");
-            missingIndex = readRaidMem(r->targetIP,numHosts(),&rbufs,(struct in6_memaddr**)rremoteAddrs,numHosts());
+            missingIndex = readRaidMem(r->targetIP,numHosts(),&rbufs,(struct in6_memaddr**)rremoteAddrs,numHosts()-1);
+            //missingIndex = 2;
             //missingIndex = readRaidMem(r->targetIP,numHosts(),remoteReads,remoteAddrs,numHosts() - 1);
             if (missingIndex == -1) {
                 //printf("All stripes retrieved checking for correctness\n");
@@ -158,7 +159,7 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
             } else if (missingIndex == (numHosts() - 1)) {
                 printf("parity missing, just keep going without correctness\n");
             } else {
-                printf("missing page %d, repairing from parity\n", missingIndex);
+                //printf("missing page %d, repairing from parity\n", missingIndex);
                 repairStripeFromParity45(&rbufs[missingIndex],&rbufs,&rbufs[numHosts()-1],missingIndex,numHosts()-1,r->block_size);
                 printf("repair complete\n");
             }

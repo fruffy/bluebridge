@@ -178,20 +178,35 @@ int readRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*bufs)[MAX_HOSTS
         remoteAddrs[i]->cmd =  GET_CMD;
         send_udp6_raw(sendBuffer, BLOCK_SIZE, targetIP, remoteAddrs[i]);
     }
-    for (int i=0; i <needed;i++) {
+    for (int i=0; i <hosts;i++) {
         //TODO check a list to ensure that the correct messages are
         //being acked
         //TODO timeout or something if a failure occurs here
-        rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
-        host = (int)targetIP->sin6_addr.s6_addr[5]-2;
-        //printf("%d\n",host);
-        //printf("rec :%s\n",receiveBuffer);
-        //printf("Read From %d\n",(int)targetIP->sin6_addr.s6_addr[5]);
-        memcpy(&((*bufs)[host]),receiveBuffer,BLOCK_SIZE);
-        //printf("cpy :%s\n",(*bufs)[host]);
-        //printf("copied\n");
-        //printf("%d ",host);
-        found[host] = 1;
+        int bytes = rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
+        //take care of timeout
+        if ( bytes == -1 && i >= needed) {
+            //There is no point in reading another page if the timeout
+            //occured, just break
+            break;
+        } else if (bytes == -1 && i < needed) {
+            //In this case a timeout occured, but there is
+            //insufficient data to repair a page, so another read must
+            //be done.
+            //TODO do retransmission of the request to the server.
+            i--;
+            continue;
+        } else {
+            //Here a page was actually read
+            host = (int)targetIP->sin6_addr.s6_addr[5]-2;
+            //printf("%d\n",host);
+            //printf("rec :%s\n",receiveBuffer);
+            //printf("Read From %d\n",(int)targetIP->sin6_addr.s6_addr[5]);
+            memcpy(&((*bufs)[host]),receiveBuffer,BLOCK_SIZE);
+            //printf("cpy :%s\n",(*bufs)[host]);
+            //printf("copied\n");
+            //printf("%d ",host);
+            found[host] = 1;
+        }
     }
     for (int i=0;i<hosts;i++) {
         if (found[i] == 0) {
@@ -211,16 +226,29 @@ int writeRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_H
         send_udp6_raw((char*)&((*payload)[i]), BLOCK_SIZE, targetIP, remoteAddrs[i]);
         //printf("FINISHED sending write request packet %d\n",i);
     }
-    for (int i=0; i <needed;i++) {
+    for (int i=0; i <hosts;i++) {
         //TODO check a list to ensure that the correct messages are
         //being acked
         //TODO timeout or something if a failure occurs here
         //printf("reading write ACK request packet %d\n",i);
         
-        rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
-        host = (int)targetIP->sin6_addr.s6_addr[5];
-        //printf("Read From %d\n",(int)targetIP->sin6_addr.s6_addr[5]);
-        memcpy(&((*payload)[host-2]),receiveBuffer,BLOCK_SIZE);
+        int bytes = rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
+        if ( bytes == -1 && i >= needed) {
+            //There is no point in reading another page if the timeout
+            //occured, just break
+            break;
+        } else if (bytes == -1 && i < needed) {
+            //In this case a timeout occured, but there is
+            //insufficient data to repair a page, so another read must
+            //be done.
+            //TODO do retransmission of the request to the server.
+            i--;
+            continue;
+        } else {
+            host = (int)targetIP->sin6_addr.s6_addr[5];
+            //printf("Read From %d\n",(int)targetIP->sin6_addr.s6_addr[5]);
+            memcpy(&((*payload)[host-2]),receiveBuffer,BLOCK_SIZE);
+        }
     }
     return EXIT_SUCCESS;
 }

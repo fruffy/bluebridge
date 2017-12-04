@@ -11,7 +11,6 @@ Make all of your changes to main.c instead.
 #include <stdint.h>
 
 struct rmem {
-    struct sockaddr_in6 *targetIP;
     struct in6_memaddr *memList;
     int block_size;
     uint64_t nblocks;
@@ -52,5 +51,6 @@ Close the virtual disk.
 */
 
 void rmem_deallocate( struct rmem *r );
-
+void rmem_close_thread_sockets();
+void rmem_init_thread_sockets(int t_id);
 #endif

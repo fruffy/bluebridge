@@ -290,7 +290,11 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
 
     while (1) {
         struct epoll_event events[1024];
-        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
+        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 5);
+
+        if (num_events == 0 && !server) {
+            return -1;
+        }
 
         for (int i = 0; i < num_events; i++)  {
             struct epoll_event *event = &events[i];

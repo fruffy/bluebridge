@@ -51,7 +51,7 @@ struct page_table *init_virtual_memory(uint64_t npages, uint64_t nframes, const 
 void print_page_faults();
 void clean_page_table(struct page_table *pt);
 void init_thread_table(int num_threads);
-
+void close_thread_sockets();
 /*
 Set the frame number and access bits associated with a page.
 The bits may be any of PROT_READ, PROT_WRITE, or PROT_EXEC logical-ored together.

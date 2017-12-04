@@ -44,16 +44,16 @@ struct LinkedPointer {
 void create_dir(const char *name) {
     struct stat st = {0};
     if (stat(name, &st) == -1)
-        mkdir(name, 0777);
+        printf("Creating dir %s...\n", name), mkdir(name, 0777);
 }
 
 void save_time(const char *type, uint64_t* latency, int length){
     int MAX_FNAME = 256;
     char fname[MAX_FNAME];
-    snprintf(fname, MAX_FNAME, "results/t%d_iter%d", NUM_THREADS, NUM_ITERATIONS);
+    snprintf(fname, MAX_FNAME, "results");
     create_dir(fname);
     memset(fname, 0, MAX_FNAME);
-    snprintf(fname, MAX_FNAME, "results/%s.csv", type);
+    snprintf(fname, MAX_FNAME, "results/t%d_iter%d_%s.csv", NUM_THREADS, NUM_ITERATIONS, type);
     FILE *file = fopen(fname, "w");
     if (file == NULL) {
         printf("Error opening file!\n");
@@ -73,7 +73,6 @@ void save_time(const char *type, uint64_t* latency, int length){
 
 typedef struct _thread_data_t {
   int tid;
-  struct in6_memaddr *r_addr;
   struct sockaddr_in6 *targetIP;
   int length;
 } thread_data_t;
@@ -82,8 +81,10 @@ void *testing_loop(void *arg) {
     thread_data_t *data = (thread_data_t *)arg;
 
     // Allocate measurement arrays
+    uint64_t alloc_latency[data->length];
     uint64_t read_latency[data->length];
     uint64_t write_latency[data->length];
+    uint64_t free_latency[data->length];
 
     // Assign threads to cores
     int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
@@ -98,23 +99,36 @@ void *testing_loop(void *arg) {
     // Initialize BlueBridge
     struct config myConf = get_bb_config();
     struct sockaddr_in6 *temp = init_net_thread(data->tid, &myConf, 0);
-    
+    struct in6_memaddr *r_addr = malloc(data->length * sizeof(struct in6_memaddr)); 
+    if(!r_addr) 
+        perror("Allocation too large"); 
+ 
+    // ALLOC TEST
+    srand(time(NULL)); 
+    for (int i = 0; i< data->length; i++) {
+       // Generate a random IPv6 address out of a set of available hosts 
+        //memcpy(&(targetIP->sin6_addr), gen_rdm_IPv6Target(), sizeof(struct in6_addr)); 
+        memcpy(&(temp->sin6_addr), gen_IPv6Target(i % myConf.num_hosts), sizeof(struct in6_addr)); 
+        uint64_t start = getns();  
+        r_addr[i] = allocate_rmem(temp); 
+        alloc_latency[i] = getns() - start;  
+    }
     // WRITE TEST
     for (int i = 0; i < data->length; i++) {
-        struct in6_memaddr *remoteMemory = data->r_addr + i;
+        struct in6_memaddr remoteMemory = r_addr[i];
         //print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
         print_debug("Creating payload");
         char payload[4096];
         snprintf(payload, 50, "HELLO WORLD! MY ID is: %d", data->tid);
         uint64_t wStart = getns();
-        write_rmem(temp, payload, remoteMemory);
+        write_rmem(temp, payload, &remoteMemory);
         write_latency[i - 1] = getns() - wStart;
     }
     // GET TEST
     for (int i = 0; i < data->length; i++) {
-        struct in6_memaddr *remoteMemory = data->r_addr + i;
+        struct in6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
-        char *test = get_rmem(temp, remoteMemory);
+        char *test = get_rmem(temp, &remoteMemory);
         read_latency[i - 1] = getns() - rStart;
         print_debug("Thread: %d, Results of memory store: %s\n",  data->tid, test);
         char payload[4096];
@@ -124,49 +138,41 @@ void *testing_loop(void *arg) {
             exit(1);
         }
     }
+    // FREE TEST
+    for (int i = 0; i< data->length; i++) { 
+        struct in6_memaddr remoteMemory = r_addr[i];
+        uint64_t rStart = getns();
+        free_rmem(temp, &remoteMemory);
+        free_latency[i - 1] = getns() - rStart; 
+    }
 
     printSendLat();
     int MAX_FNAME = 256;
     char fname[MAX_FNAME];
+    snprintf(fname, MAX_FNAME, "alloc_t%d", data->tid);
+    save_time(fname, alloc_latency, data->length);
+    memset(fname, 0, MAX_FNAME);
     snprintf(fname, MAX_FNAME, "read_t%d", data->tid);
     save_time(fname, read_latency, data->length);
     memset(fname, 0, MAX_FNAME);
     snprintf(fname, MAX_FNAME, "write_t%d", data->tid);
     save_time(fname, write_latency, data->length);
+    snprintf(fname, MAX_FNAME, "free_t%d", data->tid);
+    save_time(fname, free_latency, data->length);
+    memset(fname, 0, MAX_FNAME);
 
+    free(r_addr);
     close_sockets();
     return NULL;
 }
 
 void basic_op_threads(struct sockaddr_in6 *targetIP) {
-    
+    close_sockets();
     pthread_t thr[NUM_THREADS];
     int i;
     /* create a thread_data_t argument array */
     thread_data_t thr_data[NUM_THREADS];
     struct config myConf = get_bb_config();
-    uint64_t alloc_latency[myConf.num_hosts];
-    uint64_t free_latency[myConf.num_hosts];
-
-    struct in6_memaddr *r_addr = malloc(sizeof(struct in6_memaddr) * NUM_ITERATIONS);
-    uint64_t split = NUM_ITERATIONS/myConf.num_hosts;
-    int length;
-    for (int i = 0; i < myConf.num_hosts; i++) {
-        uint64_t start = getns(); 
-        uint64_t offset = split * i;
-        if (i == myConf.num_hosts-1)
-            length = NUM_ITERATIONS - offset;
-        else 
-            length = split;
-        struct in6_addr *ipv6Pointer = gen_IPv6Target(i);
-        memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-        struct in6_memaddr *temp = allocate_rmem_bulk(targetIP, length);
-        memcpy(&r_addr[offset],temp,length * sizeof(struct in6_memaddr) );
-        free(temp);
-        alloc_latency[i] = getns() - start; 
-    }
-
-    close_sockets();
 
     pthread_attr_t attr;
     size_t  stacksize = 0;
@@ -179,13 +185,11 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
     /* create threads */
     for (i = 0; i < NUM_THREADS; i++) {
         int rc;
-        int split = NUM_ITERATIONS/NUM_THREADS;
+        uint64_t split = NUM_ITERATIONS/NUM_THREADS;
         thr_data[i].tid =  i;
         thr_data[i].targetIP =  targetIP;
-        thr_data[i].r_addr =  &r_addr[split *i];
         thr_data[i].length = split;
         struct rlimit limit;
-
         getrlimit (RLIMIT_STACK, &limit);
         printf ("\nStack Limit = %ld and %ld max\n", limit.rlim_cur, limit.rlim_max);
         printf("Launching thread %d\n", i );
@@ -193,24 +197,12 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
           fprintf(stderr, "error: pthread_create, rc: %d\n", rc);
         }
     }
+
     /* block until all threads complete */
     for (i = 0; i < NUM_THREADS; i++) {
         printf("Thread %d Waiting for my friends...\n", i);
         pthread_join(thr[i], NULL);
     }
-
-    //open the socket again and free the leftovers
-    struct sockaddr_in6 *temp = init_net_thread(0, &myConf, 0);
-    // FREE TEST
-    for (int i = 0; i < myConf.num_hosts; i++) {
-        uint64_t fStart = getns();
-        uint64_t offset = split * i;
-        free_rmem(temp, &r_addr[offset]);
-        free_latency[i] = getns() - fStart;
-    }
-    save_time("alloc", alloc_latency, myConf.num_hosts);
-    save_time("free", free_latency, myConf.num_hosts);
-    close_sockets();
 }
 
 
