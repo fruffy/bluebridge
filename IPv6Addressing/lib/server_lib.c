@@ -146,7 +146,6 @@ int write_mem(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_mem
     //uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
     // Copy the first POINTER_SIZE bytes of receive buffer into the target
     //uint64_t pointer = getPointerFromIPv6(*ipv6Pointer);
-    printf("w");
 
     memcpy((void *) *(&ipv6Pointer->paddr), receiveBuffer, BLOCK_SIZE); 
     //print_debug("Content length %lu is currently stored at %p!", strlen((char *)pointer), (void*)pointer);

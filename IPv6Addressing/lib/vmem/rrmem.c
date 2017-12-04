@@ -150,18 +150,22 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
             //missingIndex = readRaidMem(r->targetIP,numHosts(),remoteReads,remoteAddrs,numHosts() - 1);
             if (missingIndex == -1) {
                 //printf("All stripes retrieved checking for correctness\n");
+                /*
                 if (!checkParity45(&rbufs,numHosts()-1,&(rbufs[numHosts()-1]),r->block_size)) {
                     //TODO reissue requests and try again, or correct the
                     //broken page
                     printf("Parity Not correct!!! Crashing");
                     //exit(1);
                 }
+                */
             } else if (missingIndex == (numHosts() - 1)) {
-                printf("parity missing, just keep going without correctness\n");
+                printf("(P*)");
+                //printf("parity missing, just keep going without correctness\n");
             } else {
                 //printf("missing page %d, repairing from parity\n", missingIndex);
                 repairStripeFromParity45(&rbufs[missingIndex],&rbufs,&rbufs[numHosts()-1],missingIndex,numHosts()-1,r->block_size);
-                printf("repair complete\n");
+                printf("(R*)");
+                //printf("repair complete\n");
             }
 
             int alloc = r->block_size / (numHosts() - 1); //Raid 4

@@ -307,18 +307,18 @@ void freeArray(IntArr *a) {
     a->used = a->size = 0;
 }
 
-const int readcache = 0;
-const int writecache = 1;
+const int readcache = 1;
+const int writecache = 0;
 
-void cacheFile(char *name, int size, void *value);
-void readCache(char *name, int size, void *value);
+void cacheFile(char *name, int size, char *value);
+void readCache(char *name, int size, char *value);
 void init_pr(char *cdata, int length, const char * input) {
     // Reading in the file
     printf("First read (get max and count)\n");
     uint64_t i =0;
     //FILE *fp = fopen("tiny.txt", "rb");
-    //FILE *fp = fopen(input, "rb");
-    FILE *fp = fopen("wiki-Vote.txt", "rb");
+    FILE *fp = fopen(input, "rb");
+    //FILE *fp = fopen("wiki-Vote.txt", "rb");
 	char line[256];
 	int v1, v2;
 	int max = 0, count = 0;
@@ -370,10 +370,10 @@ void init_pr(char *cdata, int length, const char * input) {
 
     if (readcache) {
         printf("reading from cache");
-        readCache("vertexes.bin",num_vertices*sizeof(vertex),(void*)vertices);
-        readCache("edgenorm.bin",num_vertices*sizeof(int),(void*)edgenorm);
-        readCache("rank.bin",num_vertices*sizeof(double),(void*)rank);
-        readCache("edges.bin",count*sizeof(int),(void*)edges);
+        readCache("vertexes.bin",num_vertices*sizeof(vertex),(char*)vertices);
+        readCache("edgenorm.bin",num_vertices*sizeof(int),(char*)edgenorm);
+        readCache("rank.bin",num_vertices*sizeof(double),(char*)rank);
+        readCache("edges.bin",count*sizeof(int),(char*)edges);
     } else {
         //printf(("Second pass of file.\n");
         printf("Parsing file on Second pass of file.\n");
@@ -415,6 +415,8 @@ void init_pr(char *cdata, int length, const char * input) {
         for (int i = 0; i < num_vertices; i++) {
             freeArray(&vs[i]);
         }
+        printf("freeing vs");
+        free(vs);
     }
     
     //CACHING
@@ -424,38 +426,43 @@ void init_pr(char *cdata, int length, const char * input) {
         cacheFile("rank.bin",num_vertices*sizeof(double),(void*)rank);
         cacheFile("edges.bin",count*sizeof(double),(void*)edges);
     }
-
-    free(vs);
-
+    printf("Finished Allocing\n");
 
     //Actually do some page rank
 }
 
-void cacheFile(char *name, int size, void *value) {
+void cacheFile(char *name, int size, char *value) {
         printf("writing to file %s\n",name);
         FILE *fptr;
         if((fptr = fopen(name,"w")) == NULL) {
             printf("Error opening file\n");
             exit(1);
         }
-        fwrite(value, size,1,fptr);
+        for (int i=0;i<size;i++) {
+            putc(value[i],fptr);
+        }
         fclose(fptr);
         return;
 }
 
-void readCache(char *name, int size, void *value) {
+void readCache(char *name, int size, char *value) {
         printf("reading from cache file %s\n",name);
         FILE *fptr;
         if((fptr = fopen(name,"r")) == NULL) {
             printf("Error opening file\n");
             exit(1);
         }
+        for(int i=0;i<size;i++){
+            value[i] = getc(fptr);
+        }
         fread(value,size,1,fptr);
         fclose(fptr);
+        printf("Done Reading\n");
         return;
 }
 
 void pagerank(int rounds, double d) {
+    printf("Running Page rank for %d rounds\n",rounds);
     double outrank = 0;
     double alpha = ((double) (1 - d))/((double) num_vertices);
 /*
@@ -467,9 +474,10 @@ void pagerank(int rounds, double d) {
     }
 */
     for (int i = 0; i < rounds; i++) {
-        printf("Round %d\n",i);
+        printf("Round %d ",i);
+        clock_t start = clock(), diff;
         for (int j = 0; j < num_vertices; j++) {
-            printf("Round: %d, Vertex: %d\n", i, j);
+            //printf("Round: %d, Vertex: %d\n", i, j);
             outrank = rank[j]/(double)edgenorm[j];
             //printf("Outrank: %f, num_edges: %d\n", outrank, vertices[j].num_edges);
             for (int k = 0; k < vertices[j].num_edges; k++) {
@@ -491,11 +499,15 @@ void pagerank(int rounds, double d) {
             rank[j] = alpha + (d*vertices[j].incoming_rank);
             //printf("Updating rank for %d to %f\n", j, rank[j]);
         }
+        diff = clock() - start;
+        int msec = diff * 1000 / CLOCKS_PER_SEC;
+        printf("Time %d seconds %d milliseconds\n",msec/1000,msec%1000);
     }
-
+    /*
     for (int j = 0; j < num_vertices; j++) {
         printf("Vertex %d Rank %f\n", j, rank[j]);
     }
+    */
 }
 
 void pr_program(char *cdata, int length, const char *input) {
