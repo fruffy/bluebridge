@@ -277,8 +277,8 @@ typedef struct vertex {
     int edge_offset;    // Offset into the edges array
 } vertex;
 
-double* edges;      // An array of all outgoing edges.
-double* edgenorm;   // number of outgoing edges for vertex j
+int* edges;      // An array of all outgoing edges.
+int* edgenorm;   // number of outgoing edges for vertex j
 vertex* vertices;   // An array of all vertices in the graph
 double* rank;       // Page rank value for vertex j
 IntArr  ids;        // List of array ids (dynamically growing)
@@ -311,11 +311,12 @@ const int writecache = 1;
 
 void cacheFile(char *name, int size, void *value);
 void readCache(char *name, int size, void *value);
-void init_pr(char *cdata, int length) {
+void init_pr(char *cdata, int length, const char * input) {
     // Reading in the file
     printf("First read (get max and count)\n");
     uint64_t i =0;
     //FILE *fp = fopen("tiny.txt", "rb");
+    //FILE *fp = fopen(input, "rb");
     FILE *fp = fopen("wiki-Vote.txt", "rb");
 	char line[256];
 	int v1, v2;
@@ -357,21 +358,21 @@ void init_pr(char *cdata, int length) {
     vertices = (vertex*) &(cdata[offset]);
     offset += num_vertices*sizeof(vertex);
     printf("Mallocing edgenorm array.\n");
-    edgenorm = (double*) &(cdata[offset]);
+    edgenorm = (int*) &(cdata[offset]);
     offset += num_vertices*sizeof(double);
     printf("Mallocing rank array.\n");
     rank = (double*) &(cdata[offset]);
     offset += num_vertices*sizeof(double);
     printf("Mallocing edges array.\n");
-    edges = (double*) &(cdata[offset]);
-    offset += count*sizeof(double);
+    edges = (int*) &(cdata[offset]);
+    offset += count*sizeof(int);
 
     if (readcache) {
         printf("reading from cache");
         readCache("vertexes.bin",num_vertices*sizeof(vertex),(void*)vertices);
-        readCache("edgenorm.bin",num_vertices*sizeof(double),(void*)edgenorm);
+        readCache("edgenorm.bin",num_vertices*sizeof(int),(void*)edgenorm);
         readCache("rank.bin",num_vertices*sizeof(double),(void*)rank);
-        readCache("edges.bin",count*sizeof(double),(void*)edges);
+        readCache("edges.bin",count*sizeof(int),(void*)edges);
     } else {
         //printf(("Second pass of file.\n");
         printf("Parsing file on Second pass of file.\n");
@@ -394,15 +395,17 @@ void init_pr(char *cdata, int length) {
         printf("Setting rest of variables.\n");
         int k = 0; 
         for (int i = 0; i < num_vertices; i++) {
-            printf("Setting vertex: %d\n", i);
+            //printf("Setting vertex: %d\n", i);
             rank[i] = 1;
+            //printf("Rank[%d] = %f\n",i,rank[i]);
             edgenorm[i] = vertices[i].num_edges + 1;
+            //printf("Edgenorm[%d] = %d\n",i,edgenorm[i]);
             vertices[i].edge_offset = k;
 
             for (int j = 0; j < vs[i].used; j++) {
-                //printf("j: %d, k: %d, i: %d, num_vertices: %d, count:
-                //%d\n", j, k, i, num_vertices, count);
+                //printf("j: %d, k: %d, i: %d, num_vertices: %d, count:%d\n", j, k, i, num_vertices, count);
                 edges[k] = vs[i].array[j];
+                //printf("Edges[%d] = %d\n",k,edges[k]);
                 k++;
             }
         }
@@ -454,30 +457,43 @@ void readCache(char *name, int size, void *value) {
 void pagerank(int rounds, double d) {
     double outrank = 0;
     double alpha = ((double) (1 - d))/((double) num_vertices);
-
+/*
+    for (int i=0;i<10000;i++){
+        printf("edge[%d] = %d\n",i,edges[i]);
+    }
+    for (int i=0;i<10000;i++){
+        printf("edge[%d] = %d\n",i,edges[i]);
+    }
+*/
     for (int i = 0; i < rounds; i++) {
+        printf("Round %d\n",i);
         for (int j = 0; j < num_vertices; j++) {
-            printf("Round: %d, Vertex: %d\n", i, j);
-            outrank = rank[j]/edgenorm[j];
-            printf("Outrank: %f, num_edges: %d\n", outrank, vertices[j].num_edges);
+            //printf("Round: %d, Vertex: %d\n", i, j);
+            outrank = rank[j]/(double)edgenorm[j];
+            //printf("Outrank: %f, num_edges: %d\n", outrank, vertices[j].num_edges);
             for (int k = 0; k < vertices[j].num_edges; k++) {
                 // TODO: check values
                 int edge_index = vertices[j].edge_offset + k;
                 //printf("Edge_offset: %d, k: %d, Edge index: %d\n", vertices[j].edge_offset, k, edge_index);
+                //printf("edge points to %d\n",edges[edge_index]);
                 int edge_to = edges[edge_index];
                 //printf("Edge to: %d\n", edge_to);
                 vertex* to_vertex = &vertices[edge_to];
                 //printf("to vertex: %p\n", to_vertex);
                 to_vertex->incoming_rank += outrank;
                 //printf("to_vertex ir: %f, array ir: %f\n", to_vertex->incoming_rank,
-                //  vertices[edge_to].incoming_rank);
+                // vertices[edge_to].incoming_rank);
             }
         }
 
         for (int j = 0; j < num_vertices; j++) {
             rank[j] = alpha + (d*vertices[j].incoming_rank);
-            printf("Updating rank for %d to %f\n", j, rank[j]);
+            //printf("Updating rank for %d to %f\n", j, rank[j]);
         }
+    }
+
+    for (int j = 0; j < num_vertices; j++) {
+        printf("Vertex %d Rank %f\n", j, rank[j]);
     }
 }
 

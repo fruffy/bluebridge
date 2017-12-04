@@ -28,7 +28,7 @@ int send_udp_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *target
     //inet_ntop(AF_INET6,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
     //print_debug("Sending to %s:%d", dst_ip,dst_port);
     cooked_send(&targetIP->sin6_addr, targetIP->sin6_port, sendBuffer, msgBlockSize);
-    memset(sendBuffer, 0, msgBlockSize);
+    //memset(sendBuffer, 0, msgBlockSize);
     return EXIT_SUCCESS;
 }
 
@@ -50,7 +50,7 @@ int send_udp6_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targe
     cooked_send((struct in6_addr *) remoteAddr, targetIP->sin6_port, sendBuffer, msgBlockSize);
     sendLat += getns() - start;
     send_calls++;
-    memset(sendBuffer, 0, msgBlockSize);
+    //memset(sendBuffer, 0, msgBlockSize);
     return EXIT_SUCCESS;
 }
 
@@ -70,7 +70,7 @@ struct in6_memaddr *send_id_udp6_raw(char *sendBuffer, int msgBlockSize, struct 
     cooked_send((struct in6_addr *) remoteAddr, targetIP->sin6_port, sendBuffer, msgBlockSize);
     sendLat += getns() - start;
     send_calls++;
-    memset(sendBuffer, 0, msgBlockSize);
+    //memset(sendBuffer, 0, msgBlockSize);
     return remoteAddr;
 }
 

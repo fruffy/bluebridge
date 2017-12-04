@@ -78,6 +78,9 @@ struct rrmem *rrmem_allocate(int nblocks) {
 char wbufs [MAX_HOSTS][BLOCK_SIZE];
 struct in6_memaddr *wremoteAddrs[MAX_HOSTS];
 void rrmem_write(struct rrmem *r, int block, char *data ) {
+    for (int i = 0; i<MAX_HOSTS;i++){
+        memset(wbufs[i],0,BLOCK_SIZE);
+    }
     if(block<0 || block>=r->nblocks) {
         fprintf(stderr,"rr_write: invalid block #%d\n",block);
         abort();
@@ -126,6 +129,9 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
 char rbufs [MAX_HOSTS][BLOCK_SIZE];
 struct in6_memaddr *rremoteAddrs[MAX_HOSTS];
 void rrmem_read( struct rrmem *r, int block, char *data ) {
+    for (int i = 0; i<MAX_HOSTS;i++){
+        memset(rbufs[i],0,BLOCK_SIZE);
+    }
     if(block<0 || block>=r->nblocks) {
         fprintf(stderr,"disk_read: invalid block #%d\n",block);
         abort();
@@ -139,7 +145,6 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
                 rremoteAddrs[i] = &r->rsmem[i].memList[block];
             }
             //printf("Reading Remotely (Parallel Raid)\n");
-
             missingIndex = readRaidMem(r->targetIP,numHosts(),&rbufs,(struct in6_memaddr**)rremoteAddrs,numHosts());
             //missingIndex = readRaidMem(r->targetIP,numHosts(),remoteReads,remoteAddrs,numHosts() - 1);
             if (missingIndex == -1) {
@@ -167,10 +172,12 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
                 if (r->block_size % (numHosts() -1) <= i) {
                     alloc = r->block_size / (numHosts() -1);
                 }
-                memcpy(&(data[base]),&(rbufs[i]),alloc);
+                //memcpy(&(data[base]),&((*rbufs)[i]),alloc);
+                memcpy(&(data[base]),&rbufs[i],alloc);
                 base += alloc;
             }
-            printf("PAGE:\n%s\n",data);
+            
+            //printf("PAGE:\n%s\n",data);
 
 
             //Temporary, recovery mechanism, attempt to rebuild a page

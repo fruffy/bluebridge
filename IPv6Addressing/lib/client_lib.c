@@ -185,8 +185,10 @@ int readRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*bufs)[MAX_HOSTS
         rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
         host = (int)targetIP->sin6_addr.s6_addr[5]-2;
         //printf("%d\n",host);
+        //printf("rec :%s\n",receiveBuffer);
         //printf("Read From %d\n",(int)targetIP->sin6_addr.s6_addr[5]);
         memcpy(&((*bufs)[host]),receiveBuffer,BLOCK_SIZE);
+        //printf("cpy :%s\n",(*bufs)[host]);
         //printf("copied\n");
         //printf("%d ",host);
         found[host] = 1;
