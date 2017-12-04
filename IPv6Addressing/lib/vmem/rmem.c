@@ -102,13 +102,13 @@ void rmem_deallocate(struct rmem *r) {
         free_rmem(r->targetIP, &r->memList[i]);
     }*/
     //free_rmem(r->targetIP, &r->memList[0]);
-    targetIP = init_net_thread(0, &myConf, 0);
+    //targetIP = init_net_thread(0, &myConf, 0);
     uint64_t split = r->nblocks/myConf.num_hosts;
     for (int i = 0; i < myConf.num_hosts; i++) {
         uint64_t offset = split * i;
         free_rmem(targetIP, &r->memList[offset]);
     }
-    close_sockets();
+    //close_sockets();
     free(r);
 }
 void rmem_close_thread_sockets() {

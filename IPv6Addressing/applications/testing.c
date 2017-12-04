@@ -50,10 +50,10 @@ void create_dir(const char *name) {
 void save_time(const char *type, uint64_t* latency, int length){
     int MAX_FNAME = 256;
     char fname[MAX_FNAME];
-    snprintf(fname, MAX_FNAME, "results");
+    snprintf(fname, MAX_FNAME, "results/t%d_iter%d", NUM_THREADS, NUM_ITERATIONS);
     create_dir(fname);
     memset(fname, 0, MAX_FNAME);
-    snprintf(fname, MAX_FNAME, "results/t%d_iter%d_%s.csv", NUM_THREADS, NUM_ITERATIONS, type);
+    snprintf(fname, MAX_FNAME, "results/t%d_iter%d/%s.csv", NUM_THREADS, NUM_ITERATIONS, type);
     FILE *file = fopen(fname, "w");
     if (file == NULL) {
         printf("Error opening file!\n");
@@ -214,10 +214,9 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
 
     // Allocate the benchmarking arrays
     uint64_t alloc_latency[myConf.num_hosts];
-    uint64_t read_latency[NUM_ITERATIONS];
-    uint64_t write_latency[NUM_ITERATIONS];
+    uint64_t *read_latency = calloc(NUM_ITERATIONS, sizeof(uint64_t));
+    uint64_t *write_latency = calloc(NUM_ITERATIONS, sizeof(uint64_t));
     uint64_t free_latency[myConf.num_hosts];
-
 
     // Allocate the address space we will use
     struct in6_memaddr *r_addr = malloc(sizeof(struct in6_memaddr) * NUM_ITERATIONS);
@@ -241,7 +240,6 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
         free(temp);
         alloc_latency[i] = getns() - start; 
     }
-
     // WRITE TEST
     for (int i = 0; i < NUM_ITERATIONS; i++) {
         struct in6_memaddr remoteMemory = r_addr[i];
