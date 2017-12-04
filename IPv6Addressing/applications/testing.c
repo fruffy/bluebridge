@@ -43,17 +43,22 @@ struct LinkedPointer {
 
 void create_dir(const char *name) {
     struct stat st = {0};
-    if (stat(name, &st) == -1)
-        printf("Creating dir %s...\n", name), mkdir(name, 0777);
+    if (stat(name, &st) == -1) {
+        int MAX_FNAME = 256;
+        char fname[MAX_FNAME];
+        snprintf(fname, MAX_FNAME, "mkdir -p %s -m 777", name);
+        printf("Creating dir %s...\n", name);
+        system(fname);
+    }
 }
 
 void save_time(const char *type, uint64_t* latency, int length){
     int MAX_FNAME = 256;
     char fname[MAX_FNAME];
-    snprintf(fname, MAX_FNAME, "results/t%d_iter%d", NUM_THREADS, NUM_ITERATIONS);
+    snprintf(fname, MAX_FNAME, "results/testing/t%d_iter%d", NUM_THREADS, NUM_ITERATIONS);
     create_dir(fname);
     memset(fname, 0, MAX_FNAME);
-    snprintf(fname, MAX_FNAME, "results/t%d_iter%d/%s.csv", NUM_THREADS, NUM_ITERATIONS, type);
+    snprintf(fname, MAX_FNAME, "results/testing/t%d_iter%d/%s.csv", NUM_THREADS, NUM_ITERATIONS, type);
     FILE *file = fopen(fname, "w");
     if (file == NULL) {
         printf("Error opening file!\n");

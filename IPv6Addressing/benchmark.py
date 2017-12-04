@@ -1,11 +1,9 @@
-"""Custom topology for BlueBridge
-"""
 import subprocess
 import os
 if __name__ == '__main__':
     iter = 1000000
     for threads in range(1, 21):
-        dir = "results/t%d_iter%d" % (threads, iter)
+        dir = "results/testing/t%d_iter%d" % (threads, iter)
         if not os.path.exists(dir):
             os.makedirs(dir)
         print("Starting interface monitor")

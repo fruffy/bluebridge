@@ -55,9 +55,9 @@ struct rcv_ring {
 static __thread int epoll_fd = -1;
 static struct ep_interface interface_ep;
 static __thread struct rcv_ring ring;
-
 static __thread int sd_rcv;
 static __thread int thread_id;
+const int TIMEOUT = 10;
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
     struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
@@ -82,7 +82,6 @@ struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
         perror("Could not bind socket.");
         exit(1);
     }
-
     return temp;
 }
 
@@ -289,9 +288,11 @@ void next_packet(struct rcv_ring *ring_p) {
 int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server) {
     while (1) {
         struct epoll_event events[1024];
-        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 5);
+
+        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, TIMEOUT);
 
         if (num_events == 0 && !server) {
+            printf("TIMEOUT!\n");
             return -1;
         }
 

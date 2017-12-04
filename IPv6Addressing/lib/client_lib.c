@@ -142,8 +142,9 @@ char *get_rmem(struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     //memcpy(sendBuffer + size, remoteAddr, IPV6_SIZE);
     print_debug("******GET DATA******");
     // Send request and store response
-    send_udp6_raw(sendBuffer, BLOCK_SIZE, targetIP, remoteAddr);
-    rcv_udp6_raw_id(receiveBuffer,BLOCK_SIZE, targetIP, remoteAddr);
+    do
+        send_udp6_raw(sendBuffer, BLOCK_SIZE, targetIP, remoteAddr);
+    while (rcv_udp6_raw_id(receiveBuffer,BLOCK_SIZE, targetIP, remoteAddr) < 0);
     return receiveBuffer;
 }
 
@@ -160,8 +161,9 @@ int write_rmem(struct sockaddr_in6 *targetIP, char *payload, struct in6_memaddr 
     print_debug("Writing to send buffer");
     memcpy(sendBuffer, payload, BLOCK_SIZE);
     print_debug("******WRITE DATA******");
-    send_udp6_raw(sendBuffer, BLOCK_SIZE, targetIP, remoteAddr);
-    rcv_udp6_raw_id(receiveBuffer,BLOCK_SIZE, targetIP, remoteAddr);
+    do
+        send_udp6_raw(sendBuffer, BLOCK_SIZE, targetIP, remoteAddr);
+    while (rcv_udp6_raw_id(receiveBuffer,BLOCK_SIZE, targetIP, remoteAddr) < 0);
     return EXIT_SUCCESS;
 }
 
@@ -269,8 +271,9 @@ int free_rmem(struct sockaddr_in6 *targetIP,  struct in6_memaddr *remoteAddr) {
     print_debug("******FREE DATA******");
     // Send message and check if it was successful
     // TODO: Check if it actually was successful
-    send_udp6_raw(sendBuffer, BLOCK_SIZE, targetIP, remoteAddr);
-    rcv_udp6_raw_id(receiveBuffer,BLOCK_SIZE, targetIP, remoteAddr);
+    do
+        send_udp6_raw(sendBuffer, BLOCK_SIZE, targetIP, remoteAddr);
+    while (rcv_udp6_raw_id(receiveBuffer,BLOCK_SIZE, targetIP, remoteAddr) < 0);
     return EXIT_SUCCESS;
 }
 
