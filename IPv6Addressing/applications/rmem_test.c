@@ -179,6 +179,7 @@ void wc_program_threads(char *cdata, int npages, int nframes, const char *input)
     uint64_t latency_store = getns() - rStart;
 
     printf("******Done with storing******\n");
+    rStart = getns();
     uint64_t split = fSize/NUM_THREADS + (BLOCK_SIZE -((fSize/NUM_THREADS) % BLOCK_SIZE));
     // Split the virtual memory table to give each thread its own cache
     register_vmem_threads(NUM_THREADS);
@@ -221,10 +222,10 @@ void wc_program_threads(char *cdata, int npages, int nframes, const char *input)
     for (int i = 0; i < NUM_THREADS; ++i) {
         count += thr_data[i].count;
     }
+    uint64_t latency_read = getns() - rStart;
     printf("Word count: %d\n", count);
     printf("Storing time...: "KGRN"%lu"RESET" micro seconds\n", latency_store/1000);
-    //printf("Reading time...: "KGRN"%lu"RESET" micro seconds\n", latency_read/1000);
-    uint64_t latency_read = 0;
+    printf("Reading time...: "KGRN"%lu"RESET" micro seconds\n", latency_read/1000);
     printf("Total time taken: "KGRN"%lu"RESET" micro seconds\n", (latency_read + latency_store)/1000 );
 }
 
