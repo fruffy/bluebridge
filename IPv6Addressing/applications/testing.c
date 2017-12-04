@@ -179,7 +179,7 @@ void basic_op_threads(struct sockaddr_in6 *targetIP) {
     /* create threads */
     for (i = 0; i < NUM_THREADS; i++) {
         int rc;
-        int split = NUM_ITERATIONS/NUM_THREADS;
+        uint64_t split = NUM_ITERATIONS/NUM_THREADS;
         thr_data[i].tid =  i;
         thr_data[i].targetIP =  targetIP;
         thr_data[i].r_addr =  &r_addr[split *i];

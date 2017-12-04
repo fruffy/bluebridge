@@ -142,7 +142,7 @@ void *wc(void *arg) {
     
     // BlueBridge initialization calls for threads
     struct config myConf = get_bb_config();
-    struct sockaddr_in6 *temp = init_net_thread(data->tid, &myConf, 0);
+    //struct sockaddr_in6 *temp = init_net_thread(data->tid, &myConf, 0);
     init_vmem_thread(data->tid);
     
     // Do the actual computation
@@ -156,6 +156,7 @@ void *wc(void *arg) {
             }
             prev = cdata[i];
     }
+    close_thread_sockets();
     return NULL;
 }
 
@@ -163,23 +164,22 @@ void wc_program_threads(char *cdata, int npages, int nframes, const char *input)
     pthread_t thr[NUM_THREADS];
     /* create a thread_data_t argument array */
     thread_data_t thr_data[NUM_THREADS];
-    uint64_t i = 0;
+    uint64_t fSize = 0;
     FILE *fp = fopen(input, "rb");
     printf("Reading in text file\n");
     uint64_t rStart = getns();
     if(fp != NULL) {
         char symbol;
         while((symbol = getc(fp)) != EOF) {
-            cdata[i] = symbol; 
-            i++;
+            cdata[fSize] = symbol; 
+            fSize++;
         }
         fclose(fp);
     }
-    uint64_t fileLenght = i;
     uint64_t latency_store = getns() - rStart;
 
     printf("******Done with storing******\n");
-    uint64_t split = fileLenght/NUM_THREADS + (BLOCK_SIZE -((fileLenght/NUM_THREADS) % BLOCK_SIZE));
+    uint64_t split = fSize/NUM_THREADS + (BLOCK_SIZE -((fSize/NUM_THREADS) % BLOCK_SIZE));
     // Split the virtual memory table to give each thread its own cache
     register_vmem_threads(NUM_THREADS);
     pthread_attr_t attr;
@@ -197,27 +197,28 @@ void wc_program_threads(char *cdata, int npages, int nframes, const char *input)
     pthread_attr_setstacksize( &attr, 99800000 );
     pthread_attr_getstacksize( &attr, &stacksize );
     // Split the dataset (more or less works) 
-    for (i = 0; i < NUM_THREADS; i++) {
+    for (int i = 0; i < NUM_THREADS; i++) {
         thr_data[i].tid = i;
         thr_data[i].count = 0;
         uint64_t offset = split * i;
         thr_data[i].data = cdata + offset;
         if (i == NUM_THREADS-1)
-            thr_data[i].length = fileLenght - offset;
+            thr_data[i].length = fSize - offset;
         else
             thr_data[i].length = split;
-        printf("Launching Thread %lu\n", i );
-        printf("Total length %.3f  Thread length %.3f Ideal split %.3f\n", (double)fileLenght/BLOCK_SIZE, (double)thr_data[i].length/BLOCK_SIZE, (double)split/BLOCK_SIZE );
+        printf("Launching Thread %d\n", i );
+        printf("Total length %.3f  Thread length %.3f Ideal split %.3f\n", (double)fSize/BLOCK_SIZE, (double)thr_data[i].length/BLOCK_SIZE, (double)split/BLOCK_SIZE );
         if ((pthread_create(&thr[i], NULL, wc, &thr_data[i])) < 0) {
           perror("error: pthread_create");
         }
     }
     /* block until all threads complete */
-    for (i = 0; i < NUM_THREADS; i++) {
+    for (int i = 0; i < NUM_THREADS; i++) {
+        printf("Thread %d Waiting for my friends...\n", i);
         pthread_join(thr[i], NULL);
     }
     int count = 0;
-    for (i = 0; i < NUM_THREADS; ++i) {
+    for (int i = 0; i < NUM_THREADS; ++i) {
         count += thr_data[i].count;
     }
     printf("Word count: %d\n", count);
