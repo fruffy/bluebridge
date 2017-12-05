@@ -2,7 +2,7 @@ MAKE_DIR = $(PWD)
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 MSG_DIR    := $(ROOT_DIR)/IPv6Addressing/
 
-CC = gcc-6
+CC = gcc
 CFLAGS += -c -Wextra -Wall -Wall -Wshadow -Wpointer-arith -Wcast-qual
 CFLAGS += -std=gnu11 -pedantic
 CFGLAS += -oFast # performance flags

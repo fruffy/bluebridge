@@ -48,13 +48,14 @@ void rrmem_init_sockets(struct rrmem *r) {
 
 void fill_rrmem(struct rrmem *r) {
     struct rmem *hostlist = malloc(sizeof(struct rmem) * numHosts());
+
     for (int i = 0; i<numHosts(); i++) {
-        struct in6_memaddr *memList = malloc(sizeof(struct in6_addr) * r->nblocks);
-        struct in6_addr *ipv6Pointer = get_IPv6Target(i);
+        struct in6_memaddr *memList = malloc(sizeof(struct in6_memaddr) *r->nblocks );
+        struct in6_addr *ipv6Pointer = gen_IPv6Target(i);
         memcpy(&(r->targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-        for (int j = 0; j<r->nblocks; j++) {
-            memList[j] = allocate_rmem(r->targetIP);
-        }
+        struct in6_memaddr *temp = allocate_rmem_bulk(r->targetIP, r->nblocks);
+        memcpy(memList,temp,r->nblocks *sizeof(struct in6_memaddr) );
+        free(temp);
         hostlist[i].memList = memList;
     }
     r->rsmem = hostlist;
@@ -466,9 +467,7 @@ int rrmem_blocks(struct rrmem *r) {
 
 void rrmem_deallocate(struct rrmem *r) {
     for(int i =0; i<numHosts();i++){
-        for (int j = 0; j<r->nblocks; j++){
-            free_rmem(r->targetIP, &r->rsmem[i].memList[j]);
-        }
+        free_rmem(r->targetIP, r->rsmem[i].memList);
     }
     close_sockets();
     free(r);
