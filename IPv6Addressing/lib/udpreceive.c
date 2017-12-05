@@ -57,7 +57,7 @@ static struct ep_interface interface_ep;
 static __thread struct rcv_ring ring;
 static __thread int sd_rcv;
 static __thread int thread_id;
-const int TIMEOUT = 10;
+const int TIMEOUT = 3;
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
     struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
@@ -290,9 +290,9 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
         struct epoll_event events[1024];
 
         int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, TIMEOUT);
-
+        //int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
         if (num_events == 0 && !server) {
-            printf("TIMEOUT!\n");
+            //printf("TIMEOUT!\n");
             return -1;
         }
 

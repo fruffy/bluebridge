@@ -308,14 +308,13 @@ void freeArray(IntArr *a) {
     a->used = a->size = 0;
 }
 
-const int readcache = 1;
+const int readcache = 0;
 const int writecache = 0;
 
 void cacheFile(char *name, int size, char *value);
 void readCache(char *name, int size, char *value);
 void init_pr(char *cdata, int length, const char * input) {
     // Reading in the file
-    printf("First read (get max and count)\n");
     uint64_t i =0;
     //FILE *fp = fopen("tiny.txt", "rb");
     FILE *fp = fopen(input, "rb");
@@ -324,7 +323,6 @@ void init_pr(char *cdata, int length, const char * input) {
 	int v1, v2;
 	int max = 0, count = 0;
 
-    printf("starting measure loop");
     assert(fp != NULL);
     while (fgets(line, sizeof(line), fp)) {
         sscanf(line, "%d\t%d\n", &v1, &v2);
@@ -337,18 +335,18 @@ void init_pr(char *cdata, int length, const char * input) {
         }
         count++;
     }
-    printf("Edges: %d Verticies:%d\n",count,max);
+    //printf("Edges: %d Verticies:%d\n",count,max);
 
-    printf(("Rewinding file\n"));
+    //printf(("Rewinding file\n"));
     rewind(fp);
 
-    printf("Num vertices: %d, Num edges: %d\n", max+1, count);
+    //printf("Num vertices: %d, Num edges: %d\n", max+1, count);
     num_vertices = (max+1);
 
     int offset = 0;
-    printf("sizeof char %lu\n",sizeof(char));
+    //printf("sizeof char %lu\n",sizeof(char));
 
-    printf("Mallocing vs array.\n");
+    //printf("Mallocing vs array.\n");
 
     IntArr* vs = (IntArr*) malloc(num_vertices*sizeof(IntArr));
     
@@ -356,16 +354,16 @@ void init_pr(char *cdata, int length, const char * input) {
         initArray(&(vs[i]), 100);
     }
 
-    printf("Mallocing vertices array.\n");
+    //printf("Mallocing vertices array.\n");
     vertices = (vertex*) &(cdata[offset]);
     offset += num_vertices*sizeof(vertex);
-    printf("Mallocing edgenorm array.\n");
+    //printf("Mallocing edgenorm array.\n");
     edgenorm = (int*) &(cdata[offset]);
     offset += num_vertices*sizeof(double);
-    printf("Mallocing rank array.\n");
+    //printf("Mallocing rank array.\n");
     rank = (double*) &(cdata[offset]);
     offset += num_vertices*sizeof(double);
-    printf("Mallocing edges array.\n");
+    //printf("Mallocing edges array.\n");
     edges = (int*) &(cdata[offset]);
     offset += count*sizeof(int);
 
@@ -377,7 +375,7 @@ void init_pr(char *cdata, int length, const char * input) {
         readCache("edges.bin",count*sizeof(int),(char*)edges);
     } else {
         //printf(("Second pass of file.\n");
-        printf("Parsing file on Second pass of file.\n");
+        //printf("Parsing file on Second pass of file.\n");
 
         int counter = 0;
         printf("\n");
@@ -386,15 +384,16 @@ void init_pr(char *cdata, int length, const char * input) {
             vertices[v1].num_edges++;
             insertArray(&vs[v1], v2);
             counter++;
+            /*
             if (counter % 1000 == 0) {
                 printf("\r%d/%d scanned\t",counter,count);
-            }
+            }*/
         }
 
-        printf("closing file.\n");
+        //printf("closing file.\n");
         fclose(fp);
 
-        printf("Setting rest of variables.\n");
+        //printf("Setting rest of variables.\n");
         int k = 0; 
         for (int i = 0; i < num_vertices; i++) {
             //printf("Setting vertex: %d\n", i);
@@ -412,11 +411,11 @@ void init_pr(char *cdata, int length, const char * input) {
             }
         }
 
-        printf("Freeing dynamic array.\n");
+        //printf("Freeing dynamic array.\n");
         for (int i = 0; i < num_vertices; i++) {
             freeArray(&vs[i]);
         }
-        printf("freeing vs");
+        //printf("freeing vs");
         free(vs);
     }
     
@@ -427,7 +426,7 @@ void init_pr(char *cdata, int length, const char * input) {
         cacheFile("rank.bin",num_vertices*sizeof(double),(void*)rank);
         cacheFile("edges.bin",count*sizeof(double),(void*)edges);
     }
-    printf("Finished Allocing\n");
+    //printf("Finished Allocing\n");
 
     //Actually do some page rank
 }
@@ -463,7 +462,7 @@ void readCache(char *name, int size, char *value) {
 }
 
 void pagerank(int rounds, double d) {
-    printf("Running Page rank for %d rounds\n",rounds);
+    //printf("Running Page rank for %d rounds\n",rounds);
     double outrank = 0;
     double alpha = ((double) (1 - d))/((double) num_vertices);
 /*
@@ -474,8 +473,15 @@ void pagerank(int rounds, double d) {
         printf("edge[%d] = %d\n",i,edges[i]);
     }
 */
+    //printf("starting main loop\n");
+    int sleeptime = 4;
+    /*
+    printf("Sleeping for %d seconds\n",sleeptime);
+    sleep(sleeptime);
+    */
+    printf("\n");
     for (int i = 0; i < rounds; i++) {
-        printf("Round %d ",i);
+        //printf("Round %d ",i);
         clock_t start = clock(), diff;
         for (int j = 0; j < num_vertices; j++) {
             //printf("Round: %d, Vertex: %d\n", i, j);
@@ -502,8 +508,10 @@ void pagerank(int rounds, double d) {
         }
         diff = clock() - start;
         int msec = diff * 1000 / CLOCKS_PER_SEC;
-        printf("Time %d seconds %d milliseconds\n",msec/1000,msec%1000);
+        printf("%d,",msec);
+        //printf("Time %d seconds %d milliseconds\n",msec/1000,msec%1000);
     }
+    printf("\n");
     /*
     for (int j = 0; j < num_vertices; j++) {
         printf("Vertex %d Rank %f\n", j, rank[j]);

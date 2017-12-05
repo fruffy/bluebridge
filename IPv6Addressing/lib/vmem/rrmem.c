@@ -88,15 +88,44 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
     // Get pointer to page data in (simulated) physical memory
     // Slice up data based on given raid configuration
     //char parity [PAGE_SIZE];
+    int alloc;
+    int base;
     switch (r->raid) {
+        case 0 :
+            //printf("Writing Raid %d\n",r->raid);
+            assert(numHosts() >= 2 && numHosts() <= MAX_HOSTS);
+            alloc = r->block_size / (numHosts()); //Raid 1
+            if (r->block_size % (numHosts()) > 0) {
+                alloc++;
+            }
+            base = 0;
+            //struct in6_memaddr **remoteAddrs = malloc(sizeof(struct in6_memaddr*) * numHosts());
+            //calculate parity
+            //parity45(data,r->block_size,numHosts()-1,(char *)&wbufs[numHosts()-1]);
+            for (int i = 0; i<numHosts(); i++) {
+                if (r->block_size % (numHosts()) <= i) {
+                    alloc = r->block_size / (numHosts());
+                }
+                //printf("Copying read data to buffers\n");
+                memcpy(&wbufs[i],&(data[base]),alloc);
+                //printf("Copying Remote Adders\n");
+                wremoteAddrs[i] = &r->rsmem[i].memList[block];
+                base += alloc;
+            }
+            //wremoteAddrs[numHosts()-1] = &r->rsmem[numHosts()-1].memList[block];
+            //printf("Writing with parallel raid\n");
+            //printf("Writing Remote\n");
+            writeRaidMem(r->targetIP,numHosts(),&wbufs, (struct in6_memaddr**)wremoteAddrs,numHosts());
+            //printf("FINISHED :: Writing with parallel raid\n");
+            break;
         case 4 :
             //printf("Writing Raid %d\n",r->raid);
-            assert(numHosts() >= 3 && numHosts() <= MAX_HOSTS);
-            int alloc = r->block_size / (numHosts() - 1); //Raid 4
+            assert(numHosts() >= 2 && numHosts() <= MAX_HOSTS);
+            alloc = r->block_size / (numHosts() - 1); //Raid 4
             if (r->block_size % (numHosts() -1) > 0) {
                 alloc++;
             }
-            int base = 0;
+            base = 0;
             //struct in6_memaddr **remoteAddrs = malloc(sizeof(struct in6_memaddr*) * numHosts());
             //calculate parity
             parity45(data,r->block_size,numHosts()-1,(char *)&wbufs[numHosts()-1]);
@@ -114,6 +143,44 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
             //printf("Writing with parallel raid\n");
             //printf("Writing Remote\n");
             writeRaidMem(r->targetIP,numHosts(),&wbufs, (struct in6_memaddr**)wremoteAddrs,numHosts()-1);
+            //printf("FINISHED :: Writing with parallel raid\n");
+            break;
+        case 5 :
+            assert(numHosts() >= 2 && numHosts() <= MAX_HOSTS);
+            alloc = r->block_size / (numHosts() - 1); //Raid 5
+            if (r->block_size % (numHosts() -1) > 0) {
+                alloc++;
+            }
+            base = 0;
+            //struct in6_memaddr **remoteAddrs = malloc(sizeof(struct in6_memaddr*) * numHosts());
+            //calculate parity
+             
+            parity45(data,r->block_size,numHosts()-1,(char *)&wbufs[block % numHosts()]);
+            for (int i = 0; i<numHosts(); i++) {
+                //printf("looping %d\n",i);
+                if (i == block % numHosts()) {
+                    //parity
+                    continue;
+                }
+
+                //TODO verify if this works or not
+                int t = ( i > block % numHosts());
+                //printf("block %d mod %d t=%d\n",block, block%numHosts(),t);
+                if (r->block_size % (numHosts() -1) <= i - t) {
+                    alloc = r->block_size / (numHosts() -1);
+                }
+                //printf("Copying read data to buffers\n");
+                memcpy(&wbufs[i],&(data[base]),alloc);
+                //printf("Copying Remote Adders\n");
+                wremoteAddrs[i] = &r->rsmem[i].memList[block];
+                //printf("done copy\n");
+                base += alloc;
+            }
+            wremoteAddrs[block % numHosts()] = &r->rsmem[block % numHosts()].memList[block];
+            //printf("Writing with parallel raid\n");
+            //printf("Writing Remote\n");
+            writeRaidMem(r->targetIP,numHosts(),&wbufs, (struct in6_memaddr**)wremoteAddrs,numHosts()-1);
+
             //printf("FINISHED :: Writing with parallel raid\n");
             break;
 
@@ -136,18 +203,91 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
         fprintf(stderr,"disk_read: invalid block #%d\n",block);
         abort();
     }
+    int missingIndex;
+    int alloc;
+    int base;
     switch (r->raid) {
+        case 0:
+            assert(numHosts() >= 2 && numHosts() <= MAX_HOSTS);
+            for (int i = 0; i<numHosts() ; i++) {
+                //remoteReads[i] = malloc(sizeof(char) * r->block_size);
+                rremoteAddrs[i] = &r->rsmem[i].memList[block];
+            }
+            //printf("Reading Remotely (Parallel Raid)\n");
+            missingIndex = readRaidMem(r->targetIP,numHosts(),&rbufs,(struct in6_memaddr**)rremoteAddrs,numHosts());
+            if (missingIndex != -1) {
+                printf("RAID 0 DOES NOT HANDLE FAILURES!!!\n");
+                exit(0);
+            }
+
+            alloc = r->block_size / (numHosts()); //Raid 0
+            if (r->block_size % (numHosts()) > 0) {
+                alloc++;
+            }
+            base = 0;
+            for (int i = 0; i<numHosts(); i++) {
+                if (r->block_size % (numHosts()) <= i) {
+                    alloc = r->block_size / (numHosts());
+                }
+                //memcpy(&(data[base]),&((*rbufs)[i]),alloc);
+                memcpy(&(data[base]),&rbufs[i],alloc);
+                base += alloc;
+            }
+            
+            //printf("PAGE:\n%s\n",data);
+
+            break;
         case 4:
-            assert(numHosts() >= 3 && numHosts() <= MAX_HOSTS);
-            int missingIndex;
+            assert(numHosts() >= 2 && numHosts() <= MAX_HOSTS);
             for (int i = 0; i<numHosts() ; i++) {
                 //remoteReads[i] = malloc(sizeof(char) * r->block_size);
                 rremoteAddrs[i] = &r->rsmem[i].memList[block];
             }
             //printf("Reading Remotely (Parallel Raid)\n");
             missingIndex = readRaidMem(r->targetIP,numHosts(),&rbufs,(struct in6_memaddr**)rremoteAddrs,numHosts()-1);
-            //missingIndex = 2;
-            //missingIndex = readRaidMem(r->targetIP,numHosts(),remoteReads,remoteAddrs,numHosts() - 1);
+            if (missingIndex == -1) {
+                //printf("All stripes retrieved checking for correctness\n");
+                /*
+                if (!checkParity45(&rbufs,numHosts()-1,&(rbufs[numHosts()-1]),r->block_size)) {
+                    //TODO reissue requests and try again, or correct the
+                    //broken page
+                    printf("Parity Not correct!!! Crashing");
+                    //exiit(1);
+                }
+                */
+            } else if (missingIndex == (numHosts() - 1)) {
+                //printf("(P*)");
+                //printf("parity missing, just keep going without correctness\n");
+            } else {
+                //printf("missing page %d, repairing from parity\n", missingIndex);
+                repairStripeFromParity45(&rbufs[missingIndex],&rbufs,&rbufs[numHosts()-1],missingIndex,numHosts()-1,r->block_size);
+                //printf("(R*)");
+                //printf("repair complete\n");
+            }
+
+            alloc = r->block_size / (numHosts() - 1); //Raid 4
+            if (r->block_size % (numHosts() -1) > 0) {
+                alloc++;
+            }
+            base = 0;
+            for (int i = 0; i<numHosts()-1; i++) {
+                if (r->block_size % (numHosts() -1) <= i) {
+                    alloc = r->block_size / (numHosts() -1);
+                }
+                //memcpy(&(data[base]),&((*rbufs)[i]),alloc);
+                memcpy(&(data[base]),&rbufs[i],alloc);
+                base += alloc;
+            }
+            break;
+        case 5:
+            assert(numHosts() >= 2 && numHosts() <= MAX_HOSTS);
+            
+            for (int i = 0; i<numHosts() ; i++) {
+                //remoteReads[i] = malloc(sizeof(char) * r->block_size);
+                rremoteAddrs[i] = &r->rsmem[i].memList[block];
+            }
+            //printf("Reading Remotely (Parallel Raid)\n");
+            missingIndex = readRaidMem(r->targetIP,numHosts(),&rbufs,(struct in6_memaddr**)rremoteAddrs,numHosts()-1);
             if (missingIndex == -1) {
                 //printf("All stripes retrieved checking for correctness\n");
                 /*
@@ -158,23 +298,28 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
                     //exit(1);
                 }
                 */
-            } else if (missingIndex == (numHosts() - 1)) {
-                printf("(P*)");
+            } else if (missingIndex == (block % numHosts())) {
+                //printf("(P*)");
                 //printf("parity missing, just keep going without correctness\n");
             } else {
                 //printf("missing page %d, repairing from parity\n", missingIndex);
-                repairStripeFromParity45(&rbufs[missingIndex],&rbufs,&rbufs[numHosts()-1],missingIndex,numHosts()-1,r->block_size);
-                printf("(R*)");
+                repairStripeFromParity45(&rbufs[missingIndex],&rbufs,&rbufs[block % numHosts()],missingIndex,numHosts()-1,r->block_size);
+                //printf("(R*)");
                 //printf("repair complete\n");
             }
 
-            int alloc = r->block_size / (numHosts() - 1); //Raid 4
+            alloc = r->block_size / (numHosts() - 1); //Raid 5
             if (r->block_size % (numHosts() -1) > 0) {
                 alloc++;
             }
-            int base = 0;
-            for (int i = 0; i<numHosts()-1; i++) {
-                if (r->block_size % (numHosts() -1) <= i) {
+            base = 0;
+            for (int i = 0; i<numHosts(); i++) {
+                if ( i == block % numHosts()) {
+                    //parity
+                    continue;
+                }
+                int t = ( i > block % numHosts());
+                if (r->block_size % (numHosts() -1) <= i - t) {
                     alloc = r->block_size / (numHosts() -1);
                 }
                 //memcpy(&(data[base]),&((*rbufs)[i]),alloc);
@@ -182,42 +327,8 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
                 base += alloc;
             }
             
-            //printf("PAGE:\n%s\n",data);
+            printf("PAGE:\n%s\n",data);
 
-
-            //Temporary, recovery mechanism, attempt to rebuild a page
-            //in the case that it is missing
-            /*
-            char * repair = malloc(sizeof(char) * r->block_size);
-            char * dupData = malloc(sizeof(char) * r->block_size);
-            int missing = 2;
-
-            repairstripefromparity45(repair,remotereads,remotereads[numhosts()-1],missing,numhosts()-1,r->block_size);
-            remotereads[missing] = repair;
-            //TODO remove total copy
-            alloc = r->block_size / (numHosts() - 1); //Raid 4
-            if (r->block_size % (numHosts() -1) > 0) {
-                alloc++;
-            }
-            base = 0;
-            for (int i = 0; i<numHosts()-1; i++) {
-                if (r->block_size % (numHosts() -1) <= i) {
-                    alloc = r->block_size / (numHosts() -1);
-                }
-                memcpy(&(dupData[base]),remoteReads[i],alloc);
-                base += alloc;
-            }
-            //FINAL TEMPORYARY Compare between rep, and orig
-            if (!memcmp(data,dupData,r->block_size) == 0 ){
-                printf("REPAIR FAILED\n");
-                exit(0);
-            } else {
-                print_debug("Integrity Passed\n");
-            }
-            */
-
-
-            //printf("Finished Parallel Raid Read\n");
             break;
         
         default:
@@ -227,6 +338,8 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
 
 
 }
+
+
 
 //stripes are assumed to be ordered
 void repairStripeFromParity45(char (*repair)[BLOCK_SIZE], char (*stripes)[MAX_HOSTS][BLOCK_SIZE], char (*parity)[BLOCK_SIZE], int missing, int numStripes, int size) {
@@ -340,8 +453,6 @@ int checkParity45(char (*stripes)[MAX_HOSTS][BLOCK_SIZE], int numStripes, char (
     //The parity has been verified
     return 1;
 }
-
-
 
 
 

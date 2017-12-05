@@ -229,6 +229,7 @@ int writeRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_H
         //printf("FINISHED sending write request packet %d\n",i);
     }
     for (int i=0; i <hosts;i++) {
+        //printf("receiving %d\n",i);
         //TODO check a list to ensure that the correct messages are
         //being acked
         //TODO timeout or something if a failure occurs here
