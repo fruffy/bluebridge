@@ -271,9 +271,8 @@ int free_rmem(struct sockaddr_in6 *targetIP,  struct in6_memaddr *remoteAddr) {
     print_debug("******FREE DATA******");
     // Send message and check if it was successful
     // TODO: Check if it actually was successful
-    do
-        send_udp6_raw(sendBuffer, BLOCK_SIZE, targetIP, remoteAddr);
-    while (rcv_udp6_raw_id(receiveBuffer,BLOCK_SIZE, targetIP, remoteAddr) < 0);
+    send_udp6_raw(sendBuffer, BLOCK_SIZE, targetIP, remoteAddr);
+    rcv_udp6_raw_id(receiveBuffer,BLOCK_SIZE, targetIP, remoteAddr);
     return EXIT_SUCCESS;
 }
 

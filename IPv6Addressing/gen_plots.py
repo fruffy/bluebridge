@@ -94,7 +94,7 @@ def get_latencies(input_file, lat_types, thread):
 
 def plot_results():
 
-    N_THREADS = 13
+    N_THREADS = 65
     it = 1000000
     # lat_types = ["alloc", "write", "read", "free"]
     lat_types = ["write", "read"]
@@ -120,7 +120,10 @@ def plot_results():
     plt.xlabel('Num of threads')
     plt.ylabel('Throughput (Mbps)')
     plt.xlim(1, N_THREADS - 1)
-
+    plt.xticks([1, 5, 8, 10, 20, 30, 40, 50, 60, 64, N_THREADS - 1])
+    xcoords = [8, 16, 24, 32, 40, 48, 56, 64]
+    for xc in xcoords:
+        plt.axvline(x=xc, linestyle=':', color='#C0C0C0')
     ax1.plot(thrd, bw, linestyle='--', color='r', label='BW')
     plt.savefig("graph_gen_code/microbench_bandwidth.png")
 
@@ -133,7 +136,10 @@ def plot_results():
     plt.xlabel('Num of threads')
     plt.ylabel('Latency (us)')
     plt.xlim(1, N_THREADS - 1)
-    plt.xticks([1, 5, 8, 10, N_THREADS - 1])
+    plt.xticks([1, 5, 8, 10, 20, 30, 40, 50, 60, 64, N_THREADS - 1])
+    xcoords = [8, 16, 24, 32, 40, 48, 56, 64]
+    for xc in xcoords:
+        plt.axvline(x=xc, linestyle=':', color='#C0C0C0')
     ax2.plot(thrd, read_lats, linestyle='--', color='g', label='Read')
     ax2.plot(thrd, write_lats, linestyle='--', color='r', label='Write')
     plt.legend(loc='upper left')
