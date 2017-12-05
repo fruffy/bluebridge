@@ -46,7 +46,7 @@ To support the architectural concept we utilize a software-defined switch as wel
 
 If a client performs an operation requiring the use of a remote pointer, it will insert the stored pointer into the destination IP field of the IPv6 header and send the packet. Since the header contains the unique node ID, the switch is able to instantaneously forward the packet to the correct port. The server will extract the pointer and specific command out of the destination header, perform the specified operation, and reply to the source IP of the packet (which is the unique ID of the client). A client ``keeps track" of an address by extracting the source ID identifier of the replying owner.
 Neither server nor client are required to store any information about the location of other machines. For $n$ servers the switch only has to maintain $n$ basic routing entries, mapping each subnet to a specific port.
-\newcommand\ipsample{{"0","0","0","0","0","0","0","0","0","1","0","3","0","0","0","0","d","0","8","4","9","5","0","1","0","0","0","0","0","0","0","0"}}
+\newcommand\ipsample{{"0","0","0","0","0","0","0","0","0","1","0","3","0","3","0","0","d","0","8","4","9","5","0","1","0","0","0","0","0","0","0","0"}}
 
 \begin{figure*}
 \hspace*{-10px}
@@ -84,7 +84,8 @@ Neither server nor client are required to store any information about the locati
 	\foreach \x in {0,...,31}
         \node at (\x+0.5,2.25) {\footnotesize \textbf{{\pgfmathparse{\ipsample[\x]}\pgfmathresult}}};
 \end{tikzpicture}
-\caption{The IP destination structure. The top row represents a sample IPv6 request which is mapped to the structure below.}
+\caption{The IP destination structure. The top row represents a sample IPv6 
+request which is mapped to the structure below.}
 \label{fig:ipv6}
 \end{figure*}
 

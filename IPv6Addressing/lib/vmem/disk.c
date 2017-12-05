@@ -18,11 +18,11 @@ extern ssize_t pwrite (int __fd, const void *__buf, size_t __nbytes, __off_t __o
 
 struct disk {
 	int fd;
-	int block_size;
-	int nblocks;
+	uint64_t block_size;
+	uint64_t nblocks;
 };
 
-struct disk *disk_open( const char *diskname, int nblocks ) {
+struct disk *disk_open( const char *diskname, uint64_t nblocks ) {
 	struct disk *d;
 
 	d = malloc(sizeof(*d));
@@ -46,33 +46,33 @@ struct disk *disk_open( const char *diskname, int nblocks ) {
 	return d;
 }
 
-void disk_write( struct disk *d, int block, const char *data ) {
-	if(block<0 || block>=d->nblocks) {
-		fprintf(stderr,"disk_write: invalid block #%d\n",block);
+void disk_write( struct disk *d, uint64_t block, const char *data ) {
+	if(block>=d->nblocks) {
+		fprintf(stderr,"disk_write: invalid block #%lu\n",block);
 		abort();
 	}
 
-	int actual = pwrite(d->fd,data,d->block_size,block*d->block_size);
+	uint64_t actual = pwrite(d->fd,data,d->block_size,block*d->block_size);
 	if(actual!=d->block_size) {
-		fprintf(stderr,"disk_write: failed to write block #%d: %s\n",block,strerror(errno));
+		fprintf(stderr,"disk_write: failed to write block #%lu: %s\n",block,strerror(errno));
 		abort();
 	}
 }
 
-void disk_read( struct disk *d, int block, char *data ) {
-	if(block<0 || block>=d->nblocks) {
-		fprintf(stderr,"disk_read: invalid block #%d\n",block);
+void disk_read( struct disk *d, uint64_t block, char *data ) {
+	if(block>=d->nblocks) {
+		fprintf(stderr,"disk_read: invalid block #%lu\n",block);
 		abort();
 	}
 
-	int actual = pread(d->fd,data,d->block_size,block*d->block_size);
+	uint64_t actual = pread(d->fd,data,d->block_size,block*d->block_size);
 	if(actual!=d->block_size) {
-		fprintf(stderr,"disk_read: failed to read block #%d: %s\n",block,strerror(errno));
+		fprintf(stderr,"disk_read: failed to read block #%lu: %s\n",block,strerror(errno));
 		abort();
 	}
 }
 
-int disk_nblocks( struct disk *d ) {
+uint64_t disk_nblocks( struct disk *d ) {
 	return d->nblocks;
 }
 

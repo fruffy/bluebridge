@@ -32,7 +32,7 @@
 
 /// The number of frames in the ring
 //  This number is not set in stone. Nor are block_size, block_nr or frame_size
-#define CONF_RING_FRAMES        128
+#define CONF_RING_FRAMES        16384 //8192
 #define CONF_RING_BLOCKS        1
 #define FRAMESIZE               8192//(4096 + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + 2 + 32)
 #define BLOCKSIZE               (FRAMESIZE) * (CONF_RING_FRAMES)

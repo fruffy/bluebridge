@@ -5,7 +5,7 @@ MSG_DIR    := $(ROOT_DIR)/IPv6Addressing/
 CC = gcc-6
 CFLAGS += -c -Wextra -Wall -Wall -Wshadow -Wpointer-arith -Wcast-qual
 CFLAGS += -std=gnu11 -pedantic
-#CFGLAS += -oFast # performance flags
+CFGLAS += -oFast # performance flags
 
 # CFLAGS += -Wstrict-prototypes -Wmissing-prototypes
 
