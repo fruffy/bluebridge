@@ -665,6 +665,35 @@ void print_page_faults() {
 }
 
 void clean_page_table(struct page_table *pt) {
+    if(replacementPolicy == LRU || replacementPolicy == FFIFO) {
+        while(dllList->count > 0) {
+            uint64_t tempPage;
+            deleteLRU(&tempPage);
+        }
+    }
+    else if(replacementPolicy == LFU) {
+        while(freqList->count > 0) {
+            uint64_t tempPage;
+            deleteLFU(&tempPage);
+        }
+    }
+    else if(replacementPolicy == RAND)
+    {
+        struct hashNode *currNode; 
+        for(uint64_t i = 0; i < pt->nframes; i++) { 
+            if (hashTable[i].count == 0) 
+                continue; 
+            currNode = hashTable[i].head; 
+            if (!currNode) 
+                continue; 
+            while (currNode != NULL) { 
+                uint64_t tempPage = currNode->key; 
+                deleteHashNode(tempPage); 
+                currNode = hashTable[i].head;
+            }
+        } 
+    }
+
     free(hashTable);
     free(dllList);
     free(freqList);
