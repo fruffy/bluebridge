@@ -141,8 +141,6 @@ void *wc(void *arg) {
     printf("Assigned Thread %d to core %d\n", data->tid, assigned );
     
     // BlueBridge initialization calls for threads
-    struct config myConf = get_bb_config();
-    //struct sockaddr_in6 *temp = init_net_thread(data->tid, &myConf, 0);
     init_vmem_thread(data->tid);
     
     // Do the actual computation
