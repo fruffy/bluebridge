@@ -2,8 +2,21 @@
 \label{sec:system}
 
 \begin{itemize}
-    \item prior system \\
+
+    \item \textbf{prior system}: Camelot is a successor to a
+simplistic DSM system. In the prior system "BlueBride" all clients to the
+system have an unrestricted view of the entire virtual address space.
+Client program were restricted to a single thread, and all paging was
+performed using a naive FIFO paging strategy. BlueBride made use of a
+novel 128 bit IPv6 remote addressing mechanism which we adopted into
+Camelot. Remote addresses are represented as 128-bit IPv6-compatible
+pointers. On the client side, all remote addresses are stored as
+combination of the virtual pointer provided by the service node and
+its source IP address. If a client accesses remote memory, it inserts
+the address into the IP header of the request packet. The switch will
+route it automatically to the correct server node. \\
+
     \item threading \\
     \item page eviction \\
-    \item faut tolerance
+    \item fault tolerance
 \end{itemize}
