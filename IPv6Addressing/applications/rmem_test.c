@@ -506,7 +506,7 @@ void pagerank(int rounds, double d) {
         }
         diff = clock() - start;
         int msec = diff * 1000 / CLOCKS_PER_SEC;
-        printf("%d,",msec);
+        printf("Round %d complete in %d\n",i,msec);
         //printf("Time %d seconds %d milliseconds\n",msec/1000,msec%1000);
     }
     printf("\n");
