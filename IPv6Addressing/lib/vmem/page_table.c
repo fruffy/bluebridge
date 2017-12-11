@@ -436,7 +436,6 @@ void init_vmem_thread(int t_id) {
 
 void register_vmem_threads(int num_threads) {
     page_table_flush();
-    close_sockets();
     struct page_table *pt = the_page_table;
     uint64_t frame_space = PAGE_SIZE * (uint64_t) pt->nframes;
     if (frame_space * num_threads > PAGE_SIZE * (uint64_t) pt->npages)
@@ -560,6 +559,7 @@ void close_thread_sockets() {
 }
 
 void page_table_delete(struct page_table *pt) {
+    rmem_close_thread_sockets();
     uint64_t page_space = PAGE_SIZE * (uint64_t) pt->npages;
     uint64_t frame_space = PAGE_SIZE * (uint64_t) pt->nframes;
     munmap(pt->virtmem,page_space);
