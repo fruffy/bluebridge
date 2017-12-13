@@ -1,33 +1,83 @@
 \section{Introduction} 
 \label{sec:intro}
-\todo{Amanda}
 
-\todo{Outline:
-\begin{enumerate}
-	\item Data-intensive applications important large-scale computations -->
-	PageRank, etc.
-	\item These are hard to run on single machines --> distribute, which is hard to
-	reason about from a programmer's perspective
-	\item Previous work attempts to address that issue by abstracting the
-	distributed nature of the cluster
-	\begin{enumerate}
-		\item Constrict type of abstraction
-		\item Constrict type of memory access (i.e., shared, isolated, distributed)
-	\end{enumerate}
-	\item But these previous works trade-off generality for performance.
-	Essentially, only certain types of applications (classes) perform well. 
-	\item The underlying decision in most of these frameworks is how to
-	efficiently handle memory. This draws greatly from previous work in distributed
-	shared memory systems.
-	\item Distributed shared memory systems typically had issues with performance 
-	(limited inter-node bandwidth, high inter-node latency, etc.) which led to
-	customized solutions in frameworks. 
-	\item With the onset of faster interconnects, DSM research has resurged
-	\item We look at optimizing the DSM to overcome the constraints of big data
-	processing frameworks. 
-	\item We present the system Camelot, a network managed DSM system, the first
-	step in providing a simple and generic interface for programmers. 
-\end{enumerate}}
+\todo{1. Data-intensive applications important large-scale computations -->
+PageRank, etc.}
+As data collected increases, the need for data-intensive large scale processing
+increases. \todo{Statistic about Google/Facebook/Amazon processing}. Large scale
+data processing is not limited to large technology companies, different
+disciplines in the sciences have also taken advantage of computing power to make
+advancements \todo{Cite some scientific use of HPC or DC}. 
+\todo{2. Can run on single machine or can distribute --> depending on dataset,
+	single machine will not work (i.e., too big for disk), distribution is best for
+	commodity hardware but is hard to reason about distribution.}
+The main dichotomy
+which appears in large scale data process is single machine (high performance
+computing) vs. clustered machines (distributed computing). Single machine
+computing has an advantage in locality of data and compute, but has the
+disadvantage of cost. Clustered computing on commodity hardware is cheaper, but
+has the disadvantage of added complexity\footnote{This is not to imply that
+programming HPC applications tend to be easier, they have their own set of
+complexities, but they do not deal with complexities brought on by the
+transference of data and compute over the network}. 
+\todo{3. Previous work attempts to address that issue by abstracting the
+	distributed nature of the cluster.}
+A large amount of previous work attempts to reduce the complexity of
+distributed processing by imposing abstractions~\cite{Dean2004,Low2010,Murray2013}.
+\todo{4. But these previous works trade-off generality for performance.
+	Essentially, only certain types of applications (classes) perform well. }
+This, unfortunately, restricts the types of applications which can run on these
+frameworks, often leading to developers attempting to force their workload into
+one of these frameworks. 
+\todo{5. Single machine implementations require programmer expertise to take
+	advantage of optimizations (COST + HPC) which is not always guaranteed.}
+Yet, in the single machine case, it has been shown that
+many of these frameworks out performed by a single threaded laptop
+implementation~\cite{COST}. McSherry showed that his implementation of certain
+processing algorithms in RUST outperformed the most popular frameworks for that
+algorithm. But, programming highly performant code requires knowledge of the
+system (i.e., operating system tuning) and is not necessarily extensible 
+(different tuning parameters per dataset and algorithm). The average programmer
+needs to be able to reason about their algorithm but also not reason
+about the underlying system to gain performance. 
+
+\todo{6. We envision a framework which provides performance but also
+	programmability by exposing a single rack-scale NUMA machine interface to a
+	developer and handling all distribution of memory in the system.}
+We propose a combined approach where the advantages of the single machine
+implementation can be combined with the advantages of the distributed
+implementation. We envision a system which provides a simple single threaded
+interface for application developers to design and implement on. The underlying
+system parallelizes and distributes that application as appropriate. 
+\todo{7. To realize this system, we built Camelot, a network managed distributed
+	shared memory system.}
+We realize
+the first part of this system in Camelot, the network managed distributed shared
+memory backend. 
+
+\todo{8. DSMs have been studied extensively, but never really adopted until
+	recently due to performance concerns. With the onset of faster networks, more
+	work has gone into improve the performance of DSMs and using them in processing
+	frameworks. }
+Distributed shared memory has be extensively studied in the past, but has
+recently resurfaced as an promising area of research due to faster
+interconnects. Traditionally, DSMs did not achieve adoption due to low
+throughput and high latency of network data transfers as well as the added
+complexity of fault tolerance. Recent work has attempted to address this issues
+individually using different techniques~\cite{Ongaro2011,Nelson2015}. 
+\todo{9. For example, Grappa, does blah. We differ because we offload some
+	management to the switch.}
+Whereas Grappa attempts to solve the issue of performance
+with \todo{blah}. 
+We differ from both solutions as we attempt to improve
+performance and fault tolerance by leveraging the network. 
+\todo{10. We expand upon a previous system, BlueBridge, to bring it closer to
+the overall system we envision by adding support for multi-threading, improved
+paging policies, and fault tolerance.}
+Camelot is the next generation of a previous system, BlueBridge, which
+implemented the basis for network managed DSM. We expand upon BlueBridge to
+bring it closer to our envisioned system by adding support for multi-threading,
+improved paging policies, and fault tolerance.
 
 % \begin{itemize}
 %         \item processing data at scale is hard
