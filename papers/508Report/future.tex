@@ -1,12 +1,26 @@
-\section{future}
+\section{Discussion and Future Work}
+In addition to a more concrete and sensible motivation, a substantial amount implementation and design work is needed to make Camelot a viable shared memory system.
+\subsection{Network Performance}
+Although benchmarking on the host-local Mininet emulator has shown that the code itself is sufficiently fast to achieve a request RTT of ~9-10 microseconds, performance on real hardware is low. Multithreaded Camelot is not able to exhaust a single 10-Gbit NIC and experiences request latencies of roughly ~50-60 microseconds. One thread averages throughput of ~63 MByte per second,  which pales against SSDs or even conventional HDDs.
+In order to make Camelot more competitive we have the following performance improvement goals:
+\subsubsection{Making use of userlevel network libraries}
+The Linux kernel negatively impacts the performance of highly specialized applications and frameworks.~\cite{packet_io} Paying the cost of generality and kernel context-switches frequently adds an unacceptable overhead and inhibits applications from achieving their full performance potential. A viable alternative to relying on the default kernel network-stack is utilizing a userlevel customized high-performance library. Examples of such libraries included the Intel DPDK, ntop's PF-RING, and the netmap.~\cite{packet_io}
+As a next step in development we plan to integrate one of the frameworks into our system, with the goal of achieving a sub-10 microseconds latency and full NIC exhaustion.
+\subsubsection{Event-based network handling}
+While the remote memory server does not currently seem to be the bottleneck, it is still singlethreaded and may become a future bottleneck. It may be good practice to develop a event-based processing framework which is multithreaded and scalable. This implementation may be trivial, as the server only processes basic CRUD requests. For high-performance, interesting options are either the same aforementioned userlevel networking libraries or the Express Data Path~\cite{xdp} framework, which fast-routes matching requests to our specific implementation.
+
+
+\subsection{Improving the virtual memory system}
+The managed virtual memory of Camelot is still far from optimal. Although we now have faster paging strategies, the memory system itself is vastly inefficient. Faults are processed over standard signal-handlers, which add a significant amount of latency to managed memory. In addition, we update eviction tracking information with every page-fault. We also do not track reads and writes on the cache itself and thus may use inaccurate information for eviction.
+To speed up the request trapping itself, we plan on adopting \texttt{userfaultfd}\todo{CITE} as method of choice. It may reduce request latency and give us a more reliable and accurate sense of our virtual memory performance.
+
+We are also considering a completely alternative path, in which we implement the system as a virtual disk or swap device. Instead of Camelot handling the virtual memory, swapping, and general management it would be the Linux operating system. If an application runs out of memory it will swap out to Camelot, just as it would swap to disk. This approach would alleviate the burden of reimplementing already existent and efficient approaches to cache-management and instead lets us focus on more novel systems contributions.
+
+\subsection{Finding applications} 
 \begin{itemize}
-    \item DPDK
-    \item eXpress Data Path
-    \item Event-based network handling
-    \item Multithreaded server
-    \item Multithreaded pagerank
-    \item parameter server
-    \item Userfault FD
-    \item Block driver
+\item Multithreaded pagerank
+\item parameter server
 \end{itemize}
+
+
 \label{sec:future}
