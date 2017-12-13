@@ -1,21 +1,21 @@
 \section{Introduction} 
 \label{sec:intro}
 
-\ac{Outline is inline. Need to integrate rack-scale + faster interconnects
-part.}
+\todo{Introduce rack-scale + faster interconnects part sooner to setup claim
+surrounding management in the network.}
 
-\ac{1. Data-intensive applications important large-scale computations -->
-PageRank, etc.}
+\ac{1. Data-intensive applications important}
 
 As data collected increases, the need for data-intensive large scale processing
-increases. \todo{Statistic about Google/Facebook/Amazon processing}. Large scale
-data processing is not limited to large technology companies, different
-disciplines in the sciences have also taken advantage of computing power to make
-advancements \todo{Cite some scientific use of HPC or DC}. 
+increases. For example, Facebook processes over 500 terabytes a day~
+\todo{https://techcrunch.com/2012/08/22/how-big-is-facebooks-data-2-5-billion-pieces-of-content-and-500-terabytes-ingested-every-day/}. Large scale data processing is not limited to large
+technology companies, different disciplines in the sciences have also taken
+advantage of computing power to make advancements. For example, high performance
+computing has been used to improve processing times of electron microscopy
+images and super computers have been used to implement and develop DNA
+sequencing systems.\todo{http://www.sciencedirect.com/science/article/pii/S030439911630300X, https://www.osc.edu/research/report10/BiologicalSciences/DNAsequencing}
 
-\ac{2. Can run on single machine or can distribute --> depending on dataset,
-	single machine will not work (i.e., too big for disk), distribution is best for
-	commodity hardware but is hard to reason about distribution.}
+\ac{2. single machine vs distributed}
 
 The main dichotomy
 which appears in large scale data process is single machine (high performance
@@ -27,53 +27,49 @@ programming HPC applications tend to be easier, they have their own set of
 complexities, but they do not deal with complexities brought on by the
 transference of data and compute over the network}. 
 
-\ac{3. Previous work attempts to address that issue by abstracting the
-	distributed nature of the cluster.}
+\ac{3. Previous distributed work}
 
 A large amount of previous work attempts to reduce the complexity of
 distributed processing by imposing abstractions~\cite{Dean2004,Low2010,Murray2013}.
 
-\ac{4. But these previous works trade-off generality for performance.
-	Essentially, only certain types of applications (classes) perform well. }
+\ac{4. previous work trade-off generality for performance.}
 
 This, unfortunately, restricts the types of applications which can run on these
 frameworks, often leading to developers attempting to force their workload into
-one of these frameworks. 
+one of these frameworks. If a developer wishes to use Hadoop, they must write
+their algorithm in the MapReduce paradigm~\cite{Dean2004}. Or, if they wish to
+run graph processing on GraphLab, they must adhere to the vertex-centric
+processing paradigm~\cite{Low2010}.
 
 \ac{5. Single machine implementations require programmer expertise to take
 	advantage of optimizations (COST + HPC) which is not always guaranteed.}
 
 Yet, in the single machine case, it has been shown that
 many of these frameworks out performed by a single threaded laptop
-implementation~\cite{COST}. McSherry showed that his implementation of certain
-processing algorithms in RUST outperformed the most popular frameworks for that
-algorithm. But, programming highly performant code requires knowledge of the
-system (i.e., operating system tuning) and is not necessarily extensible 
+implementation \todo{cite COST}. McSherry showed that his implementation of
+certain processing algorithms in RUST outperformed the most popular frameworks
+for that algorithm. But, programming highly performant code requires knowledge
+of the system (i.e., operating system tuning) and is not necessarily extensible 
 (different tuning parameters per dataset and algorithm). The average programmer
 needs to be able to reason about their algorithm but also not reason
 about the underlying system to gain performance. 
 
-\ac{6. We envision a framework which provides performance but also
-	programmability by exposing a single rack-scale NUMA machine interface to a
-	developer and handling all distribution of memory in the system.}
+\ac{6. We envision a transparent cluster based rack-scale NUMA machine.}
 
 We propose a combined approach where the advantages of the single machine
 implementation can be combined with the advantages of the distributed
 implementation. We envision a system which provides a simple single threaded
-interface for application developers to design and implement on. The underlying
-system parallelizes and distributes that application as appropriate. 
+interface for application developers to run on and underlying
+system parallelizes and distributes that application as appropriate.
+Essentially, we hope to expose a single rack-scale NUMA machine to the
+application developer. 
 
-\ac{7. To realize this system, we built Camelot, a network managed distributed
-	shared memory system.}
+\ac{7. Introduce Camelot}
 
-We realize
-the first part of this system in Camelot, the network managed distributed shared
-memory backend. 
+We realize the first part of this system in Camelot, the network managed
+distributed shared memory backend. 
 
-\ac{8. DSMs have been studied extensively, but never really adopted until
-	recently due to performance concerns. With the onset of faster networks, more
-	work has gone into improve the performance of DSMs and using them in processing
-	frameworks. }
+\ac{8. DSMs have been studied extensively. Why they coming up again?}
 
 Distributed shared memory has be extensively studied in the past, but has
 recently resurfaced as an promising area of research due to faster
@@ -82,17 +78,13 @@ throughput and high latency of network data transfers as well as the added
 complexity of fault tolerance. Recent work has attempted to address this issues
 individually using different techniques~\cite{Ongaro2011,Nelson2015}.
 
-\ac{9. For example, Grappa, does blah. We differ because we offload some
-	management to the switch.}
+\ac{9. compare contrast with grappa.}
 
-Whereas Grappa attempts to solve the issue of performance
-with \todo{blah}. 
-We differ from both solutions as we attempt to improve
-performance and fault tolerance by leveraging the network. 
+Whereas Grappa attempts to solve the issue of performance with \todo{blah}. 
+We differ from both solutions as we attempt to improve performance and fault
+tolerance by leveraging the network. 
 
-\ac{10. We expand upon a previous system, BlueBridge, to bring it closer to
-the overall system we envision by adding support for multi-threading, improved
-paging policies, and fault tolerance.}
+\ac{10. We expand upon a previous system, BlueBridge.}
 
 Camelot is the next generation of a previous system, BlueBridge, which
 implemented the basis for network managed DSM. We expand upon BlueBridge to
