@@ -1,15 +1,17 @@
 \section{Discussion and Future Work}
 \todo{Needs proofreading}
 In addition to a more concrete and sensible motivation, a substantial amount implementation and design work is needed to make Camelot a viable shared memory system.
+
 \subsection{Network Performance}
 Although benchmarking on the host-local Mininet emulator has shown that the code itself is sufficiently fast to achieve a request RTT of ~9-10 microseconds, performance on real hardware is low. Multithreaded Camelot is not able to exhaust a single 10-Gbit NIC and experiences request latencies of roughly ~50-60 microseconds. One thread averages throughput of ~63 MByte per second,  which pales against SSDs or even conventional HDDs.
 In order to make Camelot more competitive we have the following performance improvement goals:
+
 \subsubsection{Making use of userlevel network libraries}
 The Linux kernel negatively impacts the performance of highly specialized applications and frameworks.~\cite{packet_io} Paying the cost of generality and kernel context-switches frequently adds an unacceptable overhead and inhibits applications from achieving their full performance potential. A viable alternative to relying on the default kernel network-stack is utilizing a userlevel customized high-performance library. Examples of such libraries included the Intel DPDK, ntop's PF-RING, and the netmap.~\cite{packet_io}
 As a next step in development we plan to integrate one of the frameworks into our system, with the goal of achieving a sub-10 microseconds latency and full NIC exhaustion.
+
 \subsubsection{Event-based network handling}
 While the remote memory server does not currently seem to be the bottleneck, it is still singlethreaded and may become a future bottleneck. It may be good practice to develop a event-based processing framework which is multithreaded and scalable. This implementation may be trivial, as the server only processes basic CRUD requests. For high-performance, interesting options are either the same aforementioned userlevel networking libraries or the Express Data Path~\cite{xdp} framework, which fast-routes matching requests to our specific implementation.
-
 
 \subsection{Improving the virtual memory system}
 The managed virtual memory of Camelot is still far from optimal. Although we now have faster paging strategies, the memory system itself is vastly inefficient. Faults are processed over standard signal-handlers, which add a significant amount of latency to managed memory. In addition, we update eviction tracking information with every page-fault. We also do not track reads and writes on the cache itself and thus may use inaccurate information for eviction.
@@ -21,13 +23,19 @@ We are also considering a completely alternative path, in which we implement the
 Our initial plan of involving the central TOR-switch was cut due to time-constraints. However, we believe that, partially because network elements can reason about requests, there is substantial synergy to be gained. For example, RAID requests may be automatically striped and consolidated on the switch side, making RAIDing fully transparent for clients. Similarly, it may be possible to deploy various load-balancing and migration schemes on the switch side, which save additional operation cost. 
 As of now, this field of contribution remains an aspect of future work.
 
-\subsection{Testing applications}
-\todo{Someone fill in here}
-\begin{itemize}
-\item Multithreaded pagerank
-\item parameter server
-\item DNA thingy
-\end{itemize}
+\subsection{Test motivating applications}
+To fully evaluate the effectiveness of our system to achieve our goals, we must
+test our motivating applications. We plan to extend our implementation of
+PageRank to be multithreaded and plan to implement a parameter server and modify
+a DNA sequencing program to run on top of Camelot. We will then compare their
+performance to the state of the art frameworks used for each type of
+application. 
+% \todo{Someone fill in here}
+% \begin{itemize}
+% \item Multithreaded pagerank
+% \item parameter server
+% \item DNA thingy
+% \end{itemize}
 
 
 \label{sec:future}
