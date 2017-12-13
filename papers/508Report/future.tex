@@ -13,7 +13,7 @@ While the remote memory server does not currently seem to be the bottleneck, it 
 
 \subsection{Improving the virtual memory system}
 The managed virtual memory of Camelot is still far from optimal. Although we now have faster paging strategies, the memory system itself is vastly inefficient. Faults are processed over standard signal-handlers, which add a significant amount of latency to managed memory. In addition, we update eviction tracking information with every page-fault. We also do not track reads and writes on the cache itself and thus may use inaccurate information for eviction.
-To speed up the request trapping itself, we plan on adopting \texttt{userfaultfd}\todo{CITE} as method of choice. It may reduce request latency and give us a more reliable and accurate sense of our virtual memory performance.
+To speed up the request trapping itself, we plan on adopting \texttt{userfaultfd}~\cite{userfaultfd} as method of choice. It may reduce request latency and give us a more reliable and accurate sense of our virtual memory performance.
 
 We are also considering a completely alternative path, in which we implement the system as a virtual disk or swap device. Instead of Camelot handling the virtual memory, swapping, and general management it would be the Linux operating system. If an application runs out of memory it will swap out to Camelot, just as it would swap to disk. This approach would alleviate the burden of reimplementing already existent and efficient approaches to cache-management and instead lets us focus on more novel systems contributions.
 

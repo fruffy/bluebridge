@@ -486,12 +486,44 @@ publisher = {{USENIX}},
 	publisher={ACM}
 }
 
-@misc{xdp,
-	author =   {Herbert, Tom and Starovoitov, Alex},
-	title =    {Express Data Path (XDP)},
-	howpublished = {\url{https://www.iovisor.org/technology/xdp}},
-	year = {2016 -- 2017}
+@online{userfaultfd,
+	author =   {Arcangeli, Andrea},
+	title =    {userfaultfd},
+	url = {\url{https://www.kernel.org/doc/Documentation/vm/userfaultfd.txt}},
+	year = {2017},
+	urldate = {2017-12-13}
 }
+
+@online{xdp,
+	author =   {IO Visor},
+	title =    {Express Data Path (XDP)},
+	year = {2017},
+	url = {https://www.iovisor.org/technology/xdp},
+	urldate = {2017-12-13}
+}
+
+@online{packet_mmap,
+	author =   {Camara, Ulisses and Baudy, Johann},
+	title =    {Packet MMAP},
+	year = {2017},
+	url = {https://www.kernel.org/doc/Documentation/networking/packet_mmap.txt},
+	urldate = {2017-12-13}
+}
+
+@inproceedings{bpf,
+	author = {McCanne, Steven and Jacobson, Van},
+	title = {The BSD Packet Filter: A New Architecture for User-level Packet Capture},
+	booktitle = {Proceedings of the USENIX Winter 1993 Conference Proceedings on USENIX Winter 1993 Conference Proceedings},
+	series = {USENIX'93},
+	year = {1993},
+	location = {San Diego, California},
+	pages = {2--2},
+	numpages = {1},
+	url = {http://dl.acm.org/citation.cfm?id=1267303.1267305},
+	acmid = {1267305},
+	publisher = {USENIX Association},
+	address = {Berkeley, CA, USA},
+} 
 
 @inproceedings{mininet,
 	author = {Lantz, Bob and Heller, Brandon and McKeown, Nick},
@@ -510,4 +542,4 @@ publisher = {{USENIX}},
 	publisher = {ACM},
 	address = {New York, NY, USA},
 	keywords = {emulation, open-flow, rapid prototyping, software defined networking, virtualization},
-
+}
