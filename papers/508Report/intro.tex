@@ -1,11 +1,39 @@
 \section{Introduction} 
 \label{sec:intro}
 \todo{Amanda}
-\begin{itemize}
-        \item processing data at scale is hard
-        \item scientists, not just computer scientists process data
-        \item python, and C are more understood / natural than spark/hadoop/naiad
-        \item the state of current racks allow for comprable performance with DSM
-        \item (small contribution) These system admit failures, but they require expertise to reason about. Applications should be reasonably fault tolerant to prevent heartache, and confusion.
-\end{itemize}
+
+\todo{Outline:
+\begin{enumerate}
+	\item Data-intensive applications important large-scale computations -->
+	PageRank, etc.
+	\item These are hard to run on single machines --> distribute, which is hard to
+	reason about from a programmer's perspective
+	\item Previous work attempts to address that issue by abstracting the
+	distributed nature of the cluster
+	\begin{enumerate}
+		\item Constrict type of abstraction
+		\item Constrict type of memory access (i.e., shared, isolated, distributed)
+	\end{enumerate}
+	\item But these previous works trade-off generality for performance.
+	Essentially, only certain types of applications (classes) perform well. 
+	\item The underlying decision in most of these frameworks is how to
+	efficiently handle memory. This draws greatly from previous work in distributed
+	shared memory systems.
+	\item Distributed shared memory systems typically had issues with performance 
+	(limited inter-node bandwidth, high inter-node latency, etc.) which led to
+	customized solutions in frameworks. 
+	\item With the onset of faster interconnects, DSM research has resurged
+	\item We look at optimizing the DSM to overcome the constraints of big data
+	processing frameworks. 
+	\item We present the system Camelot, a network managed DSM system, the first
+	step in providing a simple and generic interface for programmers. 
+\end{enumerate}}
+
+% \begin{itemize}
+%         \item processing data at scale is hard
+%         \item scientists, not just computer scientists process data
+%         \item python, and C are more understood / natural than spark/hadoop/naiad
+%         \item the state of current racks allow for comprable performance with DSM
+%         \item (small contribution) These system admit failures, but they require expertise to reason about. Applications should be reasonably fault tolerant to prevent heartache, and confusion.
+% \end{itemize}
 
