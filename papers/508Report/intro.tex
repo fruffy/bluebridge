@@ -1,39 +1,22 @@
 \section{Introduction} 
 \label{sec:intro}
+As the amount of digital data collected increases, the need for data-intensive
+large scale processing increases. For example, Facebook processes over 500
+terabytes a day and has invested in a large data processing pipleline to process
+that data \todo{Recent facebook paper on streaming pipeline.}
+\todo{https://techcrunch.com/2012/08/22/how-big-is-facebooks-data-2-5-billion-pieces-of-content-and-500-terabytes-ingested-every-day/}. 
+Large scale data processing is not limited to large technology companies,
+different disciplines in the sciences have also taken advantage of computing
+power to make advancements. For example, high performance computing has been
+used to improve processing times of electron microscopy images and super
+computers have been used to implement and develop DNA sequencing systems.
+\todo{http://www.sciencedirect.com/science/article/pii/S030439911630300X, https://www.osc.edu/research/report10/BiologicalSciences/DNAsequencing}
 
-\todo{Introduce rack-scale + faster interconnects part sooner to setup claim
-surrounding management in the network.}
-
-\ac{1. Data-intensive applications important}
-
-As data collected increases, the need for data-intensive large scale processing
-increases. For example, Facebook processes over 500 terabytes a day~
-\todo{https://techcrunch.com/2012/08/22/how-big-is-facebooks-data-2-5-billion-pieces-of-content-and-500-terabytes-ingested-every-day/}. Large scale data processing is not limited to large
-technology companies, different disciplines in the sciences have also taken
-advantage of computing power to make advancements. For example, high performance
-computing has been used to improve processing times of electron microscopy
-images and super computers have been used to implement and develop DNA
-sequencing systems.\todo{http://www.sciencedirect.com/science/article/pii/S030439911630300X, https://www.osc.edu/research/report10/BiologicalSciences/DNAsequencing}
-
-\ac{2. single machine vs distributed}
-
-The main dichotomy
-which appears in large scale data process is single machine (high performance
-computing) vs. clustered machines (distributed computing). Single machine
-computing has an advantage in locality of data and compute, but has the
-disadvantage of cost. Clustered computing on commodity hardware is cheaper, but
-has the disadvantage of added complexity\footnote{This is not to imply that
-programming HPC applications tend to be easier, they have their own set of
-complexities, but they do not deal with complexities brought on by the
-transference of data and compute over the network}. 
-
-\ac{3. Previous distributed work}
-
-A large amount of previous work attempts to reduce the complexity of
-distributed processing by imposing abstractions~\cite{Dean2004,Low2010,Murray2013}.
-
-\ac{4. previous work trade-off generality for performance.}
-
+Previous work has looked at solving the issue of large scale data processing for
+different types of applications (i.e., graph processing, streaming, etc.).
+Distributed processing frameworks often have to make the trade off between
+performance and generality by enforcing certain abstractions or programming
+models on the developer~\cite{Dean2004,Low2010,Murray2013}. 
 This, unfortunately, restricts the types of applications which can run on these
 frameworks, often leading to developers attempting to force their workload into
 one of these frameworks. If a developer wishes to use Hadoop, they must write
@@ -41,61 +24,53 @@ their algorithm in the MapReduce paradigm~\cite{Dean2004}. Or, if they wish to
 run graph processing on GraphLab, they must adhere to the vertex-centric
 processing paradigm~\cite{Low2010}.
 
-\ac{5. Single machine implementations require programmer expertise to take
-	advantage of optimizations (COST + HPC) which is not always guaranteed.}
+Yet, it has been shown that many of these frameworks out performed by a single
+threaded laptop implementation \todo{cite COST}. McSherry showed that his
+implementation of certain processing algorithms in RUST outperformed the most
+popular frameworks for that algorithm. But, programming highly performant code
+requires knowledge of the system (i.e., operating system tuning) and is not
+necessarily extensible  (different tuning parameters per dataset and algorithm).
+The application developer needs to be able to reason about their algorithm but
+also not reason about the underlying system to gain performance. 
 
-Yet, in the single machine case, it has been shown that
-many of these frameworks out performed by a single threaded laptop
-implementation \todo{cite COST}. McSherry showed that his implementation of
-certain processing algorithms in RUST outperformed the most popular frameworks
-for that algorithm. But, programming highly performant code requires knowledge
-of the system (i.e., operating system tuning) and is not necessarily extensible 
-(different tuning parameters per dataset and algorithm). The average programmer
-needs to be able to reason about their algorithm but also not reason
-about the underlying system to gain performance. 
-
-\ac{6. We envision a transparent cluster based rack-scale NUMA machine.}
-
-We propose a combined approach where the advantages of the single machine
-implementation can be combined with the advantages of the distributed
-implementation. We envision a system which provides a simple single threaded
-interface for application developers to run on and underlying
-system parallelizes and distributes that application as appropriate.
-Essentially, we hope to expose a single rack-scale NUMA machine to the
-application developer. 
-
-\ac{7. Introduce Camelot}
-
+New trends in technology make it possible to have a combined approach, where a
+distributed framework abstracts away all complexity associated with distribution
+and presents the user with a single NUMA machine interface. We envision a system
+which turns a datacenter rack or equivalent cluster into a large NUMA machine.
 We realize the first part of this system in Camelot, the network managed
 distributed shared memory backend. 
 
-\ac{8. DSMs have been studied extensively. Why they coming up again?}
+Distributed shared memory (DSM) is made realistic by faster interconnects.
+Traditionally, DSMs did not achieve adoption due to low throughput and high
+latency of network data transfers \todo{cite}. Now, with remote direct memory
+access (RDMA) and faster networks, the prospect of achieving low-latency (3 - 5
+microsecond) is much more attainable. Due to this, there has been a resurgancy
+of research into DSM systems and remote memory systems \todo{cite}. Recent work
+has attempted to address the issues surrounding DSMs even with fast
+interconnects, such as fault tolerance~\cite{Ongaro2011,Nelson2015}.
 
-Distributed shared memory has be extensively studied in the past, but has
-recently resurfaced as an promising area of research due to faster
-interconnects. Traditionally, DSMs did not achieve adoption due to low
-throughput and high latency of network data transfers as well as the added
-complexity of fault tolerance. Recent work has attempted to address this issues
-individually using different techniques~\cite{Ongaro2011,Nelson2015}.
-
-\ac{9. compare contrast with grappa.}
-
-Whereas Grappa attempts to solve the issue of performance with \todo{blah}. 
-We differ from both solutions as we attempt to improve performance and fault
-tolerance by leveraging the network. 
-
-\ac{10. We expand upon a previous system, BlueBridge.}
+The one closest to our work, Grappa, exposes a single shared memory space with
+a simplified interface to allow for expressive but simple applications to run
+on the system. Although, both systems, our vision and Grappa, attempt to provide
+the same service (simple expressible interface on DSM), we provide optimizations
+and features beyond Grappa. We move memory management into the network to reduce
+the amount of network traffic and improve performance. Camelot also provides
+fault tolerant memory by adding different RAID levels to the system. 
 
 Camelot is the next generation of a previous system, BlueBridge, which
 implemented the basis for network managed DSM. We expand upon BlueBridge to
 bring it closer to our envisioned system by adding support for multi-threading,
 improved paging policies, and fault tolerance.
 
-% \begin{itemize}
-%         \item processing data at scale is hard
-%         \item scientists, not just computer scientists process data
-%         \item python, and C are more understood / natural than spark/hadoop/naiad
-%         \item the state of current racks allow for comprable performance with DSM
-%         \item (small contribution) These system admit failures, but they require expertise to reason about. Applications should be reasonably fault tolerant to prevent heartache, and confusion.
-% \end{itemize}
+The contributions of this work are as follows:
+\begin{itemize}
+	\item We added multi-threading support to BlueBridge, which allows for
+	mulithreaded applications to take advantage of the DSM.
+	\item We implemented different paging policies in Camelot to analyze the
+	effectiveness of each policy to determine the best one for Camelot.
+	\item We added fault tolerance by integrating RAID to the end hosts\ac{Stew,
+	is it at the end host (server) or the client?}.
+\end{itemize}
 
+In the next section we will discuss motivating use cases for this type of
+framework. 

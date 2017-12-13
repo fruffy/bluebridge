@@ -1,0 +1,35 @@
+\section{Motivating Applications} 
+\todo{Needs more nuance and explanation}
+
+\label{sec:apps}
+As stated before, many distributed processing frameworks only cater to specific
+classes of applications due to the optimizations or abstractions they enforce.
+With our proposed approach, we will be able to service a variety of
+applications. For applications to gain the full benefit of the system, they
+should require a large amount of shared memory. This is not necessary to run on
+our system though and applications should not run any slower than a naive
+solution. We present three application classes here which require shared memory
+and could be parallelized. 
+
+\textbf{Vertex-centric graph processing.} Vertex-centric graph processing is an
+important workload for many different applications (i.e., processing the
+Facebook friend graph, Google search rankings). To illustrate the effectiveness
+of our system for vertex-centric graph processing, we use PageRank as an
+example. To compute the PageRank value of a vertex (page), the vertex must first
+get the values of all the incoming pages and then calculate its PageRank value
+before propogating to the pages it links to. \todo{How is this a good workload?}
+
+\textbf{Parameter Server.} Parameter servers are often used in machine learning.
+\todo{What for?} In a Parameter Server, all parameters are stored in a single
+server, which gets queried by workers if a parameter is needed for computation
+or should be updated. This can easily be translated onto Camelot, the parameters
+required by all workers are stored in the global address space and paged in
+whenever required. There is no need for a centralized parameter server as
+Camelot would handle all access to remote memory. 
+
+\textbf{DNA Sequencing.} There are multiple ways DNA can be sequenced, in the
+case where a reference genome does not exist, the DNA must be constructed based
+on a set of rules and overlapping reads. To compute this they use bruijn graphs,
+which are not trivially partitionable. Therefore, it could be an advantage to
+treat the algorithm as if it was running on a single machine and simply page
+in/out parts of the graph that are required for computaiton. 
