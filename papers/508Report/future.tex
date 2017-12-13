@@ -1,4 +1,5 @@
 \section{Discussion and Future Work}
+\todo{Needs proofreading}
 In addition to a more concrete and sensible motivation, a substantial amount implementation and design work is needed to make Camelot a viable shared memory system.
 \subsection{Network Performance}
 Although benchmarking on the host-local Mininet emulator has shown that the code itself is sufficiently fast to achieve a request RTT of ~9-10 microseconds, performance on real hardware is low. Multithreaded Camelot is not able to exhaust a single 10-Gbit NIC and experiences request latencies of roughly ~50-60 microseconds. One thread averages throughput of ~63 MByte per second,  which pales against SSDs or even conventional HDDs.
@@ -16,7 +17,11 @@ To speed up the request trapping itself, we plan on adopting \texttt{userfaultfd
 
 We are also considering a completely alternative path, in which we implement the system as a virtual disk or swap device. Instead of Camelot handling the virtual memory, swapping, and general management it would be the Linux operating system. If an application runs out of memory it will swap out to Camelot, just as it would swap to disk. This approach would alleviate the burden of reimplementing already existent and efficient approaches to cache-management and instead lets us focus on more novel systems contributions.
 
-\subsection{Finding applications} 
+\subsection{Tighter network integration}
+Our initial plan of involving the central TOR-switch was cut due to time-constraints. However, we believe that, partially because network elements can reason about requests, there is substantial synergy to be gained. For example, RAID requests may be automatically striped and consolidated on the switch side, making RAIDing fully transparent for clients. Similarly, it may be possible to deploy various load-balancing and migration schemes on the switch side, which save additional operation cost. 
+As of now, this field of contribution remains an aspect of future work.
+\subsection{Finding applications}
+\todo{Someone fill in here}
 \begin{itemize}
 \item Multithreaded pagerank
 \item parameter server
