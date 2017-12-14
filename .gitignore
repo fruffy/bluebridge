@@ -303,3 +303,6 @@ tags
 myvirtualdisk
 *.sw*
 *.bin
+
+# Mac
+.DS_Store
