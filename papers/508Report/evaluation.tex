@@ -43,17 +43,59 @@ Latency behaves as expected, with a mild increase in early iterations that trans
 \end{figure}
 
 \subsection{RAID Overhead}
-\todo{Stewart}
+
+Our goal in evaluating our RAID implementations is twofold. We first
+wished to establish a baseline overhead of running raid over regular
+remote memory, and to compare the cost of parity calculation relative
+to the no parity case common to RAMCloud. In both cases we found that
+the size of local cache used dramatically affected performance, so we
+report our performance results as a function of local cache size. We
+measured relative performance of these algorithms by timing
+iterations of a single threaded PageRank algorithm. Each iteration
+of page rank requires both a read and write step, so in each
+iteration all pages are read, and written to remote memory.
 
 \begin{figure}[H]
     \includegraphics[width=\columnwidth]{fig/Raid4Overhead}
-    \caption{\todo{Stewart}}
+    \caption{A logarithmic plot of RAID 4 running with memory check performed on reads, and parity calculations on writes, v.s traditional remote memory.}
     \label{fig:raid4Overhead}
 \end{figure}
 
+We found that running RAID4 with memory correction on a small local
+cache 1-2\% of the entire graph) caused a 2x slowdown in PageRank
+iterations. The relation between performance and local cache size is
+plotted in Figure~\ref{fig:raid4Overhead}. As the number of local
+pages was increased to 10-20\% of the entire graph the overhead was
+reduced to ~1.5x slowdown. A large component of this overhead, is not
+the cost of performing XOR, it is due to our networking stacks lack of
+optimization for RAID. Our RAID manager is build directly on top of
+our remote memory stack, which issues single requests in the form of 4K
+pages. Therefore RAID 0,4,5 increase network bandwidth by $(n-1)x4K$
+per page. Batching requests, and optimizing the network stack to
+read/write stripes of pages will substantially drop overhead.
+
 \begin{figure}[H]
     \includegraphics[width=\columnwidth]{fig/RaidComparison}
-    \caption{\todo{Stewart}}
+    \caption{Raid 4, Raid 4 with failure, and Raid 0 vs local cache size}
     \label{fig:RaidComparison}
 \end{figure}
+
+To evaluate the relative performance of RAID 4 \& 5 compared to RAID
+0 \& 1 we likewise measured PageRank iteration times. We found that
+Raid 4 and 5 introduce a 6\% overhead on both RAID 0 \& 1, and that
+the overhead was directly proportional to parity calculation time.
+Figure~\ref{fig:RaidComparison} plots our comparative results. RAID 0
+\& 1 ran competitively within 0.01\% of each other. The only notable
+difference between then was the lack of a need for RAID 1 to wait for
+stragglers on reads. Given our setup the straggler problem was
+unobservable to our measurements. RAID 4 \& 5 operate identically from
+a latency and bandwidth perspective. We also measured the performance
+penalty from running during a failure. We killed a single memory
+server while running PageRank and observer the overhead to be
+approximately 2x. The majority of the overhead was caused by waiting for
+a preset 100 microsecond timeout to fire and initiate the repair
+calculation. This overhead could be reduced by introducing a failure
+detector which would initiate repair immediately. In this case the
+overhead of running Camelot on 3 memory nodes under failure, vs
+RAMCloud is 6\% while requiring 50\% of the total memory.
 
