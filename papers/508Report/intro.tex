@@ -23,13 +23,13 @@ run graph processing on GraphLab, they must adhere to the vertex-centric
 processing paradigm~\cite{Low2010}.
 
 Yet, it has been shown that many of these frameworks out performed by a single
-threaded laptop implementation~\cite{189908}. McSherry showed that his
+threaded laptop implementation~\cite{189908}. McSherry, Isard, and Murray showed that his
 implementation of certain processing algorithms in RUST outperformed the most
 popular frameworks for that algorithm. But, programming highly performant code
 requires knowledge of the system (i.e., operating system tuning) and is not
 necessarily extensible  (different tuning parameters per dataset and algorithm).
 The application developer needs to be able to reason about their algorithm but
-also not reason about the underlying system to gain performance. 
+should not have to think about the underlying system to gain performance. 
 
 New trends in technology make it possible to have a combined approach, where a
 distributed framework abstracts away all complexity associated with distribution
@@ -42,7 +42,7 @@ Distributed shared memory (DSM) is made realistic by faster interconnects.
 Traditionally, DSMs did not achieve adoption due to low throughput and high
 latency of network data transfers~\cite{Li1989}. Now, with remote direct memory
 access (RDMA) and faster networks, the prospect of achieving low-latency (3 - 5
-microsecond) is much more attainable. Due to this, there has been a resurgancy
+microsecond) is much more attainable. Due to this, there has been a resurgence
 of research into DSM systems and remote memory systems~\cite{Ongaro2011,Nelson2015,Dragojevic2014}. 
 % Recent work
 % has attempted to address the issues surrounding DSMs even with fast
@@ -73,10 +73,11 @@ The contributions of this work are as follows:
 \end{itemize}
 
 We evaluated each improvement to the system to determine the effects on
-performance. We found \todo{insert findings Fabian Bronson
-\sout{Stew}}. In memory RAID can significantly reduce memory usage
+performance. We found that our system is able to reliably process data which vastly exceed the local 
+amount of memory. It and scales linearly in performance, but is yet unable to make proper use of 
+network resources. In memory RAID can significantly reduce memory usage
 (over 50\% on common configurations) with a computational overhead of \textasciitilde6\%
-compaired to competing solutions~\cite{Ousterhout:2015:RSS:2818727.2806887}.
+compared to competing solutions~\cite{Ousterhout:2015:RSS:2818727.2806887}.
 
 Our paper will be organized as follows. First we will discuss previous work in
 the space in Section~\ref{sec:related}. Then we will discuss the design and

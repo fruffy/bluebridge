@@ -1,21 +1,24 @@
 \section{Related Work}
 \label{sec:related}
 
-There has bene extensive work in shared and remote memory systems over the past
+There has been extensive work in shared and remote memory systems over the past
 decades. We break related work into two broad categories: distributed shared
 memory systems, fault tolerance in distributed shared memory systems, and
 systems which expose a single machine interface.
 
-\textbf{Distributed Shared Memory.} As stated before, DSMs have been extensively
-studied over the decades and the main issue with DSMs is the performace. Two
-systems of note, TreadMarks and Cashmere, use different techniques to improve
-performance by trading off consistency. Treadmarks attempts to reduce
-the amount of commuication neccessary to enforce memory consistency~
-\cite{Keleher1994}. Similarly, Cashmere is a ``two-level'' shared memory system
-where it attempts to meet the challenge of performance by leveraging low-latency
-read-write capabilities~\cite{cashmere}. Camelot differs from both approaches as
-it does not sacrifice consistency to improve performance, rather it moves the
-management of the shared memory into the switch to reduce network overhead.
+\subsection{Distributed Shared Memory.} 
+Distributed shared memory is an field of operating systems, which has been extensively
+studied over the decades.
+Two major reoccurring issues in shared memory are the performance impact of non-uniform memory 
+accesses and consistency management. Often, these two aspects are at odds with each other.
+Systems of note, TreadMarks~\cite{Keleher1994} and Cashmere~\cite{cashmere}, use different techniques 
+to improve performance by trading off consistency. Treadmarks attempts to reduce
+the amount of communication necessary to enforce memory consistency. Similarly, Cashmere is a 
+``two-level'' shared memory system, which attempts to meet the challenge of performance by leveraging 
+low-latency read-write capabilities. Camelot differs from both approaches in that we intend to attempt 
+centralize shared memory management. Using a network addressing scheme, network elements are able to 
+enforce consistency, reducing communication overhead and roundtrip time.   the switch to reduce 
+network overhead.
 
 % \begin{itemize}
 %     \item treadmarks~\cite{Keleher1994} \todo{Fabian} \\
@@ -24,7 +27,7 @@ management of the shared memory into the switch to reduce network overhead.
 %     \item Grappa~\cite{Nelson2015} \todo{Amanda}\\
 % \end{itemize}
 
-\textbf{Fault Tolerance in DSMs.} Prior work on fault tolerant main memory in a
+\subsection{Fault Tolerance in DSM} Prior work on fault tolerant main memory in a
 distributed context was done by the RAMCloud project~\cite{Ousterhout:2015:RSS:2818727.2806887}. 
 Their approach uses full replication a key-value store, similar to RAID1, and
 disks which provide a durable log for the system to recover from.  Our approach
@@ -33,7 +36,7 @@ implement RAID4/5 at the page level which requires that only a single replica
 contains parity data while supporting the same level of fault tolerance as
 RAMCloud.
 
-\textbf{Single Machine Interface.} This section looks at two DSMs which most
+\subsection{Single Machine Interface.} This section looks at two DSMs which most
 closely resemble our system goals: a distributed framework which exposes a
 simple single machine interface to the developer. Grappa, unlike previous DSM
 work, relies on parallelism to achieve performance instead of relying on memory
@@ -61,4 +64,4 @@ achieved using data parallel techniques found in Dryad~\cite{Isard:2007:DDD:1272
 Naiad~\cite{Murray2013}, and TensorFlow~\cite{tensorflow2015-whitepaper}. These
 frameworks have proven notoriously hard for developers to understand, and debug
 in a distributed setting. Camelot's difficulty is exactly that of writing
-mutithreaded C.
+multithreaded C.

@@ -7,8 +7,9 @@ generic interface for the developer to program on, yet still provides the
 benefits of distribution of data and compute. We describe the Camelot system,
 which builds upon the BlueBridge system by adding multi-threading support,
 different paging policies, and RAID for memory fault tolerance. We evaluated
-each additions' performance impact and functionality. We found \todo{insert
-findings Fabian Bronson \sout{Stew}}. In memory RAID can significantly reduce
+each additions' performance impact and functionality. In our current setup, Camelot was able to scale 
+up to eight cores, achieving a throughput of 3.5 Gbps with an average request latency of around 60 
+microseconds. In memory RAID can significantly reduce
 memory usage (over 50\% on common configurations) with a computational overhead
 of \textasciitilde6\% compaired to competing solutions~
 \cite{Ousterhout:2015:RSS:2818727.2806887}.
