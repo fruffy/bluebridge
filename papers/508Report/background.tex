@@ -5,7 +5,35 @@
     \item treadmarks~\cite{Keleher1994} \todo{Fabian} \\
     \item piccilo~\cite{piccolo} \todo{Fabian}  \\
     \item CASHMERe ~\cite{cashmere} \todo{Fabian}  \\
-    \item ramcloud~\cite{Ousterhout:2015:RSS:2818727.2806887} \todo{Stewart} \\
-    \item distributed data processing (Hadoop~\cite{Dean2004}/pregal~\cite{Malewicz:2010:PSL:1807167.1807184}/spark~\cite{180560} \\ dryad~\cite{Isard:2007:DDD:1272996.1273005}/naiad~\cite{Murray2013}) \todo{Stewart} \\
     \item Grappa~\cite{Nelson2015} \todo{Amanda}\\
 \end{itemize}
+
+    Prior work on fault tolerant main memory in a distributed
+        context was done by the RAMCloud
+        project~\cite{Ousterhout:2015:RSS:2818727.2806887}. Their
+        approach uses full replication a key-value store, similar to
+        RAID1, and disks which provide a durable log for the system to
+        recover from.  Our approach to fault tolerant memory requires
+        less memory, at the cost of computation. We implement RAID4/5
+        at the page level which requires that only a single replica
+        contains parity data while supporting the same level of fault
+        tolerance as RAMCloud.
+
+    While entirely general we present Camelot in the context of
+        a big data processing framework. Systems such as
+        Hadoop~\cite{Dean2004},
+        Pregal~\cite{Malewicz:2010:PSL:1807167.1807184},
+        Spark~\cite{180560} use embarrassingly parallel constructs such
+        as map-reduce, or a \textit{think like a vertex} programming
+        mentality. These constructs allow for extreme scale but
+        restrict programmers to their constructs and often produce
+        inefficient algorithms. In contrast Camelot allows developers
+        to process big data using conventional C. Efficient
+        implementation of many algorithms can be achieved using data
+        parallel techniques found in
+        Dryad~\cite{Isard:2007:DDD:1272996.1273005},
+        Naiad~\cite{Murray2013}, and
+        TensorFlow~\cite{tensorflow2015-whitepaper}. These frameworks
+        have proven notoriously hard for developers to understand, and
+        debug in a distributed setting. Camelot's difficulty is
+        exactly that of writing mutithreaded C.

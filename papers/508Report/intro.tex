@@ -25,7 +25,7 @@ run graph processing on GraphLab, they must adhere to the vertex-centric
 processing paradigm~\cite{Low2010}.
 
 Yet, it has been shown that many of these frameworks out performed by a single
-threaded laptop implementation \todo{cite COST}. McSherry showed that his
+threaded laptop implementation \todo{189908}. McSherry showed that his
 implementation of certain processing algorithms in RUST outperformed the most
 popular frameworks for that algorithm. But, programming highly performant code
 requires knowledge of the system (i.e., operating system tuning) and is not
@@ -37,6 +37,7 @@ New trends in technology make it possible to have a combined approach, where a
 distributed framework abstracts away all complexity associated with distribution
 and presents the user with a single NUMA machine interface. We envision a system
 which turns a datacenter rack or equivalent cluster into a large NUMA machine.
+
 We realize the first part of this system in Camelot, the network managed
 distributed shared memory backend. 
 
