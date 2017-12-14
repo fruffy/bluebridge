@@ -3,14 +3,12 @@
 As the amount of digital data collected increases, the need for data-intensive
 large scale processing increases. For example, Facebook processes over 500
 terabytes a day and has invested in a large data processing pipleline to process
-that data \todo{Recent facebook paper on streaming pipeline.}
-\todo{https://techcrunch.com/2012/08/22/how-big-is-facebooks-data-2-5-billion-pieces-of-content-and-500-terabytes-ingested-every-day/}. 
-Large scale data processing is not limited to large technology companies,
-different disciplines in the sciences have also taken advantage of computing
-power to make advancements. For example, high performance computing has been
-used to improve processing times of electron microscopy images and super
-computers have been used to implement and develop DNA sequencing systems.
-\todo{http://www.sciencedirect.com/science/article/pii/S030439911630300X, https://www.osc.edu/research/report10/BiologicalSciences/DNAsequencing}
+that data~\cite{Chen2016}. Large scale data processing is not limited to large
+technology companies, different disciplines in the sciences have also taken
+advantage of computing power to make advancements. For example, high performance
+computing has been used to improve processing times of electron microscopy
+images and super computers have been used to implement and develop DNA
+sequencing systems~\cite{Puckelwartz2017,Oelerich2017}.
 
 Previous work has looked at solving the issue of large scale data processing for
 different types of applications (i.e., graph processing, streaming, etc.).
@@ -43,20 +41,22 @@ distributed shared memory backend.
 
 Distributed shared memory (DSM) is made realistic by faster interconnects.
 Traditionally, DSMs did not achieve adoption due to low throughput and high
-latency of network data transfers \todo{cite}. Now, with remote direct memory
+latency of network data transfers~\cite{Li1989}. Now, with remote direct memory
 access (RDMA) and faster networks, the prospect of achieving low-latency (3 - 5
 microsecond) is much more attainable. Due to this, there has been a resurgancy
-of research into DSM systems and remote memory systems \todo{cite}. Recent work
-has attempted to address the issues surrounding DSMs even with fast
-interconnects, such as fault tolerance~\cite{Ongaro2011,Nelson2015}.
+of research into DSM systems and remote memory systems~\cite{Ongaro2011,Nelson2015,Dragojevic2014}. 
+% Recent work
+% has attempted to address the issues surrounding DSMs even with fast
+% interconnects, such as fault tolerance~\cite{Ongaro2011,Nelson2015}.
 
-The one closest to our work, Grappa, exposes a single shared memory space with
-a simplified interface to allow for expressive but simple applications to run
-on the system. Although, both systems, our vision and Grappa, attempt to provide
-the same service (simple expressible interface on DSM), we provide optimizations
-and features beyond Grappa. We move memory management into the network to reduce
-the amount of network traffic and improve performance. Camelot also provides
-fault tolerant memory by adding different RAID levels to the system. 
+The recent work closest to Camelot, Grappa, exposes a single shared memory
+space with a simplified interface to allow for expressive but simple
+applications to run on the system. Although, both systems, our vision and
+Grappa, attempt to provide the same service (simple expressible interface on
+DSM), we provide optimizations and features beyond Grappa. We move memory
+management into the network to reduce the amount of network traffic and improve
+performance. Camelot also provides fault tolerant memory by adding different
+RAID levels to the system. 
 
 Camelot is the next generation of a previous system, BlueBridge, which
 implemented the basis for network managed DSM. We expand upon BlueBridge to
@@ -73,5 +73,10 @@ The contributions of this work are as follows:
 	is it at the end host (server) or the client?}.
 \end{itemize}
 
-In the next section we will discuss motivating use cases for this type of
-framework. 
+We evaluated each improvement to the system to determine the effects on
+performance. We found \todo{insert findings}.
+
+Next we will detail the some motivating applications for this framework and the
+related work. Then we will detail the system design and implemenation before we
+describe the evaluation in detail. We conclude with a discussion and future
+work.
