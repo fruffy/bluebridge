@@ -27,19 +27,23 @@ Latency behaves as expected, with a mild increase in early iterations that trans
 \end{figure*}
 
 \subsection{Paging Performance}
-\todo{Bronson}
+The purpose of our page performance evaluation was to quantify the performance improvement over the BlueBridge paging policy and to determine which paging policy is most efficient. Our first benchmark was running PageRank with varying amounts of local memory and each paging policy. The entire runtime is measured on the Google web graph dataset, roughly 75MB. The second benchmark was sorting a large number of random integers with varying local memory amounts.
 
 \begin{figure}[H]
     \includegraphics[width=\columnwidth]{fig/policyPerformance}
-    \caption{\todo{Bronson}}
+    \caption{PageRank runtime benchmark for each policy with decreasing amount of local memory.}
     \label{fig:policyPerformance}
 \end{figure}
 
+In the Pagerank benchmark, the LRU and improved FIFO policies outperformed the existing FIFO regardless of local memory size, achieving nearly half the execution time in the 35MB and 25MB tests as shown in Fig~\ref{fig:policyPerformance}. As local memory was limited and more page replacements were made, the LFU eviction policy failed to replace the correct pages and execution time increased dramatically, the results of which for 35MB and 25MB local memory were 9 minutes and 40 minutes respectively. To test the effectiveness of the policies, a random replacement policy was implemented. Ideally there would have been a substantial performance benefit from using the new replacement policies over the random replacement but the random replacement policy performed the best in the 35MB local memory test and still performed reasonably well with 50MB and 25MB. This is could be due to the policies implemented being based only on write usage as the nodes are moved around on segfault. For further work it would be beneficial to capture the read usage in an efficient way for the LRU and LFU policies.
+
 \begin{figure}[H]
     \includegraphics[width=\columnwidth]{fig/sortPerformance}
-    \caption{\todo{Bronson}}
+    \caption{Sort runtime benchmark with decreasing amount of local memory for each policy.}
     \label{fig:sortPerformance}
 \end{figure}
+
+In the Sort benchmark the existing FIFO and new replacement policies performed similarly with the exception of LFU. The results of the Sort benchmark in Fig~\ref{fig:sortPerformance} show the extreme difference between having a large number of local pages and a small number of local pages when using LFU.
 
 \subsection{RAID Overhead}
 
