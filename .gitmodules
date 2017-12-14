@@ -1,9 +1,9 @@
-[submodule "IPv6Addressing/mininet"]
-	path = IPv6Addressing/mininet
+[submodule "ip6/mininet"]
+	path = ip6/mininet
 	url = https://github.com/mininet/mininet
-[submodule "IPv6Addressing/ryu"]
-	path = IPv6Addressing/ryu
+[submodule "ip6/ryu"]
+	path = ip6/ryu
 	url = https://github.com/osrg/ryu
-[submodule "Legacy_Code/ndppd"]
-	path = Legacy_Code/ndppd
+[submodule "legacy/ndppd"]
+	path = legacy/ndppd
 	url = https://github.com/DanielAdolfsson/ndppd

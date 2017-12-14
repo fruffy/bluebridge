@@ -1,0 +1,7 @@
+TOTAL:1000 LOCAL:200 ALG:lru PROG:pr GRAPH:wiki-Vote.txt
+Opening...tmp/config/distMem.cnf,Loading Config...,*** Interface h1-eth0,*** Server port 5000,*** Client port 65280,*** Debug active? 0,*** 4 target hosts:	 0:0:102:: 0:0:103:: 0:0:104:: 0:0:105:: ,Setting interface IP...,Pages 1000,interface name: h1-eth0,ip:2,Active Filter: tcpdump -i h1-eth0 dst port 65280 and ip6 net 0:0:101::/48 -ddd,Running [31mrrmem[0m benchmark...,,RAID 0 DOES NOT HANDLE FAILURES!!!,
+TOTAL:1000 LOCAL:100 ALG:lru PROG:pr GRAPH:wiki-Vote.txt
+
+TOTAL:1000 LOCAL:50 ALG:lru PROG:pr GRAPH:wiki-Vote.txt
+
+TOTAL:1000 LOCAL:25 ALG:lru PROG:pr GRAPH:wiki-Vote.txt
