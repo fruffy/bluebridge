@@ -46,4 +46,7 @@ clean:
 	rm -f $(TARGET).dvi
 	rm -f $(TARGET).out
 	rm -f $(TARGET).toc
+	rm -f $(TARGET).fdb_latexmk
+	rm -f $(TARGET).fls
+	rm -f $(TARGET).synctex.gz
 	rm -f ./fig/*.eps
