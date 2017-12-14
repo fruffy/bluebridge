@@ -2,11 +2,16 @@
 \label{sec:conclusion}
 
 We have shown and discussed a new version of DSM which leverages in network
-management to expose a NUMA machine to the user. This provides a simple
-generic interface for the developer to program on, yet still provides the
-benefits of distribution of data and compute. We describe the Camelot system,
-which builds upon the BlueBridge system by adding multi-threading support,
-different paging policies, and RAID for memory fault tolerance. We evaluated
-each additions' performance impact and functionality. In our current setup, Camelot was able to scale 
-up to eight cores, achieving a throughput of 3.5 Gbps with an average request latency of around 60 
-microseconds. In memory RAID cost a 6\%overhead in computation, but required half of the memory of RAMCloud with comprable fault tolerance.
+management to expose a NUMA machine to the user. This provides a simple generic
+interface for the developer to program on, yet still provides the benefits of
+distribution of data and compute. We describe the Camelot system, which builds
+upon the BlueBridge system by adding multi-threading support, different paging
+policies, and RAID for memory fault tolerance. We evaluated each additions'
+performance impact and functionality. In our current setup, Camelot was able to
+scale up to eight cores, achieving a throughput of 3.5 Gbps with an average
+request latency of around 60 Application runtime can be greatly improved by
+implementing fast running replacement policies and the choice of policy has big
+impact on performance.  In memory RAID cost a 6\%overhead in computation, but
+required half of the memory of RAMCloud with comprable fault tolerance.
+
+
