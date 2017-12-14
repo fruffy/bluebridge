@@ -38,7 +38,32 @@ and completely protected. Faulting calls are subsequently mapped to the frame
 cache. This forms the page table of the system. 
 
 \subsection{Page Eviction} 
-With the goal of letting applications use large amounts of memory, BlueBridge's page eviction implementation was not sufficient. The inefficient FIFO performed poorly and with larger amounts of memory, in excess of 4GB, the weaknesses were too noticeable. We decided to not just fix the FIFO implementation but to experiment with other replacement policies as well. The focus while implementing these policies was O(1) insertion, retrieval, and deletion which was achieved by utilizing combined hashtable and list data structures. The implementation of the LFU cache is based off of an O(1) LFU algorithm from Kentan et al ~\cite{Ketan10ano(1)} in which a linked list of nodes hold a use count and are each a parent of a linked list of nodes containing the page. When a page is used it's position in the list data structure is found with the hashtable and the node is moved to the next use count node's linked list. On eviction the tail node of the head of the frequency list is removed. The LRU and improved FIFO implementations both use a linked list accompanying a hashtable. The LRU version finds the node associated with the page using the hashtable and moves it to the front of the list. On eviction the tail of the list is the least recently used and is evicted. The improved FIFO uses the hashtable in the same way as the LRU policy but only removes the tail node and avoids moving used nodes. The variety of policies gives some insight into what policy would be best and gives more options while running applications on Camelot. With the improvements made to paging, Camelot can efficiently handle the paging for large datasets loaded into memory.
+
+BlueBridge's page eviction implementation was not sufficient for large scale
+distributed memory. Its inefficient FIFO implementation performed poorly with
+memory banks in excess of 4GB. We decided to not just fix the FIFO
+implementation but to experiment with other replacement policies to investigate
+optimal distributed paging. 
+
+Our objective in implementing these policies was
+O(1) insertion, retrieval, and deletion which was achieved by utilizing
+combined hashtable and list data structures. The implementation of the LFU
+cache is based off of an O(1) LFU algorithm from Kentan et
+al~\cite{Ketan10ano(1)} in which a linked list of entries hold a use count and
+are each a parent of a linked list of entries containing the page. When a page is
+used it's position in the list data structure is found within the hashtable and
+the entry is moved to the next use count entries linked list. On eviction the
+tail entry of the head of the frequency list is removed.
+
+We developed an LRU and improved FIFO paging strategy both use a linked list
+accompanied by a hashtable. The LRU version finds the entry associated with the
+page using the hashtable and moves it to the front of the list. On eviction the
+tail of the list is the least recently used and is evicted. The improved FIFO
+uses the hashtable in the same way as the LRU policy but only removes the tail
+entry and avoids moving used entries. The variety of policies gives some insight
+into what policy would be best and gives more options while running
+applications on Camelot. Camelot can efficiently handle the paging for large
+datasets loaded into memory.
 
 \subsection{Threading} 
 As a distributed shared memory system Camelot must support multithreading, simply for multi-core support and the ability to explore sharing cache coherence semantics.
