@@ -75,7 +75,9 @@ The contributions of this work are as follows:
 We evaluated each improvement to the system to determine the effects on
 performance. We found that our system is able to reliably process data which vastly exceed the local 
 amount of memory. It and scales linearly in performance, but is yet unable to make proper use of 
-network resources. In memory RAID can significantly reduce memory usage
+network resources. Application runtime can be greatly improved by implementing fast running 
+replacement policies and the choice of policy has big impact on performance.
+In memory RAID can significantly reduce memory usage
 (over 50\% on common configurations) with a computational overhead of \textasciitilde6\%
 compared to competing solutions~\cite{Ousterhout:2015:RSS:2818727.2806887}.
 
