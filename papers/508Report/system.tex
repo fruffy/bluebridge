@@ -1,24 +1,41 @@
-\section{System}
-\label{sec:system}
-\todo{Needs proofreading}
+\section{System} \label{sec:system}
+%%
+Camelot is a functional extension of the BlueBridge system. In this section we
+describe BlueBridge, its limitations, and the extensions which compose the
+Camelot system; mainly multithreading, paging algorithms, and fault tolerance.
+%%
 \subsection{Prior System} Camelot is a successor to a
-simplistic DSM system. In the prior system, "BlueBride" all clients to the
-system have an unrestricted view of the entire virtual address space.
-Client program were restricted to a single thread, and all paging was
-performed using a naive FIFO paging strategy. BlueBride made use of a
-novel 128 bit IPv6 remote addressing mechanism which we adopted into
-Camelot. Remote addresses are represented as 128-bit IPv6-compatible
-pointers. On the client side, all remote addresses are stored as
-combination of the virtual pointer provided by the service node and
-its source IP address. If a client accesses remote memory, it inserts
-the address into the IP header of the request packet. The switch will
-route it automatically to the correct server node.
+simplistic DSM system. In the prior system, "BlueBride" all have an
+unrestricted view of the entire virtual address space.  Client program were
+limited to a single thread, and all paging was performed using a naive FIFO
+paging strategy. BlueBride made use of a novel 128 bit IPv6 remote addressing
+mechanism which we adopted into Camelot. Remote addresses are represented as
+128-bit IPv6-compatible pointers. On the client side, all remote addresses are
+stored as combination of the virtual pointer provided by the service node and
+its source IP address. If a client accesses remote memory, it inserts the
+address into the IP header of the request packet. The switch will route it
+automatically to the correct server node.
 
-\subsection{Network and Virtual Memory Stack}
-To support custom protocols without being dependent on the Linux networking stack, Camelot uses its own network library. The library is implemented using raw sockets, Berkely Packet Filters (BPFs)~\cite{bpf} and \texttt{packet mmap}~\cite{packet_mmap}.
-At runtime, the application allocates a shared ring buffer, which it registers with the kernel.  After binding the socket to an interface, the kernel copies any event into the receive buffer and continuously dispatches packets in the send buffer. To reduce the amount of packets inserted into the ring buffer, applications are able to insert a BPF byte-filter code, which directs the kernel to only copy relevant packets. This approach is substantially faster than conventional Linux send and receive, as it allows us to remove unnecessary procedures and define a custom control flow.
-
-Camelot also uses a cache management system to provide users with a section of managed memory. Users interfacing with the system initialize the virtual memory manager with a call that specifies cache and global address space size. The call will return a pointer to the managed cache memory, behaving like a typical C \texttt{malloc()}. The global memory space is allocated via \texttt{mmap()} and completely protected. Faulting calls are subsequently mapped to the frame cache. This forms the page table of the system. 
+\subsection{Network and Virtual Memory Stack} To support custom protocols
+without being dependent on the Linux networking stack, Camelot uses its own
+network library. The library is implemented using raw sockets, Berkely Packet
+Filters (BPFs)~\cite{bpf} and \texttt{packet mmap}~\cite{packet_mmap}.  At
+runtime, the application allocates a shared ring buffer, which it registers
+with the kernel.  After binding the socket to an interface, the kernel copies
+any event into the receive buffer and continuously dispatches packets in the
+send buffer. To reduce the amount of packets inserted into the ring buffer,
+applications are able to insert a BPF byte-filter code, which directs the
+kernel to only copy relevant packets. This approach is substantially faster
+than conventional Linux send and receive, as it allows the removal of
+unnecessary procedures.
+%%
+Camelot also uses a cache management system to provide users with a section of
+managed memory. Users interfacing with the system initialize the virtual memory
+manager with a call that specifies cache and global address space size. The
+call will return a pointer to the managed cache memory, behaving like a typical
+C \texttt{malloc()}. The global memory space is allocated via \texttt{mmap()}
+and completely protected. Faulting calls are subsequently mapped to the frame
+cache. This forms the page table of the system. 
 
 \subsection{Page Eviction} 
 
@@ -33,7 +50,6 @@ In the final version of the system, only minimal sharing occurs. Each thread man
 In the virtual memory system,  sharing, too, is minimal. Page metadata and the frame table are global, but sliced in subsets. Each thread owns a slice of the frame cache, which it has full control over. Threads are only able to access frames in their own cache, and are unable to evict or fill pages of other threads. While accessing and sharing pages of the global address table is theoretically possible, no support for coherence and consistency exists yet. 
 
 \subsection{Fault Tolerance} 
-
 Camelot achieves fault tolerance via in memory RAID. Thus far we have
 implemented 4 RAID variants 0,1,4,5 which provide each RAID's fault
 tolerant guarantees. RAID 0 is data striping only, and provides no

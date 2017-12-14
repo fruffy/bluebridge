@@ -68,17 +68,15 @@ The contributions of this work are as follows:
 	mulithreaded applications to take advantage of the DSM.
 	\item We implemented different paging policies in Camelot to analyze the
 	effectiveness of each policy to determine the best one for Camelot.
-	\item We added fault tolerance by integrating RAID to the end hosts\ac{Stew,
-	is it at the end host (server) or the client?}.
+	\item We added fault tolerance by integrating a RAID manager into the client side page fault handler.
+        
 \end{itemize}
 
 We evaluated each improvement to the system to determine the effects on
-performance. We tested the scaling of the multithreaded, and found that the
-system could scale to 64 threads with reasonable performance. Out of all the
-paging policies we tested, \todo{insert based on bronson} performed the best
-with our test workloads. Finally, when evaluating RAID we compared our solution
-to RAMCloud~\cite{Ongaro2011} and found with a 6\% performance penalty, we could
-recovery from memory failures with 3x less resources. 
+performance. We found \todo{insert findings Fabian Bronson
+\sout{Stew}}. In memory RAID can significantly reduce memory usage
+(over 50\% on common configurations) with a computational overhead of ~6\%
+compaired to competing solutions~\cite{Ousterhout:2015:RSS:2818727.2806887}.
 
 Our paper will be organized as follows. First we will discuss previous work in
 the space in Section~\ref{sec:background}. Then we will discuss the design and
