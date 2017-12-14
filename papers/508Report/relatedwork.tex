@@ -2,23 +2,53 @@
 \label{sec:related}
 
 There has bene extensive work in shared and remote memory systems over the past
-decades. We only sample a small amount from this area and compare it to Camelot
-here. 
+decades. We break related work into two broad categories: distributed shared
+memory systems, fault tolerance in distributed shared memory systems, and
+systems which expose a single machine interface.
 
-\begin{itemize}
-    \item treadmarks~\cite{Keleher1994} \todo{Fabian} \\
-    \item piccilo~\cite{piccolo} \todo{Fabian}  \\
-    \item CASHMERe ~\cite{cashmere} \todo{Fabian}  \\
-    \item Grappa~\cite{Nelson2015} \todo{Amanda}\\
-\end{itemize}
+\textbf{Distributed Shared Memory.} As stated before, DSMs have been extensively
+studied over the decades and the main issue with DSMs is the performace. Two
+systems of note, TreadMarks and Cashmere, use different techniques to improve
+performance by trading off consistency. Treadmarks attempts to reduce
+the amount of commuication neccessary to enforce memory consistency~
+\cite{Keleher1994}. Similarly, Cashmere is a ``two-level'' shared memory system
+where it attempts to meet the challenge of performance by leveraging low-latency
+read-write capabilities~\cite{cashmere}. Camelot differs from both approaches as
+it does not sacrifice consistency to improve performance, rather it moves the
+management of the shared memory into the switch to reduce network overhead.
 
-Prior work on fault tolerant main memory in a distributed context was done by
-the RAMCloud project~\cite{Ousterhout:2015:RSS:2818727.2806887}. Their approach
-uses full replication a key-value store, similar to RAID1, and disks which
-provide a durable log for the system to recover from.  Our approach to fault
-tolerant memory requires less memory, at the cost of computation. We implement
-RAID4/5 at the page level which requires that only a single replica contains
-parity data while supporting the same level of fault tolerance as RAMCloud.
+% \begin{itemize}
+%     \item treadmarks~\cite{Keleher1994} \todo{Fabian} \\
+%     \item piccilo~\cite{piccolo} \todo{Fabian}  \\
+%     \item CASHMERe ~\cite{cashmere} \todo{Fabian}  \\
+%     \item Grappa~\cite{Nelson2015} \todo{Amanda}\\
+% \end{itemize}
+
+\textbf{Fault Tolerance in DSMs.} Prior work on fault tolerant main memory in a
+distributed context was done by the RAMCloud project~\cite{Ousterhout:2015:RSS:2818727.2806887}. 
+Their approach uses full replication a key-value store, similar to RAID1, and
+disks which provide a durable log for the system to recover from.  Our approach
+to fault tolerant memory requires less memory, at the cost of computation. We
+implement RAID4/5 at the page level which requires that only a single replica
+contains parity data while supporting the same level of fault tolerance as
+RAMCloud.
+
+\textbf{Single Machine Interface.} This section looks at two DSMs which most
+closely resemble our system goals: a distributed framework which exposes a
+simple single machine interface to the developer. Grappa, unlike previous DSM
+work, relies on parallelism to achieve performance instead of relying on memory
+locality~\cite{Nelson2015}. This similar to Camelot, as it does not rely on
+locality for performance, but they differ in the since that Camelot attempts to
+achieve that performance by moving management to the network and improving the
+network transfer times. Piccolo exposes a key-value table interface to
+computations running on different machines which acts as shared distributed
+state~\cite{piccolo}. Piccolo is similar to the programming model we wish to use
+in Camelot, but we envision an even more general programming model. Piccolo
+requires the developer to organize their computation into application kernels
+while reasoning about how those kernels will be distributed~\cite{piccolo}.
+Camelot, on the other hand, will allow applications to be written in a
+high-level, easy to understand language, such as Python, which provides more
+expressibility to the developer.	
 
 While entirely general we present Camelot in the context of a big data
 processing framework. Systems such as Hadoop~\cite{Dean2004}, Pregal~\cite{Malewicz:2010:PSL:1807167.1807184}, 
