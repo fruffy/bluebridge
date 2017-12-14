@@ -5,7 +5,12 @@ scalability and competitiveness with existing data processing
 platforms. We developed a set of benchmark programs with diverse
 memory access patterns, to measure the quality of our page eviction
 strategies, threading performance, and raid overhead.
-
+\begin{figure*}[h]
+	\includegraphics[width=\textwidth]{fig/threads_pinned}
+	\caption{Microbenchmarks of the Camelot request API. The two figures show latency and throughput 
+	with threads pinned to cores in round-robin fashion.}
+	\label{fig:threads}
+\end{figure*}
 \subsection{Experimental setup}
 Our tests were performed in the Mininet~\cite{mininet} as well as on real hardware.
 Mininet is a host-local network emulator intended to rapidly prototype SDN and data center network environments. Mininet allow us to verify and deploy code quickly, without having to worry about hardware constraints or configuration. While absolute performance may not exactly be accurate, relative improvements are generally reliable. 
@@ -18,12 +23,6 @@ As expected, throughput scales linearly up to eight threads and latency does not
 
 We decided to go beyond the expected scaling of eight cores and explore the system behaviour up to 64 threads. The pinned experiment ran stable, demonstrating a reasonable reliability. The throughput results exhibit a sawtooth pattern, with a local maximum occurring  every eighth thread. This pattern is caused by the number of cores and pinning. However, this does not explain the maxima achieved by 16 and 24 threads. We assume that these may be caused by batching of requests in the NIC buffer, which is beneficial for throughput.
 Latency behaves as expected, with a mild increase in early iterations that transitions into wild instability the more threads are added.
-
-\begin{figure*}[H]
-    \includegraphics[width=\textwidth]{fig/threads_pinned}
-    \caption{Microbenchmarks of the Camelot request API. The two figures show latency and throughput with threads pinned to cores in round-robin fashion.}
-    \label{fig:threads}
-\end{figure*}
 
 \subsection{Paging Performance}
 The purpose of our page performance evaluation was to quantify the performance improvement over the BlueBridge paging policy and to determine which paging policy is most efficient. Our first benchmark was running PageRank with varying amounts of local memory and each paging policy. The entire runtime is measured on the Google web graph dataset, roughly 75MB. The second benchmark was sorting a large number of random integers with varying local memory amounts.
