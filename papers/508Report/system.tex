@@ -32,8 +32,45 @@ In the final version of the system, only minimal sharing occurs. Each thread man
 \subsubsection{Threading in the Virtual Memory System}
 In the virtual memory system,  sharing, too, is minimal. Page metadata and the frame table are global, but sliced in subsets. Each thread owns a slice of the frame cache, which it has full control over. Threads are only able to access frames in their own cache, and are unable to evict or fill pages of other threads. While accessing and sharing pages of the global address table is theoretically possible, no support for coherence and consistency exists yet. 
 
-
-
 \subsection{Fault Tolerance} 
+
+Camelot achieves fault tolerance via in memory RAID. Thus far we have
+implemented 4 RAID variants 0,1,4,5 which provide each RAID's fault
+tolerant guarantees. RAID 0 is data striping only, and provides no
+fault tolerance. The failure of a single memory server causes
+applications to hang, this variant was developed as a baseline. RAID 1
+is full replication, applications running RAID 1 can survive up to
+$n-1$ memory node failures. This RAID has the same guarantees as
+RAMCloud and was developed for the sake of comparison. RAID 4 \& 5
+use erasure encoding, in the form of parity to gain the tolerance of
+a single memory server failure. In RAID 4 parity is resident on a
+single machine, whereas RAID 5 distributes parity across all servers.
+
+Camelots RAID manager resides in its page fault handler on client side
+applications. When a page fault occurs the RAID manager performs a
+RAID variant, as specified by a configuration file. In the case of
+RAID 0 with 4 memory servers the manager manager splits the evicted
+4096 byte page into 1024 byte stripes and issues a separate async
+request to 4 servers. Upon receiving 4 acks the RAID manager returns
+control to the user level application. The same protocol holds for
+RAID 1, although full pages are broadcast to all servers. When a page
+is requested in RAID 0, all servers must respond with their stripe to
+compose a page, whereas RAID 1 returns control to applications after
+receiving its first replica.
+
+RAID 4 and 5 require parity calculation on page evictions, and
+repair computation when failures occur. Parity calculation, and
+repair of 4K pages takes between 10 and 15 microseconds. The main
+bottleneck of these operations is cache memory bandwidth, as the
+calculation itself only requires the execution of C's XOR function. In
+the failure case when a page from a failed node is not received
+correction is run on the fly and repaired pages are passed to the
+application so it can operate opaque to failures. In such cases
+detecting that a page is missing via timeout is the dominant factor
+which increases latency. Our current implementation uses a fixed
+timeout of 100 microseconds, and no failure detector has been
+implemented as of yet. In the future using a dynamic timeout, or
+failure detector could dramatically decrease the cost of running
+repairs.
 
 
