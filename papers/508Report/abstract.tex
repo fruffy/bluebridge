@@ -1,20 +1,20 @@
 \begin{abstract}
 Variety of applications require large scale data processing~\cite{Chen2016}. Many
-different frameworks attempt to abstract away the complexities inherent with
-distributed data processing by enforcing programming models. This leads to the
+big data processing frameworks attempt to abstract away the
+complexities inherent with distributed data processing by enforcing programming
+models~\cite{Dean2004,Zaharia2012,Murray2013}. This leads to the
 frameworks imposing undo overhead on the applications and performing worse than
 a highly optimized single threaded laptop implementation~\cite{189908}. 
 
 We propose taking the simplicity of a single machine implementation and
 combining it with the advantages of a distributed implementation. We envision a
 system which turns a datacenter rack or equivalent cluster into a large NUMA
-machine. We realize the first part of this system in Camelot, the network
-managed distributed shared memory backend. 
+machine. We realize the first part of this system in Camelot, a network
+managed distributed shared memory (DSM) backend. 
 
 Camelot is the next generation of a previous system, BlueBridge, which
 implemented the basis for network managed DSM. We expand upon BlueBridge to
 bring it closer to our envisioned system by adding support for multi-threading,
 improved paging policies, and fault tolerance. We evaluate Camelot on these
-three axises to determine if the performance cost of the added improvements.
-\todo{Add most significant findings.}
+three axises to determine the performance cost of the added improvements.
 \end{abstract}

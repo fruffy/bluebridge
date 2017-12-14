@@ -35,7 +35,6 @@ New trends in technology make it possible to have a combined approach, where a
 distributed framework abstracts away all complexity associated with distribution
 and presents the user with a single NUMA machine interface. We envision a system
 which turns a datacenter rack or equivalent cluster into a large NUMA machine.
-
 We realize the first part of this system in Camelot, the network managed
 distributed shared memory backend. 
 
@@ -74,9 +73,15 @@ The contributions of this work are as follows:
 \end{itemize}
 
 We evaluated each improvement to the system to determine the effects on
-performance. We found \todo{insert findings}.
+performance. We tested the scaling of the multithreaded, and found that the
+system could scale to 64 threads with reasonable performance. Out of all the
+paging policies we tested, \todo{insert based on bronson} performed the best
+with our test workloads. Finally, when evaluating RAID we compared our solution
+to RAMCloud~\cite{Ongaro2011} and found with a 6\% performance penalty, we could
+recovery from memory failures with 3x less resources. 
 
-Next we will detail the some motivating applications for this framework and the
-related work. Then we will detail the system design and implemenation before we
-describe the evaluation in detail. We conclude with a discussion and future
-work.
+Our paper will be organized as follows. First we will discuss previous work in
+the space in Section~\ref{sec:background}. Then we will discuss the design and
+implementation of Camelot in Section~\ref{sec:system}. Section~\ref{sec:eval}
+details the evaluation methodology and results. Finally, we conclude with
+discussion and future work. 
