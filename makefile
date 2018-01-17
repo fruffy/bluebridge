@@ -1,8 +1,8 @@
 MAKE_DIR = $(PWD)
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-MSG_DIR    := $(ROOT_DIR)/IPv6Addressing/
+MSG_DIR    := $(ROOT_DIR)/ip6/
 
-CC = gcc-6
+CC = gcc
 CFLAGS += -c -Wextra -Wall -Wall -Wshadow -Wpointer-arith -Wcast-qual
 CFLAGS += -std=gnu11 -pedantic
 CFGLAS += -oFast # performance flags
@@ -14,14 +14,14 @@ LDFLAGS := -lpcap -pthread -lm -lrt
 export MAKE_DIR CC CFLAGS LDFLAGS
 all:
 		echo $(ROOT_DIR)
-		rm -rf $(ROOT_DIR)/IPv6Addressing/build
+		rm -rf $(ROOT_DIR)/ip6/build
 		@$(MAKE) -C $(MSG_DIR)
 		#@$(MAKE) -C $(MSG_DIR) -f default.mk
-		find $(ROOT_DIR)/IPv6Addressing/ -name '*.o*' -delete
+		find $(ROOT_DIR)/ip6/ -name '*.o*' -delete
 
 .PHONY: clean
 clean:
 		@$(MAKE) -C $(MSG_DIR) clean
-		find $(ROOT_DIR)/IPv6Addressing/ -name '*.o*' -delete
-		rm -rf $(ROOT_DIR)/IPv6Addressing/build
+		find $(ROOT_DIR)/ip6/ -name '*.o*' -delete
+		rm -rf $(ROOT_DIR)/ip6/build
 

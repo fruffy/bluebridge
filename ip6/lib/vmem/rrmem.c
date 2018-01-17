@@ -373,7 +373,7 @@ void repairStripeFromParity45(char (*repair)[BLOCK_SIZE], char (*stripes)[MAX_HO
 
 
 void parity45(char *data, int size, int stripes, char *parity) {
-    clock_t start = clock(), diff;
+    //clock_t start = clock(), diff;
     //Malloc the correct ammount of space for the parity
     int alloc = size / stripes;
     /*
@@ -414,8 +414,8 @@ void parity45(char *data, int size, int stripes, char *parity) {
         }
         parity[alloc] = paritybyte;
     }
-    diff = (double)clock() - start;
-    int microsec = diff * 1000000 / CLOCKS_PER_SEC;
+    //diff = (double)clock() - start;
+    //int microsec = diff * 1000000 / CLOCKS_PER_SEC;
     //printf("mics :%d\n",microsec);
     return;
 }
