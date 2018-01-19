@@ -42,8 +42,8 @@ struct rmem {
 int PAGE_SIZE = 4096;
 
 static int xmp_read(void *buf, u_int32_t len, u_int64_t offset, void *userdata) {
-    if (*(int *)userdata)
-        fprintf(stderr, "R - %lu, %u\n", offset, len);
+/*    if (*(int *)userdata)
+        fprintf(stderr, "R - %lu, %u\n", offset, len);*/
     u_int64_t page_offset = offset/PAGE_SIZE;
     if (len > PAGE_SIZE) {
         for (int i = 0; i< len/PAGE_SIZE; i++) {
@@ -61,8 +61,8 @@ static int xmp_read(void *buf, u_int32_t len, u_int64_t offset, void *userdata) 
 }
 
 static int xmp_write(const void *buf, u_int32_t len, u_int64_t offset, void *userdata) {
-    if (*(int *)userdata)
-      fprintf(stderr, "W - %lu, %u\n", offset, len);
+/*    if (*(int *)userdata)
+      fprintf(stderr, "W - %lu, %u\n", offset, len);*/
     u_int64_t page_offset = offset/PAGE_SIZE;
     if (len > PAGE_SIZE) {
         for (int i = 0; i< len/PAGE_SIZE; i++) {
