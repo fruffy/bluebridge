@@ -110,10 +110,10 @@ int init_packetsock_ring(int sd){
     struct tpacket_req tp;
 
     // tell kernel to export data through mmap()ped ring
-    tp.tp_block_size = BLOCKSIZE;
-    tp.tp_block_nr = CONF_RING_BLOCKS;
-    tp.tp_frame_size = FRAMESIZE;
-    tp.tp_frame_nr = CONF_RING_BLOCKS * (BLOCKSIZE/ FRAMESIZE);
+    tp.tp_block_size = C_BLOCKSIZE;
+    tp.tp_block_nr = C_RING_BLOCKS;
+    tp.tp_frame_size = C_FRAMESIZE;
+    tp.tp_frame_nr = C_RING_FRAMES;
     if (setsockopt(sd, SOL_PACKET, PACKET_TX_RING, (void*) &tp, sizeof(tp)))
         RETURN_ERROR(-1, "setsockopt() ring\n");
     int on = 1;
@@ -158,11 +158,13 @@ int init_packetsock() {
 int get_send_socket() {
     return sd_send;
 }
+
 void set_thread_id_tx(int id) {
     thread_id = id;
 }
+
 int close_send_socket() {
-    if (munmap(ring, CONF_RING_BLOCKS * BLOCKSIZE)) {
+    if (munmap(ring, C_RING_BLOCKS * C_BLOCKSIZE)) {
         perror("munmap");
         return 1;
     }
@@ -200,7 +202,7 @@ int send_mmap(unsigned const char *pkt, int pktlen) {
     // fetch a frame
     // like in the PACKET_RX_RING case, we define frames to be a page long,
     // including their header. This explains the use of getpagesize().
-    struct tpacket_hdr *header = (struct tpacket_hdr * )((char *) ring + (ring_offset * FRAMESIZE));
+    struct tpacket_hdr *header = (struct tpacket_hdr * )((char *) ring + (ring_offset * C_FRAMESIZE));
     //assert((((unsigned long) header) & (FRAMESIZE - 1)) == 0);
     // fill data
     char *off = ((char *) header) + (TPACKET_HDRLEN - sizeof(struct sockaddr_ll));
@@ -210,7 +212,7 @@ int send_mmap(unsigned const char *pkt, int pktlen) {
     header->tp_status = TP_STATUS_SEND_REQUEST;
     /*    printf(KRED"Thread %d Sending on socket %d and offset %d\n"RESET, thread_id, sd_send, ring_offset);*/
     // increase consumer ring pointer
-    ring_offset = (ring_offset + 1) & (CONF_RING_FRAMES - 1);
+    ring_offset = (ring_offset + 1) & (C_RING_FRAMES - 1);
     // notify kernel
     //write(sd_send,packetinfo.ether_frame, 0);
     return 0;

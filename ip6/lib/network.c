@@ -67,36 +67,9 @@ int send_udp6_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targe
 }
 
 /*
- * Sends message to specified socket
- * RAW version, we craft our own packet.
- * We also return an id.
- */
-// TODO: Evaluate what variables and structures are actually needed here
-// TODO: Error handling
-struct in6_memaddr *send_id_udp6_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
-    //memcpy(&(targetIP->sin6_addr), &remoteAddr, IPV6_SIZE);
-   /* char dst_ip[INET6_ADDRSTRLEN];
-    inet_ntop(AF_INET6,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
-    print_debug("Sending to %s", dst_ip);*/
-    uint64_t start = getns(); 
-    struct pkt_rqst pkt = {
-        .dst_addr = (struct in6_addr *) remoteAddr,
-        .dst_port = targetIP->sin6_port,
-        .data = sendBuffer,
-        .datalen = msgBlockSize
-    };
-    cooked_send(pkt);
-    sendLat += getns() - start;
-    send_calls++;
-    //memset(sendBuffer, 0, msgBlockSize);
-    return remoteAddr;
-}
-
-/*
  * Receives message on socket
  * RAW version, we craft our own packet.
  */
-// TODO: Evaluate what variables and structures are actually needed here
 // TODO: Error handling
 int rcv_udp6_raw(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     uint64_t start = getns(); 
@@ -110,7 +83,6 @@ int rcv_udp6_raw(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *tar
  * Receives message on socket
  * RAW version, we craft our own packet.
  */
-// TODO: Evaluate what variables and structures are actually needed here
 // TODO: Error handling
 int rcv_udp6_raw_id(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     uint64_t start = getns();
@@ -119,7 +91,6 @@ int rcv_udp6_raw_id(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *
     rcv_calls++;
     return numbytes;
 }
-
 
 struct sockaddr_in6 *init_sockets(struct config *bb_conf) {
     struct sockaddr_in6 * temp = init_rcv_socket(bb_conf);
@@ -137,6 +108,7 @@ void set_net_thread_ids(int t_id) {
     set_thread_id_tx(t_id);
     set_thread_id_rx(t_id);
 }
+
 struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf, int isServer) {
     if (!isServer)
         set_net_thread_ids(t_id);

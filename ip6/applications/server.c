@@ -17,7 +17,7 @@ static int NUM_THREADS = 1;
  * Request handler for socket sock_fd
  * TODO: get message format
  */
-void handleClientRequests(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
+void handle_requests(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     // Switch on the client command
     if (remoteAddr->cmd == ALLOC_CMD) {
         print_debug("******ALLOCATE******");
@@ -25,23 +25,25 @@ void handleClientRequests(char *receiveBuffer, struct sockaddr_in6 *targetIP, st
     } else if (remoteAddr->cmd == WRITE_CMD) {
         print_debug("******WRITE DATA: ");
         if (DEBUG) {
-            printNBytes((char *) remoteAddr, IPV6_SIZE);
+            print_n_bytes((char *) remoteAddr, IPV6_SIZE);
         }
         write_mem(receiveBuffer, targetIP, remoteAddr);
     } else if (remoteAddr->cmd == GET_CMD) {
         print_debug("******GET DATA: ");
-        // printNBytes((char *) ipv6Pointer,IPV6_SIZE);
+        if (DEBUG) {
+            print_n_bytes((char *) remoteAddr, IPV6_SIZE);
+        }
         get_mem(targetIP, remoteAddr);
     } else if (remoteAddr->cmd == FREE_CMD) {
         print_debug("******FREE DATA: ");
         if (DEBUG) {
-            printNBytes((char *) remoteAddr,IPV6_SIZE);
+            print_n_bytes((char *) remoteAddr, IPV6_SIZE);
         }
         free_mem(targetIP, remoteAddr);
     } else if (remoteAddr->cmd == ALLOC_BULK_CMD) {
         print_debug("******ALLOCATE BULK DATA: ");
         if (DEBUG) {
-            printNBytes((char *) remoteAddr,IPV6_SIZE);
+            print_n_bytes((char *) remoteAddr,IPV6_SIZE);
         }
         uint64_t *alloc_size = (uint64_t *) receiveBuffer;
         allocate_mem_bulk(targetIP, *alloc_size);
@@ -82,7 +84,7 @@ void *thread_loop(void *arg) {
         rcv_udp6_raw(receiveBuffer, BLOCK_SIZE, temp, &remoteAddr);
         if (pthread_mutex_trylock(&mutex) == EBUSY)
             continue;
-        handleClientRequests(receiveBuffer, temp, &remoteAddr);
+        handle_requests(receiveBuffer, temp, &remoteAddr);
         pthread_mutex_unlock(&mutex);
     }
     close_sockets();
@@ -165,7 +167,7 @@ int main(int argc, char *argv[]) {
         while (1) {
             //TODO: Error handling (numbytes = -1)
             rcv_udp6_raw(receiveBuffer, BLOCK_SIZE, targetIP, &remoteAddr);
-            handleClientRequests(receiveBuffer, targetIP, &remoteAddr);
+            handle_requests(receiveBuffer, targetIP, &remoteAddr);
         }
         close_sockets();
     }

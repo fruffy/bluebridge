@@ -130,10 +130,10 @@ static int rx_ring(rxring_t rx)
     req.tp_frame_nr = req.tp_block_size /
                 req.tp_frame_size *
                 req.tp_block_nr;*/
-    req.tp_block_size = BLOCKSIZE,
+    req.tp_block_size = C_BLOCKSIZE,
     req.tp_block_nr = 1,
-    req.tp_frame_size = FRAMESIZE,
-    req.tp_frame_nr = CONF_RING_FRAMES,
+    req.tp_frame_size = C_FRAMESIZE,
+    req.tp_frame_nr = C_RING_FRAMES,
     req.tp_retire_blk_tov = 64;
     req.tp_sizeof_priv = sizeof(struct priv);
     req.tp_feature_req_word = 0;

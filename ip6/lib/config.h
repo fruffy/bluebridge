@@ -6,8 +6,6 @@
 #include <netinet/ip6.h>    // struct ip6_hdr
 
 // Define some constants.
-#define BLOCK_SIZE 4096 // max number of bytes we can get at once
-#define IPV6_SIZE 16
 #define POINTER_SIZE sizeof(void*)
 
 static const int SUBNET_ID = 1; // 16 bits for subnet id

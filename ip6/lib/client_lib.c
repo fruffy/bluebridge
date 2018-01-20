@@ -38,7 +38,6 @@ int numHosts() {
     return nhosts;
 }
 
-
 /*
  * Generates a random IPv6 address target under specific constraints
  * This is used by the client to request a pointer from a random server in the network
@@ -123,7 +122,6 @@ struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *targetIP, uint64_t s
     for (uint64_t i = 0; i < size; i++) {
         addrList[i] = retAddr;
         addrList[i].paddr = retAddr.paddr + i * BLOCK_SIZE;
-
     }
     return addrList;
 }
@@ -135,11 +133,8 @@ struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *targetIP, uint64_t s
  */
 // TODO: Implement meaningful return types and error messages
 char *get_rmem(struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
-    //int size = sizeof(GET_CMD);
     // Prep message
-    //memcpy(sendBuffer, GET_CMD, size);
     remoteAddr->cmd =  GET_CMD;
-    //memcpy(sendBuffer + size, remoteAddr, IPV6_SIZE);
     print_debug("******GET DATA******");
     // Send request and store response
     do
@@ -153,10 +148,7 @@ char *get_rmem(struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
  */
 // TODO: Implement meaningful return types and error messages
 int write_rmem(struct sockaddr_in6 *targetIP, char *payload, struct in6_memaddr *remoteAddr) {
-    //int size = sizeof(WRITE_CMD);
     // Create the data
-    //memcpy(sendBuffer, WRITE_CMD, size);
-
     remoteAddr->cmd =  WRITE_CMD;
     print_debug("Writing to send buffer");
     memcpy(sendBuffer, payload, BLOCK_SIZE);
@@ -263,12 +255,8 @@ int writeRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_H
  */
 // TODO: Implement meaningful return types and error messages
 int free_rmem(struct sockaddr_in6 *targetIP,  struct in6_memaddr *remoteAddr) {
-    //int size = sizeof(FREE_CMD);
     // Create message
-    //memcpy(sendBuffer, FREE_CMD, size);
     remoteAddr->cmd =  FREE_CMD;
-
-    //memcpy(sendBuffer+size,remoteAddr,IPV6_SIZE);
     print_debug("******FREE DATA******");
     // Send message and check if it was successful
     // TODO: Check if it actually was successful
@@ -276,26 +264,4 @@ int free_rmem(struct sockaddr_in6 *targetIP,  struct in6_memaddr *remoteAddr) {
     rcv_udp6_raw_id(receiveBuffer,BLOCK_SIZE, targetIP, remoteAddr);
     return EXIT_SUCCESS;
 }
-
-/*
- * Migrates remote memory
- */
-//TODO: Currently unused.
-/*int migrateRemoteMem(struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int machineID) {
-    // Allocates storage
-    char ovs_cmd[100];
-    char s[INET6_ADDRSTRLEN];
-    inet_ntop(targetIP->sin6_family,((struct in6_addr *) remoteAddr)->s6_addr, s, sizeof s);
-    printf("Getting pointer\n");
-    memcpy(receiveBuffer, getRemoteMem(targetIP, remoteAddr), BLOCK_SIZE);
-    printf("Freeing pointer\n");
-    freeRemoteMem(targetIP, remoteAddr);
-    printf("Writing pointer\n");
-    sprintf(ovs_cmd, "ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=%s,priority=65535,actions=output:%d", s, machineID);
-    int status = system(ovs_cmd);
-    printf("%d\t%s\n", status, ovs_cmd);
-    writeRemoteMem(targetIP, receiveBuffer, remoteAddr);
-    return EXIT_SUCCESS;
-}*/
-
 

@@ -149,10 +149,10 @@ void close_rcv_socket() {
 int setup_packet_mmap() {
 
     struct tpacket_req tpacket_req = {
-        .tp_block_size = BLOCKSIZE,
-        .tp_block_nr = CONF_RING_BLOCKS,
-        .tp_frame_size = FRAMESIZE,
-        .tp_frame_nr = CONF_RING_BLOCKS * (BLOCKSIZE/ FRAMESIZE)
+        .tp_block_size = C_BLOCKSIZE,
+        .tp_block_nr = C_RING_BLOCKS,
+        .tp_frame_size = C_FRAMESIZE,
+        .tp_frame_nr = C_RING_FRAMES
     };
 
     int size = tpacket_req.tp_block_size *tpacket_req.tp_block_nr;
@@ -284,7 +284,6 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
                     if (remoteAddr != NULL && server) {
                         memcpy(remoteAddr, &iphdr->ip6_dst, IPV6_SIZE);
                     }
-                    //printf("rec: %s\n",receiveBuffer);
                     memcpy(targetIP->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
                     targetIP->sin6_port = udphdr->source;
                     tpacket_hdr->tp_status = TP_STATUS_KERNEL;

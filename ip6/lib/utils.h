@@ -30,11 +30,11 @@
 
 //void print_debug(char* message);
 
-int printBytes(char *receiveBuffer);
+int print_bytes(char *receiveBuffer);
 
-int printNBytes(void *receiveBuffer, int num);
+int print_n_bytes(void *receiveBuffer, int num);
 
-int printNChars(void *receiveBuffer, int num);
+int print_n_chars(void *receiveBuffer, int num);
 
 int print_addrInfo(struct addrinfo *result);
 
