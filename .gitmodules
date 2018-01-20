@@ -1,9 +1,6 @@
 [submodule "ip6/mininet"]
 	path = ip6/mininet
 	url = https://github.com/mininet/mininet
-[submodule "ip6/ryu"]
-	path = ip6/ryu
-	url = https://github.com/osrg/ryu
 [submodule "legacy/ndppd"]
 	path = legacy/ndppd
 	url = https://github.com/DanielAdolfsson/ndppd
