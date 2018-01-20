@@ -99,26 +99,6 @@ struct packetconfig *get_packet_info() {
     return &packetinfo;
 }
 
-/*void init_epoll_send() {
-
-    struct epoll_event event = {
-        .events = EPOLLOUT,
-        .data = {.fd = sd_send }
-    };
-
-    epoll_fd = epoll_create1(0);
-
-    if (-1 == epoll_fd) {
-        perror("epoll_create failed.");
-       exit(1);
-    }
-
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sd_send, &event)) {
-        perror("epoll_ctl failed");
-        close(epoll_fd);
-       exit(1);
-    }
-}*/
 // tp_block_size must be a multiple of PAGE_SIZE (1)
 // tp_frame_size must be greater than TPACKET_HDRLEN (obvious)
 // tp_frame_size must be a multiple of TPACKET_ALIGNMENT
@@ -172,19 +152,6 @@ int init_packetsock() {
         close(sd_send);
         RETURN_ERROR(-1, "Ring initialisation failed!\n");
     }
-/*    init_epoll_send();
-
-    pthread_attr_t t_attr_send;
-    struct sched_param para_send;
-    pthread_t tx_send;
-    pthread_attr_init(&t_attr_send);
-    pthread_attr_setschedpolicy(&t_attr_send, SCHED_FIFO);
-    para_send.sched_priority = 20;
-    pthread_attr_setschedparam(&t_attr_send, &para_send);
-    if (pthread_create(&tx_send, &t_attr_send, txring_send, (void *)sd_send) != 0) {
-        perror("pthread_create() failed\n");
-        abort();
-    }*/
     return EXIT_SUCCESS;
 }
 
@@ -223,39 +190,6 @@ void init_send_socket(struct config *configstruct) {
     init_sd_socket();
 }
 
-// DEPRECATED
-void init_send_socket_old(struct config *configstruct) {
-    //Socket operator variables
-    const int on=1;
-    gen_packet_info(configstruct);
-
-    if ((sd_send = socket (AF_PACKET, SOCK_RAW|SOCK_NONBLOCK, htons (ETH_P_ALL))) < 0) {
-        perror ("socket() failed ");
-        exit (EXIT_FAILURE);
-    }
-    struct tpacket_req req;
-    req.tp_block_size = BLOCKSIZE;
-    req.tp_block_nr = CONF_RING_BLOCKS;
-    req.tp_frame_size = FRAMESIZE;
-    req.tp_frame_nr = CONF_RING_BLOCKS * (BLOCKSIZE/ FRAMESIZE);
-
-    if (-1 == bind(sd_send, (struct sockaddr *)&packetinfo.device, sizeof(packetinfo.device))) {
-        perror("Send: Could not bind socket.");
-        exit(1);
-    }    
-
-    struct packet_mreq      mr;
-    memset (&mr, 0, sizeof (mr));
-    mr.mr_ifindex = packetinfo.device.sll_ifindex;
-    mr.mr_type = PACKET_MR_PROMISC;
-    setsockopt (sd_send, SOL_PACKET,PACKET_ADD_MEMBERSHIP, &mr, sizeof (mr));
-    setsockopt(sd_send , SOL_PACKET , PACKET_TX_RING , (void*)&req , sizeof(req));
-    setsockopt(sd_send, IPPROTO_IPV6, IP_PKTINFO, &on, sizeof(int));
-    setsockopt(sd_send, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(int));
-    setsockopt(sd_send, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
-}
-
-
 /// transmit a packet using packet ring
 //  NOTE: for high rate processing try to batch system calls, 
 //        by writing multiple packets to the ring before calling send()
@@ -274,12 +208,15 @@ int send_mmap(unsigned const char *pkt, int pktlen) {
     // fill header
     header->tp_len = pktlen;
     header->tp_status = TP_STATUS_SEND_REQUEST;
-/*    printf(KRED"Thread %d Sending on socket %d and offset %d\n"RESET, thread_id, sd_send, ring_offset);*/
+    /*    printf(KRED"Thread %d Sending on socket %d and offset %d\n"RESET, thread_id, sd_send, ring_offset);*/
     // increase consumer ring pointer
     ring_offset = (ring_offset + 1) & (CONF_RING_FRAMES - 1);
     // notify kernel
     //write(sd_send,packetinfo.ether_frame, 0);
+    return 0;
+}
 
+int flush_buffer() {
     while (1) {
         if (sendto(sd_send, NULL, 0, MSG_DONTWAIT, (struct sockaddr *)NULL, sizeof(struct sockaddr_ll)) < 0) {
             perror( "sendto failed");
@@ -290,78 +227,70 @@ int send_mmap(unsigned const char *pkt, int pktlen) {
     }
 }
 
-// CURRENTLY NOT IN USE
-/**
- * This task will call be called when content has been written to the mapped region
- */
-/*void *txring_send(void *arg) {
-    long ec_send;
-    (void)arg;
-    while (1) {
-        struct epoll_event events[1024];
-        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 0);
-        
-        if (num_events == -1)  {
-        if (errno == EINTR)  {
-            perror("epoll_wait returned -1");
-            break;
-        }
-            perror("error");
-            continue;
-        }
+int cooked_batched_send(struct pkt_rqst *pkts, int num_pkts) {
 
-        for (int i = 0; i < num_events; ++i)  {
-            struct epoll_event *event = &events[i];
-            if (event->events & EPOLLOUT) {
-                // send all buffers with TP_STATUS_SEND_REQUEST 
-                ec_send=sendto(sd_send, NULL, 0, MSG_DONTWAIT,
-                        (struct sockaddr *)NULL, sizeof(struct sockaddr_ll));
-            }
-            //if(blocking) printf("end of task send()\n");
-            //printf("end of task send(ec=%x)\n", ec_send);
-        }
+    for (int i= 0; i < num_pkts; i++) {
+        struct pkt_rqst pkt = pkts[i];
+        struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN);
+        struct udphdr *udphdr = (struct udphdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN);
+        //Set destination IP
+        iphdr->ip6_dst = *pkt.dst_addr;
+        // Payload length (16 bits): UDP header + UDP data
+        iphdr->ip6_plen = htons (UDP_HDRLEN + pkt.datalen);
+        // UDP header
+        // Destination port number (16 bits): pick a number
+        // We expect the port to already be in network byte order
+        udphdr->dest = pkt.dst_port;
+        // Length of UDP datagram (16 bits): UDP header + UDP data
+        udphdr->len = htons (UDP_HDRLEN + pkt.datalen);
+        // Static UDP checksum
+        udphdr->check = 0xFFAA;
+        //udphdr->check = udp6_checksum (iphdr, udphdr, (uint8_t *) data, datalen);
+        // Copy our data
+        memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, pkt.data, pkt.datalen * sizeof (uint8_t));
+        // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
+        int frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + pkt.datalen;
+        /*    char dst_ip[INET6_ADDRSTRLEN];
+        inet_ntop(AF_INET6,&iphdr->ip6_dst, dst_ip, sizeof dst_ip);
+        printf("Sending to part two %s::%d\n", dst_ip, ntohs(udphdr->dest));*/
+        if (i >= 16384) {
+            flush_buffer();
+        } 
+        send_mmap(packetinfo.ether_frame, frame_length);
+
+    }
+    flush_buffer();
+    return EXIT_SUCCESS;
 }
-    return (void*) ec_send;
-}*/
 
-int cooked_send(struct in6_addr *dst_addr, int dst_port, char *data, int datalen) {
-    /*if (sd_send <= 0)
-        init_send_socket(sd_conf);
-    if (get_rcv_socket() <= 0)
-        init_epoll();*/
-    //pthread_mutex_lock(&mutex);
-    //unsigned char ether_frame[datalen + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN];
-    //memcpy(ether_frame, packetinfo.ether_frame,datalen + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN );
+int cooked_send(struct pkt_rqst pkt) {
+
     struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN);
     struct udphdr *udphdr = (struct udphdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN);
     //Set destination IP
-    iphdr->ip6_dst = *dst_addr;
+    iphdr->ip6_dst = *pkt.dst_addr;
     // Payload length (16 bits): UDP header + UDP data
-    iphdr->ip6_plen = htons (UDP_HDRLEN + datalen);
+    iphdr->ip6_plen = htons (UDP_HDRLEN + pkt.datalen);
     // UDP header
     // Destination port number (16 bits): pick a number
     // We expect the port to already be in network byte order
-    udphdr->dest = dst_port;
+    udphdr->dest = pkt.dst_port;
     // Length of UDP datagram (16 bits): UDP header + UDP data
-    udphdr->len = htons (UDP_HDRLEN + datalen);
+    udphdr->len = htons (UDP_HDRLEN + pkt.datalen);
+    // Static UDP checksum
     udphdr->check = 0xFFAA;
-    // UDP checksum (16 bits)
     //udphdr->check = udp6_checksum (iphdr, udphdr, (uint8_t *) data, datalen);
     // Copy our data
-    //printf("Sending %s\n", data );
-    memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, data, datalen * sizeof (uint8_t));
+    memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, pkt.data, pkt.datalen * sizeof (uint8_t));
     // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
-    int frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + datalen;
-    // Send ethernet frame to socket.
-/*    if ((sendto (sd_send, packetinfo.ether_frame, frame_length, 0, (struct sockaddr *) &packetinfo.device, sizeof (packetinfo.device))) <= 0) {
-        perror ("sendto() failed");
-        exit (EXIT_FAILURE);
-    }*/
-/*    char dst_ip[INET6_ADDRSTRLEN];
+    int frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + pkt.datalen;
+    /*    char dst_ip[INET6_ADDRSTRLEN];
     inet_ntop(AF_INET6,&iphdr->ip6_dst, dst_ip, sizeof dst_ip);
     printf("Sending to part two %s::%d\n", dst_ip, ntohs(udphdr->dest));*/
+    // Place the packet in the ring buffer
     send_mmap(packetinfo.ether_frame, frame_length);
-    //pthread_mutex_unlock(&mutex);
+    // Flush the buffer
+    flush_buffer();
     return EXIT_SUCCESS;
 }
 

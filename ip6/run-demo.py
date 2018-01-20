@@ -16,7 +16,7 @@ from subprocess import Popen, PIPE
 
 from functools import partial
 
-HOSTS = 5
+HOSTS = 3
 
 class BlueBridge(Topo):
     "Simple topology example."
@@ -51,7 +51,7 @@ def configureHosts(net):
         # Insert host configuration
         configString = "\"INTERFACE=h" + \
             str(hostNum) + \
-            "-eth0\n\HOSTS=0:0:102::,0:0:103::,0:0:104::,0:0:105::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
+            "-eth0\n\HOSTS=0:0:102::,0:0:103::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
             '{0:02x}'.format(hostNum) + "::\n\DEBUG=0\" > ./tmp/config/distMem.cnf"
         host.cmdPrint('echo ' + configString)
 

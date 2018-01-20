@@ -57,7 +57,9 @@ static struct ep_interface interface_ep;
 static __thread struct rcv_ring ring;
 static __thread int sd_rcv;
 static __thread int thread_id;
-const int TIMEOUT = 3;
+const int TIMEOUT = 0;
+
+
 /* Initialize a listening socket */
 struct sockaddr_in6 *init_rcv_socket(struct config *configstruct) {
     struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
@@ -133,63 +135,6 @@ int set_packet_filter(int sd, char *addr, char *interfaceName, int port) {
     pclose(tcpdump_output);
     return EXIT_SUCCESS;
 }
-
-/* Initialize a listening socket */
-struct sockaddr_in6 *init_rcv_socket_old(struct config *configstruct) {
-
-    struct addrinfo hints, *servinfo, *p = NULL;
-    int rv;
-    //Socket operator variables
-    const int on=1, off=0;
-    // hints = specifies criteria for selecting the socket address
-    // structures
-    interface_ep.my_port = configstruct->src_port;
-    memset (&interface_ep.device, 0, sizeof (interface_ep.device));
-    if ((interface_ep.device.sll_ifindex = if_nametoindex (configstruct->interface)) == 0) {
-        perror ("if_nametoindex() failed to obtain interface index ");
-        exit (EXIT_FAILURE);
-    }
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET6;
-    hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_flags = AI_PASSIVE; // use my IP
-    char str_port[5];
-    sprintf(str_port, "%d", configstruct->src_port);
-    if ((rv = getaddrinfo(NULL, str_port, &hints, &servinfo)) != 0) {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-        exit(1);
-    }
-
-    // loop through all the results and bind to the first we can
-    for (p = servinfo; p != NULL; p = p->ai_next) {
-        if ((sd_rcv = socket(p->ai_family, p->ai_socktype, p->ai_protocol))
-                == -1) {
-            perror("server: socket");
-            continue;
-        }
-
-        if (setsockopt(sd_rcv, SOL_SOCKET, SO_REUSEADDR, &off, sizeof(int))
-                == -1) {
-            perror("setsockopt");
-            exit(1);
-        }
-        setsockopt(sd_rcv, IPPROTO_IPV6, IP_PKTINFO, &on, sizeof(int));
-        setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(int));
-        setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(int));
-        ((struct sockaddr_in6 *)p->ai_addr)->sin6_port = interface_ep.my_port;
-        if (bind(sd_rcv, p->ai_addr, p->ai_addrlen) == -1) {
-            close(sd_rcv);
-            perror("server: bind");
-            continue;
-        }
-        break;
-    }
-    struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
-    memcpy(temp, p->ai_addr, sizeof(struct sockaddr_in6));
-
-    return temp;
-}
-
 
 int get_rcv_socket() {
     return sd_rcv;
@@ -289,9 +234,9 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
     while (1) {
         struct epoll_event events[1024];
 
-        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, 0);
+        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, TIMEOUT);
         //int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
-/*        if (num_events == 0 && !server) {
+        /*if (num_events == 0 && !server) {
             //printf("TIMEOUT!\n");
             return -1;
         }*/
@@ -352,45 +297,4 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
         }
     }
     return EXIT_SUCCESS;
-}
-
-int cooked_receive(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *ipv6Pointer){
-    struct sockaddr_in6 from;
-    struct iovec iovec[1];
-    struct msghdr msg;
-    char msg_control[1024];
-    char udp_packet[msgBlockSize];
-    int numbytes = 0;
-    //char s[INET6_ADDRSTRLEN];
-    iovec[0].iov_base = udp_packet;
-    iovec[0].iov_len = sizeof(udp_packet);
-    msg.msg_name = &from;
-    msg.msg_namelen = sizeof(from);
-    msg.msg_iov = iovec;
-    msg.msg_iovlen = sizeof(iovec) / sizeof(*iovec);
-    msg.msg_control = msg_control;
-    msg.msg_controllen = sizeof(msg_control);
-    msg.msg_flags = 0;
-
-    print_debug("Waiting for response...");
-    memset(receiveBuffer, 0, msgBlockSize);
-    numbytes = recvmsg(sd_rcv, &msg, 0);
-    struct in6_pktinfo * in6_pktinfo;
-    struct cmsghdr* cmsg;
-    for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != 0; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-        if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
-            in6_pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
-            //inet_ntop(targetIP->sin6_family, &in6_pktinfo->ipi6_addr, s, sizeof s);
-            //print_debug("Received packet was sent to this IP %s",s);
-            if (ipv6Pointer != NULL)
-                memcpy(ipv6Pointer->s6_addr,&in6_pktinfo->ipi6_addr,IPV6_SIZE);
-            memcpy(receiveBuffer,iovec[0].iov_base,iovec[0].iov_len);
-            memcpy(targetIP, (struct sockaddr *) &from, sizeof(from));
-        }
-    }
-
-    //inet_ntop(targetIP->sin6_family, targetIP, s, sizeof s);
-    //print_debug("Got message from %s:%d", s, ntohs(targetIP->sin6_port));
-    //printNBytes(receiveBuffer, 50);
-    return numbytes;
 }

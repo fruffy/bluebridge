@@ -50,24 +50,26 @@ struct in6_memaddr {
     uint64_t paddr;
 };
 
-extern int cooked_send(struct in6_addr *dst_addr, int dst_port, char* data, int datalen);
+struct pkt_rqst {
+    struct in6_addr *dst_addr;
+    int dst_port;
+    char *data;
+    int datalen;
+};
+
+extern int cooked_send(struct pkt_rqst pkt);
+extern int cooked_batched_send(struct pkt_rqst *pkts, int num_pkts);
 extern void init_send_socket(struct config *configstruct);
-extern void init_send_socket_old(struct config *configstruct);
 
 extern int get_send_socket();
 extern int close_send_socket();
 
-extern int cooked_receive(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_addr *remoteAddr);
 extern struct sockaddr_in6 *init_rcv_socket(struct config *configstruct);
-extern struct sockaddr_in6 *init_rcv_socket_old(struct config *configstruct);
 extern int get_rcv_socket();
 extern int epoll_rcv();
 extern void init_epoll();
 
 extern void close_rcv_socket();
-extern int strange_receive();
-extern struct sockaddr_in6 *rx_client_init_socket(struct config *configstruct);
-extern int rxring_mainloop(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server);
 extern void set_thread_id_tx(int id);
 extern void set_thread_id_rx(int id);
 

@@ -27,7 +27,13 @@ int send_udp_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *target
     //char dst_ip[INET6_ADDRSTRLEN];
     //inet_ntop(AF_INET6,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
     //print_debug("Sending to %s:%d", dst_ip,dst_port);
-    cooked_send(&targetIP->sin6_addr, targetIP->sin6_port, sendBuffer, msgBlockSize);
+    struct pkt_rqst pkt = {
+        .dst_addr = &targetIP->sin6_addr,
+        .dst_port = targetIP->sin6_port,
+        .data = sendBuffer,
+        .datalen = msgBlockSize
+    };
+    cooked_send(pkt);
     //memset(sendBuffer, 0, msgBlockSize);
     return EXIT_SUCCESS;
 }
@@ -47,7 +53,13 @@ int send_udp6_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targe
     //printf("addr [cmd:%d] \n",remoteAddr->cmd);
     //printf("addr [subid:%d] \n",remoteAddr->subid);
     //printf("addr [paddr:%d] \n",remoteAddr->paddr);
-    cooked_send((struct in6_addr *) remoteAddr, targetIP->sin6_port, sendBuffer, msgBlockSize);
+    struct pkt_rqst pkt = {
+        .dst_addr = (struct in6_addr *) remoteAddr,
+        .dst_port = targetIP->sin6_port,
+        .data = sendBuffer,
+        .datalen = msgBlockSize
+    };
+    cooked_send(pkt);
     sendLat += getns() - start;
     send_calls++;
     //memset(sendBuffer, 0, msgBlockSize);
@@ -67,7 +79,13 @@ struct in6_memaddr *send_id_udp6_raw(char *sendBuffer, int msgBlockSize, struct 
     inet_ntop(AF_INET6,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
     print_debug("Sending to %s", dst_ip);*/
     uint64_t start = getns(); 
-    cooked_send((struct in6_addr *) remoteAddr, targetIP->sin6_port, sendBuffer, msgBlockSize);
+    struct pkt_rqst pkt = {
+        .dst_addr = (struct in6_addr *) remoteAddr,
+        .dst_port = targetIP->sin6_port,
+        .data = sendBuffer,
+        .datalen = msgBlockSize
+    };
+    cooked_send(pkt);
     sendLat += getns() - start;
     send_calls++;
     //memset(sendBuffer, 0, msgBlockSize);
