@@ -26,6 +26,6 @@ int rcv_udp6_raw_id(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 
 struct sockaddr_in6 *init_sockets(struct config *configstruct);
 void close_sockets();
 struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf, int isServer);
-
 void printSendLat();
+
 #endif

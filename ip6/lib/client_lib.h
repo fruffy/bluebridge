@@ -13,14 +13,14 @@ int write_rmem(struct sockaddr_in6 *targetIP, char *payload,  struct in6_memaddr
 int free_rmem(struct sockaddr_in6 *targetIP,  struct in6_memaddr *remoteAddr);
 char *get_rmem(struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
 
-int writeRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remoteAddrs, int needed);
-int readRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*bufs)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remoteAddrs, int needed);
-struct in6_addr *gen_rdm_IPv6Target();
-struct in6_addr *gen_IPv6Target();
+int write_raid_mem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remoteAddrs, int needed);
+int read_raid_mem(struct sockaddr_in6 *targetIP, int hosts, char (*bufs)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remoteAddrs, int needed);
+struct in6_addr *gen_rdm_ip6_target();
+struct in6_addr *gen_ip6_target();
 void set_host_list(struct in6_addr *host_addrs, int num_hosts);
 
 
-struct in6_addr *get_IPv6Target(uint8_t index);
+struct in6_addr *get_ip6_target(uint8_t index);
 int numHosts();
 
 #endif

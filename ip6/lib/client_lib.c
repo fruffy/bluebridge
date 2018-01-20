@@ -22,14 +22,14 @@ static __thread char receiveBuffer[BLOCK_SIZE];
  * In future implementations this will be handled by the switch and controller to 
  * loadbalance. The client will send out a generic request. 
  */
-struct in6_addr *gen_rdm_IPv6Target() {
+struct in6_addr *gen_rdm_ip6_target() {
     // Pick a random host
     uint8_t rndHost = rand()% nhosts;
     return &hostList[rndHost];
 }
 
 /*Returns the IP of a given host*/
-struct in6_addr *get_IPv6Target(uint8_t index) {
+struct in6_addr *get_ip6_target(uint8_t index) {
     return &hostList[index];
 }
 
@@ -44,7 +44,7 @@ int numHosts() {
  * In future implementations this will be handled by the switch and controller to 
  * loadbalance. The client will send out a generic request. 
  */
-struct in6_addr *gen_IPv6Target(int offset) {
+struct in6_addr *gen_ip6_target(int offset) {
     // Pick a random host
     return &hostList[offset];
 }
@@ -64,9 +64,7 @@ void set_host_list(struct in6_addr *host_addrs, int num_hosts) {
 // TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
 struct in6_memaddr allocate_rmem(struct sockaddr_in6 *targetIP) {
     // Send the command to the target host and wait for response
-    //memcpy(sendBuffer, ALLOC_CMD, sizeof(ALLOC_CMD));
     ((struct in6_memaddr *)&targetIP->sin6_addr)->cmd = ALLOC_CMD;
-
     send_udp_raw(sendBuffer, BLOCK_SIZE, targetIP);
     rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
     struct in6_memaddr retAddr;
@@ -84,9 +82,6 @@ struct in6_memaddr allocate_rmem(struct sockaddr_in6 *targetIP) {
         // Not successful set the return address to zero.
         memset(&retAddr,0, IPV6_SIZE);
     }
-/*    char dst_ip[INET6_ADDRSTRLEN];
-    inet_ntop(AF_INET6,&retAddr, dst_ip, sizeof dst_ip);
-    print_debug("Allocated %s", dst_ip);*/
     return retAddr;
 }
 
@@ -98,12 +93,11 @@ struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *targetIP, uint64_t s
     // Send the command to the target host and wait for response
     memcpy(sendBuffer, &size, sizeof(uint64_t));
     ((struct in6_memaddr *)&targetIP->sin6_addr)->cmd = ALLOC_BULK_CMD;
-
     send_udp_raw(sendBuffer, BLOCK_SIZE, targetIP);
     rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
     struct in6_memaddr *addrList = malloc(size * sizeof(struct in6_memaddr));
     struct in6_memaddr retAddr;
-    print_debug("******ALLOCATE******");
+    print_debug("******ALLOCATE BULK******");
     if (memcmp(receiveBuffer,"ACK", 3) == 0) {
         // If the message is ACK --> successful allocation
         // Copy the returned pointer (very precise offsets)
@@ -133,7 +127,7 @@ struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *targetIP, uint64_t s
  */
 // TODO: Implement meaningful return types and error messages
 char *get_rmem(struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
-    // Prep message
+    // Send the command to the target host and wait for response
     remoteAddr->cmd =  GET_CMD;
     print_debug("******GET DATA******");
     // Send request and store response
@@ -148,9 +142,8 @@ char *get_rmem(struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
  */
 // TODO: Implement meaningful return types and error messages
 int write_rmem(struct sockaddr_in6 *targetIP, char *payload, struct in6_memaddr *remoteAddr) {
-    // Create the data
+    // Send the command to the target host and wait for response
     remoteAddr->cmd =  WRITE_CMD;
-    print_debug("Writing to send buffer");
     memcpy(sendBuffer, payload, BLOCK_SIZE);
     print_debug("******WRITE DATA******");
     do
@@ -160,7 +153,7 @@ int write_rmem(struct sockaddr_in6 *targetIP, char *payload, struct in6_memaddr 
 }
 
 //Returns the missing raid read -1 if everything is read
-int readRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*bufs)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remoteAddrs, int needed) {
+int read_raid_mem(struct sockaddr_in6 *targetIP, int hosts, char (*bufs)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remoteAddrs, int needed) {
     int host;
     int found[MAX_HOSTS];
     for (int i=0;i<hosts;i++) {
@@ -210,7 +203,7 @@ int readRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*bufs)[MAX_HOSTS
     return -1;
 }
 
-int writeRaidMem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remoteAddrs, int needed) {
+int write_raid_mem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remoteAddrs, int needed) {
     int host;
 
     for (int i=0; i <hosts;i++) {

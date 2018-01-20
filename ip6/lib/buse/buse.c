@@ -50,8 +50,7 @@ u_int64_t ntohll(u_int64_t a) {
 #endif
 #define htonll ntohll
 
-static int read_all(int fd, char* buf, size_t count)
-{
+static int read_all(int fd, char* buf, size_t count) {
   int bytes_read;
 
   while (count > 0) {

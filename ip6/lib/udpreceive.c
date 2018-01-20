@@ -179,7 +179,6 @@ int setup_packet_mmap() {
 
 int init_socket() {
     sd_rcv = socket(AF_PACKET, SOCK_RAW|SOCK_NONBLOCK, htons(ETH_P_ALL));
-
     //const int on = 1;
     //setsockopt(sd_rcv, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int));
     //setsockopt(sd_rcv, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));

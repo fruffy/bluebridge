@@ -111,7 +111,7 @@ void *testing_loop(void *arg) {
  
     // ALLOC TEST
     uint64_t aStart = getns();
-    struct in6_addr *ipv6Pointer = gen_IPv6Target(data->tid % myConf.num_hosts);
+    struct in6_addr *ipv6Pointer = gen_ip6_target(data->tid % myConf.num_hosts);
     memcpy(&(target->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
     struct in6_memaddr *temp = allocate_rmem_bulk(target, data->length);
     memcpy(r_addr, temp, data->length * sizeof(struct in6_memaddr));
@@ -233,7 +233,7 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
             length = NUM_ITERATIONS - offset;
         else 
             length = split;
-        struct in6_addr *ipv6Pointer = gen_IPv6Target(i);
+        struct in6_addr *ipv6Pointer = gen_ip6_target(i);
         memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
         struct in6_memaddr *temp = allocate_rmem_bulk(targetIP, length);
         memcpy(&r_addr[offset],temp,length *sizeof(struct in6_memaddr) );
