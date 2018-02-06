@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <time.h>
+#include <signal.h>
 
 static int *frameState;     // keeps track of how long a page has been in a frame
 static uint64_t *framePage;      // keeps track of which page is in a frame
