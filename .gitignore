@@ -277,6 +277,9 @@ IPv6Addressing/openflow/
 IPv6Addressing/ltmain\.sh
 IPv6Addressing/oflops/
 IPv6Addressing/0
+IPv6Addressing/applications/bin/
+IPv6Addressing/myvirtualdisk
+dpdk/x86_64-native-linuxapp-gcc/
 
 # For Python
 TestApps/PageRank/bin
@@ -289,9 +292,7 @@ TestApps/PageRank/share
 # Cost
 TestApps/Cost/single/cache
 
-IPv6Addressing/applications/bin/
 
-IPv6Addressing/myvirtualdisk
 
 papers/508Report/paper.pdf
 
@@ -308,3 +309,7 @@ myvirtualdisk
 .DS_Store
 
 ip6/applications/bin/
+
+*.cmd
+
+*.d

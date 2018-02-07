@@ -33,7 +33,11 @@ int send_udp_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *target
         .data = sendBuffer,
         .datalen = msgBlockSize
     };
+#ifdef RAW_SOCK
     cooked_send(pkt);
+#else
+    dpdk_send(pkt);
+#endif
     //memset(sendBuffer, 0, msgBlockSize);
     return EXIT_SUCCESS;
 }
@@ -59,7 +63,11 @@ int send_udp6_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targe
         .data = sendBuffer,
         .datalen = msgBlockSize
     };
+#ifdef RAW_SOCK
     cooked_send(pkt);
+#else
+    dpdk_send(pkt);
+#endif
     sendLat += getns() - start;
     send_calls++;
     //memset(sendBuffer, 0, msgBlockSize);
@@ -72,8 +80,13 @@ int send_udp6_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targe
  */
 // TODO: Error handling
 int rcv_udp6_raw(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
-    uint64_t start = getns(); 
-    int numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 1);
+    uint64_t start = getns();
+    int numbytes;
+#ifdef RAW_SOCK
+    numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 1);
+#else
+    numbytes = dpdk_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 1);
+#endif
     rcvLat += getns() - start;
     rcv_calls++;
     return numbytes;
@@ -86,15 +99,25 @@ int rcv_udp6_raw(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *tar
 // TODO: Error handling
 int rcv_udp6_raw_id(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     uint64_t start = getns();
-    int numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 0);
+    int numbytes;
+#ifdef RAW_SOCK
+    numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 0);
+#else
+    numbytes = dpdk_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 0);
+#endif
     rcvLat += getns() - start;
     rcv_calls++;
     return numbytes;
 }
 
 struct sockaddr_in6 *init_sockets(struct config *bb_conf) {
+#ifdef RAW_SOCK
     struct sockaddr_in6 * temp = init_rcv_socket(bb_conf);
     init_send_socket(bb_conf);
+#else
+    init_dpdk(bb_conf);
+    struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
+#endif
     temp->sin6_port = htons(strtol(bb_conf->server_port, (char **)NULL, 10));
     return temp;
 }

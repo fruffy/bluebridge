@@ -100,7 +100,7 @@ static struct buse_operations aop = {
       .disc = xmp_disc,
       .flush = xmp_flush,
       .trim = xmp_trim,
-      .size_blocks =  (u_int64_t) 46 * 1024 * 1024 * 1024 / 4096,
+      .size_blocks =  (u_int64_t) 23 * 1024 * 1024 * 1024 / 4096,
       .blksize = 4096
 };
 

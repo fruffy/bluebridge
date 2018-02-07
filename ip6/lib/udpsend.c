@@ -62,7 +62,7 @@ struct packetconfig *gen_packet_info(struct config *configstruct) {
     }
     //memcpy(src_mac, packetinfo.device.sll_addr, 6); 
     uint8_t src_mac[6] = { 0xa0, 0x36, 0x9f, 0x45, 0xd8, 0x74 };
-    uint8_t dst_mac[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+    uint8_t dst_mac[6] = { 0xa0, 0x36, 0x9f, 0x45, 0xd8, 0x75 };
     // Fill out sockaddr_ll.
     packetinfo.device.sll_family = AF_PACKET;
     memcpy (packetinfo.device.sll_addr, src_mac, 6 * sizeof (uint8_t));

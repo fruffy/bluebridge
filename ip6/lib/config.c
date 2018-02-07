@@ -120,7 +120,7 @@ struct config set_bb_config(char *filename, int isServer) {
             } else if (i == 2){
                     strncpy(bb_config.server_port,cfline,strlen(cfline));
             } else if (i == 3){
-                    set_source_port(&bb_config, isServer,cfline);
+                    set_source_port(&bb_config, isServer, cfline);
             } else if (i == 4){
                     inet_pton(AF_INET6, cfline, bb_config.src_addr.s6_addr);
             } else if (i == 5){

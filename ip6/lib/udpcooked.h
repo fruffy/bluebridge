@@ -66,11 +66,15 @@ extern int close_send_socket();
 
 extern struct sockaddr_in6 *init_rcv_socket(struct config *configstruct);
 extern int get_rcv_socket();
-extern int epoll_rcv();
+extern int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server);
 extern void init_epoll();
 
 extern void close_rcv_socket();
 extern void set_thread_id_tx(int id);
 extern void set_thread_id_rx(int id);
+
+extern void init_dpdk(struct config *configstruct);
+extern int dpdk_send(struct pkt_rqst pkt);
+extern int dpdk_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server);
 
 #endif

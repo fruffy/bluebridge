@@ -74,14 +74,14 @@ int get_mem(struct sockaddr_in6 *target_ip, struct in6_memaddr *r_addr) {
  * TODO: explain.
  * Writes a piece of memory?
  */
-int write_mem(char *receiveBuffer, struct sockaddr_in6 *target_ip, struct in6_memaddr *r_addr) {
+int write_mem(char *receiveBuffer, int length, struct sockaddr_in6 *target_ip, struct in6_memaddr *r_addr) {
     // Copy the first POINTER_SIZE bytes of receive buffer into the target
     memcpy((void *) *(&r_addr->paddr), receiveBuffer, BLOCK_SIZE); 
     memcpy(sendBuffer, "ACK", 3);
     struct in6_memaddr *returnID = (struct in6_memaddr *) (&target_ip->sin6_addr);
     returnID->cmd = r_addr->cmd;
     returnID->paddr = r_addr->paddr;
-    send_udp_raw(sendBuffer, BLOCK_SIZE, target_ip);
+    send_udp_raw(sendBuffer, length, target_ip);
     // TODO change to be meaningful, i.e., error message
     return EXIT_SUCCESS;
 }
