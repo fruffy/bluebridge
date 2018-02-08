@@ -22,3 +22,28 @@ modprobe nbd
 # mount /dev/nbd0 /mnt
 
 # time sudo rsync -ah --progress file4.txt  test/file4.txt
+
+
+Thrift Folder:
+./bootstrap.sh
+./configure
+sudo make
+sudo make install
+
+NanoMsg Folder:
+
+mkdir build
+cd build
+cmake ..
+cmake --build .
+ctest .
+sudo cmake --build . --target install
+sudo ldconfig
+
+
+Building the P4 Library:
+./autogen.sh
+./configure
+make
+sudo make install
+

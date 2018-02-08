@@ -39,7 +39,7 @@ app := server testing test_rmem
 
 sources := $(shell find "$(libDir)" -name '*.$(srcExt)')
 
-RTE_SDK=$(ROOT_DIR)/../dpdk
+RTE_SDK=$(ROOT_DIR)/../includes/dpdk
 ifeq ($(RTE_SDK),)
 $(error "Please define RTE_SDK environment variable")
 endif
