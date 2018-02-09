@@ -1,7 +1,19 @@
-#!/bin/sh
+#!/bin/bash
 set -x
-git submodule update --init --recursive
-./mininet/util/install.sh -nfv
-sudo apt-get install -y libpcap-dev
-make -C ../
+
+cd includes
+read -r -p "Do you want to install the DPDK version? [y/N]" response
+response=${response,,} # tolower
+if [[ $response =~ ^(yes|y| ) ]] || [[ -z $response ]]; then
+    sudo ./setup_includes.sh
+    make dpdk
+else 
+    sudo ./setup_includes.sh -d
+    make
+fi
+cd ..
+
+echo "All done! You are good to go!"
+
+
 
