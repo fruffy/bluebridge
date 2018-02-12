@@ -28,6 +28,7 @@ set -- "${POSITIONAL[@]}" # restore positional parameters
 
 #git submodule update --init --recursive
 sudo apt-get install -y libpcap-dev
+git submodule update --init
 
 
 if [[ $DPDK ]]; then

@@ -1,10 +1,15 @@
 [submodule "includes/dpdk"]
 	url = https://github.com/FRuffy/dpdk
+	path = includes/dpdk
 [submodule "includes/mininet"]
 	url = https://github.com/mininet/mininet
+	path = includes/mininet
 [submodule "includes/nanomsg"]
 	url = https://github.com/nanomsg/nanomsg
+	path = includes/nanomsg
 [submodule "includes/p4"]
 	url = https://github.com/p4lang/behavioral-model
+	path = includes/p4
 [submodule "includes/thrift"]
 	url = https://github.com/apache/thrift
+	path = includes/thrift
