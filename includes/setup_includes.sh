@@ -28,7 +28,6 @@ set -- "${POSITIONAL[@]}" # restore positional parameters
 
 #git submodule update --init --recursive
 sudo apt-get install -y libpcap-dev
-git submodule update --init
 
 
 if [[ $DPDK ]]; then
@@ -43,9 +42,10 @@ if [[ $DPDK ]]; then
             echo "Device not found, please retry..."
         fi
     done
-    git submodule update dpdk
+    git submodule update --init dpdk
+    sudo apt-get install -y libnuma-dev
     ##### Optional Installs
-
+    cd dpdk
     make config T=x86_64-native-linuxapp-gcc
     make install T=x86_64-native-linuxapp-gcc
     cd x86_64-native-linuxapp-gcc
