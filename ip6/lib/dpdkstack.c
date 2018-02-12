@@ -635,14 +635,14 @@ int config_dpdk() {
     printf("NIC should be ready now...\n");
 
     /* create flow for send packet with */
-    struct rte_flow_error error;
-    struct rte_flow *flow = generate_ipv6_flow(portid, rx_lcore_id, packetinfo.iphdr.ip6_dst, &error);
-    if (!flow) {
-        printf("Flow can't be created %d message: %s\n",
-            error.type,
-            error.message ? error.message : "(no stated reason)");
-        rte_exit(EXIT_FAILURE, "error in creating flow");
-    }
+    // struct rte_flow_error error;
+    // struct rte_flow *flow = generate_ipv6_flow(portid, rx_lcore_id, packetinfo.iphdr.ip6_dst, &error);
+    // if (!flow) {
+    //     printf("Flow can't be created %d message: %s\n",
+    //         error.type,
+    //         error.message ? error.message : "(no stated reason)");
+    //     rte_exit(EXIT_FAILURE, "error in creating flow");
+    // }
 
     return ret;
 }
