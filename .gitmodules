@@ -1,0 +1,10 @@
+[submodule "includes/dpdk"]
+	url = https://github.com/FRuffy/dpdk
+[submodule "includes/mininet"]
+	url = https://github.com/mininet/mininet
+[submodule "includes/nanomsg"]
+	url = https://github.com/nanomsg/nanomsg
+[submodule "includes/p4"]
+	url = https://github.com/p4lang/behavioral-model
+[submodule "includes/thrift"]
+	url = https://github.com/apache/thrift
