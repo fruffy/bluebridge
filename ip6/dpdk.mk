@@ -28,18 +28,14 @@
 #   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 #   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 srcExt = c
-srcDir = $(ROOT_DIR)/applications
-objDir = $(srcDir)/obj
-binDir = $(srcDir)/bin
-libDir = $(ROOT_DIR)/lib
-app := server testing test_rmem
-#userfaultfd_measure_pagefault dsm_wc rmem_test 
-
+srcDir = $(MAKE_ROOT)/applications
+libDir = $(MAKE_ROOT)/lib
 sources := $(shell find "$(libDir)" -name '*.$(srcExt)')
 
-RTE_SDK=$(ROOT_DIR)/../includes/dpdk
+
+RTE_SDK=$(MAKE_ROOT)/../includes/dpdk
 ifeq ($(RTE_SDK),)
 $(error "Please define RTE_SDK environment variable")
 endif
@@ -48,25 +44,7 @@ RTE_TARGET ?= x86_64-native-linuxapp-gcc
 
 include $(RTE_SDK)/mk/rte.vars.mk
 
-# binary name
-APP = testing
-
-COMMON_DIR  = ../../common
-
 # all source are stored in SRCS-y
-SRCS-y := ${srcDir}/testing.c ${sources}
-
-#CFLAGS += -O0
-#CFLAGS += -O3
-#CFLAGS += -g
-#CFLAGS += -DPRIVATE_COUNTER
-#CFLAGS += -DSHARED_COUNTER
-#CFLAGS += -DSHARED_LOCK
-#CFLAGS += -DUDP_DBG
-#CFLAGS += -DTHROTTLE_TX
-#CFLAGS += $(WERROR_FLAGS)
-CFLAGS += -Wno-unused-parameter
-
-CFLAGS += -I${COMMON_DIR}
+SRCS-y := ${srcDir}/${APP}.c ${sources}
 
 include $(RTE_SDK)/mk/rte.extapp.mk

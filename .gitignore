@@ -453,3 +453,4 @@ ip6/applications/bin/
 *.cmd
 
 *.d
+ip6/applications/dpdk/

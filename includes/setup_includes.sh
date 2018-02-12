@@ -34,12 +34,17 @@ if [[ $DPDK ]]; then
     while true;
     do
         read -r -p "Please specify the interface to bind to:" iface
-        ifconfig $iface > /dev/null 2>&1
-        if [[ $? -eq 0 ]]; then
-            echo "Initializing the DPDK..."
-            break;
+        if [[ $iface ]]; then
+            ifconfig $iface > /dev/null 2>&1
+            if [[ $? -eq 0 ]]; then
+                echo "Initializing the DPDK..."
+                break;
+            else
+                echo "Device not found, please retry..."
+            fi
         else
-            echo "Device not found, please retry..."
+            echo "Not binding to an interface."
+            break;
         fi
     done
     git submodule update --init dpdk
@@ -58,14 +63,16 @@ if [[ $DPDK ]]; then
     echo 0 > /proc/sys/kernel/randomize_va_space
     modprobe uio
     insmod x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
-    ifconfig enp66s0f0 down
-    usertools/dpdk-devbind.py --bind=igb_uio enp66s0f0
+    if [[ $iface ]]; then
+        ifconfig $iface down
+        usertools/dpdk-devbind.py --bind=igb_uio $iface
+    fi
     cd ..
 else
-    git submodule update mininet
-    git submodule update p4
-    git submodule update nanomsg
-    git submodule update thrift
+    git submodule update --init mininet
+    git submodule update --init p4
+    git submodule update --init nanomsg
+    git submodule update --init thrift
 
     ##### Optional Installs
     sudo apt-get install -y bison

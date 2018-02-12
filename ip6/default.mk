@@ -1,10 +1,9 @@
-ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 srcExt = c
-srcDir = $(ROOT_DIR)/applications
+srcDir = $(MAKE_ROOT)/applications
 objDir = $(srcDir)/obj
 binDir = $(srcDir)/bin
-libDir = $(ROOT_DIR)/lib
-app := server testing rmem_test busexmp
+libDir = $(MAKE_ROOT)/lib
 
 # a list of c files we do not want to compile
 filter:= $(libDir)/dpdkstack.c
@@ -12,12 +11,12 @@ filter:= $(libDir)/dpdkstack.c
 sources := $(shell find "$(libDir)" -name '*.$(srcExt)')
 sources_filtered := $(filter-out $(filter), $(sources))
 srcDirs := $(shell find . -name '*.$(srcExt)' -exec dirname {} \; | uniq)
-objects := $(patsubst $(ROOT_DIR)/%.$(srcExt), $(objDir)/%.o, $(sources_filtered))
+objects := $(patsubst $(MAKE_ROOT)/%.$(srcExt), $(objDir)/%.o, $(sources_filtered))
 
-all: $(app)
+all: $(apps)
 	-rm -r $(objDir)
 
-$(app):  % : $(binDir)/%
+$(apps):  % : $(binDir)/%
 
 
 $(binDir)/%: buildrepo $(objects)
@@ -27,7 +26,7 @@ $(binDir)/%: buildrepo $(objects)
 
 $(objDir)/%.o: %.$(srcExt)
 	@echo "Building $@ ... "
-	@$(CC) $(CFLAGS) $(ROOT_DIR)/$< -o $@
+	@$(CC) $(CFLAGS) $(MAKE_ROOT)/$< -o $@
 
 clean:
 	@echo "Cleaning..."
