@@ -4,16 +4,16 @@ MSG_DIR    := $(MAKE_ROOT)/ip6/
 CC = gcc
 CFLAGS += -c -Wextra -Wall -Wall -Wshadow -Wpointer-arith -Wcast-qual
 CFLAGS += -std=gnu11 -pedantic
-CFGLAS += -oFast # performance flags
-CFLAGS += -DRAW_SOCK
+CFLAGS += -oFast # performance flags
 # CFLAGS += -Wstrict-prototypes -Wmissing-prototypes
 LDFLAGS := -lpcap -pthread -lm -lrt
 
-apps := server testing rmem_test busexmp
+apps := testing server busexmp
+#rmem_test busexmp
 
 export apps CC CFLAGS LDFLAGS
 all:
-		@echo $(MAKE_ROOT)
+		@echo "Running default build in $(MAKE_ROOT)"
 		@rm -rf $(MAKE_ROOT)/ip6/build
 		@$(MAKE) -C $(MSG_DIR) -f default.mk
 		@find $(MAKE_ROOT)/ip6/ -name '*.o*' -delete

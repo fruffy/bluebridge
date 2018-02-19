@@ -5,6 +5,8 @@ objDir = $(srcDir)/obj
 binDir = $(srcDir)/bin
 libDir = $(MAKE_ROOT)/lib
 
+# add the raw socket flag to differentiate from other builds
+CFLAGS += -DRAW_SOCK
 # a list of c files we do not want to compile
 filter:= $(libDir)/dpdkstack.c
 

@@ -128,9 +128,10 @@ void *testing_loop(void *arg) {
         write_latency[i - 1] = getns() - wStart;
     }
     // GET TEST
+    char test[BLOCK_SIZE];
     for (int i = 0; i < data->length; i++) {
         uint64_t rStart = getns();
-        char *test = get_rmem(target, &r_addr[i]);
+        get_rmem(test, BLOCK_SIZE, target, &r_addr[i]);
         read_latency[i - 1] = getns() - rStart;
         print_debug("Thread: %d, Results of memory store: %s\n",  data->tid, test);
         char payload[4096];
@@ -251,18 +252,18 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
         write_latency[i] = getns() - wStart;
         free(payload);
     }
-
+    char test[BLOCK_SIZE];
     // READ TEST
     for (int i = 0; i < NUM_ITERATIONS; i++) {
         struct in6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
-        char *test = get_rmem(targetIP, &remoteMemory);
+        get_rmem(test, BLOCK_SIZE, targetIP, &remoteMemory);
         read_latency[i] = getns() - rStart;
         char *payload = malloc(4096);
         snprintf(payload, 50, "HELLO WORLD! How are you? %d", i);
         print_debug("Results of memory store: %.50s", test);
         if (strncmp(test, payload, 50) < 0) {
-            print_debug(KRED"ERROR: WRONG RESULT"RESET);
+            perror(KRED"ERROR: WRONG RESULT"RESET);
             exit(1);
         }
         free(payload);

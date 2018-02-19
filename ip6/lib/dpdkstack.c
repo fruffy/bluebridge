@@ -2,7 +2,7 @@
 #include <stdio.h>            // printf() and sprintf()
 #include <stdlib.h>           // free(), alloc, and calloc()
 #include <unistd.h>           // close(), sleep()
-#include <string.h>           // strcpy, memset(), and memcpy()
+#include <string.h>           // strcpy, memset(), and rte_memcpy()
 #include <netinet/udp.h>      // struct udphdr
 #include <net/if.h>           // struct ifreq
 #include <linux/if_ether.h>   // ETH_P_IP = 0x0800, ETH_P_IPV6 = 0x86DD
@@ -11,11 +11,10 @@
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
 
 
-#include <rte_ethdev.h>       // main DPDK library
-#include <rte_malloc.h>       // rte_zmalloc_socket()
 #include <rte_cycles.h>       // rte_delay_ms
 #include <rte_flow.h>
-
+#include <rte_ethdev.h>       // main DPDK library
+#include <rte_malloc.h>       // rte_zmalloc_socket()
 
 #include "udpcooked.h"
 #include "utils.h"
@@ -23,6 +22,10 @@
 
 
 #define MTU 8192
+// Hardcoded source and dest macs
+uint8_t SRC_MAC[6] = { 0xa0, 0x36, 0x9f, 0x45, 0xd8, 0x74 };
+uint8_t DST_MAC[6] = { 0xa0, 0x36, 0x9f, 0x45, 0xd8, 0x75 };
+
 
 #define RTE_LOGTYPE_bb RTE_LOGTYPE_USER1
 
@@ -83,7 +86,7 @@ struct lcore_queue_conf {
     unsigned rx_port_list[MAX_RX_QUEUE_PER_LCORE];
 } __rte_cache_aligned;
 struct lcore_queue_conf lcore_queue_conf[RTE_MAX_LCORE];
-struct rte_mempool * bb_pktmbuf_pool = NULL;
+struct rte_mempool *bb_pktmbuf_pool = NULL;
 
 static struct rte_eth_dev_tx_buffer *tx_buffer[RTE_MAX_ETHPORTS];
 
@@ -98,82 +101,113 @@ static const struct rte_eth_conf port_conf = {
     .rxmode = {
         .split_hdr_size = 0,
         .header_split   = 0, /**< Header Split disabled */
-        .hw_ip_checksum = 1, /**< IP checksum offload disabled */
+        .hw_ip_checksum = 0, /**< IP checksum offload disabled */
         .hw_vlan_filter = 0, /**< VLAN filtering disabled */
-        .jumbo_frame    = 0, /**< Jumbo Frame Support disabled */
-        .hw_strip_crc   = 1, /**< CRC stripped by hardware */
+        .jumbo_frame    = 0, /**< Jumbo Frame Support enabled */
+        .hw_strip_crc   = 0, /**< CRC stripped by hardware */
     },
-/*    .rx_adv_conf = {
+    .rx_adv_conf = {
         .rss_conf = {
             .rss_key = NULL,
-            .rss_hf = ETH_RSS_IPV4 | ETH_RSS_NONFRAG_IPV4_UDP,
+            .rss_hf = ETH_RSS_IP | ETH_RSS_UDP,
         },
-    },*/
+    },
     .txmode = {
         .mq_mode = ETH_MQ_TX_NONE,
     },
 };
 
-struct packetconfig {
-    struct ip6_hdr iphdr;
-    struct udphdr udphdr;
-    struct sockaddr_ll device;
-    unsigned char ether_frame[IP_MAXPACKET];
-};
+#define HEADER_PTR(var, type, end) \
+    var = (type *)end, end += sizeof(type)
 
-static struct packetconfig packetinfo;
-static char *ring;
+struct p_skeleton {
+    struct ethhdr ether_hdr;
+    struct ip6_hdr ip_hdr;
+    struct udphdr udp_hdr;
+}ether_frame ;
+
+
+struct p_skeleton *gen_dpdk_packet_info(struct config *configstruct) {
+    memset(&ether_frame, 0, sizeof(struct p_skeleton));
+    /* *** Ethernet header *** */
+    memcpy(&ether_frame.ether_hdr.h_source, &SRC_MAC, 6 * sizeof (uint8_t));
+    memcpy(&ether_frame.ether_hdr.h_dest, &DST_MAC, 6 * sizeof (uint8_t));
+    // Next is ethernet type code (ETH_P_IPV6 for IPv6).
+    // http://www.iana.org/assignments/ethernet-numbers
+    ether_frame.ether_hdr.h_proto = htons(0x86DD);
+    /* *** IPv6 header *** */
+    // IPv6 version (4 bits), Traffic class (8 bits), Flow label (20 bits)
+    ether_frame.ip_hdr.ip6_src = configstruct->src_addr;
+    ether_frame.ip_hdr.ip6_flow = htonl ((6 << 28) | (0 << 20) | 0);
+    // Next header (8 bits): 17 for UDP
+    ether_frame.ip_hdr.ip6_nxt = IPPROTO_UDP;
+    // Hop limit (8 bits): default to maximum value
+    ether_frame.ip_hdr.ip6_hops = 255;
+    /* *** UDP header *** */
+    ether_frame.udp_hdr.source = configstruct->src_port;
+    // Static UDP checksum
+    ether_frame.udp_hdr.check = 0xFFAA;
+    return &ether_frame;
+}
 
 static int send_packet(uint8_t portid, struct rte_mbuf *m) {
-    int b_sent = 0, sent = 0;
-    b_sent = rte_eth_tx_buffer(0,0,tx_buffer[0], m);
-    sent = rte_eth_tx_buffer_flush(0,0,tx_buffer[0]);
+    rte_eth_tx_buffer(0,0,tx_buffer[0], m);
+    int sent = rte_eth_tx_buffer_flush(0,0,tx_buffer[0]);
     return sent;
 }
 
-// datalen = 4158
-int send_dpdk_packet(char *data, int datalen) {
-    struct rte_mbuf *m = rte_pktmbuf_alloc(bb_pktmbuf_pool);
-    if (m == NULL) {
-        return EXIT_FAILURE;
+// Frame length is usually 4158
+// Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
+struct rte_mbuf *dpdk_assemble(struct pkt_rqst pkt) {
+    struct ethhdr *ether_hdr;
+    struct ip6_hdr *ip_hdr;
+    struct udphdr *udp_hdr;
+
+    struct rte_mbuf *frame = rte_pktmbuf_alloc(bb_pktmbuf_pool);
+    if (frame == NULL) {
+        perror("Fatal Error could not allocate packet.");
+        exit(1);
     }
-    char *end = rte_pktmbuf_mtod(m, char *);
-    rte_memcpy(end, data, datalen);
-    end += datalen;
-    rte_pktmbuf_append(m, end - rte_pktmbuf_mtod(m, char *));
-    send_packet(0, m);
-    //rte_pktmbuf_free(m);
-    return EXIT_SUCCESS;
+
+    char *pkt_end = rte_pktmbuf_mtod(frame, char *);
+    HEADER_PTR(ether_hdr, struct ethhdr, pkt_end);
+    HEADER_PTR(ip_hdr, struct ip6_hdr, pkt_end);
+    HEADER_PTR(udp_hdr, struct udphdr, pkt_end);
+
+    //Copy pre-filled variables
+    rte_memcpy(ether_hdr, &ether_frame.ether_hdr, ETH_HDRLEN);
+    rte_memcpy(ip_hdr, &ether_frame.ip_hdr, IP6_HDRLEN);
+    rte_memcpy(udp_hdr, &ether_frame.udp_hdr,UDP_HDRLEN);
+
+    //Set destination IP
+    ip_hdr->ip6_dst = *pkt.dst_addr;
+    // Payload length (16 bits): UDP header + UDP data
+    ip_hdr->ip6_plen = htons(UDP_HDRLEN + pkt.datalen);
+    // UDP header
+    // We expect the port to already be in network byte order
+    udp_hdr->dest = pkt.dst_port;
+    // Length of UDP datagram (16 bits): UDP header + UDP data
+    udp_hdr->len =  htons(UDP_HDRLEN + pkt.datalen);
+    //udp_hdr->check = udp6_checksum (iphdr, udp_hdr, (uint8_t *) data, datalen);
+
+    // Copy our data
+    rte_memcpy(pkt_end, pkt.data, pkt.datalen);
+    pkt_end += pkt.datalen;
+    rte_pktmbuf_append(frame, pkt_end - rte_pktmbuf_mtod(frame, char *));
+    // char dst_ip[INET6_ADDRSTRLEN];
+    // inet_ntop(AF_INET6,&iphdr->ip6_dst, dst_ip, sizeof dst_ip);
+    // printf("Sending to part two %s::%d\n", dst_ip, ntohs(udp_hdr->dest));
+    return frame;
 }
 
 int dpdk_send(struct pkt_rqst pkt) {
-    struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN);
-    struct udphdr *udphdr = (struct udphdr *)((char *)packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN);
-    //Set destination IP
-    iphdr->ip6_dst = *pkt.dst_addr;
-    // Payload length (16 bits): UDP header + UDP data
-    iphdr->ip6_plen = htons (UDP_HDRLEN + pkt.datalen);
-    // UDP header
-    // Destination port number (16 bits): pick a number
-    // We expect the port to already be in network byte order
-    udphdr->dest = pkt.dst_port;
-    // Length of UDP datagram (16 bits): UDP header + UDP data
-    udphdr->len =  UDP_HDRLEN + pkt.datalen;
-    // Static UDP checksum
-    udphdr->check = 0xFFAA;
-    //udphdr->check = udp6_checksum (iphdr, udphdr, (uint8_t *) data, datalen);
-    // Copy our data
-    memcpy(packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, pkt.data, pkt.datalen * sizeof (uint8_t));
-    // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
-    int frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + pkt.datalen; // Usually 4158
-/*    char dst_ip[INET6_ADDRSTRLEN];
-    inet_ntop(AF_INET6,&iphdr->ip6_dst, dst_ip, sizeof dst_ip);
-    printf("Sending to part two %s::%d\n", dst_ip, ntohs(udphdr->dest));*/
+    //Assemble the packet
+    struct rte_mbuf *frame = dpdk_assemble(pkt);
     // Commit the dpdk packet
-    send_dpdk_packet(packetinfo.ether_frame, frame_length);
+    send_packet(0, frame);
+    //rte_pktmbuf_free(frame);
     return EXIT_SUCCESS;
 }
-
 
 struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
 int dpdk_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server) {
@@ -192,18 +226,18 @@ int dpdk_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetI
             char *payload = ((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
             struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
             int isMyID = 1;
-/*            char s[INET6_ADDRSTRLEN];
-            char s1[INET6_ADDRSTRLEN];
-            inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
-            inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
-            printf("Thread %d Got message from %s:%d to %s:%d\n", 0, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
-            printf("Thread %d My port %d their dest port %d\n",0, ntohs(packetinfo.udphdr.source), ntohs(udphdr->dest) );*/
-            if (udphdr->dest == packetinfo.udphdr.source) {
+            // char s[INET6_ADDRSTRLEN];
+            // char s1[INET6_ADDRSTRLEN];
+            // inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
+            // inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
+            // printf("Thread %d Got message from %s:%d to %s:%d\n", 0, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
+            // printf("Thread %d My port %d their dest port %d\n",0, ntohs(packetinfo.udphdr.source), ntohs(udphdr->dest) );
+            if (udphdr->dest == ether_frame.udp_hdr.source) {
                 if (remoteAddr != NULL && !server) {
-/*                    printf("Thread %d Their ID\n", 0);
-                    print_n_bytes(inAddress, 16);
-                    printf("Thread %d MY ID\n", 0);
-                    print_n_bytes(remoteAddr, 16);*/
+                    // printf("Thread %d Their ID\n", 0);
+                    // print_n_bytes(inAddress, 16);
+                    // printf("Thread %d MY ID\n", 0);
+                    // print_n_bytes(remoteAddr, 16);
                     isMyID = (inAddress->cmd == remoteAddr->cmd) && (inAddress->paddr == remoteAddr->paddr);
                 }
                 if (isMyID) {
@@ -222,51 +256,6 @@ int dpdk_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetI
     }
 }
 
-struct packetconfig *gen_dpdk_packet_info(struct config *configstruct) {
-
-    // Allocate memory for various arrays.
-
-    // Find interface index from interface name and store index in
-    // struct sockaddr_ll device, which will be used as an argument of sendto().
-    memset (&packetinfo.device, 0, sizeof (packetinfo.device));
-    if ((packetinfo.device.sll_ifindex = if_nametoindex (configstruct->interface)) == 0) {
-        perror ("if_nametoindex() failed to obtain interface index ");
-    //    exit (EXIT_FAILURE);
-    }
-    //memcpy(src_mac, packetinfo.device.sll_addr, 6); 
-    uint8_t src_mac[6] = { 0xa0, 0x36, 0x9f, 0x45, 0xd8, 0x74 };
-    uint8_t dst_mac[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-    // Fill out sockaddr_ll.
-    packetinfo.device.sll_family = AF_PACKET;
-    memcpy (packetinfo.device.sll_addr, src_mac, 6 * sizeof (uint8_t));
-    packetinfo.device.sll_halen = 6;
-
-    // Destination and Source MAC addresses
-    memcpy (packetinfo.ether_frame, &dst_mac, 6 * sizeof (uint8_t));
-    memcpy (packetinfo.ether_frame + 6, &src_mac, 6 * sizeof (uint8_t));
-    // Next is ethernet type code (ETH_P_IPV6 for IPv6).
-    // http://www.iana.org/assignments/ethernet-numbers
-    packetinfo.ether_frame[12] = ETH_P_IPV6 / 256;
-    packetinfo.ether_frame[13] = ETH_P_IPV6 % 256;
-
-    // IPv6 header
-    // IPv6 version (4 bits), Traffic class (8 bits), Flow label (20 bits)
-    packetinfo.iphdr.ip6_src = configstruct->src_addr;
-    // IPv6 version (4 bits), Traffic class (8 bits), Flow label (20 bits)
-    packetinfo.iphdr.ip6_flow = htonl ((6 << 28) | (0 << 20) | 0);
-
-    // Next header (8 bits): 17 for UDP
-    packetinfo.iphdr.ip6_nxt = IPPROTO_UDP;
-    //packetinfo.iphdr.ip6_nxt = 0x9F;
-
-    // Hop limit (8 bits): default to maximum value
-    packetinfo.iphdr.ip6_hops = 255;
-    packetinfo.udphdr.source = configstruct->src_port;
-    memcpy (packetinfo.ether_frame + ETH_HDRLEN, &packetinfo.iphdr, IP6_HDRLEN * sizeof (uint8_t));
-    memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN, &packetinfo.udphdr, UDP_HDRLEN * sizeof (uint8_t));
-    return &packetinfo;
-}
-
 static int bb_parse_portmask(const char *portmask)
 {
     char *end = NULL;
@@ -275,13 +264,12 @@ static int bb_parse_portmask(const char *portmask)
     /* parse hexadecimal string */
     pm = strtoul(portmask, &end, 16);
     if ((portmask[0] == '\0') || (end == NULL) || (*end != '\0'))
-        return -1;
-
+        return EXIT_FAILURE;
     if (pm == 0)
-        return -1;
-
+        return EXIT_FAILURE;
     return pm;
 }
+
 /* Parse the argument given in the command line of the application */
 static int
 bb_parse_args(int argc, char **argvopt) {
@@ -502,77 +490,77 @@ unsigned setup_ports (uint8_t portid, uint8_t nb_ports) {
     return nb_ports_in_mask;
 }
 
-struct rte_flow *generate_ipv6_flow(uint8_t port_id, uint16_t rx_q, struct in6_addr dest_ip, struct rte_flow_error *error) {
-    struct rte_flow_attr attr;
-    struct rte_flow_item pattern[3];
-    struct rte_flow_action action[3];
-    struct rte_flow *flow = NULL;
-    struct rte_flow_action_queue queue = { .index = rx_q };
-    struct rte_flow_item_udp udp_spec;
-    struct rte_flow_item_udp udp_mask;
-    struct rte_flow_item_ipv6 ip_spec;
-    struct rte_flow_item_ipv6 ip_mask;
-    int res;
+// struct rte_flow *generate_ipv6_flow(uint8_t port_id, uint16_t rx_q, struct in6_addr dest_ip, struct rte_flow_error *error) {
+//     struct rte_flow_attr attr;
+//     struct rte_flow_item pattern[3];
+//     struct rte_flow_action action[3];
+//     struct rte_flow *flow = NULL;
+//     struct rte_flow_action_queue queue = { .index = rx_q };
+//     struct rte_flow_item_udp udp_spec;
+//     struct rte_flow_item_udp udp_mask;
+//     struct rte_flow_item_ipv6 ip_spec;
+//     struct rte_flow_item_ipv6 ip_mask;
+//     int res;
 
-    memset(pattern, 0, sizeof(pattern));
-    memset(action, 0, sizeof(action));
-    char dst_ip[INET6_ADDRSTRLEN];
-    inet_ntop(AF_INET6,&packetinfo.iphdr.ip6_src, dst_ip, sizeof dst_ip);
-    printf("Sending to part two %s\n", dst_ip);
-
-
-    //char subnet_mask[INET6_ADDRSTRLEN];
-    //inet_ntop(AF_INET6, &packetinfo.iphdr.ip6_src, subnet_mask, sizeof subnet_mask);
-    unsigned char subnet_mask[sizeof(struct in6_addr)];
-    inet_pton(AF_INET6, dst_ip, subnet_mask);
-    memcpy(&subnet_mask[8], "\xff\xff\xff\xff\xff\xff\xff\xff", 8);
-    printf("%s\n",subnet_mask );
-    /*
-     * set the rule attribute.
-     * in this case only ingress packets will be checked.
-     */
-    memset(&attr, 0, sizeof(struct rte_flow_attr));
-    attr.ingress = 1;
-
-    /*
-     * create the action sequence.
-     * one action only,  move packet to queue
-     */
-
-    action[0].type = RTE_FLOW_ACTION_TYPE_QUEUE;
-    action[0].conf = &queue;
-    action[1].type = RTE_FLOW_ACTION_TYPE_END;
-
-    /*
-     * setting the third level of the pattern (ip).
-     * in this example this is the level we care about
-     * so we set it according to the parameters.
-     */
-    memset(&ip_spec, 0, sizeof(struct rte_flow_item_ipv6));
-    memset(&ip_mask, 0, sizeof(struct rte_flow_item_ipv6));
-    memcpy(ip_spec.hdr.dst_addr, &packetinfo.iphdr.ip6_src , IPV6_SIZE);
-    //memcpy(ip_mask.hdr.dst_addr, subnet_mask, IPV6_SIZE);
-
-    pattern[0].type = RTE_FLOW_ITEM_TYPE_IPV6;
-    pattern[0].spec = &ip_spec;
-    pattern[0].mask = &ip_mask;
-
-    udp_spec.hdr.src_port = packetinfo.udphdr.source;
-    udp_mask.hdr.src_port = 65535;
+//     memset(pattern, 0, sizeof(pattern));
+//     memset(action, 0, sizeof(action));
+//     char dst_ip[INET6_ADDRSTRLEN];
+//     inet_ntop(AF_INET6,&ether_frame.ip_hdr.ip6_src, dst_ip, sizeof dst_ip);
+//     printf("Sending to part two %s\n", dst_ip);
 
 
-    pattern[1].type = RTE_FLOW_ITEM_TYPE_UDP;
-    pattern[1].spec = &udp_spec;
-    pattern[1].mask = &udp_mask;
+//     //char subnet_mask[INET6_ADDRSTRLEN];
+//     //inet_ntop(AF_INET6, &packetinfo.iphdr.ip6_src, subnet_mask, sizeof subnet_mask);
+//     unsigned char subnet_mask[sizeof(struct in6_addr)];
+//     inet_pton(AF_INET6, dst_ip, subnet_mask);
+//     rte_memcpy(&subnet_mask[8], "\xff\xff\xff\xff\xff\xff\xff\xff", 8);
+//     printf("%s\n",subnet_mask );
+//     /*
+//      * set the rule attribute.
+//      * in this case only ingress packets will be checked.
+//      */
+//     memset(&attr, 0, sizeof(struct rte_flow_attr));
+//     attr.ingress = 1;
 
-    /* the final level must be always type end */
-    pattern[2].type = RTE_FLOW_ITEM_TYPE_END;
+//     /*
+//      * create the action sequence.
+//      * one action only,  move packet to queue
+//      */
 
-    res = rte_flow_validate(port_id, &attr, pattern, action, error);
-    if (!res)
-        flow = rte_flow_create(port_id, &attr, pattern, action, error);
-    return flow;
-}
+//     action[0].type = RTE_FLOW_ACTION_TYPE_QUEUE;
+//     action[0].conf = &queue;
+//     action[1].type = RTE_FLOW_ACTION_TYPE_END;
+
+//     /*
+//      * setting the third level of the pattern (ip).
+//      * in this example this is the level we care about
+//      * so we set it according to the parameters.
+//      */
+//     memset(&ip_spec, 0, sizeof(struct rte_flow_item_ipv6));
+//     memset(&ip_mask, 0, sizeof(struct rte_flow_item_ipv6));
+//     rte_memcpy(ip_spec.hdr.dst_addr, &ether_frame.ip_hdr.ip6_src , IPV6_SIZE);
+//     //memcpy(ip_mask.hdr.dst_addr, subnet_mask, IPV6_SIZE);
+
+//     pattern[0].type = RTE_FLOW_ITEM_TYPE_IPV6;
+//     pattern[0].spec = &ip_spec;
+//     pattern[0].mask = &ip_mask;
+
+//     udp_spec.hdr.src_port = ether_frame.udp_hdr.source;
+//     udp_mask.hdr.src_port = 65535;
+
+
+//     pattern[1].type = RTE_FLOW_ITEM_TYPE_UDP;
+//     pattern[1].spec = &udp_spec;
+//     pattern[1].mask = &udp_mask;
+
+//     /* the final level must be always type end */
+//     pattern[2].type = RTE_FLOW_ITEM_TYPE_END;
+
+//     res = rte_flow_validate(port_id, &attr, pattern, action, error);
+//     if (!res)
+//         flow = rte_flow_create(port_id, &attr, pattern, action, error);
+//     return flow;
+// }
 
 
 int config_dpdk() {
@@ -586,7 +574,6 @@ int config_dpdk() {
     char **argv = sample_input;
     int argc = sizeof(sample_input) / sizeof(char*) - 1;
 
-    printf("%d argc\n", argc);
     
     /* init EAL */
     ret = rte_eal_init(argc, argv);
@@ -647,8 +634,8 @@ int config_dpdk() {
     return ret;
 }
 
-struct packetconfig *get_dpdk_packet_info() {
-    return &packetinfo;
+struct p_skeleton *get_dpdk_packet_info() {
+    return &ether_frame;
 }
 
 void init_dpdk(struct config *configstruct) {

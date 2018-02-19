@@ -27,7 +27,7 @@ void handle_requests(char *receiveBuffer, int size, struct sockaddr_in6 *targetI
         if (DEBUG) {
             print_n_bytes((char *) remoteAddr, IPV6_SIZE);
         }
-        write_mem(receiveBuffer, size, targetIP, remoteAddr);
+        write_mem(receiveBuffer, targetIP, remoteAddr);
     } else if (remoteAddr->cmd == GET_CMD) {
         print_debug("******GET DATA: ");
         if (DEBUG) {
@@ -163,7 +163,11 @@ int main(int argc, char *argv[]) {
     } else {
        // Start waiting for connections
         struct in6_memaddr remoteAddr;
+#ifndef SOCK_RAW
+        receiveBuffer = rte_calloc(NULL, 1 ,BLOCK_SIZE, 64);
+#else
         char receiveBuffer[BLOCK_SIZE];
+#endif
         while (1) {
             //TODO: Error handling (numbytes = -1)
             int size = rcv_udp6_raw(receiveBuffer, BLOCK_SIZE, targetIP, &remoteAddr);

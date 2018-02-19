@@ -15,11 +15,12 @@ do
     scp -r $IP6TARGET $USER_R@$server:$DIR_REMOTE/ip6/
     scp -r $APPTARGET $USER_R@$server:$DIR_REMOTE/ip6/applications
     scp -r $BBTARGET $USER_R@$server:$DIR_REMOTE/
-done
-for server in "${SERVERS[@]}"
-do
     ssh $USER_R@$server make -C $DIR_REMOTE dpdk
 done
+# for server in "${SERVERS[@]}"
+# do
+#     ssh $USER_R@$server make -C $DIR_REMOTE dpdk
+# done
 
 
 

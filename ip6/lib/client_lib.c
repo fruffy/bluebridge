@@ -11,6 +11,11 @@
 #include "client_lib.h"
 #include "utils.h"
 
+#ifndef RAW_SOCK
+#include <rte_ethdev.h>       // main DPDK library
+#include <rte_malloc.h>       // rte_zmalloc_socket()
+#endif
+
 struct in6_addr *hostList;
 int nhosts;
 static char sendBuffer[BLOCK_SIZE];
@@ -128,15 +133,19 @@ struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *targetIP, uint64_t s
  * Reads the remote memory based on remoteAddr
  */
 // TODO: Implement meaningful return types and error messages
-char *get_rmem(struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
-    char *receiveBuffer = malloc(BLOCK_SIZE);
+int get_rmem(char *receiveBuffer, int length, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
+// #ifndef SOCK_RAW
+//     char *receiveBuffer = rte_malloc(NULL, BLOCK_SIZE, 64);
+// #else
+//     char *receiveBuffer = malloc(BLOCK_SIZE);
+// #endif
     // Send the command to the target host and wait for response
     remoteAddr->cmd =  GET_CMD;
     print_debug("******GET DATA******");
     // Send request and store response
-    send_udp6_raw(sendBuffer, BLOCK_SIZE, targetIP, remoteAddr);
-    rcv_udp6_raw_id(receiveBuffer,BLOCK_SIZE, targetIP, remoteAddr);
-    return receiveBuffer;
+    send_udp6_raw(sendBuffer, 0, targetIP, remoteAddr);
+    int numBytes = rcv_udp6_raw_id(receiveBuffer, length, targetIP, remoteAddr);
+    return numBytes;
 }
 
 /*
@@ -144,13 +153,11 @@ char *get_rmem(struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
  */
 // TODO: Implement meaningful return types and error messages
 int write_rmem(struct sockaddr_in6 *targetIP, char *payload, struct in6_memaddr *remoteAddr) {
-    char receiveBuffer[BLOCK_SIZE];
     // Send the command to the target host and wait for response
     remoteAddr->cmd =  WRITE_CMD;
-    memcpy(sendBuffer, payload, BLOCK_SIZE);
     print_debug("******WRITE DATA******");
-    send_udp6_raw(sendBuffer, BLOCK_SIZE, targetIP, remoteAddr);
-    rcv_udp6_raw_id(receiveBuffer,BLOCK_SIZE, targetIP, remoteAddr);
+    send_udp6_raw(payload, BLOCK_SIZE, targetIP, remoteAddr);
+    rcv_udp6_raw_id(NULL, 0, targetIP, remoteAddr);
     return EXIT_SUCCESS;
 }
 

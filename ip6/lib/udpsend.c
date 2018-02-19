@@ -257,7 +257,7 @@ int cooked_batched_send(struct pkt_rqst *pkts, int num_pkts) {
         printf("Sending to part two %s::%d\n", dst_ip, ntohs(udphdr->dest));*/
         if (i >= 16384) {
             flush_buffer();
-        } 
+        }
         send_mmap(packetinfo.ether_frame, frame_length);
 
     }
