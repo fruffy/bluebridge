@@ -209,6 +209,7 @@ int dpdk_send(struct pkt_rqst pkt) {
     return EXIT_SUCCESS;
 }
 
+//This function is hacky bullshit, needs a lot of improvement.
 struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
 int dpdk_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server) {
     while (1) {
@@ -233,14 +234,18 @@ int dpdk_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetI
             // printf("Thread %d Got message from %s:%d to %s:%d\n", 0, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
             // printf("Thread %d My port %d their dest port %d\n",0, ntohs(packetinfo.udphdr.source), ntohs(udphdr->dest) );
             if (udphdr->dest == ether_frame.udp_hdr.source) {
+                // This part in particular is just terrible
+                // It is necessary because the IPv6 DPDK filter does not work...
                 if (remoteAddr != NULL && !server) {
+                    isMyID = (inAddress->cmd == remoteAddr->cmd) && (inAddress->paddr == remoteAddr->paddr);
+                } else {
+                     isMyID = (inAddress->subid == ((struct in6_memaddr *)&ether_frame.ip_hdr.ip6_src)->subid);
+                }
+                if (isMyID) {
                     // printf("Thread %d Their ID\n", 0);
                     // print_n_bytes(inAddress, 16);
                     // printf("Thread %d MY ID\n", 0);
-                    // print_n_bytes(remoteAddr, 16);
-                    isMyID = (inAddress->cmd == remoteAddr->cmd) && (inAddress->paddr == remoteAddr->paddr);
-                }
-                if (isMyID) {
+                    // print_n_bytes(&ether_frame.ip_hdr.ip6_src, 16);
                     rte_memcpy(receiveBuffer, payload, msgBlockSize);
                     if (remoteAddr != NULL && server) {
                         rte_memcpy(remoteAddr, &iphdr->ip6_dst, IPV6_SIZE);
@@ -489,78 +494,88 @@ unsigned setup_ports (uint8_t portid, uint8_t nb_ports) {
     }
     return nb_ports_in_mask;
 }
+#define SRC_IP ((0<<24) + (0<<16) + (0<<8) + 0) /* src ip = 0.0.0.0 */
+#define DEST_IP ((192<<24) + (168<<16) + (1<<8) + 1) /* dest ip = 192.168.1.1 */
+#define FULL_MASK 0xffffffff /* full mask */
+#define EMPTY_MASK 0x0 /* empty mask */
+struct rte_flow *generate_ipv6_flow(uint8_t port_id, uint16_t rx_q, struct in6_addr dst_ip, struct rte_flow_error *error) {
+    struct rte_flow_attr attr;
+    struct rte_flow_item pattern[3];
+    struct rte_flow_action action[3];
+    struct rte_flow *flow = NULL;
+    struct rte_flow_action_queue queue = { .index = rx_q };
+    struct rte_flow_item_ipv4 ip4_spec;
+    struct rte_flow_item_ipv4 ip4_mask;
+    struct rte_flow_item_ipv6 ip6_spec;
+    struct rte_flow_item_ipv6 ip6_mask;
+    struct rte_flow_item_udp udp_spec;
+    struct rte_flow_item_udp udp_mask;
+    int res;
+    memset(pattern, 0, sizeof(pattern));
+    memset(action, 0, sizeof(action));
+    unsigned char subnet_mask[16] = 
+             "\xff\xff\xff\xff\xff\xff\xff\xff"
+            "\xff\xff\xff\xff\xff\xff\xff\xff";
+    /*
+     * set the rule attribute.
+     * in this case only ingress packets will be checked.
+     */
+    memset(&attr, 0, sizeof(struct rte_flow_attr));
+    attr.ingress = 1;
 
-// struct rte_flow *generate_ipv6_flow(uint8_t port_id, uint16_t rx_q, struct in6_addr dest_ip, struct rte_flow_error *error) {
-//     struct rte_flow_attr attr;
-//     struct rte_flow_item pattern[3];
-//     struct rte_flow_action action[3];
-//     struct rte_flow *flow = NULL;
-//     struct rte_flow_action_queue queue = { .index = rx_q };
-//     struct rte_flow_item_udp udp_spec;
-//     struct rte_flow_item_udp udp_mask;
-//     struct rte_flow_item_ipv6 ip_spec;
-//     struct rte_flow_item_ipv6 ip_mask;
-//     int res;
+    /*
+     * create the action sequence.
+     * one action only,  move packet to queue
+     */
 
-//     memset(pattern, 0, sizeof(pattern));
-//     memset(action, 0, sizeof(action));
-//     char dst_ip[INET6_ADDRSTRLEN];
-//     inet_ntop(AF_INET6,&ether_frame.ip_hdr.ip6_src, dst_ip, sizeof dst_ip);
-//     printf("Sending to part two %s\n", dst_ip);
+    action[0].type = RTE_FLOW_ACTION_TYPE_QUEUE;
+    action[0].conf = &queue;
+    action[1].type = RTE_FLOW_ACTION_TYPE_END;
 
+    memset(&ip4_spec, 0, sizeof(struct rte_flow_item_ipv4));
+    memset(&ip4_mask, 0, sizeof(struct rte_flow_item_ipv4));
+    ip4_spec.hdr.dst_addr = htonl(DEST_IP);
+    ip4_mask.hdr.dst_addr = EMPTY_MASK;
+    ip4_spec.hdr.src_addr = htonl(SRC_IP);
+    ip4_mask.hdr.src_addr = EMPTY_MASK;
+    pattern[0].type = RTE_FLOW_ITEM_TYPE_IPV4;
+    pattern[0].spec = &ip4_spec;
+    pattern[0].mask = &ip4_mask;
+   /*
+     * setting the third level of the pattern (ip).
+     * in this example this is the level we care about
+     * so we set it according to the parameters.
+     */
+    // memset(&ip6_spec, 0, sizeof(struct rte_flow_item_ipv6));
+    // memset(&ip6_mask, 0, sizeof(struct rte_flow_item_ipv6));
+    // memcpy(ip6_spec.hdr.dst_addr,&ether_frame.ip_hdr.ip6_src, IPV6_SIZE);
+    // memcpy(ip6_mask.hdr.dst_addr, subnet_mask, IPV6_SIZE);
+    // memcpy(ip6_spec.hdr.src_addr,&ether_frame.ip_hdr.ip6_src, IPV6_SIZE);
+    // memcpy(ip6_mask.hdr.src_addr, subnet_mask, IPV6_SIZE);
 
-//     //char subnet_mask[INET6_ADDRSTRLEN];
-//     //inet_ntop(AF_INET6, &packetinfo.iphdr.ip6_src, subnet_mask, sizeof subnet_mask);
-//     unsigned char subnet_mask[sizeof(struct in6_addr)];
-//     inet_pton(AF_INET6, dst_ip, subnet_mask);
-//     rte_memcpy(&subnet_mask[8], "\xff\xff\xff\xff\xff\xff\xff\xff", 8);
-//     printf("%s\n",subnet_mask );
-//     /*
-//      * set the rule attribute.
-//      * in this case only ingress packets will be checked.
-//      */
-//     memset(&attr, 0, sizeof(struct rte_flow_attr));
-//     attr.ingress = 1;
+    // pattern[1].type = RTE_FLOW_ITEM_TYPE_IPV6;
+    // pattern[1].spec = &ip6_spec;
+    // pattern[1].mask = &ip6_mask;
 
-//     /*
-//      * create the action sequence.
-//      * one action only,  move packet to queue
-//      */
+    udp_spec.hdr.src_port = ether_frame.udp_hdr.source;
+    udp_mask.hdr.src_port = 0xFFFF;
+    udp_spec.hdr.dst_port = ether_frame.udp_hdr.source;
+    udp_mask.hdr.dst_port = 0;
+    pattern[1].type = RTE_FLOW_ITEM_TYPE_UDP;
+    pattern[1].spec = &udp_spec;
+    pattern[1].mask = &udp_mask;
 
-//     action[0].type = RTE_FLOW_ACTION_TYPE_QUEUE;
-//     action[0].conf = &queue;
-//     action[1].type = RTE_FLOW_ACTION_TYPE_END;
+    /* the final level must be always type end */
+    pattern[2].type = RTE_FLOW_ITEM_TYPE_END;
 
-//     /*
-//      * setting the third level of the pattern (ip).
-//      * in this example this is the level we care about
-//      * so we set it according to the parameters.
-//      */
-//     memset(&ip_spec, 0, sizeof(struct rte_flow_item_ipv6));
-//     memset(&ip_mask, 0, sizeof(struct rte_flow_item_ipv6));
-//     rte_memcpy(ip_spec.hdr.dst_addr, &ether_frame.ip_hdr.ip6_src , IPV6_SIZE);
-//     //memcpy(ip_mask.hdr.dst_addr, subnet_mask, IPV6_SIZE);
+    res = rte_flow_validate(port_id, &attr, pattern, action, error);
+    if (!res) {
+        flow = rte_flow_create(port_id, &attr, pattern, action, error);
+        rte_flow_isolate(port_id, 1, NULL);
+    }
 
-//     pattern[0].type = RTE_FLOW_ITEM_TYPE_IPV6;
-//     pattern[0].spec = &ip_spec;
-//     pattern[0].mask = &ip_mask;
-
-//     udp_spec.hdr.src_port = ether_frame.udp_hdr.source;
-//     udp_mask.hdr.src_port = 65535;
-
-
-//     pattern[1].type = RTE_FLOW_ITEM_TYPE_UDP;
-//     pattern[1].spec = &udp_spec;
-//     pattern[1].mask = &udp_mask;
-
-//     /* the final level must be always type end */
-//     pattern[2].type = RTE_FLOW_ITEM_TYPE_END;
-
-//     res = rte_flow_validate(port_id, &attr, pattern, action, error);
-//     if (!res)
-//         flow = rte_flow_create(port_id, &attr, pattern, action, error);
-//     return flow;
-// }
+    return flow;
+}
 
 
 int config_dpdk() {
@@ -621,15 +636,15 @@ int config_dpdk() {
     sleep(2);
     printf("NIC should be ready now...\n");
 
-    /* create flow for send packet with */
-    // struct rte_flow_error error;
-    // struct rte_flow *flow = generate_ipv6_flow(portid, rx_lcore_id, packetinfo.iphdr.ip6_dst, &error);
-    // if (!flow) {
-    //     printf("Flow can't be created %d message: %s\n",
-    //         error.type,
-    //         error.message ? error.message : "(no stated reason)");
-    //     rte_exit(EXIT_FAILURE, "error in creating flow");
-    // }
+    /* create flow to filter for packets */
+    struct rte_flow_error error;
+    struct rte_flow *flow = generate_ipv6_flow(0, 0, ether_frame.ip_hdr.ip6_dst, &error);
+    if (!flow) {
+        printf("Flow can't be created %d message: %s\n",
+            error.type,
+            error.message ? error.message : "(no stated reason)");
+        rte_exit(EXIT_FAILURE, "error in creating flow");
+    }
 
     return ret;
 }
