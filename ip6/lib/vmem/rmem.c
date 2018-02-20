@@ -29,7 +29,7 @@ void configure_rmem(char *filename) {
 }
 
 void rmem_init_sockets() {
-    targetIP = init_sockets(&myConf);
+    targetIP = init_sockets(&myConf, 0);
 }
 
 void rmem_init_thread_sockets(int t_id) {

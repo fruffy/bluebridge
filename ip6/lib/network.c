@@ -78,7 +78,7 @@ int rcv_udp6_raw(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *tar
 #ifdef RAW_SOCK
     numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 1);
 #else
-    numbytes = dpdk_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 1);
+    numbytes = dpdk_server_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 1);
 #endif
     rcvLat += getns() - start;
     rcv_calls++;
@@ -96,19 +96,22 @@ int rcv_udp6_raw_id(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *
 #ifdef RAW_SOCK
     numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 0);
 #else
-    numbytes = dpdk_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 0);
+    numbytes = dpdk_client_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 0);
 #endif
     rcvLat += getns() - start;
     rcv_calls++;
     return numbytes;
 }
 
-struct sockaddr_in6 *init_sockets(struct config *bb_conf) {
+struct sockaddr_in6 *init_sockets(struct config *bb_conf, int server) {
 #ifdef RAW_SOCK
     struct sockaddr_in6 * temp = init_rcv_socket(bb_conf);
     init_send_socket(bb_conf);
 #else
-    init_dpdk(bb_conf);
+    if (server)
+        init_server_dpdk(bb_conf);
+    else 
+        init_client_dpdk(bb_conf);
     struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
 #endif
     temp->sin6_port = htons(strtol(bb_conf->server_port, (char **)NULL, 10));
@@ -128,7 +131,7 @@ void set_net_thread_ids(int t_id) {
 struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf, int isServer) {
     if (!isServer)
         set_net_thread_ids(t_id);
-    return init_sockets(bb_conf);
+    return init_sockets(bb_conf, 0);
 }
 
 void printSendLat() {

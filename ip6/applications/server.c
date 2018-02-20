@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
     }
     printf("Running server with %d threads \n", NUM_THREADS );
 
-    struct sockaddr_in6 *targetIP = init_sockets(&myConf);
+    struct sockaddr_in6 *targetIP = init_sockets(&myConf, 1);
 
     if (NUM_THREADS > 1) {
         threaded_server();

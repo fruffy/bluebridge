@@ -23,6 +23,7 @@ dpdk: $(apps)
 		@rm -rf $(MAKE_ROOT)/ip6/build
 
 $(apps):
+	@find $(MAKE_ROOT)/ip6/ -name '*.o*' -delete
 	# binary name
 	$(MAKE) -C $(MSG_DIR) -f dpdk.mk O=applications/dpdk/ APP=$@
 	@find $(MAKE_ROOT)/ip6/ -name '*.o*' -delete

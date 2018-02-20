@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
     }
     r.block_size = PAGE_SIZE;
     struct config myConf = set_bb_config("distmem_client.cnf", 0);
-    r.targetIP = init_sockets(&myConf);
+    r.targetIP = init_sockets(&myConf, 0);
     set_host_list(myConf.hosts, myConf.num_hosts);
     r.nblocks = aop.size_blocks;
     printf("Allocating %lu MB of memory, %lu blocks\n", (aop.size_blocks * aop.blksize / (1024*1024)), r.nblocks);

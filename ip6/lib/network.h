@@ -21,7 +21,7 @@ int send_udp6_raw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targ
 int rcv_udp6_raw(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
 int rcv_udp6_raw_id(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
 
-struct sockaddr_in6 *init_sockets(struct config *configstruct);
+struct sockaddr_in6 *init_sockets(struct config *configstruct, int server);
 void close_sockets();
 struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf, int isServer);
 void printSendLat();

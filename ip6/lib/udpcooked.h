@@ -1,20 +1,3 @@
-/*  Copyright (C) 2011-2015  P.D. Buchan (pdbuchan@yahoo.com)
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-
 #ifndef PROJECT_COOK
 #define PROJECT_COOK
 
@@ -73,8 +56,10 @@ extern void close_rcv_socket();
 extern void set_thread_id_tx(int id);
 extern void set_thread_id_rx(int id);
 
-extern void init_dpdk(struct config *configstruct);
-extern int dpdk_send(struct pkt_rqst pkt);
-extern int dpdk_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server);
+extern void init_client_dpdk(struct config *configstruct);
+extern void init_server_dpdk(struct config *configstruct);
 
+extern int dpdk_send(struct pkt_rqst pkt);
+extern int dpdk_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server);
+extern int dpdk_client_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr, int server);
 #endif

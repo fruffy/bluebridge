@@ -313,7 +313,7 @@ int main(int argc, char *argv[]) {
       } 
     } 
     printf("Running test with %d threads and %d iterations.\n", NUM_THREADS, NUM_ITERATIONS );
-    struct sockaddr_in6 *temp = init_sockets(&myConf);
+    struct sockaddr_in6 *temp = init_sockets(&myConf, 0);
     set_host_list(myConf.hosts, myConf.num_hosts);
 
     struct timeval st, et;
