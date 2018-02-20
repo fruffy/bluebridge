@@ -8,7 +8,11 @@ libDir = $(MAKE_ROOT)/lib
 # add the raw socket flag to differentiate from other builds
 CFLAGS += -DRAW_SOCK
 # a list of c files we do not want to compile
-filter:= $(libDir)/dpdkstack.c
+filter:= $(libDir)/dpdk_server.c
+filter+= $(libDir)/dpdk_client.c
+filter+= $(libDir)/dpdk_common.c
+filter+= $(libDir)/dpdk_common.h
+
 
 sources := $(shell find "$(libDir)" -name '*.$(srcExt)')
 sources_filtered := $(filter-out $(filter), $(sources))

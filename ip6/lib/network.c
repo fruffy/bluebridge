@@ -3,8 +3,9 @@
 #include "network.h"
 #include "utils.h"
 #include "udpcooked.h"
-
-
+#ifndef RAW_SOCK
+#include "dpdk_common.h"
+#endif
 #include <stdio.h>            // printf() and sprintf()
 #include <stdlib.h>           // free(), alloc, and calloc()
 #include <string.h>           // strcpy, memset(), and memcpy()
@@ -105,6 +106,7 @@ int rcv_udp6_raw_id(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *
 
 struct sockaddr_in6 *init_sockets(struct config *bb_conf, int server) {
 #ifdef RAW_SOCK
+    if (server) {} // Currently a null operation until we have a raw socket server
     struct sockaddr_in6 * temp = init_rcv_socket(bb_conf);
     init_send_socket(bb_conf);
 #else
@@ -117,6 +119,16 @@ struct sockaddr_in6 *init_sockets(struct config *bb_conf, int server) {
     temp->sin6_port = htons(strtol(bb_conf->server_port, (char **)NULL, 10));
     return temp;
 }
+
+#ifndef RAW_SOCK
+void launch_server_loop(struct config *bb_conf) {
+    init_server_dpdk(bb_conf);
+    enter_server_loop(bb_conf->src_port);
+}
+#endif
+
+
+
 
 void close_sockets() {
     close_send_socket();

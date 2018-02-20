@@ -8,13 +8,13 @@ CFLAGS += -oFast # performance flags
 # CFLAGS += -Wstrict-prototypes -Wmissing-prototypes
 LDFLAGS := -lpcap -pthread -lm -lrt
 
-apps := testing server busexmp
-#rmem_test busexmp
+apps := testing server event_server busexmp
+#rmem_test
 
 export apps CC CFLAGS LDFLAGS
 all:
 		@echo "Running default build in $(MAKE_ROOT)"
-		@rm -rf $(MAKE_ROOT)/ip6/build
+		@find $(MAKE_ROOT)/ip6/ -name '*.o*' -delete
 		@$(MAKE) -C $(MSG_DIR) -f default.mk
 		@find $(MAKE_ROOT)/ip6/ -name '*.o*' -delete
 
