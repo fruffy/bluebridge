@@ -11,7 +11,7 @@
 #include "client_lib.h"
 #include "utils.h"
 
-#ifndef RAW_SOCK
+#ifndef DEFAULT
 #include <rte_ethdev.h>       // main DPDK library
 #include <rte_malloc.h>       // rte_zmalloc_socket()
 #endif

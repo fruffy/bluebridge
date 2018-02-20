@@ -40,8 +40,7 @@ int main(int argc, char *argv[]) {
       } 
     }
     printf("Running server with %d threads \n", NUM_THREADS );
-#ifndef SOCK_RAW
     launch_server_loop(&myConf);
-#endif
+
     return 0;
 }

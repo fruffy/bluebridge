@@ -1,4 +1,4 @@
-#include "dpdkcommon.h"
+#include "dpdk_common.h"
 
 struct p_skeleton {
     struct ethhdr ether_hdr;

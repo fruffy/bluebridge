@@ -56,78 +56,6 @@ void handle_requests(char *receiveBuffer, int size, struct sockaddr_in6 *targetI
     }
 }
 
-typedef struct _thread_data_t {
-  int tid;
-} thread_data_t;
-atomic_int round_robin = 0;
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;;
-void *thread_loop(void *arg) {
-    thread_data_t *data = (thread_data_t *)arg;
-
-    // Assign threads to cores
-    int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
-    int assigned = data->tid % num_cores;
-    pthread_t my_thread = pthread_self();
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET(assigned, &cpuset);
-    pthread_setaffinity_np(my_thread, sizeof(cpu_set_t), &cpuset);
-    printf("Assigned Thread %d to core %d\n", data->tid, assigned );
-    
-    // Initialize BlueBridge
-    struct config myConf = get_bb_config();
-    struct sockaddr_in6 *temp = init_net_thread(data->tid, &myConf, 1);
-   // Start waiting for connections
-    struct in6_memaddr remoteAddr;
-    char receiveBuffer[BLOCK_SIZE];
-    while (1) {
-        int size = rcv_udp6_raw(receiveBuffer, BLOCK_SIZE, temp, &remoteAddr);
-        if (pthread_mutex_trylock(&mutex) == EBUSY)
-            continue;
-        handle_requests(receiveBuffer, size, temp, &remoteAddr);
-        pthread_mutex_unlock(&mutex);
-    }
-    close_sockets();
-    return NULL;
-}
-void threaded_server(){
-    pthread_t thr[NUM_THREADS];
-    int i;
-    /* create a thread_data_t argument array */
-    thread_data_t thr_data[NUM_THREADS];
-    pthread_attr_t attr;
-    size_t  stacksize = 0;
-
-    pthread_attr_init( &attr );
-    pthread_attr_getstacksize( &attr, &stacksize );
-    printf("before stacksize : [%lu]\n", stacksize);
-    pthread_attr_setstacksize( &attr, 99800000 );
-    pthread_attr_getstacksize( &attr, &stacksize );
-    printf("after  stacksize : [%lu]\n", stacksize);
-
-    pthread_attr_init(&attr);
-
-    if(pthread_attr_setschedpolicy(&attr, SCHED_RR) != 0)
-        fprintf(stderr, "Unable to set policy.\n");
-
-    for (i = 0; i < NUM_THREADS; i++) {
-        int rc;
-        thr_data[i].tid =  i;
-        struct rlimit limit;
-        getrlimit (RLIMIT_STACK, &limit);
-        printf ("\nStack Limit = %ld and %ld max\n", limit.rlim_cur, limit.rlim_max);
-        printf("Launching thread %d\n", i );
-        if ((rc = pthread_create(&thr[i],  &attr, thread_loop, &thr_data[i]))) {
-          fprintf(stderr, "error: pthread_create, rc: %d\n", rc);
-        }
-    }
-    /* block until all threads complete */
-    for (i = 0; i < NUM_THREADS; i++) {
-        printf("Thread %d Waiting for my friends...\n", i);
-        pthread_join(thr[i], NULL);
-    }
-}
-
 /*
  * Main workhorse method. Parses command args and does setup.
  * Blocks waiting for connections.
@@ -157,23 +85,14 @@ int main(int argc, char *argv[]) {
     printf("Running server with %d threads \n", NUM_THREADS );
 
     struct sockaddr_in6 *targetIP = init_sockets(&myConf, 1);
-
-    if (NUM_THREADS > 1) {
-        threaded_server();
-    } else {
-       // Start waiting for connections
-        struct in6_memaddr remoteAddr;
-#ifndef SOCK_RAW
-        receiveBuffer = rte_calloc(NULL, 1 ,BLOCK_SIZE, 64);
-#else
-        char receiveBuffer[BLOCK_SIZE];
-#endif
-        while (1) {
-            //TODO: Error handling (numbytes = -1)
-            int size = rcv_udp6_raw(receiveBuffer, BLOCK_SIZE, targetIP, &remoteAddr);
-            handle_requests(receiveBuffer, size, targetIP, &remoteAddr);
-        }
-        close_sockets();
+   // Start waiting for connections
+    struct in6_memaddr remoteAddr;
+    char receiveBuffer[BLOCK_SIZE];
+    while (1) {
+        //TODO: Error handling (numbytes = -1)
+        int size = rcv_udp6_raw(receiveBuffer, BLOCK_SIZE, targetIP, &remoteAddr);
+        handle_requests(receiveBuffer, size, targetIP, &remoteAddr);
     }
+    close_sockets();
     return 0;
 }

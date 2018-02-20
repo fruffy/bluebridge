@@ -3,7 +3,7 @@
 #include "network.h"
 #include "utils.h"
 #include "udpcooked.h"
-#ifndef RAW_SOCK
+#ifndef DEFAULT
 #include "dpdk_common.h"
 #endif
 #include <stdio.h>            // printf() and sprintf()
@@ -34,7 +34,7 @@ int send_udp_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *target
         .data = sendBuffer,
         .datalen = msgBlockSize
     };
-#ifdef RAW_SOCK
+#ifdef DEFAULT
     cooked_send(pkt);
 #else
     dpdk_send(pkt);
@@ -57,7 +57,7 @@ int send_udp6_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targe
         .data = sendBuffer,
         .datalen = msgBlockSize
     };
-#ifdef RAW_SOCK
+#ifdef DEFAULT
     cooked_send(pkt);
 #else
     dpdk_send(pkt);
@@ -76,7 +76,7 @@ int send_udp6_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targe
 int rcv_udp6_raw(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     uint64_t start = getns();
     int numbytes;
-#ifdef RAW_SOCK
+#ifdef DEFAULT
     numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 1);
 #else
     numbytes = dpdk_server_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 1);
@@ -94,7 +94,7 @@ int rcv_udp6_raw(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *tar
 int rcv_udp6_raw_id(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     uint64_t start = getns();
     int numbytes;
-#ifdef RAW_SOCK
+#ifdef DEFAULT
     numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 0);
 #else
     numbytes = dpdk_client_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 0);
@@ -105,7 +105,7 @@ int rcv_udp6_raw_id(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *
 }
 
 struct sockaddr_in6 *init_sockets(struct config *bb_conf, int server) {
-#ifdef RAW_SOCK
+#ifdef DEFAULT
     if (server) {} // Currently a null operation until we have a raw socket server
     struct sockaddr_in6 * temp = init_rcv_socket(bb_conf);
     init_send_socket(bb_conf);
@@ -120,12 +120,13 @@ struct sockaddr_in6 *init_sockets(struct config *bb_conf, int server) {
     return temp;
 }
 
-#ifndef RAW_SOCK
 void launch_server_loop(struct config *bb_conf) {
+    (void) bb_conf; // Placeholder
+#ifndef DEFAULT
     init_server_dpdk(bb_conf);
     enter_server_loop(bb_conf->src_port);
-}
 #endif
+}
 
 
 

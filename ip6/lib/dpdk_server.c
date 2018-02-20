@@ -1,39 +1,112 @@
-#include "dpdkcommon.h"
+#include "dpdk_common.h"
 #include "server_lib.h"
+
 uint16_t src_server_port = 0;
 struct in6_addr src_addr;
+/*
+ * TODO: explain.
+ * Allocates local memory and exposes it to a client requesting it
+ */
+int allocate_local_mem(struct sockaddr_in6 *target_ip, char *sendBuffer) {
+    struct in6_memaddr allocPointer;
+    //TODO: Error handling if we runt out of memory, this will fail
+    //do some work, which might goto error
+    void *allocated = rte_calloc(NULL, 1, BLOCK_SIZE, BLOCK_SIZE);
+    memset(&allocPointer, 0, IPV6_SIZE);
+    memcpy(&allocPointer.paddr, &allocated, POINTER_SIZE);
+    memcpy(&allocPointer.subid, &SUBNET_ID, 2);
+    memcpy(sendBuffer, "ACK", 3);
+    memcpy(sendBuffer+3, &allocPointer, IPV6_SIZE); 
+    send_udp_raw(sendBuffer, BLOCK_SIZE, target_ip);
+    // TODO change to be meaningful, i.e., error message
+    return EXIT_SUCCESS;
+}
 
+/*
+ * TODO: explain.
+ * Allocates local memory and exposes it to a client requesting it
+ */
+int allocate_local_mem_bulk( struct sockaddr_in6 *target_ip, uint64_t size, char *sendBuffer) {
+    struct in6_memaddr allocPointer;
+    //TODO: Error handling if we runt out of memory, this will fail
+    //do some work, which might goto error
+    void *allocated = rte_calloc(NULL, size, BLOCK_SIZE, BLOCK_SIZE);
+    memset(&allocPointer, 0, IPV6_SIZE);
+    memcpy(&allocPointer.paddr, &allocated, POINTER_SIZE);
+    memcpy(&allocPointer.subid, &SUBNET_ID, 2);
+    memcpy(sendBuffer, "ACK", 3);
+    memcpy(sendBuffer+3, &allocPointer, IPV6_SIZE); 
+    send_udp_raw(sendBuffer, BLOCK_SIZE, target_ip);
+    return EXIT_SUCCESS;
+}
+
+
+/*
+ * Gets memory and sends it
+ */
+int get_local_mem(struct sockaddr_in6 *target_ip, struct in6_memaddr *r_addr, char *sendBuffer) {
+    // Send the sendBuffer (entire BLOCK_SIZE)
+    struct in6_memaddr *returnID = (struct in6_memaddr *) (&target_ip->sin6_addr);
+    returnID->cmd = r_addr->cmd;
+    returnID->paddr = r_addr->paddr;
+    send_udp_raw((void *) *&r_addr->paddr, BLOCK_SIZE, target_ip);
+    return EXIT_SUCCESS;
+}
+
+/*
+ * TODO: explain.
+ * Writes a piece of memory?
+ */
+int write_local_mem(char *receiveBuffer, struct sockaddr_in6 *target_ip, struct in6_memaddr *r_addr, char *sendBuffer) {
+    // Copy the first POINTER_SIZE bytes of receive buffer into the target
+    rte_memcpy((void *) *(&r_addr->paddr), receiveBuffer, BLOCK_SIZE);
+    struct in6_memaddr *returnID = (struct in6_memaddr *) (&target_ip->sin6_addr);
+    returnID->cmd = r_addr->cmd;
+    returnID->paddr = r_addr->paddr;
+    send_udp_raw("", 0, target_ip);
+    return EXIT_SUCCESS;
+}
+
+/*
+ * TODO: explain.
+ * This is freeing target memory?
+ */
+int free_local_mem(struct sockaddr_in6 *target_ip, struct in6_memaddr *r_addr, char *sendBuffer) {
+    //print_debug("Content stored at %p has been freed!", (void*)pointer);
+    rte_free((void *) *&r_addr->paddr);
+    //munmap((void *) pointer, BLOCK_SIZE);
+    rte_memcpy(sendBuffer, "ACK", 3);
+    struct in6_memaddr *returnID = (struct in6_memaddr *) (&target_ip->sin6_addr);
+    returnID->cmd = r_addr->cmd;
+    returnID->paddr = r_addr->paddr;
+    send_udp_raw(sendBuffer, BLOCK_SIZE, target_ip);
+    return EXIT_SUCCESS;
+}
 
 void process_request(char *receiveBuffer, int size, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
+    char *sendBuffer = rte_calloc(NULL, 1 ,BLOCK_SIZE, 64);
+
     // Switch on the client command
     if (remoteAddr->cmd == ALLOC_CMD) {
         print_debug("******ALLOCATE******");
-        allocate_mem(targetIP);
+        allocate_local_mem(targetIP, sendBuffer);
     } else if (remoteAddr->cmd == WRITE_CMD) {
         print_debug("******WRITE DATA: ");
-        if (DEBUG) {
-            print_n_bytes((char *) remoteAddr, IPV6_SIZE);
-        }
-        write_mem(receiveBuffer, targetIP, remoteAddr);
+        if (DEBUG) print_n_bytes((char *) remoteAddr, IPV6_SIZE);
+        write_local_mem(receiveBuffer, targetIP, remoteAddr, sendBuffer);
     } else if (remoteAddr->cmd == GET_CMD) {
         print_debug("******GET DATA: ");
-        if (DEBUG) {
-            print_n_bytes((char *) remoteAddr, IPV6_SIZE);
-        }
-        get_mem(targetIP, remoteAddr);
+        if (DEBUG) print_n_bytes((char *) remoteAddr, IPV6_SIZE);
+        get_local_mem(targetIP, remoteAddr, sendBuffer);
     } else if (remoteAddr->cmd == FREE_CMD) {
         print_debug("******FREE DATA: ");
-        if (DEBUG) {
-            print_n_bytes((char *) remoteAddr, IPV6_SIZE);
-        }
-        free_mem(targetIP, remoteAddr);
+        if (DEBUG) print_n_bytes((char *) remoteAddr, IPV6_SIZE);
+        free_local_mem(targetIP, remoteAddr, sendBuffer);
     } else if (remoteAddr->cmd == ALLOC_BULK_CMD) {
         print_debug("******ALLOCATE BULK DATA: ");
-        if (DEBUG) {
-            print_n_bytes((char *) remoteAddr,IPV6_SIZE);
-        }
+        if (DEBUG) print_n_bytes((char *) remoteAddr,IPV6_SIZE);
         uint64_t *alloc_size = (uint64_t *) receiveBuffer;
-        allocate_mem_bulk(targetIP, *alloc_size);
+        allocate_local_mem_bulk(targetIP, *alloc_size, sendBuffer);
     } else {
         printf("Cannot match command %d!\n",remoteAddr->cmd);
         if (send_udp_raw("Hello, world!", 13, targetIP) == -1) {
