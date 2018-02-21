@@ -8,7 +8,7 @@ CFLAGS += -oFast # performance flags
 # CFLAGS += -Wstrict-prototypes -Wmissing-prototypes
 LDFLAGS := -lpcap -pthread -lm -lrt
 
-apps := testing server event_server busexmp
+apps := testing server event_server bb_disk
 #rmem_test
 
 export apps CC CFLAGS LDFLAGS

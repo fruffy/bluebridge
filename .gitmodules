@@ -1,5 +1,5 @@
 [submodule "includes/dpdk"]
-	url = https://github.com/FRuffy/dpdk
+	url = https://github.com/fruffy/dpdk
 	path = includes/dpdk
 [submodule "includes/mininet"]
 	url = https://github.com/mininet/mininet

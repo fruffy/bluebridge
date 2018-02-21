@@ -11,7 +11,10 @@ int allocate_local_mem(struct sockaddr_in6 *target_ip, char *sendBuffer) {
     struct in6_memaddr allocPointer;
     //TODO: Error handling if we runt out of memory, this will fail
     //do some work, which might goto error
-    void *allocated = rte_calloc(NULL, 1, BLOCK_SIZE, BLOCK_SIZE);
+    //void *allocated = rte_calloc(NULL, 1, BLOCK_SIZE, 64);
+    //Cannot use hugepages here, rte_calloc can not handle scale for now
+    // TODO: Fix
+    void *allocated = calloc(1, BLOCK_SIZE);
     memset(&allocPointer, 0, IPV6_SIZE);
     memcpy(&allocPointer.paddr, &allocated, POINTER_SIZE);
     memcpy(&allocPointer.subid, &SUBNET_ID, 2);
@@ -30,12 +33,16 @@ int allocate_local_mem_bulk( struct sockaddr_in6 *target_ip, uint64_t size, char
     struct in6_memaddr allocPointer;
     //TODO: Error handling if we runt out of memory, this will fail
     //do some work, which might goto error
-    void *allocated = rte_calloc(NULL, size, BLOCK_SIZE, BLOCK_SIZE);
+    // Cannot use hugepages here, rte_calloc can not handle scale for now
+    // TODO: Fix
+    //void *allocated = rte_calloc(NULL, size, BLOCK_SIZE, 64);
+    void *allocated = calloc(size, BLOCK_SIZE);
     memset(&allocPointer, 0, IPV6_SIZE);
     memcpy(&allocPointer.paddr, &allocated, POINTER_SIZE);
     memcpy(&allocPointer.subid, &SUBNET_ID, 2);
     memcpy(sendBuffer, "ACK", 3);
     memcpy(sendBuffer+3, &allocPointer, IPV6_SIZE); 
+    printf("Allocated pointer: %p\n", allocated );
     send_udp_raw(sendBuffer, BLOCK_SIZE, target_ip);
     return EXIT_SUCCESS;
 }
@@ -73,6 +80,7 @@ int write_local_mem(char *receiveBuffer, struct sockaddr_in6 *target_ip, struct 
  */
 int free_local_mem(struct sockaddr_in6 *target_ip, struct in6_memaddr *r_addr, char *sendBuffer) {
     //print_debug("Content stored at %p has been freed!", (void*)pointer);
+    printf("Freeing pointer: %p\n", (void *) *&r_addr->paddr );
     rte_free((void *) *&r_addr->paddr);
     //munmap((void *) pointer, BLOCK_SIZE);
     rte_memcpy(sendBuffer, "ACK", 3);
