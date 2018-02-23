@@ -64,61 +64,57 @@ static int read_all(int fd, char* buf, size_t count) {
   return 0;
 }
 
-static int write_all(int fd, char* buf, size_t count)
-{
-  int bytes_written;
-
-  while (count > 0) {
-    bytes_written = write(fd, buf, count);
-    assert(bytes_written > 0);
-    buf += bytes_written;
-    count -= bytes_written;
-  }
-  assert(count == 0);
-
-  return 0;
+static int write_all(int fd, char* buf, size_t count) {
+    int bytes_written;
+    while (count > 0) {
+        bytes_written = write(fd, buf, count);
+        assert(bytes_written > 0);
+        buf += bytes_written;
+        count -= bytes_written;
+    }
+    assert(count == 0);
+    return 0;
 }
 
-int buse_main(const char* dev_file, const struct buse_operations *aop, void *userdata)
-{
-  int sp[2];
-  int nbd, sk, err, tmp_fd;
-  u_int64_t from;
-  u_int32_t len;
-  ssize_t bytes_read;
-  struct nbd_request request;
-  struct nbd_reply reply;
-  void *chunk;
+int buse_main(const char* dev_file, const struct buse_operations *aop, void *userdata) {
+    int sp[2];
+    int nbd, sk, err, tmp_fd;
+    u_int64_t from;
+    u_int32_t len;
+    ssize_t bytes_read;
+    struct nbd_request request;
+    struct nbd_reply reply;
+    void *chunk;
 
-  err = socketpair(AF_UNIX, SOCK_STREAM, 0, sp);
-  assert(!err);
+    err = socketpair(AF_UNIX, SOCK_STREAM, 0, sp);
+    assert(!err);
 
-  nbd = open(dev_file, O_RDWR);
-  if (nbd == -1) {
+    nbd = open(dev_file, O_RDWR);
+    if (nbd == -1) {
     fprintf(stderr, 
         "Failed to open `%s': %s\n"
         "Is kernel module `nbd' is loaded and you have permissions "
         "to access the device?\n", dev_file, strerror(errno));
     return 1;
-  }
+    }
 
-  if (aop->blksize) {
-    err = ioctl(nbd, NBD_SET_BLKSIZE, aop->blksize);
-    assert(err != -1);
-  }
-  if (aop->size) {
-    err = ioctl(nbd, NBD_SET_SIZE, aop->size);
-    assert(err != -1);
-  }
-  if (aop->size_blocks) {
-    err = ioctl(nbd, NBD_SET_SIZE_BLOCKS, aop->size_blocks);
-    assert(err != -1);
-  }
+    if (aop->blksize) {
+        err = ioctl(nbd, NBD_SET_BLKSIZE, aop->blksize);
+        assert(err != -1);
+    }
+    if (aop->size) {
+        err = ioctl(nbd, NBD_SET_SIZE, aop->size);
+        assert(err != -1);
+    }
+    if (aop->size_blocks) {
+        err = ioctl(nbd, NBD_SET_SIZE_BLOCKS, aop->size_blocks);
+        assert(err != -1);
+    }
 
-  err = ioctl(nbd, NBD_CLEAR_SOCK);
-  assert(err != -1);
+    err = ioctl(nbd, NBD_CLEAR_SOCK);
+    assert(err != -1);
 
-  if (!fork()) {
+    if (!fork()) {
     /* The child needs to continue setting things up. */
     close(sp[0]);
     sk = sp[1];

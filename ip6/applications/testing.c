@@ -14,7 +14,7 @@
 #include <sys/stat.h>
 
 static int NUM_THREADS = 1;
-static int NUM_ITERATIONS;
+static uint64_t NUM_ITERATIONS;
 
 
 
@@ -52,20 +52,20 @@ void create_dir(const char *name) {
     }
 }
 
-void save_time(const char *type, uint64_t* latency, int length){
+void save_time(const char *type, uint64_t* latency, uint64_t length){
     int MAX_FNAME = 256;
     char fname[MAX_FNAME];
-    snprintf(fname, MAX_FNAME, "results/testing/t%d_iter%d", NUM_THREADS, NUM_ITERATIONS);
+    snprintf(fname, MAX_FNAME, "results/testing/t%d_iter%lu", NUM_THREADS, NUM_ITERATIONS);
     create_dir(fname);
     memset(fname, 0, MAX_FNAME);
-    snprintf(fname, MAX_FNAME, "results/testing/t%d_iter%d/%s.csv", NUM_THREADS, NUM_ITERATIONS, type);
+    snprintf(fname, MAX_FNAME, "results/testing/t%d_iter%lu/%s.csv", NUM_THREADS, NUM_ITERATIONS, type);
     FILE *file = fopen(fname, "w");
     if (file == NULL) {
         printf("Error opening file!\n");
         exit(1);
     }
     fprintf(file, "latency (ns)\n");
-    int i;
+    uint64_t i;
     for (i = 0; i < length; i++) {
         fprintf(file, "%llu\n", (unsigned long long) latency[i]);
     }
@@ -73,14 +73,14 @@ void save_time(const char *type, uint64_t* latency, int length){
     uint64_t total = 0;
     for (i = 0; i < length; i++)
         total += (unsigned long long) latency[i];
-    printf("Average %s latency: "KRED"%lu us\n"RESET, type, total/ (length*1000));
+    printf("Average %s latency: "KRED"%lu us\n"RESET, type, total / (length*1000));
 }
 
 typedef struct _thread_data_t {
   int tid;
   struct sockaddr_in6 *targetIP;
   struct in6_memaddr *r_addr; 
-  int length;
+  uint64_t length;
 } thread_data_t;
 
 
@@ -145,8 +145,6 @@ void *testing_loop(void *arg) {
     uint64_t rStart = getns();
     free_rmem(target, r_addr);
     free_latency[0] = getns() - rStart;
-
-
 
     printSendLat();
     int MAX_FNAME = 256;
@@ -227,6 +225,7 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
     // ALLOC TEST
     uint64_t split = NUM_ITERATIONS/myConf.num_hosts;
     int length;
+    printf("Allocating...\n");
     for (int i = 0; i < myConf.num_hosts; i++) {
         uint64_t start = getns(); 
         uint64_t offset = split * i;
@@ -242,10 +241,11 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
         alloc_latency[i] = getns() - start; 
     }
     // WRITE TEST
+    printf("Starting write test...\n");
     for (int i = 0; i < NUM_ITERATIONS; i++) {
         struct in6_memaddr remoteMemory = r_addr[i];
         print_debug("Creating payload");
-        char *payload = malloc(4096);
+        char *payload = malloc(BLOCK_SIZE);
         snprintf(payload, 50, "HELLO WORLD! How are you? %d", i);
         uint64_t wStart = getns();
         write_rmem(targetIP, payload, &remoteMemory);
@@ -254,12 +254,13 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
     }
     char test[BLOCK_SIZE];
     // READ TEST
+    printf("Starting read test...\n");
     for (int i = 0; i < NUM_ITERATIONS; i++) {
         struct in6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
         get_rmem(test, BLOCK_SIZE, targetIP, &remoteMemory);
         read_latency[i] = getns() - rStart;
-        char *payload = malloc(4096);
+        char *payload = malloc(BLOCK_SIZE);
         snprintf(payload, 50, "HELLO WORLD! How are you? %d", i);
         print_debug("Results of memory store: %.50s", test);
         if (strncmp(test, payload, 50) < 0) {
@@ -268,7 +269,8 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
         }
         free(payload);
     }
-    // FREE TEST
+    //FREE TEST
+    printf("Freeing...\n");
     for (int i = 0; i < myConf.num_hosts; i++) {
         uint64_t fStart = getns();
         uint64_t offset = split * i;
@@ -280,6 +282,8 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
     save_time("read_t0", read_latency, NUM_ITERATIONS);
     save_time("write_t0", write_latency, NUM_ITERATIONS);
     save_time("free_t0", free_latency, myConf.num_hosts);
+    free(read_latency);
+    free(write_latency);
 }
 
 
@@ -312,7 +316,7 @@ int main(int argc, char *argv[]) {
         abort (); 
       } 
     } 
-    printf("Running test with %d threads and %d iterations.\n", NUM_THREADS, NUM_ITERATIONS );
+    printf("Running test with %d threads and %lu iterations.\n", NUM_THREADS, NUM_ITERATIONS );
     struct sockaddr_in6 *temp = init_sockets(&myConf, 0);
     set_host_list(myConf.hosts, myConf.num_hosts);
 

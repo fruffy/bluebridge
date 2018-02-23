@@ -66,7 +66,7 @@ int get_local_mem(struct sockaddr_in6 *target_ip, struct in6_memaddr *r_addr, ch
  */
 int write_local_mem(char *receiveBuffer, struct sockaddr_in6 *target_ip, struct in6_memaddr *r_addr, char *sendBuffer) {
     // Copy the first POINTER_SIZE bytes of receive buffer into the target
-    rte_memcpy((void *) *(&r_addr->paddr), receiveBuffer, BLOCK_SIZE);
+    memcpy((void *) *(&r_addr->paddr), receiveBuffer, BLOCK_SIZE);
     struct in6_memaddr *returnID = (struct in6_memaddr *) (&target_ip->sin6_addr);
     returnID->cmd = r_addr->cmd;
     returnID->paddr = r_addr->paddr;
@@ -79,11 +79,11 @@ int write_local_mem(char *receiveBuffer, struct sockaddr_in6 *target_ip, struct 
  * This is freeing target memory?
  */
 int free_local_mem(struct sockaddr_in6 *target_ip, struct in6_memaddr *r_addr, char *sendBuffer) {
-    //print_debug("Content stored at %p has been freed!", (void*)pointer);
-    printf("Freeing pointer: %p\n", (void *) *&r_addr->paddr );
-    rte_free((void *) *&r_addr->paddr);
+    printf("Freeing pointer: %p\n", (void *) r_addr->paddr );
+    //rte_free((void *) *&r_addr->paddr);
+    free((void *) r_addr->paddr);
     //munmap((void *) pointer, BLOCK_SIZE);
-    rte_memcpy(sendBuffer, "ACK", 3);
+    memcpy(sendBuffer, "ACK", 3);
     struct in6_memaddr *returnID = (struct in6_memaddr *) (&target_ip->sin6_addr);
     returnID->cmd = r_addr->cmd;
     returnID->paddr = r_addr->paddr;
@@ -92,7 +92,7 @@ int free_local_mem(struct sockaddr_in6 *target_ip, struct in6_memaddr *r_addr, c
 }
 
 void process_request(char *receiveBuffer, int size, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
-    char *sendBuffer = rte_calloc(NULL, 1 ,BLOCK_SIZE, 64);
+    char sendBuffer[BLOCK_SIZE];
 
     // Switch on the client command
     if (remoteAddr->cmd == ALLOC_CMD) {
@@ -208,7 +208,7 @@ void init_server_dpdk(struct config *configstruct) {
 }
 
 void enter_server_loop(uint16_t server_port) {
-    char *receiveBuffer = rte_calloc(NULL, 1 ,BLOCK_SIZE, 64);
+    char receiveBuffer[BLOCK_SIZE];
     struct sockaddr_in6 *targetIP = rte_malloc(NULL, sizeof(struct sockaddr_in6), 0);
     targetIP->sin6_port = htons(server_port);
     struct in6_memaddr remoteAddr;
