@@ -39,11 +39,10 @@ struct rmem {
     struct sockaddr_in6 *targetIP;
 } r;
 
-int PAGE_SIZE = 4096;
+#define PAGE_SIZE 4096
 
 static int xmp_read(void *buf, u_int32_t len, u_int64_t offset, void *userdata) {
-/*    if (*(int *)userdata)
-        fprintf(stderr, "R - %lu, %u\n", offset, len);*/
+    // if (*(int *)userdata) fprintf(stderr, "R - %lu, %u\n", offset, len);
     u_int64_t page_offset = offset/PAGE_SIZE;
     if (len > PAGE_SIZE) {
         for (int i = 0; i< len/PAGE_SIZE; i++) {
@@ -52,26 +51,19 @@ static int xmp_read(void *buf, u_int32_t len, u_int64_t offset, void *userdata) 
     } else {
         get_rmem(buf, len, r.targetIP, &r.memList[page_offset]);
     }
-    //memcpy(buf, (char *)data + offset, len);
-/*    char dst_ip[INET6_ADDRSTRLEN];
-    inet_ntop(AF_INET6,&r.memList[page_offset], dst_ip, sizeof dst_ip);
-    printf("Reading from offset %lu\n", page_offset );
-    printf("IP Address: %s\n", dst_ip);*/
     return 0;
 }
 
 static int xmp_write(const void *buf, u_int32_t len, u_int64_t offset, void *userdata) {
-/*    if (*(int *)userdata)
-      fprintf(stderr, "W - %lu, %u\n", offset, len);*/
+    // if (*(int *)userdata) fprintf(stderr, "W - %lu, %u\n", offset, len);
     u_int64_t page_offset = offset/PAGE_SIZE;
     if (len > PAGE_SIZE) {
         for (int i = 0; i< len/PAGE_SIZE; i++) {
             write_rmem(r.targetIP, (char *) buf + (PAGE_SIZE *i), &r.memList[page_offset + i]);
-
         }
     } else {
         write_rmem(r.targetIP, (char *)buf, &r.memList[page_offset]);
-    }    //memcpy((char *)data + offset, buf, len);
+    }
     return 0;
 }
 

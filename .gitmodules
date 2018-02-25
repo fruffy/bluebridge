@@ -13,3 +13,7 @@
 [submodule "includes/thrift"]
 	url = https://github.com/apache/thrift
 	path = includes/thrift
+[submodule "includes/arangodb"]
+	url = https://github.com/arangodb/arangodb
+[submodule "includes/rocksdb"]
+	url = https://github.com/facebook/rocksdb

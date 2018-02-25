@@ -314,8 +314,8 @@ srcdir = .
 sysconfdir = ${prefix}/etc
 target_alias = 
 top_build_prefix = ../../../
-top_builddir = ../../..
-top_srcdir = ../../..
+top_builddir = ../../../../includes/p4
+top_srcdir = ../../../../includes/p4
 learn_client_SOURCES = learn_client.cpp
 learn_client_LDADD = $(top_builddir)/src/bm_apps/libbmapps.la
 all: all-am

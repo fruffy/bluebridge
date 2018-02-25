@@ -215,6 +215,7 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
     uint64_t alloc_latency[myConf.num_hosts];
     uint64_t *read_latency = calloc(NUM_ITERATIONS, sizeof(uint64_t));
     uint64_t *write_latency = calloc(NUM_ITERATIONS, sizeof(uint64_t));
+    uint64_t *write_latency2 = calloc(NUM_ITERATIONS, sizeof(uint64_t));
     uint64_t free_latency[myConf.num_hosts];
 
     // Allocate the address space we will use
@@ -269,6 +270,18 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
         }
         free(payload);
     }
+    // WRITE TEST 2
+    printf("Starting second write test...\n");
+    for (int i = 0; i < NUM_ITERATIONS; i++) {
+        struct in6_memaddr remoteMemory = r_addr[i];
+        print_debug("Creating payload");
+        char *payload = malloc(BLOCK_SIZE);
+        snprintf(payload, 50, "Bye WORLD! I am done? %d", i);
+        uint64_t wStart = getns();
+        write_rmem(targetIP, payload, &remoteMemory);
+        write_latency2[i] = getns() - wStart;
+        free(payload);
+    }
     //FREE TEST
     printf("Freeing...\n");
     for (int i = 0; i < myConf.num_hosts; i++) {
@@ -281,6 +294,7 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
     save_time("alloc_t0", alloc_latency, myConf.num_hosts);
     save_time("read_t0", read_latency, NUM_ITERATIONS);
     save_time("write_t0", write_latency, NUM_ITERATIONS);
+    save_time("write2_t0", write_latency2, NUM_ITERATIONS);
     save_time("free_t0", free_latency, myConf.num_hosts);
     free(read_latency);
     free(write_latency);
