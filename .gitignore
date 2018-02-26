@@ -453,9 +453,3 @@ ip6/applications/bin/
 
 *.d
 ip6/applications/dpdk/
-
-ip6/p4_switch/l2_switch/\.deps/
-
-ip6/p4_switch/l2_switch/learn_client/\.deps/
-
-ip6/p4_switch/l2_switch/\.libs/

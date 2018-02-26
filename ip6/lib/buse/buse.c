@@ -162,7 +162,7 @@ int buse_main(const char* dev_file, const struct buse_operations *aop, void *use
     len = ntohl(request.len);
     from = ntohll(request.from);
     assert(request.magic == htonl(NBD_REQUEST_MAGIC));
-    char chunk[len];
+    //char chunk[len];
     switch(ntohl(request.type)) {
       /* I may at some point need to deal with the the fact that the
        * official nbd server has a maximum buffer size, and divides up
@@ -172,7 +172,7 @@ int buse_main(const char* dev_file, const struct buse_operations *aop, void *use
     case NBD_CMD_READ:
       // fprintf(stderr, "Request for read of size %d\n", len);
       /* Fill with zero in case actual read is not implemented */
-      // = malloc(len);
+      chunk = malloc(len);
       if (aop->read) {
         reply.error = aop->read(chunk, len, from, userdata);
       } else {
@@ -181,11 +181,11 @@ int buse_main(const char* dev_file, const struct buse_operations *aop, void *use
       }
       write_all(sk, (char*)&reply, sizeof(struct nbd_reply));
       write_all(sk, (char*)chunk, len);
-
-      //free(chunk);
+      free(chunk);
       break;
     case NBD_CMD_WRITE:
       // fprintf(stderr, "Request for write of size %d\n", len);
+      chunk = malloc(len);
       read_all(sk, chunk, len);
       if (aop->write) {
         reply.error = aop->write(chunk, len, from, userdata);
@@ -193,7 +193,7 @@ int buse_main(const char* dev_file, const struct buse_operations *aop, void *use
         /* If user not specified write operation, return EPERM error */
         reply.error = htonl(EPERM);
       }
-      //free(chunk);
+      free(chunk);
       write_all(sk, (char*)&reply, sizeof(struct nbd_reply));
       break;
     case NBD_CMD_DISC:

@@ -109,10 +109,9 @@ else
     cd ../..
 
     # Building the P4 Library:
-    cd p4
-    ./autogen.sh
-    ./configure
-    make
-    make install
     cd ..
+    (cd includes/p4/ && sudo ./autogen.sh)
+    (cd includes/p4/ && sudo ./configure)
+    (cd includes/p4/ && sudo make)
+    (cd includes/p4/ && sudo make install)
 fi
