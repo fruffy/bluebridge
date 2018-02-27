@@ -4,9 +4,6 @@
 [submodule "includes/mininet"]
 	url = https://github.com/mininet/mininet
 	path = includes/mininet
-[submodule "includes/nanomsg"]
-	url = https://github.com/nanomsg/nanomsg
-	path = includes/nanomsg
 [submodule "includes/p4"]
 	url = https://github.com/p4lang/behavioral-model
 	path = includes/p4
