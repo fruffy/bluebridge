@@ -7,9 +7,6 @@
 [submodule "includes/p4"]
 	url = https://github.com/p4lang/behavioral-model
 	path = includes/p4
-[submodule "includes/thrift"]
-	url = https://github.com/apache/thrift
-	path = includes/thrift
 [submodule "includes/arangodb"]
 	url = https://github.com/arangodb/arangodb
 	path = includes/arangodb
