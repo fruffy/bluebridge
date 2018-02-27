@@ -1,9 +1,9 @@
 #!/bin/bash
 
-if [ "$EUID" -ne 0 ]
-  then echo "This script must be run as root"
-  exit
-fi
+# if [ "$EUID" -ne 0 ]
+#   then echo "This script must be run as root"
+#   exit
+# fi
 
 # Framework to accept various command line arguments
 POSITIONAL=()
@@ -71,47 +71,62 @@ if [[ $DPDK ]]; then
 else
     git submodule update --init mininet
     git submodule update --init p4
-    git submodule update --init nanomsg
-    git submodule update --init thrift
-
+    # git submodule update --init nanomsg
+    # git submodule update --init thrift
     ##### Optional Installs
-    sudo apt-get install -y bison
-    sudo apt-get install -y flex
-    sudo apt-get install -y pkg-config
-    sudo apt-get install -y libboost-all-dev
-    sudo apt-get install -y libevent-dev
-    sudo apt-get install -y libssl-dev
-    sudo apt-get install -y libtool
-    sudo apt-get install -y libjudy-dev
-    sudo apt-get install -y libgmp-dev
-    sudo apt-get install -y libffi-dev
-    sudo apt-get install -y automake
-    sudo apt-get install -y cmake
-    sudo apt-get install -y make
-    sudo apt-get install -y g++
-
+    (cd p4 && ./install_deps.sh)
+    # sudo apt-get install -y \
+    # automake \
+    # cmake \
+    # libjudy-dev \
+    # libgmp-dev \
+    # libpcap-dev \
+    # libboost-dev \
+    # libboost-test-dev \
+    # libboost-program-options-dev \
+    # libboost-system-dev \
+    # libboost-filesystem-dev \
+    # libboost-thread-dev \
+    # libevent-dev \
+    # libtool \
+    # flex \
+    # bison \
+    # pkg-config \
+    # g++ \
+    # libssl-dev \
+    # mktemp \
+    # libffi-dev \
+    # python-dev \
+    # python-pip \
+    # wget
     # Thrift Folder:
-    cd thrift
-    ./bootstrap.sh
-    ./configure
-    make
-    make install
-    cd ..
+    # echo "Installing Thrift"
+    # chmod 775 p4/travis/install-thrift.sh
+    # (cd p4/travis && sudo ./install-thrift.sh)
+    # cd thrift
+    # ./bootstrap.sh
+    # ./configure --with-cpp=yes --with-c_glib=no --with-java=no --with-ruby=no --with-erlang=no --with-go=no --with-nodejs=no
+    # make
+    # make install
+    # cd ..
     # NanoMsg Folder:
-    cd nanomsg
-    mkdir build
-    cd build
-    cmake ..
-    cmake --build .
-    ctest .
-    cmake --build . --target install
-    ldconfig
-    cd ../..
-
+    # echo "Installing NanoMsg"
+    # chmod 775 p4/travis/install-nanomsg.sh
+    # (cd p4/travis && sudo ./install-nanomsg.sh)
+    # cd nanomsg
+    # mkdir build
+    # cd build
+    # cmake ..
+    # cmake --build .
+    # ctest .
+    # cmake --build . --target install
+    # ldconfig
+    # cd ../..
     # Building the P4 Library:
-    cd ..
-    (cd includes/p4/ && sudo ./autogen.sh)
-    (cd includes/p4/ && sudo ./configure)
-    (cd includes/p4/ && sudo make)
-    (cd includes/p4/ && sudo make install)
+    # cd ..
+    echo "Installing P4"
+    (cd p4/ && ./autogen.sh)
+    (cd p4/ && ./configure --with-pdfixed)
+    (cd p4/ && make)
+    (cd p4/ && sudo make install)
 fi

@@ -15,5 +15,7 @@
 	path = includes/thrift
 [submodule "includes/arangodb"]
 	url = https://github.com/arangodb/arangodb
+	path = includes/arangodb
 [submodule "includes/rocksdb"]
 	url = https://github.com/facebook/rocksdb
+	path = includes/rocksdb
