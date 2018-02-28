@@ -1,6 +1,3 @@
-[submodule "includes/dpdk"]
-	url = https://github.com/fruffy/dpdk
-	path = includes/dpdk
 [submodule "includes/mininet"]
 	url = https://github.com/mininet/mininet
 	path = includes/mininet
@@ -13,3 +10,12 @@
 [submodule "includes/rocksdb"]
 	url = https://github.com/facebook/rocksdb
 	path = includes/rocksdb
+[submodule "includes/p4c-bm"]
+	url = https://github.com/p4lang/p4c-bm
+	path = includes/p4c-bm
+[submodule "includes/dpdk"]
+	url = https://github.com/fruffy/dpdk
+	path = includes/dpdk
+[submodule "ip6/p4_switch/full_switch"]
+	url = https://github.com/p4lang/switch
+	path = ip6/p4_switch/full_switch
