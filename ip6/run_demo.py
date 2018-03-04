@@ -16,7 +16,7 @@ from subprocess import Popen, PIPE
 
 from functools import partial
 
-HOSTS = 3
+HOSTS = 5
 
 class BlueBridge(Topo):
     "Simple topology example."
@@ -29,14 +29,17 @@ class BlueBridge(Topo):
 
         switch = self.addSwitch('s1')
         # Create a network topology of a single switch
-        # connected to three nodes.
+        # connected to three servers and two clients.
+        #    h1      h2
+        #    |       |
         # +------s1------+
         # |      |       |
-        # h1     h2      h3
-        for hostNum in range(1, HOSTS + 1):  # TODO: change back to 1, 4
+        # h3     h4      h5
+
+        for serverNum in range(1, HOSTS + 1):  # TODO: change back to 1, 4
             # Add hosts and switches
-            host = self.addHost('h' + str(hostNum))
-            self.addLink(host, switch)
+            server = self.addHost('h' + str(serverNum))
+            self.addLink(server, switch)
 
 
 topos = {'BlueBridge': (lambda: BlueBridge())}
@@ -49,24 +52,24 @@ def configureHosts(net):
         print(host)
 
         # Insert host configuration
-        configString = "\"INTERFACE=h" + \
-            str(hostNum) + \
-            "-eth0\n\HOSTS=0:0:102::,0:0:103::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
-            '{0:02x}'.format(hostNum) + "::\n\DEBUG=0\" > ./tmp/config/distMem.cnf"
+        configString = "\"INTERFACE=" + \
+            str(host) + \
+            "-eth0\n\HOSTS=0:0:103::,0:0:104::,0:0:105::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
+            '{0:02x}'.format(hostNum) + "::\n\DEBUG=1\" > ./tmp/config/distMem.cnf"
         host.cmdPrint('echo ' + configString)
 
         # Configure the interface and respective routing
-        host.cmdPrint('ip address change dev h' + str(hostNum) +
+        host.cmdPrint('ip address change dev ' + str(host) +
                       '-eth0 scope global 0:0:01' + '{0:02x}'.format(hostNum) + '::/48')
-        host.cmdPrint('ip -6 route add local 0:0:0100::/40  dev h' +
-                      str(hostNum) + '-eth0')
+        host.cmdPrint('ip -6 route add local 0:0:0100::/40  dev ' +
+                      str(host) + '-eth0')
         # host.cmdPrint('ip -6 route add local 0:0:01' +
         #               '{0:02x}'.format(hostNum) + '::/48 dev lo')
         # Gotta get dem jumbo frames
-        host.cmdPrint('ifconfig h' + str(hostNum) + '-eth0 mtu 9000')
-        if hostNum != 1:
-                # Run the server
-            host.cmdPrint('xterm  -T \"server' + str(hostNum) +
+        host.cmdPrint('ifconfig ' + str(host) + '-eth0 mtu 9000')
+        if 'h' in str(host) and hostNum > 2:
+            # Run the server
+            host.cmdPrint('xterm  -T \"server' + str(host)[1] +
                           '\" -e \"./applications/bin/server -c tmp/config/distMem.cnf; bash\" &')
             #host.cmdPrint('./applications/bin/server tmp/config/distMem.cnf &')
         hostNum += 1
@@ -108,6 +111,8 @@ def run():
     # net.startTerms()
 
     makeTerm(net.hosts[0])
+    makeTerm(net.hosts[1])
+
     # switch.cmdPrint('ifconfig -a')
     # switch = net.switch(name=('s1'))
     # switch.cmdPrint('ip -6 route add local 0:0:01' +
