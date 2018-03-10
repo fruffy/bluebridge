@@ -1,7 +1,7 @@
 #!/bin/bash
 set +x
 USER_R="fruffy"
-DIR_LOCAL="/home/fruffy/Projects/BlueBridge"
+DIR_LOCAL="./"
 DIR_REMOTE="/home/$USER_R/ip6/BlueBridge"
 SERVERS=("192.168.79.28" "192.168.79.41" "192.168.79.27")
 

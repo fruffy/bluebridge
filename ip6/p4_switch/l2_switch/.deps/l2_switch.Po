@@ -55,7 +55,7 @@ l2_switch.o: l2_switch.cpp /usr/include/stdc-predef.h \
  /usr/include/x86_64-linux-gnu/bits/types/FILE.h \
  /usr/include/x86_64-linux-gnu/bits/types/locale_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h \
- /usr/include/c++/7/cstdint \
+ /usr/include/x86_64-linux-gnu/bits/wchar2.h /usr/include/c++/7/cstdint \
  /usr/lib/gcc/x86_64-linux-gnu/7/include/stdint.h /usr/include/stdint.h \
  /usr/include/x86_64-linux-gnu/bits/types.h \
  /usr/include/x86_64-linux-gnu/bits/typesizes.h \
@@ -104,16 +104,20 @@ l2_switch.o: l2_switch.cpp /usr/include/stdc-predef.h \
  /usr/include/x86_64-linux-gnu/bits/select.h \
  /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h \
+ /usr/include/x86_64-linux-gnu/bits/select2.h \
  /usr/include/x86_64-linux-gnu/sys/sysmacros.h \
  /usr/include/x86_64-linux-gnu/bits/sysmacros.h /usr/include/alloca.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
  /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib.h \
  /usr/include/c++/7/bits/std_abs.h /usr/include/c++/7/cstdio \
  /usr/include/stdio.h /usr/include/libio.h /usr/include/_G_config.h \
  /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
  /usr/include/x86_64-linux-gnu/bits/sys_errlist.h \
- /usr/include/c++/7/cerrno /usr/include/errno.h \
- /usr/include/x86_64-linux-gnu/bits/errno.h /usr/include/linux/errno.h \
- /usr/include/x86_64-linux-gnu/asm/errno.h \
+ /usr/include/x86_64-linux-gnu/bits/stdio.h \
+ /usr/include/x86_64-linux-gnu/bits/stdio2.h /usr/include/c++/7/cerrno \
+ /usr/include/errno.h /usr/include/x86_64-linux-gnu/bits/errno.h \
+ /usr/include/linux/errno.h /usr/include/x86_64-linux-gnu/asm/errno.h \
  /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h \
  /usr/include/c++/7/bits/functional_hash.h \
  /usr/include/c++/7/bits/basic_string.tcc \
@@ -171,6 +175,7 @@ l2_switch.o: l2_switch.cpp /usr/include/stdc-predef.h \
  /usr/include/x86_64-linux-gnu/bits/confname.h \
  /usr/include/x86_64-linux-gnu/bits/getopt_posix.h \
  /usr/include/x86_64-linux-gnu/bits/getopt_core.h \
+ /usr/include/x86_64-linux-gnu/bits/unistd.h \
  /usr/include/boost/config/select_platform_config.hpp \
  /usr/include/boost/config/platform/linux.hpp \
  /usr/include/boost/config/posix_features.hpp \
@@ -419,6 +424,7 @@ l2_switch.o: l2_switch.cpp /usr/include/stdc-predef.h \
  /usr/include/x86_64-linux-gnu/bits/mathcalls-helper-functions.h \
  /usr/include/x86_64-linux-gnu/bits/mathcalls.h \
  /usr/include/x86_64-linux-gnu/bits/iscanonical.h \
+ /usr/include/x86_64-linux-gnu/bits/mathinline.h \
  /usr/include/boost/date_time/time_duration.hpp \
  /usr/include/boost/operators.hpp /usr/include/c++/7/iterator \
  /usr/include/c++/7/istream /usr/include/c++/7/bits/istream.tcc \
@@ -591,6 +597,8 @@ l2_switch.o: l2_switch.cpp /usr/include/stdc-predef.h \
  /usr/include/c++/7/unordered_set /usr/include/c++/7/bits/unordered_set.h \
  ../../../includes/p4/include/bm/bm_sim/data.h /usr/include/c++/7/cstring \
  /usr/include/string.h /usr/include/strings.h \
+ /usr/include/x86_64-linux-gnu/bits/strings_fortified.h \
+ /usr/include/x86_64-linux-gnu/bits/string_fortified.h \
  ../../../includes/p4/include/bm/bm_sim/bignum.h \
  /usr/include/boost/multiprecision/gmp.hpp \
  /usr/include/boost/multiprecision/number.hpp \
@@ -1203,6 +1211,7 @@ l2_switch.o: l2_switch.cpp /usr/include/stdc-predef.h \
  ../../../includes/p4/third_party/spdlog/bm/spdlog/details/../sinks/syslog_sink.h \
  /usr/include/syslog.h /usr/include/x86_64-linux-gnu/sys/syslog.h \
  /usr/include/x86_64-linux-gnu/bits/syslog-path.h \
+ /usr/include/x86_64-linux-gnu/bits/syslog.h \
  ../../../includes/p4/include/bm/bm_sim/simple_pre.h \
  ../../../includes/p4/include/bm/bm_sim/pre.h \
  ../../../includes/p4/include/bm/bm_runtime/bm_runtime.h \
@@ -1224,9 +1233,9 @@ l2_switch.o: l2_switch.cpp /usr/include/stdc-predef.h \
  /usr/include/x86_64-linux-gnu/asm/sockios.h \
  /usr/include/asm-generic/sockios.h \
  /usr/include/x86_64-linux-gnu/bits/types/struct_osockaddr.h \
+ /usr/include/x86_64-linux-gnu/bits/socket2.h \
  /usr/include/x86_64-linux-gnu/bits/in.h \
- /usr/local/include/thrift/TLogging.h /usr/local/include/thrift/TOutput.h \
- /usr/local/include/thrift/stdcxx.h \
+ /usr/local/include/thrift/TLogging.h \
  /usr/local/include/thrift/transport/TTransportException.h \
  /usr/local/include/thrift/protocol/TProtocolException.h \
  /usr/include/x86_64-linux-gnu/sys/param.h /usr/include/signal.h \
@@ -1408,6 +1417,8 @@ l2_switch.o: l2_switch.cpp /usr/include/stdc-predef.h \
 
 /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h:
 
+/usr/include/x86_64-linux-gnu/bits/wchar2.h:
+
 /usr/include/c++/7/cstdint:
 
 /usr/lib/gcc/x86_64-linux-gnu/7/include/stdint.h:
@@ -1524,13 +1535,19 @@ l2_switch.o: l2_switch.cpp /usr/include/stdc-predef.h \
 
 /usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h:
 
+/usr/include/x86_64-linux-gnu/bits/select2.h:
+
 /usr/include/x86_64-linux-gnu/sys/sysmacros.h:
 
 /usr/include/x86_64-linux-gnu/bits/sysmacros.h:
 
 /usr/include/alloca.h:
 
+/usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h:
+
 /usr/include/x86_64-linux-gnu/bits/stdlib-float.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdlib.h:
 
 /usr/include/c++/7/bits/std_abs.h:
 
@@ -1545,6 +1562,10 @@ l2_switch.o: l2_switch.cpp /usr/include/stdc-predef.h \
 /usr/include/x86_64-linux-gnu/bits/stdio_lim.h:
 
 /usr/include/x86_64-linux-gnu/bits/sys_errlist.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdio.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:
 
 /usr/include/c++/7/cerrno:
 
@@ -1697,6 +1718,8 @@ l2_switch.o: l2_switch.cpp /usr/include/stdc-predef.h \
 /usr/include/x86_64-linux-gnu/bits/getopt_posix.h:
 
 /usr/include/x86_64-linux-gnu/bits/getopt_core.h:
+
+/usr/include/x86_64-linux-gnu/bits/unistd.h:
 
 /usr/include/boost/config/select_platform_config.hpp:
 
@@ -2236,6 +2259,8 @@ l2_switch.o: l2_switch.cpp /usr/include/stdc-predef.h \
 
 /usr/include/x86_64-linux-gnu/bits/iscanonical.h:
 
+/usr/include/x86_64-linux-gnu/bits/mathinline.h:
+
 /usr/include/boost/date_time/time_duration.hpp:
 
 /usr/include/boost/operators.hpp:
@@ -2609,6 +2634,10 @@ l2_switch.o: l2_switch.cpp /usr/include/stdc-predef.h \
 /usr/include/string.h:
 
 /usr/include/strings.h:
+
+/usr/include/x86_64-linux-gnu/bits/strings_fortified.h:
+
+/usr/include/x86_64-linux-gnu/bits/string_fortified.h:
 
 ../../../includes/p4/include/bm/bm_sim/bignum.h:
 
@@ -3914,6 +3943,8 @@ l2_switch.o: l2_switch.cpp /usr/include/stdc-predef.h \
 
 /usr/include/x86_64-linux-gnu/bits/syslog-path.h:
 
+/usr/include/x86_64-linux-gnu/bits/syslog.h:
+
 ../../../includes/p4/include/bm/bm_sim/simple_pre.h:
 
 ../../../includes/p4/include/bm/bm_sim/pre.h:
@@ -3958,13 +3989,11 @@ l2_switch.o: l2_switch.cpp /usr/include/stdc-predef.h \
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_osockaddr.h:
 
+/usr/include/x86_64-linux-gnu/bits/socket2.h:
+
 /usr/include/x86_64-linux-gnu/bits/in.h:
 
 /usr/local/include/thrift/TLogging.h:
-
-/usr/local/include/thrift/TOutput.h:
-
-/usr/local/include/thrift/stdcxx.h:
 
 /usr/local/include/thrift/transport/TTransportException.h:
 

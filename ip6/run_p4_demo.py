@@ -114,11 +114,13 @@ def main():
 
     host = partial(Host,
                    privateDirs=privateDirs)
-    behavioral = 'p4_switch/l2_switch/l2_switch'
-    json = 'p4_switch/l2_switch/l2_switch.json'
+    behavioral_l2 = 'p4_switch/l2_switch/l2_switch'
+    # behavioral_full = '/usr/local/bin/simple_switch'
+    json_l2 = 'p4_switch/l2_switch/l2_switch.json'
+    # json_full = '/storage/Projects/bluebridge/ip6/p4_switch/full_switch/p4-build/bmpd/switch.json'
     thrift_port = 9090
-    topo = BlueBridgeTopo(behavioral,
-                          json,
+    topo = BlueBridgeTopo(behavioral_l2,
+                          json_l2,
                           thrift_port,
                           False,
                           HOSTS)
