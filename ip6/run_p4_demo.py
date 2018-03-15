@@ -114,11 +114,12 @@ def main():
 
     host = partial(Host,
                    privateDirs=privateDirs)
-    behavioral = 'p4_switch/l2_switch/l2_switch'
-    json = 'p4_switch/l2_switch/l2_switch.json'
+    # behavioral_l2 = 'p4_switch/l2_switch/l2_switch'
+    behavioral_simple = 'p4_switch/simple_switch/simple_switch'
+    json_simple = 'p4_switch/l2_broadcast.json'
     thrift_port = 9090
-    topo = BlueBridgeTopo(behavioral,
-                          json,
+    topo = BlueBridgeTopo(behavioral_simple,
+                          json_simple,
                           thrift_port,
                           False,
                           HOSTS)
@@ -139,7 +140,8 @@ def main():
         # Gotta get dem jumbo frames
         os.system('ifconfig s1-eth' + str(i) + ' mtu 9000')
         i += 1
-    os.system('p4_switch/l2_switch/runtime_CLI < p4_switch/l2_switch/commands.txt')
+    # os.system('p4_switch/l2_switch/runtime_CLI < p4_switch/l2_switch/commands.txt')
+    os.system('p4_switch/simple_switch/simple_switch_CLI < p4_switch/commands.txt')
     CLI(net)
     clean()
     net.stop()

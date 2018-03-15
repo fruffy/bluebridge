@@ -16,6 +16,3 @@
 [submodule "includes/dpdk"]
 	url = https://github.com/fruffy/dpdk
 	path = includes/dpdk
-[submodule "ip6/p4_switch/full_switch"]
-	url = https://github.com/p4lang/switch
-	path = ip6/p4_switch/full_switch
