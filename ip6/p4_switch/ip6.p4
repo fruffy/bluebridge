@@ -118,7 +118,7 @@ action _drop() {
 header_type routing_metadata_t {
     fields {
         nhop_ipv4 : 32;
-        nhop_ipv6 : 32;
+        nhop_ipv6 : 128;
     }
 }
 
