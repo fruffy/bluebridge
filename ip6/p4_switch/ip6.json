@@ -164,8 +164,88 @@
             "max_length": null
         },
         {
-            "name": "routing_metadata_t",
+            "name": "arp_t",
             "id": 4,
+            "fields": [
+                [
+                    "hType",
+                    16
+                ],
+                [
+                    "pType",
+                    16
+                ],
+                [
+                    "hSize",
+                    8
+                ],
+                [
+                    "pSize",
+                    8
+                ],
+                [
+                    "opcode",
+                    16
+                ],
+                [
+                    "sMac",
+                    48
+                ],
+                [
+                    "sIP",
+                    32
+                ],
+                [
+                    "dMac",
+                    48
+                ],
+                [
+                    "dIP",
+                    32
+                ]
+            ],
+            "length_exp": null,
+            "max_length": null
+        },
+        {
+            "name": "intrinsic_metadata_t",
+            "id": 5,
+            "fields": [
+                [
+                    "ingress_global_timestamp",
+                    48
+                ],
+                [
+                    "mcast_grp",
+                    4
+                ],
+                [
+                    "egress_rid",
+                    4
+                ],
+                [
+                    "mcast_hash",
+                    16
+                ],
+                [
+                    "lf_field_list",
+                    32
+                ],
+                [
+                    "resubmit_flag",
+                    16
+                ],
+                [
+                    "recirculate_flag",
+                    16
+                ]
+            ],
+            "length_exp": null,
+            "max_length": null
+        },
+        {
+            "name": "routing_metadata_t",
+            "id": 6,
             "fields": [
                 [
                     "nhop_ipv4",
@@ -206,8 +286,20 @@
             "metadata": false
         },
         {
-            "name": "routing_metadata",
+            "name": "arp",
             "id": 4,
+            "header_type": "arp_t",
+            "metadata": false
+        },
+        {
+            "name": "intrinsic_metadata",
+            "id": 5,
+            "header_type": "intrinsic_metadata_t",
+            "metadata": true
+        },
+        {
+            "name": "routing_metadata",
+            "id": 6,
             "header_type": "routing_metadata_t",
             "metadata": true
         }
@@ -270,6 +362,12 @@
                             "next_state": "parse_ipv6"
                         },
                         {
+                            "type": "hexstr",
+                            "value": "0x0806",
+                            "mask": null,
+                            "next_state": "parse_arp"
+                        },
+                        {
                             "type": "default",
                             "value": null,
                             "mask": null,
@@ -324,6 +422,30 @@
                             "next_state": null
                         }
                     ]
+                },
+                {
+                    "name": "parse_arp",
+                    "id": 4,
+                    "parser_ops": [
+                        {
+                            "op": "extract",
+                            "parameters": [
+                                {
+                                    "type": "regular",
+                                    "value": "arp"
+                                }
+                            ]
+                        }
+                    ],
+                    "transition_key": [],
+                    "transitions": [
+                        {
+                            "type": "default",
+                            "value": null,
+                            "mask": null,
+                            "next_state": null
+                        }
+                    ]
                 }
             ]
         }
@@ -335,44 +457,17 @@
             "id": 0,
             "order": [
                 "ethernet",
-                "ipv4",
-                "ipv6"
+                "arp",
+                "ipv6",
+                "ipv4"
             ]
         }
     ],
     "meter_arrays": [],
     "actions": [
         {
-            "name": "set_dmac",
-            "id": 0,
-            "runtime_data": [
-                {
-                    "name": "dmac",
-                    "bitwidth": 48
-                }
-            ],
-            "primitives": [
-                {
-                    "op": "modify_field",
-                    "parameters": [
-                        {
-                            "type": "field",
-                            "value": [
-                                "ethernet",
-                                "dstAddr"
-                            ]
-                        },
-                        {
-                            "type": "runtime_data",
-                            "value": 0
-                        }
-                    ]
-                }
-            ]
-        },
-        {
             "name": "rewrite_mac",
-            "id": 1,
+            "id": 0,
             "runtime_data": [
                 {
                     "name": "smac",
@@ -399,88 +494,8 @@
             ]
         },
         {
-            "name": "set_nhop6",
-            "id": 2,
-            "runtime_data": [
-                {
-                    "name": "nhop_ipv6",
-                    "bitwidth": 128
-                },
-                {
-                    "name": "port",
-                    "bitwidth": 9
-                }
-            ],
-            "primitives": [
-                {
-                    "op": "modify_field",
-                    "parameters": [
-                        {
-                            "type": "field",
-                            "value": [
-                                "routing_metadata",
-                                "nhop_ipv6"
-                            ]
-                        },
-                        {
-                            "type": "runtime_data",
-                            "value": 0
-                        }
-                    ]
-                },
-                {
-                    "op": "modify_field",
-                    "parameters": [
-                        {
-                            "type": "field",
-                            "value": [
-                                "standard_metadata",
-                                "egress_spec"
-                            ]
-                        },
-                        {
-                            "type": "runtime_data",
-                            "value": 1
-                        }
-                    ]
-                },
-                {
-                    "op": "modify_field",
-                    "parameters": [
-                        {
-                            "type": "field",
-                            "value": [
-                                "ipv6",
-                                "hopLimit"
-                            ]
-                        },
-                        {
-                            "type": "expression",
-                            "value": {
-                                "type": "expression",
-                                "value": {
-                                    "op": "-",
-                                    "left": {
-                                        "type": "field",
-                                        "value": [
-                                            "ipv6",
-                                            "hopLimit"
-                                        ]
-                                    },
-                                    "right": {
-                                        "type": "hexstr",
-                                        "value": "0x1"
-                                    }
-                                }
-                            }
-                        }
-                    ]
-                }
-            ]
-        },
-        {
             "name": "set_nhop4",
-            "id": 3,
+            "id": 1,
             "runtime_data": [
                 {
                     "name": "nhop_ipv4",
@@ -560,12 +575,143 @@
         },
         {
             "name": "_drop",
-            "id": 4,
+            "id": 2,
             "runtime_data": [],
             "primitives": [
                 {
                     "op": "drop",
                     "parameters": []
+                }
+            ]
+        },
+        {
+            "name": "broadcast",
+            "id": 3,
+            "runtime_data": [],
+            "primitives": [
+                {
+                    "op": "modify_field",
+                    "parameters": [
+                        {
+                            "type": "field",
+                            "value": [
+                                "intrinsic_metadata",
+                                "mcast_grp"
+                            ]
+                        },
+                        {
+                            "type": "hexstr",
+                            "value": "0x1"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "set_nhop6",
+            "id": 4,
+            "runtime_data": [
+                {
+                    "name": "nhop_ipv6",
+                    "bitwidth": 128
+                },
+                {
+                    "name": "port",
+                    "bitwidth": 9
+                }
+            ],
+            "primitives": [
+                {
+                    "op": "modify_field",
+                    "parameters": [
+                        {
+                            "type": "field",
+                            "value": [
+                                "routing_metadata",
+                                "nhop_ipv6"
+                            ]
+                        },
+                        {
+                            "type": "runtime_data",
+                            "value": 0
+                        }
+                    ]
+                },
+                {
+                    "op": "modify_field",
+                    "parameters": [
+                        {
+                            "type": "field",
+                            "value": [
+                                "standard_metadata",
+                                "egress_spec"
+                            ]
+                        },
+                        {
+                            "type": "runtime_data",
+                            "value": 1
+                        }
+                    ]
+                },
+                {
+                    "op": "modify_field",
+                    "parameters": [
+                        {
+                            "type": "field",
+                            "value": [
+                                "ipv6",
+                                "hopLimit"
+                            ]
+                        },
+                        {
+                            "type": "expression",
+                            "value": {
+                                "type": "expression",
+                                "value": {
+                                    "op": "-",
+                                    "left": {
+                                        "type": "field",
+                                        "value": [
+                                            "ipv6",
+                                            "hopLimit"
+                                        ]
+                                    },
+                                    "right": {
+                                        "type": "hexstr",
+                                        "value": "0x1"
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "set_dmac",
+            "id": 5,
+            "runtime_data": [
+                {
+                    "name": "dmac",
+                    "bitwidth": 48
+                }
+            ],
+            "primitives": [
+                {
+                    "op": "modify_field",
+                    "parameters": [
+                        {
+                            "type": "field",
+                            "value": [
+                                "ethernet",
+                                "dstAddr"
+                            ]
+                        },
+                        {
+                            "type": "runtime_data",
+                            "value": 0
+                        }
+                    ]
                 }
             ]
         }
@@ -670,6 +816,35 @@
                         "_drop": null
                     },
                     "base_default_next": null
+                },
+                {
+                    "name": "arp",
+                    "id": 3,
+                    "match_type": "exact",
+                    "type": "simple",
+                    "max_size": 512,
+                    "with_counters": false,
+                    "direct_meters": null,
+                    "support_timeout": false,
+                    "key": [
+                        {
+                            "match_type": "exact",
+                            "target": [
+                                "ethernet",
+                                "dstAddr"
+                            ],
+                            "mask": null
+                        }
+                    ],
+                    "actions": [
+                        "broadcast",
+                        "_drop"
+                    ],
+                    "next_tables": {
+                        "broadcast": null,
+                        "_drop": null
+                    },
+                    "base_default_next": null
                 }
             ],
             "action_profiles": [],
@@ -751,7 +926,47 @@
                             }
                         }
                     },
-                    "true_next": "ipv6_lpm",
+                    "true_next": "_condition_2",
+                    "false_next": "_condition_3"
+                },
+                {
+                    "name": "_condition_2",
+                    "id": 2,
+                    "expression": {
+                        "type": "expression",
+                        "value": {
+                            "op": "==",
+                            "left": {
+                                "type": "field",
+                                "value": [
+                                    "ipv6",
+                                    "nextHeader"
+                                ]
+                            },
+                            "right": {
+                                "type": "hexstr",
+                                "value": "0x3a"
+                            }
+                        }
+                    },
+                    "true_next": "arp",
+                    "false_next": "ipv6_lpm"
+                },
+                {
+                    "name": "_condition_3",
+                    "id": 3,
+                    "expression": {
+                        "type": "expression",
+                        "value": {
+                            "op": "valid",
+                            "left": null,
+                            "right": {
+                                "type": "header",
+                                "value": "arp"
+                            }
+                        }
+                    },
+                    "true_next": "arp",
                     "false_next": null
                 }
             ]
@@ -763,7 +978,7 @@
             "tables": [
                 {
                     "name": "send_frame",
-                    "id": 3,
+                    "id": 4,
                     "match_type": "exact",
                     "type": "simple",
                     "max_size": 256,
@@ -795,105 +1010,8 @@
             "conditionals": []
         }
     ],
-    "calculations": [
-        {
-            "name": "ipv4_checksum",
-            "id": 0,
-            "input": [
-                {
-                    "type": "field",
-                    "value": [
-                        "ipv4",
-                        "version"
-                    ]
-                },
-                {
-                    "type": "field",
-                    "value": [
-                        "ipv4",
-                        "ihl"
-                    ]
-                },
-                {
-                    "type": "field",
-                    "value": [
-                        "ipv4",
-                        "diffserv"
-                    ]
-                },
-                {
-                    "type": "field",
-                    "value": [
-                        "ipv4",
-                        "totalLen"
-                    ]
-                },
-                {
-                    "type": "field",
-                    "value": [
-                        "ipv4",
-                        "identification"
-                    ]
-                },
-                {
-                    "type": "field",
-                    "value": [
-                        "ipv4",
-                        "flags"
-                    ]
-                },
-                {
-                    "type": "field",
-                    "value": [
-                        "ipv4",
-                        "fragOffset"
-                    ]
-                },
-                {
-                    "type": "field",
-                    "value": [
-                        "ipv4",
-                        "ttl"
-                    ]
-                },
-                {
-                    "type": "field",
-                    "value": [
-                        "ipv4",
-                        "protocol"
-                    ]
-                },
-                {
-                    "type": "field",
-                    "value": [
-                        "ipv4",
-                        "srcAddr"
-                    ]
-                },
-                {
-                    "type": "field",
-                    "value": [
-                        "ipv4",
-                        "dstAddr"
-                    ]
-                }
-            ],
-            "algo": "csum16"
-        }
-    ],
-    "checksums": [
-        {
-            "name": "ipv4.hdrChecksum|ipv4_checksum",
-            "id": 0,
-            "target": [
-                "ipv4",
-                "hdrChecksum"
-            ],
-            "type": "generic",
-            "calculation": "ipv4_checksum",
-            "if_cond": null
-        }
-    ],
+    "calculations": [],
+    "checksums": [],
     "learn_lists": [],
     "field_lists": [],
     "counter_arrays": [],
@@ -930,6 +1048,34 @@
         [
             "standard_metadata",
             "_padding"
+        ],
+        [
+            "intrinsic_metadata",
+            "ingress_global_timestamp"
+        ],
+        [
+            "intrinsic_metadata",
+            "mcast_grp"
+        ],
+        [
+            "intrinsic_metadata",
+            "egress_rid"
+        ],
+        [
+            "intrinsic_metadata",
+            "mcast_hash"
+        ],
+        [
+            "intrinsic_metadata",
+            "lf_field_list"
+        ],
+        [
+            "intrinsic_metadata",
+            "resubmit_flag"
+        ],
+        [
+            "intrinsic_metadata",
+            "recirculate_flag"
         ]
     ]
 }

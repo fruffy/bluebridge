@@ -78,8 +78,8 @@ def configureHosts(net):
                       '-eth0 scope global 0:0:01' + '{0:02x}'.format(hostNum) + '::/48')
         host.cmdPrint('ip -6 route add local 0:0:0100::/40  dev h' +
                       str(hostNum) + '-eth0')
-        for j in range(HOSTS):
-            host.cmdPrint('arp -s 10.0.0.%d 00:04:00:00:00:0%d' % (j + 1, j))
+        # for j in range(HOSTS):
+        #     host.cmdPrint('arp -s 10.0.0.%d 00:04:00:00:00:0%d' % (j + 1, j))
         # host.cmdPrint('ip -6 route add local 0:0:01' +
         #               '{0:02x}'.format(hostNum) + '::/48 dev lo')
         # Gotta get dem jumbo frames
