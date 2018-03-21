@@ -16,3 +16,6 @@
 [submodule "includes/dpdk"]
 	url = https://github.com/fruffy/dpdk
 	path = includes/dpdk
+[submodule "ip6/thrift"]
+	path = ip6/thrift
+	url = git@github.com:acarb95/thrift.git
