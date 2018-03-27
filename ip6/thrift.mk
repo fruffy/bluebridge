@@ -1,7 +1,12 @@
 MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+THRIFT_DIR = $(MAKE_ROOT)/thrift
+C_GLIB_DIR = $(THRIFT_DIR)/lib/c_glib
+C_GLIB_TUTORIAL = $(THRIFT_DIR)/tutorial/c_glib
+
+MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 srcExt = c
 srcDir = $(MAKE_ROOT)/applications
-objDir = $(srcDir)/obj
+objDir = $(MAKE_ROOT)/obj
 binDir = $(srcDir)/bin
 libDir = $(MAKE_ROOT)/lib
 thriftDir = $(MAKE_ROOT)/thrift
@@ -20,12 +25,17 @@ srcDirs := $(shell find . -name '*.$(srcExt)' -exec dirname {} \; | uniq)
 objects := $(patsubst $(MAKE_ROOT)/%.$(srcExt), $(objDir)/%.o, $(sources_filtered))
 
 all: $(apps)
-	-rm -rf $(objDir)
+	# @$(MAKE) -C $(THRIFT_DIR)
+	@$(MAKE) -C $(C_GLIB_DIR)
+	@$(MAKE) -C $(C_GLIB_TUTORIAL)
+	# -rm -rf $(objDir)
 
 $(apps):  % : $(binDir)/%
 
+.SECONDARY: $(objects)
 
 $(binDir)/%: buildrepo $(objects)
+	@echo "objects: $(objects)"
 	@mkdir -p `dirname $@`
 	@$(eval appObject = $(@:$(binDir)/%=%))
 	@$(CC) $(srcDir)/$(appObject).c $(objects) $(LDFLAGS) $(DFLAGS)-o $@
@@ -36,6 +46,8 @@ $(objDir)/%.o: %.$(srcExt)
 
 clean:
 	@echo "Cleaning..."
+	@$(MAKE) -C $(C_GLIB_DIR) clean
+	@$(MAKE) -C $(C_GLIB_TUTORIAL) clean
 	-rm -rf $(objDir)
 	-rm -rf $(binDir)/*
 
