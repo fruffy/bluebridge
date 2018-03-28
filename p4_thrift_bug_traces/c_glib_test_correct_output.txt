@@ -1,0 +1,58 @@
+H1 output:
+root@yao:ip6# cd thrift/tutorial/c_glib/
+root@yao:c_glib# ./tutorial_client -c ../../../tmp/config/distMem.cnf -i 10
+Opening...../../../tmp/config/distMem.cnf
+Loading Config...
+*** Interface h1-eth0
+*** Server port 5000
+*** Client port 65280
+*** Debug active? 1
+*** 3 target hosts:      0:0:103:: 0:0:104:: 0:0:105:: 
+Setting interface IP...
+SIOCSIFADDR: File exists
+interface name: h1-eth0
+ip:2
+Active Filter: tcpdump -i h1-eth0 dst port 65280 and ip6 net 0:0:101::/48 -ddd
+
+
+###### Server functionality tests ######
+Testing ping...                 SUCCESS
+Testing allocate_mem...         SUCCESS
+Testing write_mem...            SUCCESS
+Testing read_mem...             SUCCESS
+Testing free_mem...             SUCCESS
+
+####### Shared pointer RPC tests #######
+Testing increment_array...      SUCCESS
+Testing add_arrays...           SUCCESS
+
+####### Shared pointer performance tests #######
+Average ping latency: 46 us
+Average alloc latency: 95 us
+Average write latency: 104 us
+Average read latency: 71 us
+Average free latency: 99 us
+Average no_op_rpcs latency: 510 us
+
+
+Cleaning up...
+
+
+H2 output:
+root@yao:ip6# cd thrift/tutorial/c_glib/
+root@yao:c_glib# ./tutorial_server -c ../../../tmp/config/distMem.cnf 
+Opening...../../../tmp/config/distMem.cnf
+Loading Config...
+*** Interface h2-eth0
+*** Server port 5000
+*** Client port 65280
+*** Debug active? 1
+*** 3 target hosts:      0:0:103:: 0:0:104:: 0:0:105:: 
+Setting interface IP...
+SIOCSIFADDR: File exists
+interface name: h2-eth0
+ip:2
+Active Filter: tcpdump -i h2-eth0 dst port 65280 and ip6 net 0:0:102::/48 -ddd
+Starting the server...
+
+** (process:14386): WARNING **: received invalid message type 1de40d90 from client
