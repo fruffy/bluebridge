@@ -75,6 +75,7 @@ else
     # git submodule update --init thrift
     ##### Optional Installs
     (cd p4 && ./install_deps.sh)
+    sudo -H pip install ipaddr
     # sudo apt-get install -y \
     # automake \
     # cmake \

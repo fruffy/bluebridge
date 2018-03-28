@@ -78,6 +78,8 @@ def configureHosts(net):
                       '-eth0 scope global 0:0:01' + '{0:02x}'.format(hostNum) + '::/48')
         host.cmdPrint('ip -6 route add local 0:0:0100::/40  dev h' +
                       str(hostNum) + '-eth0')
+        # for j in range(HOSTS):
+        #     host.cmdPrint('arp -s 10.0.0.%d 00:04:00:00:00:0%d' % (j + 1, j))
         # host.cmdPrint('ip -6 route add local 0:0:01' +
         #               '{0:02x}'.format(hostNum) + '::/48 dev lo')
         # Gotta get dem jumbo frames
@@ -86,25 +88,14 @@ def configureHosts(net):
                 # Run the server
             host.cmdPrint('xterm  -T \"server' + str(hostNum) +
                           '\" -e \"./applications/bin/server -c tmp/config/distMem.cnf; bash\" &')
-            #host.cmdPrint('./applications/bin/server tmp/config/distMem.cnf &')
+            # host.cmdPrint('./applications/bin/server tmp/config/distMem.cnf &')
         hostNum += 1
 
 
 def clean():
     ''' Clean any the running instances of POX '''
     Popen("killall xterm", stdout=PIPE, shell=True)
-    # p = Popen("ps aux | grep 'xterm' | awk '{print $2}'",
-    #           stdout=PIPE, shell=True)
-    # p.wait()
-    # procs = (p.communicate()[0]).split('\n')
-    # for pid in procs:
-    #     try:
-    #         pid = int(pid)
-    #         Popen('kill %d' % pid, shell=True).wait()
-    #     except:
-    #         pass
-
-# "sudo python 1sw_demo.py --behavioral-exe ../targets/l2_switch/l2_switch --json ../targets/l2_switch/l2_switch.json"
+    # Popen("mn -c", stdout=PIPE, shell=True)
 
 
 def main():
@@ -114,12 +105,11 @@ def main():
 
     host = partial(Host,
                    privateDirs=privateDirs)
-    # behavioral_l2 = 'p4_switch/l2_switch/l2_switch'
     behavioral_simple = 'p4_switch/simple_switch/simple_switch'
-    json_simple = 'p4_switch/l2_broadcast.json'
+    json_router = 'p4_switch/ip6.json'
     thrift_port = 9090
     topo = BlueBridgeTopo(behavioral_simple,
-                          json_simple,
+                          json_router,
                           thrift_port,
                           False,
                           HOSTS)
@@ -133,18 +123,16 @@ def main():
     makeTerm(net.hosts[0])
 
     # Our current "switch"
-    hostNum = HOSTS  # TODO: change back to 3
     i = 1
-    while i <= hostNum:
+    while i <= HOSTS:
         # Routing entries per port
         # Gotta get dem jumbo frames
         os.system('ifconfig s1-eth' + str(i) + ' mtu 9000')
         i += 1
-    # os.system('p4_switch/l2_switch/runtime_CLI < p4_switch/l2_switch/commands.txt')
     os.system('p4_switch/simple_switch/simple_switch_CLI < p4_switch/commands.txt')
     CLI(net)
-    clean()
     net.stop()
+    clean()
 
 
 if __name__ == '__main__':

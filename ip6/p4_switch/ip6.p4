@@ -51,12 +51,42 @@ header_type ipv6_t {
     }
 }
 
+header_type arp_t {
+    fields {
+        hType : 16;
+        pType : 16;
+        hSize : 8;
+        pSize : 8;
+        opcode : 16;
+        sMac : 48;
+        sIP : 32;
+        dMac : 48;
+        dIP : 32;
+    }
+}
+
+header_type intrinsic_metadata_t {
+    fields {
+        ingress_global_timestamp : 48;  // ingress timestamp, in microseconds
+        mcast_grp : 4;  // to be set in the ingress pipeline for multicast
+        egress_rid : 4;  // replication id, available on egress if packet was
+                            // multicast
+        mcast_hash : 16;  // unused
+        lf_field_list : 32;  // set by generate_digest primitive, not to be used
+                                // directly by P4 programmer
+        resubmit_flag : 16;  // used internally
+        recirculate_flag : 16;  // used internally
+    }
+}
+
+
 parser start {
     return parse_ethernet;
 }
 
 #define ETHERTYPE_IPV4 0x0800
 #define ETHERTYPE_IPV6 0x86DD
+#define ETHERTYPE_ARP  0x0806
 
 header ethernet_t ethernet;
 
@@ -65,49 +95,28 @@ parser parse_ethernet {
     return select(latest.etherType) {
         ETHERTYPE_IPV4 : parse_ipv4;
         ETHERTYPE_IPV6 : parse_ipv6;
+        ETHERTYPE_ARP : parse_arp;
         default: ingress;
     }
 }
 
 header ipv4_t ipv4;
-
-field_list ipv4_checksum_list {
-        ipv4.version;
-        ipv4.ihl;
-        ipv4.diffserv;
-        ipv4.totalLen;
-        ipv4.identification;
-        ipv4.flags;
-        ipv4.fragOffset;
-        ipv4.ttl;
-        ipv4.protocol;
-        ipv4.srcAddr;
-        ipv4.dstAddr;
-}
-
-field_list_calculation ipv4_checksum {
-    input {
-        ipv4_checksum_list;
-    }
-    algorithm : csum16;
-    output_width : 16;
-}
-
-calculated_field ipv4.hdrChecksum  {
-    verify ipv4_checksum;
-    update ipv4_checksum;
-}
+header ipv6_t ipv6;
+header arp_t arp;
+metadata intrinsic_metadata_t intrinsic_metadata;
 
 parser parse_ipv4 {
     extract(ipv4);
     return ingress;
 }
 
-header ipv6_t ipv6;
-
-
 parser parse_ipv6 {
     extract(ipv6);
+    return ingress;
+}
+
+parser parse_arp {
+    extract(arp);
     return ingress;
 }
 
@@ -118,7 +127,7 @@ action _drop() {
 header_type routing_metadata_t {
     fields {
         nhop_ipv4 : 32;
-        nhop_ipv6 : 32;
+        nhop_ipv6 : 128;
     }
 }
 
@@ -189,14 +198,32 @@ table send_frame {
     size: 256;
 }
 
+action broadcast() {
+    modify_field(intrinsic_metadata.mcast_grp, 1);
+}
+
+table arp {
+    reads {
+        ethernet.dstAddr : exact;
+    }
+    actions {broadcast;_drop;}
+    size : 512;
+}
+
 control ingress {
     if(valid(ipv4) and ipv4.ttl > 0) {
         apply(ipv4_lpm);
         apply(forward);
     }
     else if(valid(ipv6) and ipv6.hopLimit > 0) {
-        apply(ipv6_lpm);
-        apply(forward);
+        if (ipv6.nextHeader == 0x3A) {
+            apply(arp);
+        } else {
+            apply(ipv6_lpm);
+            apply(forward);
+        }
+    } else if (valid(arp)) {
+        apply(arp);
     }
 }
 

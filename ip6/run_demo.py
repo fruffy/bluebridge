@@ -78,17 +78,7 @@ def configureHosts(net):
 def clean():
     ''' Clean any the running instances of POX '''
     Popen("killall xterm", stdout=PIPE, shell=True)
-    # p = Popen("ps aux | grep 'xterm' | awk '{print $2}'",
-    #           stdout=PIPE, shell=True)
-    # p.wait()
-    # procs = (p.communicate()[0]).split('\n')
-    # for pid in procs:
-    #     try:
-    #         pid = int(pid)
-    #         Popen('kill %d' % pid, shell=True).wait()
-    #     except:
-    #         pass
-
+    Popen("mn -c", stdout=PIPE, shell=True)
 
 def run():
     privateDirs = [('./tmp/config', '/tmp/%(name)s/var/config')]
