@@ -69,7 +69,7 @@ def configureHosts(net):
         # Insert host configuration
         configString = "\"INTERFACE=h" + \
             str(hostNum) + \
-            "-eth0\n\HOSTS=0:0:102::,0:0:103::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
+            "-eth0\n\HOSTS=0:0:103::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
             '{0:02x}'.format(hostNum) + "::\n\DEBUG=0\" > ./tmp/config/distMem.cnf"
         host.cmdPrint('echo ' + configString)
 
@@ -84,7 +84,7 @@ def configureHosts(net):
         #               '{0:02x}'.format(hostNum) + '::/48 dev lo')
         # Gotta get dem jumbo frames
         host.cmdPrint('ifconfig h' + str(hostNum) + '-eth0 mtu 9000')
-        if hostNum != 1:
+        if hostNum == 3:
                 # Run the server
             host.cmdPrint('xterm  -T \"server' + str(hostNum) +
                           '\" -e \"./applications/bin/server -c tmp/config/distMem.cnf; bash\" &')
@@ -121,6 +121,7 @@ def main():
 
     configureHosts(net)
     makeTerm(net.hosts[0])
+    makeTerm(net.hosts[1])
 
     # Our current "switch"
     i = 1

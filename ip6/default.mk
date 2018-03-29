@@ -4,6 +4,7 @@ srcDir = $(MAKE_ROOT)/applications
 objDir = $(srcDir)/obj
 binDir = $(srcDir)/bin
 libDir = $(MAKE_ROOT)/lib
+thriftDir = $(MAKE_ROOT)/thrift
 
 # add the raw socket flag to differentiate from other builds
 CFLAGS += -DDEFAULT
@@ -13,14 +14,13 @@ filter+= $(libDir)/dpdk_client.c
 filter+= $(libDir)/dpdk_common.c
 filter+= $(libDir)/dpdk_common.h
 
-
 sources := $(shell find "$(libDir)" -name '*.$(srcExt)')
 sources_filtered := $(filter-out $(filter), $(sources))
 srcDirs := $(shell find . -name '*.$(srcExt)' -exec dirname {} \; | uniq)
 objects := $(patsubst $(MAKE_ROOT)/%.$(srcExt), $(objDir)/%.o, $(sources_filtered))
 
 all: $(apps)
-	-rm -r $(objDir)
+	-rm -rf $(objDir)
 
 $(apps):  % : $(binDir)/%
 
@@ -36,8 +36,8 @@ $(objDir)/%.o: %.$(srcExt)
 
 clean:
 	@echo "Cleaning..."
-	-rm -r $(objDir)
-	-rm -r $(binDir)/*
+	-rm -rf $(objDir)
+	-rm -rf $(binDir)/*
 
 buildrepo:
 	@$(call make-repo)

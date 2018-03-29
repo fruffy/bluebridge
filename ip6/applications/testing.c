@@ -117,6 +117,7 @@ void *testing_loop(void *arg) {
     memcpy(r_addr, temp, data->length * sizeof(struct in6_memaddr));
     free(temp);
     alloc_latency[0] = getns() - aStart;
+    printf("%" PRIu32 ", %" PRIu16 ", %" PRIu16 ", %" PRIu64 "\n", r_addr[0].wildcard, r_addr[0].subid, r_addr[0].cmd, r_addr[0].paddr);
     // WRITE TEST
     for (int i = 0; i < data->length; i++) {
         //print_debug("Using Pointer: %p", (void *) getPointerFromIPv6(nextPointer->AddrString));
