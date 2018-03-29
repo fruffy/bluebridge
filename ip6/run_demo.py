@@ -18,6 +18,7 @@ from functools import partial
 
 HOSTS = 5
 
+
 class BlueBridge(Topo):
     "Simple topology example."
 
@@ -38,7 +39,9 @@ class BlueBridge(Topo):
 
         for serverNum in range(1, HOSTS + 1):  # TODO: change back to 1, 4
             # Add hosts and switches
-            server = self.addHost('h' + str(serverNum))
+            server = self.addHost('h' + str(serverNum),
+                                  ip="10.0.0.%d/24" % (serverNum + 1),
+                                  mac='00:04:00:00:00:%02x' % serverNum)
             self.addLink(server, switch)
 
 
@@ -79,6 +82,7 @@ def clean():
     ''' Clean any the running instances of POX '''
     Popen("killall xterm", stdout=PIPE, shell=True)
     Popen("mn -c", stdout=PIPE, shell=True)
+
 
 def run():
     privateDirs = [('./tmp/config', '/tmp/%(name)s/var/config')]

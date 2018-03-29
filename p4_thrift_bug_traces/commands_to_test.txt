@@ -1,11 +1,9 @@
 Tutorial client: always run on h1
 
-cd thrift/tutorial/c_glib
-./tutorial_client -c ../../../tmp/config/distMem.cnf -i 10
+./thrift/tutorial/c_glib/tutorial_client -c ./tmp/config/distMem.cnf -i 10
 
 Tutorial server: always run on h2
 
-cd thrift/tutorial/c_glib
-./tutorial_server -c ../../../tmp/config/distMem.cnf
+./thrift/tutorial/c_glib/tutorial_server -c ./tmp/config/distMem.cnf
 
 tcpdump command used: tcpdump -vvv -i h#-eth0 -e

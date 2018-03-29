@@ -29,7 +29,7 @@ from p4_mininet.p4_mininet import P4Switch, P4Host
 
 from time import sleep
 
-HOSTS = 3
+HOSTS = 5
 
 
 class BlueBridgeTopo(Topo):
@@ -65,12 +65,14 @@ def configureHosts(net):
     hosts = net.hosts
     for host in hosts:
         print(host)
-
+        for off in ["rx", "tx", "sg"]:
+            cmd = "/sbin/ethtool --offload h" + str(hostNum) + "-eth0 %s off" % off
+            host.cmdPrint(cmd)
         # Insert host configuration
-        configString = "\"INTERFACE=h" + \
-            str(hostNum) + \
-            "-eth0\n\HOSTS=0:0:103::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
-            '{0:02x}'.format(hostNum) + "::\n\DEBUG=0\" > ./tmp/config/distMem.cnf"
+        configString = "\"INTERFACE=" + \
+            str(host) + \
+            "-eth0\n\HOSTS=0:0:103::,0:0:104::,0:0:105::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
+            '{0:02x}'.format(hostNum) + "::\n\DEBUG=1\" > ./tmp/config/distMem.cnf"
         host.cmdPrint('echo ' + configString)
 
         # Configure the interface and respective routing
@@ -84,11 +86,15 @@ def configureHosts(net):
         #               '{0:02x}'.format(hostNum) + '::/48 dev lo')
         # Gotta get dem jumbo frames
         host.cmdPrint('ifconfig h' + str(hostNum) + '-eth0 mtu 9000')
-        if hostNum == 3:
-                # Run the server
-            host.cmdPrint('xterm  -T \"server' + str(hostNum) +
+        if 'h' in str(host) and hostNum > 2:
+            # Run the server
+            host.cmdPrint('xterm  -T \"server' + str(host)[1] +
                           '\" -e \"./applications/bin/server -c tmp/config/distMem.cnf; bash\" &')
             # host.cmdPrint('./applications/bin/server tmp/config/distMem.cnf &')
+        if (hostNum == 2):
+            host.cmdPrint('xterm  -T \"thrift' + str(host)[1] +
+                          '\" -e \"./thrift/tutorial/c_glib/tutorial_server -c ./tmp/config/distMem.cnf; bash\" &')
+
         hostNum += 1
 
 
@@ -121,7 +127,7 @@ def main():
 
     configureHosts(net)
     makeTerm(net.hosts[0])
-    makeTerm(net.hosts[1])
+    # makeTerm(net.hosts[1])
 
     # Our current "switch"
     i = 1
