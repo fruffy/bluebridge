@@ -16,3 +16,5 @@ table_add ipv6_lpm set_nhop6 0:0:102::/48 => 0:0:102::48 2
 table_add ipv6_lpm set_nhop6 0:0:103::/48 => 0:0:103::48 3
 table_add ipv6_lpm set_nhop6 0:0:104::/48 => 0:0:104::48 4
 table_add ipv6_lpm set_nhop6 0:0:105::/48 => 0:0:105::48 5
+table_add thrift thrift_forward "ping" => 2
+table_add thrift thrift_forward "allocate_mem" => 2

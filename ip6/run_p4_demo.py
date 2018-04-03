@@ -41,6 +41,7 @@ class BlueBridgeTopo(Topo):
         Topo.__init__(self, **opts)
 
         switch = self.addSwitch('s1',
+                                enable_debug=True,
                                 sw_path=sw_path,
                                 json_path=json_path,
                                 thrift_port=thrift_port,
@@ -111,7 +112,7 @@ def main():
 
     host = partial(Host,
                    privateDirs=privateDirs)
-    behavioral_simple = 'p4_switch/simple_switch/simple_switch'
+    behavioral_simple = 'p4_switch/simple_switch/simple_switch --debugger'
     json_router = 'p4_switch/ip6.json'
     thrift_port = 9090
     topo = BlueBridgeTopo(behavioral_simple,

@@ -478,7 +478,7 @@ am__relativize = \
 ACLOCAL = ${SHELL} /storage/Projects/bluebridge/includes/p4/missing aclocal-1.15
 AMTAR = $${TAR-tar}
 AM_CFLAGS = -pthread
-AM_CPPFLAGS =  -DBMLOG_DEBUG_ON -DBMLOG_TRACE_ON -DBMELOG_ON -DBMTHRIFT_ON -DBMNANOMSG_ON                           -I$(top_srcdir)/include                           -isystem$(top_srcdir)/third_party/jsoncpp/include                           -isystem$(top_srcdir)/third_party/spdlog -isystem \
+AM_CPPFLAGS =  -DBMDEBUG_ON -DBMLOG_DEBUG_ON -DBMLOG_TRACE_ON -DBMELOG_ON -DBMTHRIFT_ON -DBMNANOMSG_ON                           -I$(top_srcdir)/include                           -isystem$(top_srcdir)/third_party/jsoncpp/include                           -isystem$(top_srcdir)/third_party/spdlog -isystem \
 	$(top_srcdir)/third_party/gtest/include -I$(srcdir)/.. \
 	-I$(srcdir)/ -DTESTDATADIR=\"$(srcdir)/testdata\"
 AM_CXXFLAGS = -Wall -Wextra -pthread

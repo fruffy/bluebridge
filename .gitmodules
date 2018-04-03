@@ -1,18 +1,23 @@
 [submodule "includes/mininet"]
 	url = https://github.com/mininet/mininet
 	path = includes/mininet
+	ignore = dirty
 [submodule "includes/p4"]
 	url = https://github.com/p4lang/behavioral-model
 	path = includes/p4
+	ignore = dirty
 [submodule "includes/arangodb"]
 	url = https://github.com/arangodb/arangodb
 	path = includes/arangodb
+	ignore = dirty
 [submodule "includes/rocksdb"]
 	url = https://github.com/facebook/rocksdb
 	path = includes/rocksdb
+	ignore = dirty
 [submodule "includes/p4c-bm"]
 	url = https://github.com/p4lang/p4c-bm
 	path = includes/p4c-bm
+	ignore = dirty
 [submodule "includes/dpdk"]
 	url = https://github.com/fruffy/dpdk
 	path = includes/dpdk
