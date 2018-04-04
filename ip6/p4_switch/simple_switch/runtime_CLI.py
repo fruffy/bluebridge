@@ -580,7 +580,7 @@ def parse_match_key(table, key_fields):
         if param_type == BmMatchParamType.EXACT:
             if field.startswith("\"") and field.endswith("\""):
                 key = field.replace('"', '').strip()
-                key = key.rjust(16, '\0')
+                key = key.rjust(16, ' ')
             else:
                 key = bytes_to_string(parse_param_(field, bw))
             param = BmMatchParam(type=param_type,

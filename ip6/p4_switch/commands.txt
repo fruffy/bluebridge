@@ -3,18 +3,29 @@ mc_mgrp_create 1
 mc_node_create 0 1 
 mc_node_create 1 2 
 mc_node_create 2 3 
+mc_node_create 3 4 
+mc_node_create 4 5 
+mc_node_create 5 6 
 mc_node_associate 1 0 
 mc_node_associate 1 1 
 mc_node_associate 1 2
+mc_node_associate 1 3
+mc_node_associate 1 4
+mc_node_associate 1 5
 table_add ipv4_lpm set_nhop4 10.0.0.1/32 => 10.0.0.1 1
 table_add ipv4_lpm set_nhop4 10.0.0.2/32 => 10.0.0.2 2
 table_add ipv4_lpm set_nhop4 10.0.0.3/32 => 10.0.0.3 3
 table_add ipv4_lpm set_nhop4 10.0.0.4/32 => 10.0.0.4 4
 table_add ipv4_lpm set_nhop4 10.0.0.5/32 => 10.0.0.5 5
+table_add ipv4_lpm set_nhop4 10.0.0.6/32 => 10.0.0.6 6
 table_add ipv6_lpm set_nhop6 0:0:101::/48 => 0:0:101::48 1
 table_add ipv6_lpm set_nhop6 0:0:102::/48 => 0:0:102::48 2
 table_add ipv6_lpm set_nhop6 0:0:103::/48 => 0:0:103::48 3
 table_add ipv6_lpm set_nhop6 0:0:104::/48 => 0:0:104::48 4
 table_add ipv6_lpm set_nhop6 0:0:105::/48 => 0:0:105::48 5
+table_add ipv6_lpm set_nhop6 0:0:106::/48 => 0:0:106::48 6
 table_add thrift thrift_forward "ping" => 2
 table_add thrift thrift_forward "allocate_mem" => 2
+table_add thrift thrift_forward "write_mem" => 2
+table_add thrift thrift_forward "read_mem" => 2
+table_add thrift thrift_forward "free_mem" => 2

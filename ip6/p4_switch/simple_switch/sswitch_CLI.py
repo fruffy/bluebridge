@@ -20,7 +20,7 @@
 #
 #
 
-from . import runtime_CLI
+import runtime_CLI
 
 import sys
 import os

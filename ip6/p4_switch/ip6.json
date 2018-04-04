@@ -679,152 +679,16 @@
                 "udp",
                 "thrift",
                 "tcp",
-                "ipv4",
-                "arp"
+                "arp",
+                "ipv4"
             ]
         }
     ],
     "meter_arrays": [],
     "actions": [
         {
-            "name": "set_dmac",
-            "id": 0,
-            "runtime_data": [
-                {
-                    "name": "dmac",
-                    "bitwidth": 48
-                }
-            ],
-            "primitives": [
-                {
-                    "op": "modify_field",
-                    "parameters": [
-                        {
-                            "type": "field",
-                            "value": [
-                                "ethernet",
-                                "dstAddr"
-                            ]
-                        },
-                        {
-                            "type": "runtime_data",
-                            "value": 0
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            "name": "set_nhop4",
-            "id": 1,
-            "runtime_data": [
-                {
-                    "name": "nhop_ipv4",
-                    "bitwidth": 32
-                },
-                {
-                    "name": "port",
-                    "bitwidth": 9
-                }
-            ],
-            "primitives": [
-                {
-                    "op": "modify_field",
-                    "parameters": [
-                        {
-                            "type": "field",
-                            "value": [
-                                "routing_metadata",
-                                "nhop_ipv4"
-                            ]
-                        },
-                        {
-                            "type": "runtime_data",
-                            "value": 0
-                        }
-                    ]
-                },
-                {
-                    "op": "modify_field",
-                    "parameters": [
-                        {
-                            "type": "field",
-                            "value": [
-                                "standard_metadata",
-                                "egress_spec"
-                            ]
-                        },
-                        {
-                            "type": "runtime_data",
-                            "value": 1
-                        }
-                    ]
-                },
-                {
-                    "op": "modify_field",
-                    "parameters": [
-                        {
-                            "type": "field",
-                            "value": [
-                                "ipv4",
-                                "ttl"
-                            ]
-                        },
-                        {
-                            "type": "expression",
-                            "value": {
-                                "type": "expression",
-                                "value": {
-                                    "op": "-",
-                                    "left": {
-                                        "type": "field",
-                                        "value": [
-                                            "ipv4",
-                                            "ttl"
-                                        ]
-                                    },
-                                    "right": {
-                                        "type": "hexstr",
-                                        "value": "0x1"
-                                    }
-                                }
-                            }
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            "name": "rewrite_mac",
-            "id": 2,
-            "runtime_data": [
-                {
-                    "name": "smac",
-                    "bitwidth": 48
-                }
-            ],
-            "primitives": [
-                {
-                    "op": "modify_field",
-                    "parameters": [
-                        {
-                            "type": "field",
-                            "value": [
-                                "ethernet",
-                                "srcAddr"
-                            ]
-                        },
-                        {
-                            "type": "runtime_data",
-                            "value": 0
-                        }
-                    ]
-                }
-            ]
-        },
-        {
             "name": "set_nhop6",
-            "id": 3,
+            "id": 0,
             "runtime_data": [
                 {
                     "name": "nhop_ipv6",
@@ -903,9 +767,14 @@
             ]
         },
         {
-            "name": "broadcast",
-            "id": 4,
-            "runtime_data": [],
+            "name": "set_dmac",
+            "id": 1,
+            "runtime_data": [
+                {
+                    "name": "dmac",
+                    "bitwidth": 48
+                }
+            ],
             "primitives": [
                 {
                     "op": "modify_field",
@@ -913,13 +782,93 @@
                         {
                             "type": "field",
                             "value": [
-                                "intrinsic_metadata",
-                                "mcast_grp"
+                                "ethernet",
+                                "dstAddr"
                             ]
                         },
                         {
-                            "type": "hexstr",
-                            "value": "0x1"
+                            "type": "runtime_data",
+                            "value": 0
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "set_nhop4",
+            "id": 2,
+            "runtime_data": [
+                {
+                    "name": "nhop_ipv4",
+                    "bitwidth": 32
+                },
+                {
+                    "name": "port",
+                    "bitwidth": 9
+                }
+            ],
+            "primitives": [
+                {
+                    "op": "modify_field",
+                    "parameters": [
+                        {
+                            "type": "field",
+                            "value": [
+                                "routing_metadata",
+                                "nhop_ipv4"
+                            ]
+                        },
+                        {
+                            "type": "runtime_data",
+                            "value": 0
+                        }
+                    ]
+                },
+                {
+                    "op": "modify_field",
+                    "parameters": [
+                        {
+                            "type": "field",
+                            "value": [
+                                "standard_metadata",
+                                "egress_spec"
+                            ]
+                        },
+                        {
+                            "type": "runtime_data",
+                            "value": 1
+                        }
+                    ]
+                },
+                {
+                    "op": "modify_field",
+                    "parameters": [
+                        {
+                            "type": "field",
+                            "value": [
+                                "ipv4",
+                                "ttl"
+                            ]
+                        },
+                        {
+                            "type": "expression",
+                            "value": {
+                                "type": "expression",
+                                "value": {
+                                    "op": "-",
+                                    "left": {
+                                        "type": "field",
+                                        "value": [
+                                            "ipv4",
+                                            "ttl"
+                                        ]
+                                    },
+                                    "right": {
+                                        "type": "hexstr",
+                                        "value": "0x1"
+                                    }
+                                }
+                            }
                         }
                     ]
                 }
@@ -927,7 +876,7 @@
         },
         {
             "name": "thrift_forward",
-            "id": 5,
+            "id": 3,
             "runtime_data": [
                 {
                     "name": "port",
@@ -980,6 +929,57 @@
                                     }
                                 }
                             }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "rewrite_mac",
+            "id": 4,
+            "runtime_data": [
+                {
+                    "name": "smac",
+                    "bitwidth": 48
+                }
+            ],
+            "primitives": [
+                {
+                    "op": "modify_field",
+                    "parameters": [
+                        {
+                            "type": "field",
+                            "value": [
+                                "ethernet",
+                                "srcAddr"
+                            ]
+                        },
+                        {
+                            "type": "runtime_data",
+                            "value": 0
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "broadcast",
+            "id": 5,
+            "runtime_data": [],
+            "primitives": [
+                {
+                    "op": "modify_field",
+                    "parameters": [
+                        {
+                            "type": "field",
+                            "value": [
+                                "intrinsic_metadata",
+                                "mcast_grp"
+                            ]
+                        },
+                        {
+                            "type": "hexstr",
+                            "value": "0x1"
                         }
                     ]
                 }

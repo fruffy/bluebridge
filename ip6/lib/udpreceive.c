@@ -233,7 +233,7 @@ int epoll_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target
     while (1) {
         struct epoll_event events[1024];
 
-        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, TIMEOUT);
+        int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
         //int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
         /*if (num_events == 0 && !server) {
             //printf("TIMEOUT!\n");

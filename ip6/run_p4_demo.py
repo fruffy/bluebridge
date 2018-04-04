@@ -29,7 +29,7 @@ from p4_mininet.p4_mininet import P4Switch, P4Host
 
 from time import sleep
 
-HOSTS = 5
+HOSTS = 6
 
 
 class BlueBridgeTopo(Topo):
@@ -72,7 +72,7 @@ def configureHosts(net):
         # Insert host configuration
         configString = "\"INTERFACE=" + \
             str(host) + \
-            "-eth0\n\HOSTS=0:0:103::,0:0:104::,0:0:105::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
+            "-eth0\n\HOSTS=0:0:104::,0:0:105::,0:0:106::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
             '{0:02x}'.format(hostNum) + "::\n\DEBUG=1\" > ./tmp/config/distMem.cnf"
         host.cmdPrint('echo ' + configString)
 
@@ -87,14 +87,17 @@ def configureHosts(net):
         #               '{0:02x}'.format(hostNum) + '::/48 dev lo')
         # Gotta get dem jumbo frames
         host.cmdPrint('ifconfig h' + str(hostNum) + '-eth0 mtu 9000')
-        if 'h' in str(host) and hostNum > 2:
+        if 'h' in str(host) and hostNum > 3:
             # Run the server
             host.cmdPrint('xterm  -T \"server' + str(host)[1] +
                           '\" -e \"./applications/bin/server -c tmp/config/distMem.cnf; bash\" &')
-            # host.cmdPrint('./applications/bin/server tmp/config/distMem.cnf &')
+            #host.cmdPrint('./applications/bin/server tmp/config/distMem.cnf &')
         if (hostNum == 2):
             host.cmdPrint('xterm  -T \"thrift' + str(host)[1] +
-                          '\" -e \"./thrift/tutorial/c_glib/tutorial_server -c ./tmp/config/distMem.cnf; bash\" &')
+                          '\" -e \"./thrift/tutorial/c_glib/tutorial_remote_mem_test_server -c ./tmp/config/distMem.cnf; bash\" &')
+        if (hostNum == 3):
+            host.cmdPrint('xterm  -T \"thrift' + str(host)[1] +
+                          '\" -e \"./thrift/tutorial/c_glib/tutorial_simple_array_comp_server -c ./tmp/config/distMem.cnf; bash\" &')
 
         hostNum += 1
 
