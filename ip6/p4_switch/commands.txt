@@ -29,3 +29,6 @@ table_add thrift thrift_forward "allocate_mem" => 2
 table_add thrift thrift_forward "write_mem" => 2
 table_add thrift thrift_forward "read_mem" => 2
 table_add thrift thrift_forward "free_mem" => 2
+table_add thrift thrift_forward "increment_array" => 3
+table_add thrift thrift_forward "add_arrays" => 3
+table_add thrift thrift_forward "no_op" => 3

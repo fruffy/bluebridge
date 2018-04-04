@@ -121,12 +121,12 @@ parser start {
 #define ETHERTYPE_IPV6         0x86dd
 #define ETHERTYPE_ARP          0x0806
 #define IP_PROTOCOLS_ICMP      1
+#define IP_PROTOCOLS_ICMP      1
 #define IP_PROTOCOLS_IGMP      2
 #define IP_PROTOCOLS_IPV4      4
 #define IP_PROTOCOLS_TCP       6
 #define IP_PROTOCOLS_UDP       17
-#define IP_PROTOCOLS_IPV6      41
-
+#define IP_PROTOCOLS_ICMPV6    58
 
 header ethernet_t ethernet;
 header ipv4_t ipv4;
@@ -148,21 +148,26 @@ parser parse_ethernet {
     return select(latest.etherType) {
         ETHERTYPE_IPV4 : parse_ipv4;
         ETHERTYPE_IPV6 : parse_ipv6;
-        ETHERTYPE_ARP : parse_arp;
+        ETHERTYPE_ARP  : parse_arp;
         default: ingress;
     }
 }
 
 parser parse_ipv4 {
     extract(ipv4);
-    return ingress;
+    return select(latest.protocol) {
+        IP_PROTOCOLS_TCP:    parse_tcp;
+        IP_PROTOCOLS_UDP:    parse_udp;
+        default: ingress;
+    }
 }
 
 parser parse_ipv6 {
     extract(ipv6);
     return select(latest.nextHdr) {
-        IP_PROTOCOLS_TCP : parse_tcp;
-        IP_PROTOCOLS_UDP : parse_udp;
+        IP_PROTOCOLS_TCP:    parse_tcp;
+        IP_PROTOCOLS_UDP:    parse_udp;
+        IP_PROTOCOLS_ICMPV6: parse_arp;
         default: ingress;
     }
 }
@@ -298,24 +303,19 @@ table thrift {
 
 
 control ingress {
-    if(valid(ipv4) and ipv4.ttl > 0) {
-        apply(ipv4_lpm);
-        apply(forward);
-    }
-    else if(valid(ipv6) and ipv6.hopLimit > 0) {
-        if (ipv6.nextHdr == 0x3A) {
-            apply(arp);
-        } else {
-            if (thrift.ttype == 1 and thrift.version == 0x8001) {
-                apply(thrift);
-            }
-            else {
-                apply(ipv6_lpm);
-            }
-        }
-    } else if (valid(arp)) {
+    if (valid(arp)) {
         apply(arp);
     }
+    else if (valid(thrift) and thrift.version == 0x8001 and thrift.ttype == 1) {
+        apply(thrift);
+    }
+    else if(valid(ipv4) and ipv4.ttl > 0) {
+        apply(ipv4_lpm);
+        apply(forward);
+    } 
+    else if(valid(ipv6) and ipv6.hopLimit > 0) {
+        apply(ipv6_lpm);
+    } 
 }
 
 control egress {
