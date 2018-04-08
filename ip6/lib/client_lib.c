@@ -154,10 +154,13 @@ int get_rmem(char *receiveBuffer, int length, struct sockaddr_in6 *targetIP, str
 // TODO: Implement meaningful return types and error messages
 int write_rmem(struct sockaddr_in6 *targetIP, char *payload, struct in6_memaddr *remoteAddr) {
     // Send the command to the target host and wait for response
+    // printf("Writing things\n");
     remoteAddr->cmd =  WRITE_CMD;
     print_debug("******WRITE DATA******");
     send_udp6_raw(payload, BLOCK_SIZE, targetIP, remoteAddr);
+    // printf("receive \n");
     rcv_udp6_raw_id(NULL, 0, targetIP, remoteAddr);
+    // printf("returning\n");
     return EXIT_SUCCESS;
 }
 

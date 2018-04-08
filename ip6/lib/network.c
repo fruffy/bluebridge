@@ -58,6 +58,7 @@ int send_udp6_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targe
         .datalen = msgBlockSize
     };
 #ifdef DEFAULT
+    // printf("Calling cooked_send\n");
     cooked_send(pkt);
 #else
     dpdk_send(pkt);

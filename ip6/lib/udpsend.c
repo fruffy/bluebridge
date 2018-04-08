@@ -283,6 +283,10 @@ int cooked_send(struct pkt_rqst pkt) {
     udphdr->check = 0xFFAA;
     //udphdr->check = udp6_checksum (iphdr, udphdr, (uint8_t *) data, datalen);
     // Copy our data
+    // printf("Memcpy: %s, ether_frame: ", pkt.data);
+    // print_n_bytes(packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, pkt.datalen);
+
+    // printf("slkjfg\n");
     memcpy (packetinfo.ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, pkt.data, pkt.datalen * sizeof (uint8_t));
     // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
     int frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + pkt.datalen;
@@ -290,9 +294,12 @@ int cooked_send(struct pkt_rqst pkt) {
     inet_ntop(AF_INET6,&iphdr->ip6_dst, dst_ip, sizeof dst_ip);
     printf("Sending to part two %s::%d\n", dst_ip, ntohs(udphdr->dest));*/
     // Place the packet in the ring buffer
+    // printf("Send mmap\n");
     send_mmap(packetinfo.ether_frame, frame_length);
+    // printf("Flushing buffer\n");
     // Flush the buffer
     flush_buffer();
+    // printf("returning\n");
     return EXIT_SUCCESS;
 }
 
