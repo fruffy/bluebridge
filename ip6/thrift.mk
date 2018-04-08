@@ -1,7 +1,8 @@
 MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 THRIFT_DIR = $(MAKE_ROOT)/thrift
 C_GLIB_DIR = $(THRIFT_DIR)/lib/c_glib
-C_GLIB_TUTORIAL = $(THRIFT_DIR)/tutorial/c_glib
+BIFROST_TUTORIAL = $(THRIFT_DIR)/tutorial/c_glib
+THRIFT_TUTORIAL = $(THRIFT_DIR)/tutorial_thrift/c_glib
 
 MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 srcExt = c
@@ -27,7 +28,8 @@ objects := $(patsubst $(MAKE_ROOT)/%.$(srcExt), $(objDir)/%.o, $(sources_filtere
 all: $(apps)
 	# @$(MAKE) -C $(THRIFT_DIR)
 	@$(MAKE) -C $(C_GLIB_DIR)
-	@$(MAKE) -C $(C_GLIB_TUTORIAL)
+	@$(MAKE) -C $(BIFROST_TUTORIAL)
+	@$(MAKE) -C $(THRIFT_TUTORIAL)
 	# -rm -rf $(objDir)
 
 $(apps):  % : $(binDir)/%
@@ -47,7 +49,8 @@ $(objDir)/%.o: %.$(srcExt)
 clean:
 	@echo "Cleaning..."
 	@$(MAKE) -C $(C_GLIB_DIR) clean
-	@$(MAKE) -C $(C_GLIB_TUTORIAL) clean
+	@$(MAKE) -C $(BIFROST_TUTORIAL) clean
+	@$(MAKE) -C $(THRIFT_TUTORIAL) clean
 	-rm -rf $(objDir)
 	-rm -rf $(binDir)/*
 

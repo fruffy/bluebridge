@@ -115,7 +115,7 @@ def main():
 
     host = partial(Host,
                    privateDirs=privateDirs)
-    behavioral_simple = 'p4_switch/simple_switch/simple_switch --debugger'
+    behavioral_simple = 'p4_switch/simple_switch/simple_switch'
     json_router = 'p4_switch/ip6.json'
     thrift_port = 9090
     topo = BlueBridgeTopo(behavioral_simple,
