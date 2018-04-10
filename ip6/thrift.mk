@@ -37,7 +37,6 @@ $(apps):  % : $(binDir)/%
 .SECONDARY: $(objects)
 
 $(binDir)/%: buildrepo $(objects)
-	# @echo "objects: $(objects)"
 	@mkdir -p `dirname $@`
 	@$(eval appObject = $(@:$(binDir)/%=%))
 	@$(CC) $(srcDir)/$(appObject).c $(objects) $(LDFLAGS) $(DFLAGS)-o $@
