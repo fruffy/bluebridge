@@ -10,10 +10,6 @@
 	url = https://github.com/arangodb/arangodb
 	path = includes/arangodb
 	ignore = dirty
-[submodule "includes/rocksdb"]
-	url = https://github.com/facebook/rocksdb
-	path = includes/rocksdb
-	ignore = dirty
 [submodule "includes/p4c-bm"]
 	url = https://github.com/p4lang/p4c-bm
 	path = includes/p4c-bm
