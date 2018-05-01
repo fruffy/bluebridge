@@ -1,6 +1,7 @@
 MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 MSG_DIR    := $(MAKE_ROOT)/ip6
 APP_DIR    := $(MSG_DIR)/apps
+THRIFT_DIR    := $(MSG_DIR)/thrift
 
 CC = gcc
 CFLAGS += -c -Wextra -Wall -Wall -Wshadow -Wpointer-arith -Wcast-qual
@@ -22,25 +23,23 @@ all: lib
 	@$(MAKE) -C $(APP_DIR) -f app.mk clean
 	@$(MAKE) -C $(APP_DIR) -f app.mk all
 
-lib: 
-	@echo "Running lib build in $(MAKE_ROOT)"
-	@$(MAKE) -C $(MSG_DIR) -f lib.mk clean
-	@$(MAKE) -C $(MSG_DIR) -f lib.mk all
-
 classic:
 	@echo "Running classic build in $(MAKE_ROOT)"
 	@$(MAKE) -C $(MSG_DIR) -f classic.mk clean
 	@$(MAKE) -C $(MSG_DIR) -f classic.mk all
 
-thrift:
-	@echo "Running thrift build in $(MAKE_ROOT)"
-	@$(MAKE) -C $(MSG_DIR) -f thrift.mk
+lib: 
+	@echo "Running lib build in $(MAKE_ROOT)"
+	@$(MAKE) -C $(MSG_DIR) -f lib.mk clean
+	@$(MAKE) -C $(MSG_DIR) -f lib.mk all
 
-thrift-clean:
-	@echo "Cleaning thrift build in $(MAKE_ROOT)"
-	@$(MAKE) -C $(MSG_DIR) -f thrift.mk clean
+libdpdk: 
+	@echo "Running the libdpdk build in $(MAKE_ROOT)"
+	@$(MAKE) -C $(MSG_DIR) -f libdpdk.mk clean
+	@$(MAKE) -C $(MSG_DIR) -f libdpdk.mk O=./
+	@$(MAKE) -C $(MSG_DIR) -f libdpdk.mk clean
 
-dpdk: lib $(apps)
+dpdk: libdpdk $(apps)
 	@find $(MAKE_ROOT)/ip6/ -name '*.o*' -delete
 	@rm -rf $(MAKE_ROOT)/ip6/build
 
@@ -49,11 +48,16 @@ $(apps):
 	$(MAKE) -C $(APP_DIR) -f dpdk.mk O=dpdk/ APP=$@
 	@find $(MAKE_ROOT)/ip6/ -name '*.o*' -delete
 
+thrift: lib
+	@echo "Running thrift build in $(MAKE_ROOT)"
+	@$(MAKE) -C $(THRIFT_DIR) -f thrift.mk
 
-.PHONY: clean dpdk
-clean:
+thrift-clean:
+	@echo "Cleaning thrift build in $(MAKE_ROOT)"
+	@$(MAKE) -C $(THRIFT_DIR) -f thrift.mk clean
+
+clean: 
 	@$(MAKE) -C $(MSG_DIR) -f default.mk clean
-	@$(MAKE) -C $(MSG_DIR) -f thrift.mk clean
 	@$(MAKE) -C $(MSG_DIR) -f lib.mk clean
 	@$(MAKE) -C $(MSG_DIR) -f dpdk.mk clean
 

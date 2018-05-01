@@ -73,8 +73,8 @@ def configureHosts(net):
         if 'h' in str(host) and hostNum > 3:
             # Run the server
             host.cmdPrint('xterm  -T \"server' + str(host)[1] +
-                          '\" -e \"./applications/bin/server -c tmp/config/distMem.cnf; bash\" &')
-            #host.cmdPrint('./applications/bin/server tmp/config/distMem.cnf &')
+                          '\" -e \"./apps/bin/server -c tmp/config/distMem.cnf; bash\" &')
+            #host.cmdPrint('./apps/bin/server tmp/config/distMem.cnf &')
         if (hostNum == 2):
             host.cmdPrint('xterm  -T \"thrift' + str(host)[1] +
                           '\" -e \"./thrift/tutorial/c_glib/tutorial_remote_mem_test_server -c ./tmp/config/distMem.cnf; bash\" &')
@@ -121,7 +121,7 @@ def run():
     # switch.cmdPrint('ifconfig s1-eth' + str(hostNum) +' mtu 5000')
     # Our current "switch"
     i = 1
-    while i <= hostNum:
+    while i <= HOSTS:
         # Routing entries per port
         # cmd = "ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=0:0:10%d::/48,priority=1,actions=output:%d" % (i, i)
         # os.system(cmd)

@@ -30,11 +30,12 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 srcExt = c
-LDLIBS+= -L$(MAKE_ROOT)/.. -lbluebridgedpdk
-binDir = dpdk
+srcDir = $(MAKE_ROOT)/apps
+libDir = $(MAKE_ROOT)/lib
+sources := $(shell find "$(libDir)" -name '*.$(srcExt)')
 
 
-RTE_SDK=$(MAKE_ROOT)/../../includes/dpdk
+RTE_SDK=$(MAKE_ROOT)/../includes/dpdk
 ifeq ($(RTE_SDK),)
 $(error "Please define RTE_SDK environment variable")
 endif
@@ -42,9 +43,15 @@ endif
 RTE_TARGET ?= x86_64-native-linuxapp-gcc
 
 include $(RTE_SDK)/mk/rte.vars.mk
-
 # all source are stored in SRCS-y
-SRCS-y := ${APP}.c
+SRCS-y := ${sources}
+LIB = libbluebridgedpdk.a
 
-include $(RTE_SDK)/mk/rte.extapp.mk
 
+include $(RTE_SDK)/mk/rte.extlib.mk
+
+clean:
+	@find $(MAKE_ROOT) -name '*.o*' -delete
+	@find $(MAKE_ROOT) -name '*.cmd' -delete
+	@-rm -rf _postbuild
+	@-rm -rf _postinstall

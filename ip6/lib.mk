@@ -5,6 +5,8 @@ libDir = $(MAKE_ROOT)/lib
 dpdkDir = $(libDir)/dpdk_backend
 thriftDir = $(MAKE_ROOT)/thrift
 
+libname = libbluebridge
+
 # add the raw socket flag to differentiate from other builds
 CFLAGS += -DDEFAULT
 # a list of c files we do not want to compile
@@ -23,8 +25,8 @@ all: libmake
 
 libmake: buildrepo $(objects)
 	@mkdir -p `dirname $@`
-	@ar rcs libbluebridge.a $(objects)
-	@ranlib libbluebridge.a
+	@ar rcs $(libname).a $(objects)
+	@ranlib $(libname).a
 
 $(objDir)/%.o: %.$(srcExt)
 	@echo "Building $@ ... "
@@ -33,7 +35,7 @@ $(objDir)/%.o: %.$(srcExt)
 clean:
 	@echo "Cleaning..."
 	@-rm -rf $(objDir)
-	@-rm -rf libbluebridge.a
+	@-rm -rf $(libname).a
 
 buildrepo:
 	@$(call make-repo)
