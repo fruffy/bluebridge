@@ -28,9 +28,9 @@ lib:
 	@$(MAKE) -C $(MSG_DIR) -f lib.mk all
 
 classic:
-	@echo "Running default build in $(MAKE_ROOT)"
-	@$(MAKE) -C $(MSG_DIR) -f default.mk clean
-	@$(MAKE) -C $(MSG_DIR) -f default.mk all
+	@echo "Running classic build in $(MAKE_ROOT)"
+	@$(MAKE) -C $(MSG_DIR) -f classic.mk clean
+	@$(MAKE) -C $(MSG_DIR) -f classic.mk all
 
 thrift:
 	@echo "Running thrift build in $(MAKE_ROOT)"
