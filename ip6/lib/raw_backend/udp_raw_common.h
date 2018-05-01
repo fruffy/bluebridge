@@ -19,13 +19,6 @@
 #define C_FRAMESIZE               8192//(4096 + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + 2 + 32)
 #define C_BLOCKSIZE               (C_FRAMESIZE) * (C_RING_FRAMES)
 
-struct pkt_rqst {
-    struct in6_addr *dst_addr;
-    int dst_port;
-    char *data;
-    int datalen;
-};
-
 struct rx_ring {
     struct tpacket_hdr *first_tpacket_hdr;
     int mapped_memory_size;

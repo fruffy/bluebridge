@@ -34,35 +34,6 @@ void init_rx_socket_server(struct config *cfg) {
     setup_rx_socket(cfg, my_port, thread_id, &epoll_fd_g, &ring_rx_g);
 }
 
-void process_request(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
-
-    // Switch on the client command
-    if (remoteAddr->cmd == ALLOC_CMD) {
-        print_debug("******ALLOCATE******");
-        allocate_mem(targetIP);
-    } else if (remoteAddr->cmd == WRITE_CMD) {
-        print_debug("******WRITE DATA: ");
-        if (DEBUG) print_n_bytes((char *) remoteAddr, IPV6_SIZE);
-        write_mem(receiveBuffer, targetIP, remoteAddr);
-    } else if (remoteAddr->cmd == GET_CMD) {
-        print_debug("******GET DATA: ");
-        if (DEBUG) print_n_bytes((char *) remoteAddr, IPV6_SIZE);
-        get_mem(targetIP, remoteAddr);
-    } else if (remoteAddr->cmd == FREE_CMD) {
-        print_debug("******FREE DATA: ");
-        if (DEBUG) print_n_bytes((char *) remoteAddr, IPV6_SIZE);
-        free_mem(targetIP, remoteAddr);
-    } else if (remoteAddr->cmd == ALLOC_BULK_CMD) {
-        print_debug("******ALLOCATE BULK DATA: ");
-        if (DEBUG) print_n_bytes((char *) remoteAddr,IPV6_SIZE);
-        uint64_t *alloc_size = (uint64_t *) receiveBuffer;
-        allocate_mem_bulk(targetIP, *alloc_size);
-    } else {
-        printf("Cannot match command %d!\n",remoteAddr->cmd);
-    }
-}
-
-
 int epoll_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     while (1) {
         struct epoll_event events[1024];

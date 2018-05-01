@@ -403,56 +403,25 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-###
-
-# For IPv6
-IPv6Addressing/messaging/bin/
-IPv6Addressing/tmp/
-*.csv
-IPv6Addressing/results/
-IPv6Addressing/pox/
-IPv6Addressing/oftest/
-IPv6Addressing/openflow/
-IPv6Addressing/ltmain\.sh
-IPv6Addressing/oflops/
-IPv6Addressing/0
-IPv6Addressing/applications/bin/
-IPv6Addressing/myvirtualdisk
-dpdk/x86_64-native-linuxapp-gcc/
-
-# For Python
-TestApps/PageRank/bin
-TestApps/PageRank/build
-TestApps/PageRank/include
-TestApps/PageRank/lib
-TestApps/PageRank/local
-TestApps/PageRank/share
-
-# Cost
-TestApps/Cost/single/cache
 
 
-
-papers/508Report/paper.pdf
-
+# Mac
+.DS_Store
 */web-Google.txt
 #*/tiny.txt
-
 ovs/
 tags
 myvirtualdisk
 *.sw*
 *.bin
 
-# Mac
-.DS_Store
-
 ip6/applications/bin/
-
+#DPDK Debris
 *.cmd
-
 *.d
 ip6/applications/dpdk/
 ip6/prelim_results/
-
+ip6/results/
 ip6/apps/bin/
+ip6/apps/dpdk/
+includes/dpdk/x86_64-native-linuxapp-gcc/

@@ -33,6 +33,7 @@ $(objDir)/%.o: %.$(srcExt)
 clean:
 	@echo "Cleaning..."
 	@-rm -rf $(objDir)
+	@-rm -rf libbluebridge.a
 
 buildrepo:
 	@$(call make-repo)

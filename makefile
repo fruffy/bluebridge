@@ -18,40 +18,43 @@ apps := testing server event_server bb_disk rmem_test
 # a complete rebuild of thrift to repopulate. 
 
 export apps CC CFLAGS LDFLAGS
-all:
-		@echo "Running lib build in $(MAKE_ROOT)"
-		@$(MAKE) -C $(MSG_DIR) -f lib.mk clean
-		@$(MAKE) -C $(APP_DIR) -f app.mk clean
-		@$(MAKE) -C $(MSG_DIR) -f lib.mk all
-		@$(MAKE) -C $(APP_DIR) -f app.mk all
+all: lib
+	@$(MAKE) -C $(APP_DIR) -f app.mk clean
+	@$(MAKE) -C $(APP_DIR) -f app.mk all
 
+lib: 
+	@echo "Running lib build in $(MAKE_ROOT)"
+	@$(MAKE) -C $(MSG_DIR) -f lib.mk clean
+	@$(MAKE) -C $(MSG_DIR) -f lib.mk all
 
 classic:
-		@echo "Running default build in $(MAKE_ROOT)"
-		@$(MAKE) -C $(MSG_DIR) -f default.mk clean
-		@$(MAKE) -C $(MSG_DIR) -f default.mk all
+	@echo "Running default build in $(MAKE_ROOT)"
+	@$(MAKE) -C $(MSG_DIR) -f default.mk clean
+	@$(MAKE) -C $(MSG_DIR) -f default.mk all
 
 thrift:
-		@echo "Running thrift build in $(MAKE_ROOT)"
-		@$(MAKE) -C $(MSG_DIR) -f thrift.mk
+	@echo "Running thrift build in $(MAKE_ROOT)"
+	@$(MAKE) -C $(MSG_DIR) -f thrift.mk
 
 thrift-clean:
-		@echo "Cleaning thrift build in $(MAKE_ROOT)"
-		@$(MAKE) -C $(MSG_DIR) -f thrift.mk clean
+	@echo "Cleaning thrift build in $(MAKE_ROOT)"
+	@$(MAKE) -C $(MSG_DIR) -f thrift.mk clean
 
-dpdk: $(apps)
-		@find $(MAKE_ROOT)/ip6/ -path -name '*.o*' -delete
-		@rm -rf $(MAKE_ROOT)/ip6/build
+dpdk: lib $(apps)
+	@find $(MAKE_ROOT)/ip6/ -name '*.o*' -delete
+	@rm -rf $(MAKE_ROOT)/ip6/build
 
 $(apps):
 	# binary name
-	@find $(MAKE_ROOT)/ip6/ -path -name '*.o*' -delete
-	$(MAKE) -C $(MSG_DIR) -f dpdk.mk O=applications/dpdk/ APP=$@
+	$(MAKE) -C $(APP_DIR) -f dpdk.mk O=dpdk/ APP=$@
+	@find $(MAKE_ROOT)/ip6/ -name '*.o*' -delete
 
 
 .PHONY: clean dpdk
-clean-all:
-		@$(MAKE) -C $(MSG_DIR) -f default.mk clean
-		@$(MAKE) -C $(MSG_DIR) -f thrift.mk clean
-		@rm -rf $(MAKE_ROOT)/ip6/build
+clean:
+	@$(MAKE) -C $(MSG_DIR) -f default.mk clean
+	@$(MAKE) -C $(MSG_DIR) -f thrift.mk clean
+	@$(MAKE) -C $(MSG_DIR) -f lib.mk clean
+	@$(MAKE) -C $(MSG_DIR) -f dpdk.mk clean
+
 

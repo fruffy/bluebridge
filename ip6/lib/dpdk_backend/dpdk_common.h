@@ -17,9 +17,8 @@
 #include <rte_ethdev.h>       // main DPDK library
 #include <rte_malloc.h>       // rte_zmalloc_socket()
 
-#include "udpcooked.h"
-#include "utils.h"
-#include "config.h"
+#include "../config.h"
+#include "../types.h"
 
 
 #define MTU 8192
@@ -97,7 +96,6 @@ struct mbuf_table {
 } __rte_cache_aligned;
 struct mbuf_table tx_mbufs[RTE_MAX_LCORE];
 
-
 static const struct rte_eth_conf port_conf = {
     .rxmode = {
         .split_hdr_size = 0,
@@ -126,3 +124,8 @@ static const struct rte_eth_conf port_conf = {
 int config_dpdk();
 struct p_skeleton *gen_dpdk_packet_info();
 void enter_dpdk_server_loop(uint16_t server_port);
+extern void init_client_dpdk(struct config *configstruct);
+extern void init_server_dpdk(struct config *configstruct);
+extern int dpdk_send(struct pkt_rqst pkt);
+extern int dpdk_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
+extern int dpdk_client_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);

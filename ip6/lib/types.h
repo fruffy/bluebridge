@@ -9,6 +9,14 @@ struct in6_memaddr {
     uint64_t paddr;
 };
 
+struct pkt_rqst {
+    struct in6_addr *dst_addr;
+    int dst_port;
+    char *data;
+    int datalen;
+};
+
+
 // Define some constants.
 #define ETH_HDRLEN 14  // Ethernet header length
 #define IP6_HDRLEN 40  // IPv6 header length
