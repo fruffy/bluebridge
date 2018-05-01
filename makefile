@@ -1,14 +1,16 @@
 MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-MSG_DIR    := $(MAKE_ROOT)/ip6/
+MSG_DIR    := $(MAKE_ROOT)/ip6
+APP_DIR    := $(MSG_DIR)/apps
 
 CC = gcc
 CFLAGS += -c -Wextra -Wall -Wall -Wshadow -Wpointer-arith -Wcast-qual
 CFLAGS += -std=gnu11 -pedantic
-CFLAGS += -oFast # performance flags
+# performance flags
+CFLAGS += -oFast
 # CFLAGS += -Wstrict-prototypes -Wmissing-prototypes
 LDFLAGS := -lpcap -pthread -lm -lrt
 
-apps := testing server event_server bb_disk
+apps := testing server event_server bb_disk rmem_test
 #rmem_test
 
 # Cannot do "@find $(MAKE_ROOT)/ip6/ -path -name '*.o*' -delete"
@@ -17,6 +19,14 @@ apps := testing server event_server bb_disk
 
 export apps CC CFLAGS LDFLAGS
 all:
+		@echo "Running lib build in $(MAKE_ROOT)"
+		@$(MAKE) -C $(MSG_DIR) -f lib.mk clean
+		@$(MAKE) -C $(APP_DIR) -f app.mk clean
+		@$(MAKE) -C $(MSG_DIR) -f lib.mk all
+		@$(MAKE) -C $(APP_DIR) -f app.mk all
+
+
+classic:
 		@echo "Running default build in $(MAKE_ROOT)"
 		@$(MAKE) -C $(MSG_DIR) -f default.mk clean
 		@$(MAKE) -C $(MSG_DIR) -f default.mk all

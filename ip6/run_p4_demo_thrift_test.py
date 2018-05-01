@@ -90,8 +90,8 @@ def configureHosts(net):
         if 'h' in str(host) and hostNum > 3:
             # Run the server
             host.cmdPrint('xterm  -T \"server' + str(host)[1] +
-                          '\" -e \"./applications/bin/server -c tmp/config/distMem.cnf; bash\" &')
-            #host.cmdPrint('./applications/bin/server tmp/config/distMem.cnf &')
+                          '\" -e \"./apps/bin/server -c tmp/config/distMem.cnf; bash\" &')
+            #host.cmdPrint('./apps/bin/server tmp/config/distMem.cnf &')
         if (hostNum == 2):
             host.cmdPrint('xterm  -T \"thrift' + str(host)[1] +
                           '\" -e \"./thrift/tutorial_thrift/c_glib/thrift_remote_mem_test_server -c ./tmp/config/distMem.cnf; bash\" &')

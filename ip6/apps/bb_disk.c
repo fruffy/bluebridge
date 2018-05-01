@@ -39,13 +39,14 @@ struct rmem {
     struct sockaddr_in6 *targetIP;
 } r;
 
-#define PAGE_SIZE 4096
+const u_int32_t PAGE_SIZE = 4096;
 
 static int xmp_read(void *buf, u_int32_t len, u_int64_t offset, void *userdata) {
     // if (*(int *)userdata) fprintf(stderr, "R - %lu, %u\n", offset, len);
+    (void) userdata;
     u_int64_t page_offset = offset/PAGE_SIZE;
     if (len > PAGE_SIZE) {
-        for (int i = 0; i< len/PAGE_SIZE; i++) {
+        for (u_int32_t i = 0; i< len/PAGE_SIZE; i++) {
             get_rmem((char *) buf + (PAGE_SIZE *i), PAGE_SIZE, r.targetIP, &r.memList[page_offset + i]);
         }
     } else {
@@ -56,13 +57,14 @@ static int xmp_read(void *buf, u_int32_t len, u_int64_t offset, void *userdata) 
 
 static int xmp_write(const void *buf, u_int32_t len, u_int64_t offset, void *userdata) {
     // if (*(int *)userdata) fprintf(stderr, "W - %lu, %u\n", offset, len);
+    (void) userdata;
     u_int64_t page_offset = offset/PAGE_SIZE;
     if (len > PAGE_SIZE) {
-        for (int i = 0; i< len/PAGE_SIZE; i++) {
+        for (u_int32_t i = 0; i< len/PAGE_SIZE; i++) {
             write_rmem(r.targetIP, (char *) buf + (PAGE_SIZE *i), &r.memList[page_offset + i]);
         }
     } else {
-        write_rmem(r.targetIP, (char *)buf, &r.memList[page_offset]);
+        write_rmem(r.targetIP, (char *) buf, &r.memList[page_offset]);
     }
     return 0;
 }

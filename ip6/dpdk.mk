@@ -30,7 +30,7 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 srcExt = c
-srcDir = $(MAKE_ROOT)/applications
+srcDir = $(MAKE_ROOT)/apps
 libDir = $(MAKE_ROOT)/lib
 sources := $(shell find "$(libDir)" -name '*.$(srcExt)')
 

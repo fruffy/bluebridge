@@ -1,8 +1,6 @@
 MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 srcExt = c
-srcDir = $(MAKE_ROOT)/apps
-objDir = $(srcDir)/obj
-binDir = $(srcDir)/bin
+objDir = $(MAKE_ROOT)/obj
 libDir = $(MAKE_ROOT)/lib
 dpdkDir = $(libDir)/dpdk_backend
 thriftDir = $(MAKE_ROOT)/thrift
@@ -20,15 +18,13 @@ sources_filtered := $(filter-out $(filter), $(sources))
 srcDirs := $(shell find . -name '*.$(srcExt)' -exec dirname {} \; | uniq)
 objects := $(patsubst $(MAKE_ROOT)/%.$(srcExt), $(objDir)/%.o, $(sources_filtered))
 
-all: $(apps)
-	-rm -rf $(objDir)
+all: libmake
+	@-rm -rf $(objDir)
 
-$(apps):  % : $(binDir)/%
-
-$(binDir)/%: buildrepo $(objects)
+libmake: buildrepo $(objects)
 	@mkdir -p `dirname $@`
-	@$(eval appObject = $(@:$(binDir)/%=%))
-	@$(CC) $(srcDir)/$(appObject).c $(objects) $(LDFLAGS) $(DFLAGS)-o $@
+	@ar rcs libbluebridge.a $(objects)
+	@ranlib libbluebridge.a
 
 $(objDir)/%.o: %.$(srcExt)
 	@echo "Building $@ ... "
@@ -37,7 +33,6 @@ $(objDir)/%.o: %.$(srcExt)
 clean:
 	@echo "Cleaning..."
 	@-rm -rf $(objDir)
-	@-rm -rf $(binDir)/*
 
 buildrepo:
 	@$(call make-repo)
