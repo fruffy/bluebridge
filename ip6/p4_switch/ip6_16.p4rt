@@ -1,0 +1,30 @@
+"
+‰éÄarparp»≥Ä∏∂Ä@Ä"
+¥“Ändpndp»≥Ä∏∂Ä@Ä4
+!∫»Åalloc_accessalloc_accesså÷Å∏∂Ä@Ä0
+ÒÆÄ
+rpc_access
+rpc_access˛ÅÇ∏∂Ä@ÄQ
+“ØÇipv4ipv4ipv4.dstAddr  (ƒ€Ç∏∂Ä∑∂Å@defaultonly()@ÄR
+Ò≤Çipv6ipv6ipv6.dstAddr Ä(¿øÄ∏∂Ä∑∂Å@defaultonly()@ÄV
+Í Åbb_aclbb_aclbb.d_subnet (bb.d_bb_pointer @(÷§É∏∂Ä@ÄT
+◊ÏÉbb_fwdbb_fwdbb.d_subnet («µÅ∏∂Ä∑∂Å@defaultonly()@ÄU
+ç∏Äthriftthriftthrift.name Ä(û›Ç∏∂Ä∑∂Å@defaultonly()@Ä
+∑∂ÅNoActionNoAction+
+)å÷Åupdate_access_bbupdate_access_bb
+∏∂Ä_drop_drop
+»≥Ä	broadcast	broadcast
+÷§É_nop_nop#
+«µÅset_bbset_bb
+port 	%
+ƒ€Çfwd_ip4fwd_ip4
+port 	%
+¿øÄfwd_ip6fwd_ip6
+port 	3
+1˛ÅÇupdate_access_thriftupdate_access_thrift3
+%û›Çthrift_forwardthrift_forward
+port 	¢Û˝ÀÉ¿	digestß
+√€Å»		bb_digest	bb_digestÜ
+,type.googleapis.com/p4.config.v1model.DigestVbb.s_subnet bb.d_cmd bb.d_bb_pointer @ethernet.etherType ∏
+$–Ä»	thrift_digestthrift_digestè
+,type.googleapis.com/p4.config.v1model.Digest_thrift_ip.subnet thrift_ip.cmd thrift_ip.bb_pointer @thrift.ttype 

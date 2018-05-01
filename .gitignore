@@ -453,3 +453,4 @@ ip6/applications/bin/
 
 *.d
 ip6/applications/dpdk/
+ip6/prelim_results/

@@ -72,22 +72,24 @@ struct in6_memaddr allocate_rmem(struct sockaddr_in6 *targetIP) {
     // Send the command to the target host and wait for response
     ((struct in6_memaddr *)&targetIP->sin6_addr)->cmd = ALLOC_CMD;
     send_udp_raw(sendBuffer, BLOCK_SIZE, targetIP);
-    rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
     struct in6_memaddr retAddr;
+    memcpy(&retAddr, &targetIP->sin6_addr, IPV6_SIZE);
+    rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, &retAddr);
+    memcpy(&retAddr.subid, ((char*)&targetIP->sin6_addr)+4, 2);
+
     print_debug("******ALLOCATE******");
-    if (memcmp(receiveBuffer,"ACK", 3) == 0) {
-        // If the message is ACK --> successful allocation
-        // Copy the returned pointer (very precise offsets)
-        memcpy(&retAddr, receiveBuffer+3, IPV6_SIZE);
-        // Insert information about the source host (black magic)
-        //00 00 00 00 01 02 00 00 00 00 00 00 00 00 00 00
-        //            ^  ^ these two bytes are stored (subnet and host ID)
-        memcpy(&retAddr.subid, ((char*)&targetIP->sin6_addr)+4, 2);
-    } else {
-        perror("Response was not successful\n");
-        // Not successful set the return address to zero.
-        memset(&retAddr,0, IPV6_SIZE);
-    }
+    // if (memcmp(receiveBuffer,"ACK", 3) == 0) {
+    //     // If the message is ACK --> successful allocation
+    //     // Copy the returned pointer (very precise offsets)
+    //     memcpy(&retAddr, receiveBuffer+3, IPV6_SIZE);
+    //     // Insert information about the source host (black magic)
+    //     //00 00 00 00 01 02 00 00 00 00 00 00 00 00 00 00
+    //     //            ^  ^ these two bytes are stored (subnet and host ID)
+    // } else {
+    //     perror("Response was not successful\n");
+    //     // Not successful set the return address to zero.
+    //     memset(&retAddr,0, IPV6_SIZE);
+    // }
     return retAddr;
 }
 
@@ -101,24 +103,26 @@ struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *targetIP, uint64_t s
     memcpy(sendBuffer, &size, sizeof(uint64_t));
     ((struct in6_memaddr *)&targetIP->sin6_addr)->cmd = ALLOC_BULK_CMD;
     send_udp_raw(sendBuffer, BLOCK_SIZE, targetIP);
-    rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
-    struct in6_memaddr *addrList = malloc(size * sizeof(struct in6_memaddr));
     struct in6_memaddr retAddr;
+    memcpy(&retAddr, &targetIP->sin6_addr, IPV6_SIZE);
+    rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, &retAddr);
+    memcpy(&retAddr.subid, ((char*)&targetIP->sin6_addr)+4, 2);
+    struct in6_memaddr *addrList = malloc(size * sizeof(struct in6_memaddr));
     print_debug("******ALLOCATE BULK******");
-    if (memcmp(receiveBuffer,"ACK", 3) == 0) {
-        // If the message is ACK --> successful allocation
-        // Copy the returned pointer (very precise offsets)
-        memcpy(&retAddr, receiveBuffer+3, IPV6_SIZE);
-        // Insert information about the source host (black magic)
-        //00 00 00 00 01 02 00 00 00 00 00 00 00 00 00 00
-        //            ^  ^ these two bytes are stored (subnet and host ID)
-        memcpy(&retAddr.subid, ((char*)&targetIP->sin6_addr)+4, 2);
+    // if (memcmp(receiveBuffer,"ACK", 3) == 0) {
+    //     // If the message is ACK --> successful allocation
+    //     // Copy the returned pointer (very precise offsets)
+    //     memcpy(&retAddr, receiveBuffer+3, IPV6_SIZE);
+    //     // Insert information about the source host (black magic)
+    //     //00 00 00 00 01 02 00 00 00 00 00 00 00 00 00 00
+    //     //            ^  ^ these two bytes are stored (subnet and host ID)
+    //     memcpy(&retAddr.subid, ((char*)&targetIP->sin6_addr)+4, 2);
 
-    } else {
-        perror("Response was not successful\n");
-        // Not successful set the return address to zero.
-        memset(&retAddr,0, IPV6_SIZE);
-    }
+    // } else {
+    //     perror("Response was not successful\n");
+    //     // Not successful set the return address to zero.
+    //     memset(&retAddr,0, IPV6_SIZE);
+    // }
     // Convert the returned pointer into an array of pointers
     for (uint64_t i = 0; i < size; i++) {
         addrList[i] = retAddr;

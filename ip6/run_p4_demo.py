@@ -16,18 +16,19 @@
 #
 
 import os
+from subprocess import Popen, PIPE
+from functools import partial
+from time import sleep
 
 from mininet.net import Mininet
 from mininet.topo import Topo
 from mininet.log import setLogLevel, info
 from mininet.cli import CLI
-from functools import partial
 from mininet.term import makeTerm
-from subprocess import Popen, PIPE
 from mininet.node import Host
+from mininet.node import RemoteController
 from p4_mininet.p4_mininet import P4Switch, P4Host
 
-from time import sleep
 
 HOSTS = 6
 
@@ -43,6 +44,7 @@ class BlueBridgeTopo(Topo):
         switch = self.addSwitch('s1',
                                 enable_debug=True,
                                 sw_path=sw_path,
+                                log_console=True,
                                 json_path=json_path,
                                 thrift_port=thrift_port,
                                 pcap_dump=pcap_dump)
@@ -58,7 +60,6 @@ class BlueBridgeTopo(Topo):
             self.addLink(host, switch)
 
 
-topos = {'BlueBridge': (lambda: BlueBridgeTopo())}
 
 
 def configureHosts(net):
@@ -111,12 +112,12 @@ def clean():
 def main():
 
     privateDirs = [('./tmp/config', '/tmp/%(name)s/var/config')]
-    # c = RemoteController('c', '0.0.0.0', 6633)
-
+    heimdall = RemoteController('c', '0.0.0.0', 6633)
+    # os.system("p4c-bmv2 --json p4_switch/ip6.json p4_switch/ip6.p4")
     host = partial(Host,
                    privateDirs=privateDirs)
     behavioral_simple = 'p4_switch/simple_switch/simple_switch'
-    json_router = 'p4_switch/ip6.json'
+    json_router = 'p4_switch/ip6_16.json'
     thrift_port = 9090
     topo = BlueBridgeTopo(behavioral_simple,
                           json_router,
@@ -126,11 +127,14 @@ def main():
     net = Mininet(topo=topo,
                   host=host,
                   switch=P4Switch,
-                  controller=None)
+                  controller=heimdall)
     net.start()
 
     configureHosts(net)
     makeTerm(net.hosts[0])
+    heimdall.cmdPrint('xterm  -T \"heimdall\" -e \"' +
+                      'sudo ./p4_switch/heimdall/heimdall; bash" &')
+
     # makeTerm(net.hosts[1])
 
     # Our current "switch"

@@ -12,15 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import os
+import tempfile
+import socket
 from mininet.net import Mininet
 from mininet.node import Switch, Host
 from mininet.log import setLogLevel, info, error, debug
 from mininet.moduledeps import pathCheck
-from sys import exit
-import os
-import tempfile
-import socket
+
 
 class P4Host(Host):
     def config(self, **params):
@@ -40,26 +39,27 @@ class P4Host(Host):
         return r
 
     def describe(self):
-        print "**********"
-        print self.name
-        print "default interface: %s\t%s\t%s" %(
+        print("**********")
+        print(self.name)
+        print("default interface: %s\t%s\t%s") % (
             self.defaultIntf().name,
             self.defaultIntf().IP(),
             self.defaultIntf().MAC()
         )
-        print "**********"
+        print("**********")
+
 
 class P4Switch(Switch):
     """P4 virtual switch"""
     device_id = 0
 
-    def __init__(self, name, sw_path = None, json_path = None,
-                 thrift_port = None,
-                 pcap_dump = False,
-                 log_console = False,
-                 verbose = False,
-                 device_id = None,
-                 enable_debugger = False,
+    def __init__(self, name, sw_path=None, json_path=None,
+                 thrift_port=None,
+                 pcap_dump=False,
+                 log_console=False,
+                 verbose=False,
+                 device_id=None,
+                 enable_debugger=False,
                  **kwargs):
         Switch.__init__(self, name, **kwargs)
         assert(sw_path)
@@ -103,7 +103,7 @@ class P4Switch(Switch):
             sock.settimeout(0.5)
             result = sock.connect_ex(("localhost", self.thrift_port))
             if result == 0:
-                return  True
+                return True
 
     def start(self, controllers):
         "Start up a new P4 switch"

@@ -2,9 +2,9 @@
 
 #include "network.h"
 #include "utils.h"
-#include "udpcooked.h"
+#include "raw_backend/udp_raw_common.h"
 #ifndef DEFAULT
-#include "dpdk_common.h"
+#include "dpdk_backend/dpdk_common.h"
 #endif
 #include <stdio.h>            // printf() and sprintf()
 #include <stdlib.h>           // free(), alloc, and calloc()
@@ -78,9 +78,9 @@ int rcv_udp6_raw(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *tar
     uint64_t start = getns();
     int numbytes;
 #ifdef DEFAULT
-    numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 1);
+    numbytes = epoll_server_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr);
 #else
-    numbytes = dpdk_server_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 1);
+    numbytes = dpdk_server_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr);
 #endif
     rcvLat += getns() - start;
     rcv_calls++;
@@ -96,9 +96,9 @@ int rcv_udp6_raw_id(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *
     uint64_t start = getns();
     int numbytes;
 #ifdef DEFAULT
-    numbytes = epoll_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 0);
+    numbytes = epoll_client_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr);
 #else
-    numbytes = dpdk_client_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr, 0);
+    numbytes = dpdk_client_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr);
 #endif
     rcvLat += getns() - start;
     rcv_calls++;
@@ -107,39 +107,45 @@ int rcv_udp6_raw_id(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *
 
 struct sockaddr_in6 *init_sockets(struct config *bb_conf, int server) {
 #ifdef DEFAULT
-    if (server) {} // Currently a null operation until we have a raw socket server
-    struct sockaddr_in6 * temp = init_rcv_socket(bb_conf);
-    init_send_socket(bb_conf);
+    if (server)
+        init_rx_socket_server(bb_conf);
+    else
+        init_rx_socket_client(bb_conf);
+    init_tx_socket(bb_conf);
 #else
     if (server)
         init_server_dpdk(bb_conf);
     else 
         init_client_dpdk(bb_conf);
-    struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
 #endif
+    struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));
     temp->sin6_port = htons(strtol(bb_conf->server_port, (char **)NULL, 10));
     return temp;
 }
 
 void launch_server_loop(struct config *bb_conf) {
     (void) bb_conf; // Placeholder
-#ifndef DEFAULT
+#ifdef DEFAULT
+    init_sockets(bb_conf, 1);
+    enter_raw_server_loop(bb_conf->src_port);
+#else
     init_server_dpdk(bb_conf);
-    enter_server_loop(bb_conf->src_port);
+    enter_dpdk_server_loop(bb_conf->src_port);
 #endif
 }
 
-
-
-
-void close_sockets() {
-    close_send_socket();
-    close_rcv_socket();
+void close_sockets(int server) {
+    close_tx_socket();
+    if (server)
+        close_rx_socket_server();
+    else
+        close_rx_socket_client();
 }
 
 void set_net_thread_ids(int t_id) {
     set_thread_id_tx(t_id);
-    set_thread_id_rx(t_id);
+    set_thread_id_rx_client(t_id);
+    set_thread_id_rx_server(t_id);
 }
 
 struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf, int isServer) {

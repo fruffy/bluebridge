@@ -48,6 +48,4 @@ static inline uint64_t getns(void)
     assert(ret == 0);
     return (((uint64_t)ts.tv_sec) * 1000000000ULL) + ts.tv_nsec;
 }
-
-
 #endif

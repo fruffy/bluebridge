@@ -15,7 +15,7 @@ static __thread char sendBuffer[BLOCK_SIZE];
  * Allocates local memory and exposes it to a client requesting it
  */
 int allocate_mem(struct sockaddr_in6 *target_ip) {
-    struct in6_memaddr allocPointer;
+    //struct in6_memaddr allocPointer;
     //TODO: Error handling if we runt out of memory, this will fail
     //do some work, which might goto error
 #ifdef SOCK_RAW
@@ -23,13 +23,16 @@ int allocate_mem(struct sockaddr_in6 *target_ip) {
 #else
     void *allocated = rte_calloc(NULL, 1 ,BLOCK_SIZE, 64);
 #endif
-    memset(&allocPointer, 0, IPV6_SIZE);
-    memcpy(&allocPointer.paddr, &allocated, POINTER_SIZE);
-    memcpy(&allocPointer.subid, &SUBNET_ID, 2);
+    // memset(&allocPointer, 0, IPV6_SIZE);
+    // memcpy(&allocPointer.paddr, &allocated, POINTER_SIZE);
+    // memcpy(&allocPointer.subid, &SUBNET_ID, 2);
 
     //struct in6_addr r_addr; = getIPv6FromPointer((uint64_t) &allocated);
-    memcpy(sendBuffer, "ACK", 3);
-    memcpy(sendBuffer+3, &allocPointer, IPV6_SIZE); 
+    // memcpy(sendBuffer, "ACK", 3);
+    // memcpy(sendBuffer+3, &allocPointer, IPV6_SIZE); 
+    struct in6_memaddr *returnID = (struct in6_memaddr *) (&target_ip->sin6_addr);
+    returnID->cmd = ALLOC_CMD;
+    memcpy(&returnID->paddr, &allocated, POINTER_SIZE);
     send_udp_raw(sendBuffer, BLOCK_SIZE, target_ip);
     // TODO change to be meaningful, i.e., error message
     return EXIT_SUCCESS;
@@ -40,19 +43,24 @@ int allocate_mem(struct sockaddr_in6 *target_ip) {
  * Allocates local memory and exposes it to a client requesting it
  */
 int allocate_mem_bulk( struct sockaddr_in6 *target_ip, uint64_t size) {
-    struct in6_memaddr allocPointer;
+    //struct in6_memaddr allocPointer;
     //TODO: Error handling if we runt out of memory, this will fail
     //do some work, which might goto error
+    if (!size)
+        size = 1;
     #ifdef SOCK_RAW
-        void *allocated = calloc(size ,BLOCK_SIZE);
+        void *allocated = calloc(size, BLOCK_SIZE);
     #else
-        void *allocated = rte_calloc(NULL, size ,BLOCK_SIZE, 64);
+        void *allocated = rte_calloc(NULL, size, BLOCK_SIZE, 64);
     #endif
-    memset(&allocPointer, 0, IPV6_SIZE);
-    memcpy(&allocPointer.paddr, &allocated, POINTER_SIZE);
-    memcpy(&allocPointer.subid, &SUBNET_ID, 2);
-    memcpy(sendBuffer, "ACK", 3);
-    memcpy(sendBuffer+3, &allocPointer, IPV6_SIZE); 
+    // memset(&allocPointer, 0, IPV6_SIZE);
+    // memcpy(&allocPointer.paddr, &allocated, POINTER_SIZE);
+    // memcpy(&allocPointer.subid, &SUBNET_ID, 2);
+    // memcpy(sendBuffer, "ACK", 3);
+    // memcpy(sendBuffer+3, &allocPointer, IPV6_SIZE);
+    struct in6_memaddr *returnID = (struct in6_memaddr *) (&target_ip->sin6_addr);
+    returnID->cmd = ALLOC_BULK_CMD;
+    memcpy(&returnID->paddr, &allocated, POINTER_SIZE);
     send_udp_raw(sendBuffer, BLOCK_SIZE, target_ip);
     return EXIT_SUCCESS;
 }

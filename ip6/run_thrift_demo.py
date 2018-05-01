@@ -1,10 +1,5 @@
 """Custom topology for BlueBridge
 """
-import os
-import time
-from functools import partial
-from subprocess import Popen, PIPE
-
 from mininet.node import CPULimitedHost
 from mininet.topo import Topo
 from mininet.net import Mininet
@@ -13,10 +8,15 @@ from mininet.node import RemoteController
 from mininet.cli import CLI
 from mininet.link import TCLink
 from mininet.topolib import TreeNet
+import os
+import time
 from mininet.node import Host
 from mininet.term import makeTerm
+from subprocess import Popen, PIPE
 
-HOSTS = 3
+from functools import partial
+
+HOSTS = 6
 
 
 class BlueBridge(Topo):
@@ -45,6 +45,9 @@ class BlueBridge(Topo):
             self.addLink(server, switch)
 
 
+topos = {'BlueBridge': (lambda: BlueBridge())}
+
+
 def configureHosts(net):
     hostNum = 1
     hosts = net.hosts
@@ -54,7 +57,7 @@ def configureHosts(net):
         # Insert host configuration
         configString = "\"INTERFACE=" + \
             str(host) + \
-            "-eth0\n\HOSTS=0:0:102::,0:0:103::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
+            "-eth0\n\HOSTS=0:0:104::,0:0:105::,0:0:106::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
             '{0:02x}'.format(hostNum) + "::\n\DEBUG=1\" > ./tmp/config/distMem.cnf"
         host.cmdPrint('echo ' + configString)
 
@@ -67,12 +70,17 @@ def configureHosts(net):
         #               '{0:02x}'.format(hostNum) + '::/48 dev lo')
         # Gotta get dem jumbo frames
         host.cmdPrint('ifconfig ' + str(host) + '-eth0 mtu 9000')
-        if 'h' in str(host) and hostNum != 1:
+        if 'h' in str(host) and hostNum > 3:
             # Run the server
             host.cmdPrint('xterm  -T \"server' + str(host)[1] +
-                          '\" -e \"./applications/bin/event_server -c tmp/config/distMem.cnf; bash\" &')
+                          '\" -e \"./applications/bin/server -c tmp/config/distMem.cnf; bash\" &')
             #host.cmdPrint('./applications/bin/server tmp/config/distMem.cnf &')
-
+        if (hostNum == 2):
+            host.cmdPrint('xterm  -T \"thrift' + str(host)[1] +
+                          '\" -e \"./thrift/tutorial/c_glib/tutorial_remote_mem_test_server -c ./tmp/config/distMem.cnf; bash\" &')
+        if (hostNum == 3):
+            host.cmdPrint('xterm  -T \"thrift' + str(host)[1] +
+                          '\" -e \"./thrift/tutorial/c_glib/tutorial_simple_array_comp_server -c ./tmp/config/distMem.cnf; bash\" &')
         hostNum += 1
 
 
@@ -113,7 +121,7 @@ def run():
     # switch.cmdPrint('ifconfig s1-eth' + str(hostNum) +' mtu 5000')
     # Our current "switch"
     i = 1
-    while i <= HOSTS:
+    while i <= hostNum:
         # Routing entries per port
         # cmd = "ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=0:0:10%d::/48,priority=1,actions=output:%d" % (i, i)
         # os.system(cmd)

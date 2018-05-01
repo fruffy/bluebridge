@@ -1,4 +1,3 @@
-table_set_default arp broadcast 
 mc_mgrp_create 1 
 mc_node_create 0 1 
 mc_node_create 1 2 
@@ -12,18 +11,24 @@ mc_node_associate 1 2
 mc_node_associate 1 3
 mc_node_associate 1 4
 mc_node_associate 1 5
-table_add ipv4_lpm set_nhop4 10.0.0.1/32 => 10.0.0.1 1
-table_add ipv4_lpm set_nhop4 10.0.0.2/32 => 10.0.0.2 2
-table_add ipv4_lpm set_nhop4 10.0.0.3/32 => 10.0.0.3 3
-table_add ipv4_lpm set_nhop4 10.0.0.4/32 => 10.0.0.4 4
-table_add ipv4_lpm set_nhop4 10.0.0.5/32 => 10.0.0.5 5
-table_add ipv4_lpm set_nhop4 10.0.0.6/32 => 10.0.0.6 6
-table_add ipv6_lpm set_nhop6 0:0:101::/48 => 0:0:101::48 1
-table_add ipv6_lpm set_nhop6 0:0:102::/48 => 0:0:102::48 2
-table_add ipv6_lpm set_nhop6 0:0:103::/48 => 0:0:103::48 3
-table_add ipv6_lpm set_nhop6 0:0:104::/48 => 0:0:104::48 4
-table_add ipv6_lpm set_nhop6 0:0:105::/48 => 0:0:105::48 5
-table_add ipv6_lpm set_nhop6 0:0:106::/48 => 0:0:106::48 6
+table_add ipv4 fwd_ip4 10.0.0.1/32 => 1
+table_add ipv4 fwd_ip4 10.0.0.2/32 => 2
+table_add ipv4 fwd_ip4 10.0.0.3/32 => 3
+table_add ipv4 fwd_ip4 10.0.0.4/32 => 4
+table_add ipv4 fwd_ip4 10.0.0.5/32 => 5
+table_add ipv4 fwd_ip4 10.0.0.6/32 => 6
+table_add ipv6 fwd_ip6 0:0:101::/48 => 1
+table_add ipv6 fwd_ip6 0:0:102::/48 => 2
+table_add ipv6 fwd_ip6 0:0:103::/48 => 3
+table_add ipv6 fwd_ip6 0:0:104::/48 => 4
+table_add ipv6 fwd_ip6 0:0:105::/48 => 5
+table_add ipv6 fwd_ip6 0:0:106::/48 => 6
+table_add bb_fwd set_bb 0x0101 => 1
+table_add bb_fwd set_bb 0x0102 => 2
+table_add bb_fwd set_bb 0x0103 => 3
+table_add bb_fwd set_bb 0x0104 => 4
+table_add bb_fwd set_bb 0x0105 => 5
+table_add bb_fwd set_bb 0x0106 => 6
 table_add thrift thrift_forward "ping" => 2
 table_add thrift thrift_forward "allocate_mem" => 2
 table_add thrift thrift_forward "write_mem" => 2
@@ -33,3 +38,10 @@ table_add thrift thrift_forward "increment_array" => 3
 table_add thrift thrift_forward "add_arrays" => 3
 table_add thrift thrift_forward "no_op" => 3
 table_add thrift thrift_forward "flush_timestamps" => 3
+table_add bb_acl _nop 0x0103 0/64 =>
+table_add bb_acl _nop 0x0104 0/64 =>
+table_add bb_acl _nop 0x0105 0/64 =>
+table_add bb_acl _nop 0x0106 0/64 =>
+table_add bb_acl _nop 0x0101 0/0 =>
+table_add bb_acl _nop 0x0102 0/0 =>
+table_add bb_acl _nop 0x0103 0/0 =>
