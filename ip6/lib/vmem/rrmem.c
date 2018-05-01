@@ -40,10 +40,7 @@ void configure_rrmem(char *filename) {
 }
 
 void rrmem_init_sockets(struct rrmem *r) {
-    init_rx_socket_client(&myConf);
-    r->targetIP = malloc(sizeof(struct sockaddr_in6));
-    r->targetIP->sin6_port = htons(strtol(myConf.server_port, (char **)NULL, 10));
-    init_tx_socket(&myConf);
+    r->targetIP = init_sockets(&myConf, 0);
 }
 
 
