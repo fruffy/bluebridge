@@ -10,6 +10,7 @@
 struct in6_memaddr allocate_rmem(struct sockaddr_in6 *targetIP);
 struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *targetIP, uint64_t size);
 int write_rmem(struct sockaddr_in6 *targetIP, char *payload,  struct in6_memaddr *remoteAddr);
+int write_rmem_bulk(struct sockaddr_in6 *target_ip, char *payload, struct in6_memaddr *remote_addrs, int num_addrs);
 int free_rmem(struct sockaddr_in6 *targetIP,  struct in6_memaddr *remoteAddr);
 int get_rmem(char *receiveBuffer, int length, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
 

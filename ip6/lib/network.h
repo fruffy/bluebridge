@@ -6,8 +6,8 @@
 #include "types.h"
 #include "config.h"
 
-int send_udp_raw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP);
-int send_udp6_raw(char * sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
+int send_udp_raw(char * sendBuffer, int msgBlockSize, struct in6_memaddr *remoteAddr, int dst_port);
+int send_udp_raw_batched(char *tx_buf, int msg_size, struct in6_memaddr *remote_addrs, int num_addrs, int dst_port);
 int rcv_udp6_raw(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
 int rcv_udp6_raw_id(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
 

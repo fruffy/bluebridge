@@ -16,7 +16,7 @@
 static __thread uint64_t sendLat = 0;
 static __thread uint64_t send_calls = 0;
 
-static __thread uint64_t rcvLat = 0;
+static __thread uint64_t rcv_lat = 0;
 static __thread uint64_t rcv_calls = 0;
 
 
@@ -24,22 +24,24 @@ static __thread uint64_t rcv_calls = 0;
  * Sends message to specified socket
  * RAW version, we craft our own packet.
  */
-int send_udp_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP) {
-    //char dst_ip[INET6_ADDRSTRLEN];
-    //inet_ntop(AF_INET6,&targetIP->sin6_addr, dst_ip, sizeof dst_ip);
-    //print_debug("Sending to %s:%d", dst_ip,dst_port);
+// TODO: Evaluate what variables and structures are actually needed here
+// TODO: Error handling
+int send_udp_raw(char *tx_buf, int msg_size, struct in6_memaddr *remote_addr, int dst_port) {
+    uint64_t start = getns(); 
     struct pkt_rqst pkt = {
-        .dst_addr = &targetIP->sin6_addr,
-        .dst_port = targetIP->sin6_port,
-        .data = sendBuffer,
-        .datalen = msgBlockSize
+        .dst_addr = remote_addr,
+        .dst_port = dst_port,
+        .data = tx_buf,
+        .datalen = msg_size
     };
 #ifdef DEFAULT
     cooked_send(pkt);
 #else
     dpdk_send(pkt);
 #endif
-    //memset(sendBuffer, 0, msgBlockSize);
+    sendLat += getns() - start;
+    send_calls++;
+    //memset(tx_buf, 0, msg_size);
     return EXIT_SUCCESS;
 }
 
@@ -49,40 +51,41 @@ int send_udp_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *target
  */
 // TODO: Evaluate what variables and structures are actually needed here
 // TODO: Error handling
-int send_udp6_raw(char *sendBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
-    uint64_t start = getns(); 
-    struct pkt_rqst pkt = {
-        .dst_addr = (struct in6_addr *) remoteAddr,
-        .dst_port = targetIP->sin6_port,
-        .data = sendBuffer,
-        .datalen = msgBlockSize
-    };
+int send_udp_raw_batched(char *tx_buf, int msg_size, struct in6_memaddr *remote_addrs, int num_addrs, int dst_port) {
+    uint64_t start = getns();
+    struct pkt_rqst pkts[num_addrs];
+    for (int i = 0; i < num_addrs; i++){
+        pkts[i].dst_addr = &remote_addrs[i];
+        pkts[i].dst_port = dst_port;
+        pkts[i].data = tx_buf + msg_size * i;
+        pkts[i].datalen = msg_size;
+    }
 #ifdef DEFAULT
-    // printf("Calling cooked_send\n");
-    cooked_send(pkt);
+    cooked_batched_send(pkts,num_addrs);
 #else
     dpdk_send(pkt);
 #endif
     sendLat += getns() - start;
     send_calls++;
-    //memset(sendBuffer, 0, msgBlockSize);
+    //memset(tx_buf, 0, msg_size);
     return EXIT_SUCCESS;
 }
+
 
 /*
  * Receives message on socket
  * RAW version, we craft our own packet.
  */
 // TODO: Error handling
-int rcv_udp6_raw(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
+int rcv_udp6_raw(char *rx_buf, int msg_size, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
     uint64_t start = getns();
     int numbytes;
 #ifdef DEFAULT
-    numbytes = epoll_server_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr);
+    numbytes = epoll_server_rcv(rx_buf, msg_size, target_ip, remote_addr);
 #else
-    numbytes = dpdk_server_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr);
+    numbytes = dpdk_server_rcv(rx_buf, msg_size, target_ip, remote_addr);
 #endif
-    rcvLat += getns() - start;
+    rcv_lat += getns() - start;
     rcv_calls++;
     return numbytes;
 }
@@ -92,15 +95,15 @@ int rcv_udp6_raw(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *tar
  * RAW version, we craft our own packet.
  */
 // TODO: Error handling
-int rcv_udp6_raw_id(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
+int rcv_udp6_raw_id(char *rx_buf, int msg_size, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
     uint64_t start = getns();
     int numbytes;
 #ifdef DEFAULT
-    numbytes = epoll_client_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr);
+    numbytes = epoll_client_rcv(rx_buf, msg_size, target_ip, remote_addr);
 #else
-    numbytes = dpdk_client_rcv(receiveBuffer, msgBlockSize, targetIP, remoteAddr);
+    numbytes = dpdk_client_rcv(rx_buf, msg_size, target_ip, remote_addr);
 #endif
-    rcvLat += getns() - start;
+    rcv_lat += getns() - start;
     rcv_calls++;
     return numbytes;
 }
@@ -158,6 +161,6 @@ void printSendLat() {
     if (send_calls == 0 || rcv_calls == 0)
         return;
     printf("Average Sending Time %lu ns\n", (sendLat)/send_calls );
-    printf("Average Receive Time %lu ns\n", (rcvLat)/rcv_calls );
+    printf("Average Receive Time %lu ns\n", (rcv_lat)/rcv_calls );
 
 }

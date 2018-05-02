@@ -35,9 +35,8 @@ void init_rx_socket_server(struct config *cfg) {
 }
 
 int epoll_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
+    struct epoll_event events[1024];
     while (1) {
-        struct epoll_event events[1024];
-
         int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, 0);
         //int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
         /*if (num_events == 0 && !server) {
@@ -90,7 +89,6 @@ int epoll_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 
 
 //This function is hacky bullshit, needs a lot of improvement.
 int raw_rcv_loop(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
-
     struct epoll_event events[1024];
     while (1){
         int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, 0);

@@ -53,9 +53,9 @@ int set_packet_filter(int sd, char *addr, char *interfaceName, int port) {
     int i, lineCount = 0;
     char tcpdump_command[512];
     FILE* tcpdump_output;
-    //sprintf(tcpdump_command, "tcpdump -i %s dst port %d and ip6 net %s/48 -ddd",interfaceName, ntohs(port), addr);
+    sprintf(tcpdump_command, "tcpdump -i %s dst port %d and ip6 net %s/48 -ddd",interfaceName, ntohs(port), addr);
     // Super shitty hack. Do not try this at home kids.
-    sprintf(tcpdump_command, "tcpdump -i %s ether proto 0xffff and ether[56:2] == 0x%02x and ether[42:2] == 0x%02x%02x -ddd",interfaceName, ntohs(port), addr[4],addr[5]);
+    //sprintf(tcpdump_command, "tcpdump -i %s ether proto 0xffff and ether[56:2] == 0x%02x and ether[42:2] == 0x%02x%02x -ddd",interfaceName, ntohs(port), addr[4],addr[5]);
     printf("Active Filter: %s\n",tcpdump_command );
     if ( (tcpdump_output = popen(tcpdump_command, "r")) == NULL ) {
         RETURN_ERROR(-1, "Cannot compile filter using tcpdump.");
@@ -134,6 +134,8 @@ int init_epoll(int sd_rx) {
 int setup_rx_socket(struct config *cfg, int my_port, int thread_id, int *my_epoll, struct rx_ring *my_ring) {
 
     struct sockaddr_ll device;
+    char my_addr[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6, &cfg->src_addr, my_addr, INET6_ADDRSTRLEN);
     memset(&device, 0, sizeof(struct sockaddr_ll));
     if ((device.sll_ifindex = if_nametoindex (cfg->interface)) == 0)
         perror ("if_nametoindex() failed to obtain interface index "), exit (EXIT_FAILURE);
@@ -145,8 +147,8 @@ int setup_rx_socket(struct config *cfg, int my_port, int thread_id, int *my_epol
     int sd_rx = socket(AF_PACKET, SOCK_RAW|SOCK_NONBLOCK, htons(ETH_P_ALL));
     if (-1 == sd_rx)
         perror("Could not set socket"), exit(EXIT_FAILURE);
-    set_packet_filter(sd_rx, (char*) &cfg->src_addr, cfg->interface,htons((ntohs(my_port) + thread_id)));
-    //set_packet_filter(sd_rx, my_addr, cfg->interface,htons((ntohs(my_port) + thread_id)));
+    //set_packet_filter(sd_rx, (char*) &cfg->src_addr, cfg->interface, htons((ntohs(my_port) + thread_id)));
+    set_packet_filter(sd_rx, my_addr, cfg->interface,htons((ntohs(my_port) + thread_id)));
     *my_epoll = init_epoll(sd_rx);
     *my_ring = setup_packet_mmap(sd_rx);
     if (-1 == bind(sd_rx, (struct sockaddr *)&device, sizeof(device)))
@@ -192,8 +194,10 @@ struct sockaddr_ll configure_tx(struct config *cfg) {
     memcpy (ether_frame + 6, &src_mac, 6 * sizeof (uint8_t));
     // Next is ethernet type code (ETH_P_IPV6 for IPv6).
     // http://www.iana.org/assignments/ethernet-numbers
-    ether_frame[12] = 0xFF;//TH_P_IPV6 / 256;
-    ether_frame[13] = 0xFF;//ETH_P_IPV6 % 256;
+    //ether_frame[12] = 0xFF;
+    //ether_frame[13] = 0xFF;
+    ether_frame[12] = ETH_P_IPV6 / 256;
+    ether_frame[13] = ETH_P_IPV6 % 256;
 
     // IPv6 header
     // IPv6 version (4 bits), Traffic class (8 bits), Flow label (20 bits)
@@ -326,7 +330,7 @@ int send_mmap(unsigned const char *pkt, int pktlen) {
     ring_offset = (ring_offset + 1) & (C_RING_FRAMES - 1);
     // notify kernel
     //write(sd_send,ether_frame, 0);
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 int flush_buffer() {
@@ -335,7 +339,7 @@ int flush_buffer() {
             perror( "sendto failed");
             printf("Retrying....\n");
         } else {
-            return 0;
+            return EXIT_SUCCESS;
         }
     }
 }
@@ -347,7 +351,7 @@ int cooked_batched_send(struct pkt_rqst *pkts, int num_pkts) {
         struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ether_frame + ETH_HDRLEN);
         struct udphdr *udphdr = (struct udphdr *)((char *)ether_frame + ETH_HDRLEN + IP6_HDRLEN);
         //Set destination IP
-        iphdr->ip6_dst = *pkt.dst_addr;
+        iphdr->ip6_dst = *(struct in6_addr *)pkt.dst_addr;
         // Payload length (16 bits): UDP header + UDP data
         iphdr->ip6_plen = htons (UDP_HDRLEN + pkt.datalen);
         // UDP header
@@ -370,7 +374,6 @@ int cooked_batched_send(struct pkt_rqst *pkts, int num_pkts) {
             flush_buffer();
         }
         send_mmap(ether_frame, frame_length);
-
     }
     flush_buffer();
     return EXIT_SUCCESS;
@@ -381,7 +384,7 @@ int cooked_send(struct pkt_rqst pkt) {
     struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ether_frame + ETH_HDRLEN);
     struct udphdr *udphdr = (struct udphdr *)((char *)ether_frame + ETH_HDRLEN + IP6_HDRLEN);
     //Set destination IP
-    iphdr->ip6_dst = *pkt.dst_addr;
+    iphdr->ip6_dst = *(struct in6_addr *)pkt.dst_addr;
     // Payload length (16 bits): UDP header + UDP data
     iphdr->ip6_plen = htons (UDP_HDRLEN + pkt.datalen);
     // UDP header

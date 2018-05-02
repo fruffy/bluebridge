@@ -18,7 +18,7 @@
 
 struct in6_addr *hostList;
 int nhosts;
-static char sendBuffer[BLOCK_SIZE];
+static char tx_buf[BLOCK_SIZE];
 
 /*
  * Generates a random IPv6 address target under specific constraints
@@ -66,30 +66,15 @@ void set_host_list(struct in6_addr *host_addrs, int num_hosts) {
  * Allocate memory from a remote machine.
  */
 // TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
-struct in6_memaddr allocate_rmem(struct sockaddr_in6 *targetIP) {
-    char receiveBuffer[BLOCK_SIZE];
-
+struct in6_memaddr allocate_rmem(struct sockaddr_in6 *target_ip) {
     // Send the command to the target host and wait for response
-    ((struct in6_memaddr *)&targetIP->sin6_addr)->cmd = ALLOC_CMD;
-    send_udp_raw(sendBuffer, BLOCK_SIZE, targetIP);
-    struct in6_memaddr retAddr;
-    memcpy(&retAddr, &targetIP->sin6_addr, IPV6_SIZE);
-    rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, &retAddr);
-    memcpy(&retAddr.subid, ((char*)&targetIP->sin6_addr)+4, 2);
-
+    ((struct in6_memaddr *)&target_ip->sin6_addr)->cmd = ALLOC_CMD;
     print_debug("******ALLOCATE******");
-    // if (memcmp(receiveBuffer,"ACK", 3) == 0) {
-    //     // If the message is ACK --> successful allocation
-    //     // Copy the returned pointer (very precise offsets)
-    //     memcpy(&retAddr, receiveBuffer+3, IPV6_SIZE);
-    //     // Insert information about the source host (black magic)
-    //     //00 00 00 00 01 02 00 00 00 00 00 00 00 00 00 00
-    //     //            ^  ^ these two bytes are stored (subnet and host ID)
-    // } else {
-    //     perror("Response was not successful\n");
-    //     // Not successful set the return address to zero.
-    //     memset(&retAddr,0, IPV6_SIZE);
-    // }
+    send_udp_raw(tx_buf, BLOCK_SIZE, (struct in6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port);
+    struct in6_memaddr retAddr;
+    memcpy(&retAddr, &target_ip->sin6_addr, IPV6_SIZE);
+    rcv_udp6_raw_id(NULL, 0, target_ip, &retAddr);
+    memcpy(&retAddr.subid, ((char*)&target_ip->sin6_addr)+4, 2);
     return retAddr;
 }
 
@@ -97,32 +82,17 @@ struct in6_memaddr allocate_rmem(struct sockaddr_in6 *targetIP) {
  * Allocates a bulk of memory from a remote machine.
  */
 // TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
-struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *targetIP, uint64_t size) {
-    char receiveBuffer[BLOCK_SIZE];
+struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *target_ip, uint64_t size) {
     // Send the command to the target host and wait for response
-    memcpy(sendBuffer, &size, sizeof(uint64_t));
-    ((struct in6_memaddr *)&targetIP->sin6_addr)->cmd = ALLOC_BULK_CMD;
-    send_udp_raw(sendBuffer, BLOCK_SIZE, targetIP);
-    struct in6_memaddr retAddr;
-    memcpy(&retAddr, &targetIP->sin6_addr, IPV6_SIZE);
-    rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, &retAddr);
-    memcpy(&retAddr.subid, ((char*)&targetIP->sin6_addr)+4, 2);
-    struct in6_memaddr *addrList = malloc(size * sizeof(struct in6_memaddr));
+    memcpy(tx_buf, &size, sizeof(uint64_t));
+    ((struct in6_memaddr *)&target_ip->sin6_addr)->cmd = ALLOC_BULK_CMD;
     print_debug("******ALLOCATE BULK******");
-    // if (memcmp(receiveBuffer,"ACK", 3) == 0) {
-    //     // If the message is ACK --> successful allocation
-    //     // Copy the returned pointer (very precise offsets)
-    //     memcpy(&retAddr, receiveBuffer+3, IPV6_SIZE);
-    //     // Insert information about the source host (black magic)
-    //     //00 00 00 00 01 02 00 00 00 00 00 00 00 00 00 00
-    //     //            ^  ^ these two bytes are stored (subnet and host ID)
-    //     memcpy(&retAddr.subid, ((char*)&targetIP->sin6_addr)+4, 2);
-
-    // } else {
-    //     perror("Response was not successful\n");
-    //     // Not successful set the return address to zero.
-    //     memset(&retAddr,0, IPV6_SIZE);
-    // }
+    send_udp_raw(tx_buf, BLOCK_SIZE, (struct in6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port);
+    struct in6_memaddr retAddr;
+    memcpy(&retAddr, &target_ip->sin6_addr, IPV6_SIZE);
+    rcv_udp6_raw_id(NULL, 0, target_ip, &retAddr);
+    memcpy(&retAddr.subid, ((char*)&target_ip->sin6_addr)+4, 2);
+    struct in6_memaddr *addrList = malloc(size * sizeof(struct in6_memaddr));
     // Convert the returned pointer into an array of pointers
     for (uint64_t i = 0; i < size; i++) {
         addrList[i] = retAddr;
@@ -134,60 +104,85 @@ struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *targetIP, uint64_t s
 
 
 /*
- * Reads the remote memory based on remoteAddr
+ * Reads the remote memory based on remote_addr
  */
 // TODO: Implement meaningful return types and error messages
-int get_rmem(char *receiveBuffer, int length, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
-// #ifndef SOCK_RAW
-//     char *receiveBuffer = rte_malloc(NULL, BLOCK_SIZE, 64);
-// #else
-//     char *receiveBuffer = malloc(BLOCK_SIZE);
-// #endif
+int get_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
     // Send the command to the target host and wait for response
-    remoteAddr->cmd =  GET_CMD;
+    remote_addr->cmd =  GET_CMD;
     print_debug("******GET DATA******");
     // Send request and store response
-    send_udp6_raw(sendBuffer, 0, targetIP, remoteAddr);
-    int numBytes = rcv_udp6_raw_id(receiveBuffer, length, targetIP, remoteAddr);
+    send_udp_raw(tx_buf, 0, remote_addr, target_ip->sin6_port);
+    int numBytes = rcv_udp6_raw_id(rx_buf, length, target_ip, remote_addr);
     return numBytes;
 }
 
 /*
- * Sends a write command to the server based on remoteAddr
+ * Sends a write command to the server based on remote_addr
  */
 // TODO: Implement meaningful return types and error messages
-int write_rmem(struct sockaddr_in6 *targetIP, char *payload, struct in6_memaddr *remoteAddr) {
+int write_rmem(struct sockaddr_in6 *target_ip, char *payload, struct in6_memaddr *remote_addr) {
     // Send the command to the target host and wait for response
-    // printf("Writing things\n");
-    remoteAddr->cmd =  WRITE_CMD;
+    remote_addr->cmd =  WRITE_CMD;
     print_debug("******WRITE DATA******");
-    send_udp6_raw(payload, BLOCK_SIZE, targetIP, remoteAddr);
-    // printf("receive \n");
-    rcv_udp6_raw_id(NULL, 0, targetIP, remoteAddr);
-    // printf("returning\n");
+    send_udp_raw(payload, BLOCK_SIZE, remote_addr, target_ip->sin6_port);
+    rcv_udp6_raw_id(NULL, 0, target_ip, remote_addr);
     return EXIT_SUCCESS;
 }
 
+/*
+ * Sends a write command to the server based on remote_addr
+ */
+// TODO: Implement meaningful return types and error messages
+int write_rmem_bulk(struct sockaddr_in6 *target_ip, char *payload, struct in6_memaddr *remote_addrs, int num_addrs) {
+    // Send the command to the target host and wait for response
+    for (int i = 0; i< num_addrs; i++)
+        remote_addrs[i].cmd =  WRITE_BULK_CMD;
+    print_debug("******WRITE DATA******");
+    send_udp_raw_batched(payload, BLOCK_SIZE, remote_addrs, num_addrs, target_ip->sin6_port);
+    //rcv_udp6_raw_id(NULL, 0, target_ip, remote_addr);
+    return EXIT_SUCCESS;
+}
+
+
+/*
+ * Releases the remote memory based on remote_addr
+ */
+// TODO: Implement meaningful return types and error messages
+int free_rmem(struct sockaddr_in6 *target_ip,  struct in6_memaddr *remote_addr) {
+    // Create message
+    remote_addr->cmd =  FREE_CMD;
+    print_debug("******FREE DATA******");
+    // Send message and check if it was successful
+    // TODO: Check if it actually was successful
+    send_udp_raw(tx_buf, BLOCK_SIZE, remote_addr, target_ip->sin6_port);
+    rcv_udp6_raw_id(NULL,0, target_ip, remote_addr);
+    return EXIT_SUCCESS;
+}
+
+
+
+
 //Returns the missing raid read -1 if everything is read
-int read_raid_mem(struct sockaddr_in6 *targetIP, int hosts, char (*bufs)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remoteAddrs, int needed) {
+int read_raid_mem(struct sockaddr_in6 *target_ip, int hosts, char (*bufs)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remote_addrs, int needed) {
     int host;
-    char receiveBuffer[BLOCK_SIZE];
+    char rx_buf[BLOCK_SIZE];
 
     int found[MAX_HOSTS];
     for (int i=0;i<hosts;i++) {
         found[i] = 0;
     }
-    //memcpy(sendBuffer + size, remoteAddr, IPV6_SIZE);
+    //memcpy(tx_buf + size, remote_addr, IPV6_SIZE);
     print_debug("******GET DATA******");
     for (int i=0; i<hosts;i++) {
-        remoteAddrs[i]->cmd =  GET_CMD;
-        send_udp6_raw(sendBuffer, BLOCK_SIZE, targetIP, remoteAddrs[i]);
+        remote_addrs[i]->cmd =  GET_CMD;
+        send_udp_raw(tx_buf, BLOCK_SIZE, remote_addrs[i], target_ip->sin6_port);
     }
     for (int i=0; i <hosts;i++) {
         //TODO check a list to ensure that the correct messages are
         //being acked
         //TODO timeout or something if a failure occurs here
-        int bytes = rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
+        int bytes = rcv_udp6_raw_id(rx_buf, BLOCK_SIZE, target_ip, NULL);
         //take care of timeout
         if ( bytes == -1 && i >= needed) {
             //There is no point in reading another page if the timeout
@@ -202,11 +197,11 @@ int read_raid_mem(struct sockaddr_in6 *targetIP, int hosts, char (*bufs)[MAX_HOS
             continue;
         } else {
             //Here a page was actually read
-            host = (int)targetIP->sin6_addr.s6_addr[5]-2;
+            host = (int)target_ip->sin6_addr.s6_addr[5]-2;
             //printf("%d\n",host);
-            //printf("rec :%s\n",receiveBuffer);
-            //printf("Read From %d\n",(int)targetIP->sin6_addr.s6_addr[5]);
-            memcpy(&((*bufs)[host]),receiveBuffer,BLOCK_SIZE);
+            //printf("rec :%s\n",rx_buf);
+            //printf("Read From %d\n",(int)target_ip->sin6_addr.s6_addr[5]);
+            memcpy(&((*bufs)[host]),rx_buf,BLOCK_SIZE);
             //printf("cpy :%s\n",(*bufs)[host]);
             //printf("copied\n");
             //printf("%d ",host);
@@ -221,15 +216,15 @@ int read_raid_mem(struct sockaddr_in6 *targetIP, int hosts, char (*bufs)[MAX_HOS
     return -1;
 }
 
-int write_raid_mem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remoteAddrs, int needed) {
+int write_raid_mem(struct sockaddr_in6 *target_ip, int hosts, char (*payload)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remote_addrs, int needed) {
     int host;
-    char receiveBuffer[BLOCK_SIZE];
+    char rx_buf[BLOCK_SIZE];
 
     for (int i=0; i <hosts;i++) {
         //printf("sending write request packet %d\n",i);
-        remoteAddrs[i]->cmd = WRITE_CMD;
+        remote_addrs[i]->cmd = WRITE_CMD;
         //printf("Sending Page UDP\n");
-        send_udp6_raw((char*)&((*payload)[i]), BLOCK_SIZE, targetIP, remoteAddrs[i]);
+        send_udp_raw((char*)&((*payload)[i]), BLOCK_SIZE, remote_addrs[i], target_ip->sin6_port);
         //printf("FINISHED sending write request packet %d\n",i);
     }
     for (int i=0; i <hosts;i++) {
@@ -239,7 +234,7 @@ int write_raid_mem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX
         //TODO timeout or something if a failure occurs here
         //printf("reading write ACK request packet %d\n",i);
         
-        int bytes = rcv_udp6_raw_id(receiveBuffer, BLOCK_SIZE, targetIP, NULL);
+        int bytes = rcv_udp6_raw_id(rx_buf, BLOCK_SIZE, target_ip, NULL);
         if ( bytes == -1 && i >= needed) {
             //There is no point in reading another page if the timeout
             //occured, just break
@@ -252,29 +247,10 @@ int write_raid_mem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX
             i--;
             continue;
         } else {
-            host = (int)targetIP->sin6_addr.s6_addr[5];
-            //printf("Read From %d\n",(int)targetIP->sin6_addr.s6_addr[5]);
-            memcpy(&((*payload)[host-2]),receiveBuffer,BLOCK_SIZE);
+            host = (int)target_ip->sin6_addr.s6_addr[5];
+            //printf("Read From %d\n",(int)target_ip->sin6_addr.s6_addr[5]);
+            memcpy(&((*payload)[host-2]),rx_buf,BLOCK_SIZE);
         }
     }
     return EXIT_SUCCESS;
 }
-
-
-
-/*
- * Releases the remote memory based on remoteAddr
- */
-// TODO: Implement meaningful return types and error messages
-int free_rmem(struct sockaddr_in6 *targetIP,  struct in6_memaddr *remoteAddr) {
-    char receiveBuffer[BLOCK_SIZE];
-    // Create message
-    remoteAddr->cmd =  FREE_CMD;
-    print_debug("******FREE DATA******");
-    // Send message and check if it was successful
-    // TODO: Check if it actually was successful
-    send_udp6_raw(sendBuffer, BLOCK_SIZE, targetIP, remoteAddr);
-    rcv_udp6_raw_id(receiveBuffer,BLOCK_SIZE, targetIP, remoteAddr);
-    return EXIT_SUCCESS;
-}
-

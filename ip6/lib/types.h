@@ -10,7 +10,7 @@ struct in6_memaddr {
 };
 
 struct pkt_rqst {
-    struct in6_addr *dst_addr;
+    struct in6_memaddr *dst_addr;
     int dst_port;
     char *data;
     int datalen;
@@ -30,6 +30,7 @@ struct pkt_rqst {
 #define FREE_CMD        04
 #define GET_ADDR_CMD    05
 #define ALLOC_BULK_CMD  06
+#define WRITE_BULK_CMD  07
 #define CMD_SIZE        02
 
 /*          struct sockaddr_in6 {

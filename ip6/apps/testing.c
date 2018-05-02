@@ -14,6 +14,8 @@
 #include <sys/stat.h>
 
 static int NUM_THREADS = 1;
+static int BATCHED_MODE = 0;
+static int BATCH_SIZE = 20;
 static uint64_t NUM_ITERATIONS;
 
 
@@ -215,6 +217,7 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
     // Allocate the benchmarking arrays
     uint64_t alloc_latency[myConf.num_hosts];
     uint64_t *read_latency = calloc(NUM_ITERATIONS, sizeof(uint64_t));
+    uint64_t *read_latency2 = calloc(NUM_ITERATIONS, sizeof(uint64_t));
     uint64_t *write_latency = calloc(NUM_ITERATIONS, sizeof(uint64_t));
     uint64_t *write_latency2 = calloc(NUM_ITERATIONS, sizeof(uint64_t));
     uint64_t free_latency[myConf.num_hosts];
@@ -244,15 +247,29 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
     }
     // WRITE TEST
     printf("Starting write test...\n");
-    for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
-        struct in6_memaddr remoteMemory = r_addr[i];
-        print_debug("Creating payload");
-        char *payload = malloc(BLOCK_SIZE);
-        snprintf(payload, 50, "HELLO WORLD! How are you? %lu", i);
-        uint64_t wStart = getns();
-        write_rmem(targetIP, payload, &remoteMemory);
-        write_latency[i] = getns() - wStart;
-        free(payload);
+    if (BATCHED_MODE) {
+        for (uint64_t i = 0; i < NUM_ITERATIONS/BATCH_SIZE; i++) {
+            char payload[BLOCK_SIZE * BATCH_SIZE];
+            print_debug("Creating payload");
+            for (int j = 0; j < BATCH_SIZE; j++) {
+                print_debug("Writing %lu to offset %d\n", i*BATCH_SIZE + j, BLOCK_SIZE *j );
+                snprintf(&payload[BLOCK_SIZE *(j)], 50, "HELLO WORLD! How are you? %lu", i*BATCH_SIZE + j);
+            }
+            uint64_t wStart = getns();
+            write_rmem_bulk(targetIP, payload, (struct in6_memaddr *)&r_addr[i * BATCH_SIZE], BATCH_SIZE);
+            write_latency[i] = getns() - wStart;
+        }
+    } else {
+        for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
+            struct in6_memaddr remoteMemory = r_addr[i];
+            print_debug("Creating payload");
+            char *payload = malloc(BLOCK_SIZE);
+            snprintf(payload, 50, "HELLO WORLD! How are you? %lu", i);
+            uint64_t wStart = getns();
+            write_rmem(targetIP, payload, &remoteMemory);
+            write_latency[i] = getns() - wStart;
+            free(payload);
+        }
     }
     char test[BLOCK_SIZE];
     // READ TEST
@@ -267,22 +284,55 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
         print_debug("Results of memory store: %.50s", test);
         if (strncmp(test, payload, 50) < 0) {
             perror(KRED"ERROR: WRONG RESULT"RESET);
+            printf("Expected %s Got %s\n", payload, test );
             exit(1);
         }
         free(payload);
     }
     // WRITE TEST 2
     printf("Starting second write test...\n");
+    if (BATCHED_MODE) {
+        for (uint64_t i = 0; i < NUM_ITERATIONS/BATCH_SIZE; i++) {
+            char payload[BLOCK_SIZE * BATCH_SIZE];
+            print_debug("Creating payload");
+            for (int j = 0; j < BATCH_SIZE; j++) {
+                print_debug("Writing %lu to offset %d\n", i*BATCH_SIZE + j, BLOCK_SIZE *j );
+                snprintf(&payload[BLOCK_SIZE *(j)], 50, "Bye WORLD! I am done? %lu", i*BATCH_SIZE + j);
+            }
+            uint64_t wStart = getns();
+            write_rmem_bulk(targetIP, payload, (struct in6_memaddr *)&r_addr[i * BATCH_SIZE], BATCH_SIZE);
+            write_latency[i] = getns() - wStart;
+        }
+    } else {
+        for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
+            struct in6_memaddr remoteMemory = r_addr[i];
+            print_debug("Creating payload");
+            char *payload = malloc(BLOCK_SIZE);
+            snprintf(payload, 50, "Bye WORLD! I am done? %lu", i);
+            uint64_t wStart = getns();
+            write_rmem(targetIP, payload, &remoteMemory);
+            write_latency2[i] = getns() - wStart;
+            free(payload);
+        }
+    }
+    // READ TEST 2
+    printf("Starting second read test...\n");
     for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
         struct in6_memaddr remoteMemory = r_addr[i];
-        print_debug("Creating payload");
+        uint64_t rStart = getns();
+        get_rmem(test, BLOCK_SIZE, targetIP, &remoteMemory);
+        read_latency2[i] = getns() - rStart;
         char *payload = malloc(BLOCK_SIZE);
         snprintf(payload, 50, "Bye WORLD! I am done? %lu", i);
-        uint64_t wStart = getns();
-        write_rmem(targetIP, payload, &remoteMemory);
-        write_latency2[i] = getns() - wStart;
+        print_debug("Results of memory store: %.50s", test);
+        if (strncmp(test, payload, 50) < 0) {
+            perror(KRED"ERROR: WRONG RESULT"RESET);
+            printf("Expected %s Got %s\n", payload, test );
+            exit(1);
+        }
         free(payload);
     }
+
     //FREE TEST
     printf("Freeing...\n");
     for (int i = 0; i < myConf.num_hosts; i++) {
@@ -293,9 +343,10 @@ void basicOperations(struct sockaddr_in6 *targetIP) {
     }
 
     save_time("alloc_t0", alloc_latency, myConf.num_hosts);
-    save_time("read_t0", read_latency, NUM_ITERATIONS);
     save_time("write_t0", write_latency, NUM_ITERATIONS);
+    save_time("read_t0", read_latency, NUM_ITERATIONS);
     save_time("write2_t0", write_latency2, NUM_ITERATIONS);
+    save_time("read2_t0", read_latency2, NUM_ITERATIONS);
     save_time("free_t0", free_latency, myConf.num_hosts);
     free(read_latency);
     free(write_latency);
@@ -311,7 +362,7 @@ int main(int argc, char *argv[]) {
     //./applications/bin/testing -c ./tmp/config/distMem.cnf -t 4 -i 10000
     int c; 
     struct config myConf;
-    while ((c = getopt (argc, argv, "c:i:t:")) != -1) { 
+    while ((c = getopt (argc, argv, "c:i:t:b")) != -1) { 
     switch (c) 
       { 
       case 'c':
@@ -322,6 +373,9 @@ int main(int argc, char *argv[]) {
         break;
       case 't': 
         NUM_THREADS = atoi(optarg); 
+        break;
+      case 'b': 
+        BATCHED_MODE = 1; 
         break;
       case '?': 
           fprintf (stderr, "Unknown option `-%c'.\n", optopt);
