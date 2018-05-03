@@ -67,14 +67,13 @@ int epoll_client_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 
                 struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ethhdr + ETH_HDRLEN);
                 struct udphdr *udphdr = (struct udphdr *)((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN);
                 char *payload = ((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
-                /*
-                char s[INET6_ADDRSTRLEN];
-                char s1[INET6_ADDRSTRLEN];
-                inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
-                inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
-                printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
-                printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udphdr->dest) );
-                */
+                
+                // char s[INET6_ADDRSTRLEN];
+                // char s1[INET6_ADDRSTRLEN];
+                // inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
+                // inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
+                // printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
+                // printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udphdr->dest) );
                 struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
                 int isMyID = 1;
                 // Terrible hacks inbound, this code needs to be burned.

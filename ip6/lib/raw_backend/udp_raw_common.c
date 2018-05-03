@@ -53,7 +53,7 @@ int set_packet_filter(int sd, char *addr, char *interfaceName, int port) {
     int i, lineCount = 0;
     char tcpdump_command[512];
     FILE* tcpdump_output;
-    sprintf(tcpdump_command, "tcpdump -i %s dst port %d and ip6 net %s/48 -ddd",interfaceName, ntohs(port), addr);
+    sprintf(tcpdump_command, "tcpdump -i %s dst port %d and ip6 net %s/16 -ddd",interfaceName, ntohs(port), addr);
     // Super shitty hack. Do not try this at home kids.
     //sprintf(tcpdump_command, "tcpdump -i %s ether proto 0xffff and ether[56:2] == 0x%02x and ether[42:2] == 0x%02x%02x -ddd",interfaceName, ntohs(port), addr[4],addr[5]);
     printf("Active Filter: %s\n",tcpdump_command );
@@ -344,14 +344,15 @@ int flush_buffer() {
     }
 }
 
-int cooked_batched_send(struct pkt_rqst *pkts, int num_pkts) {
+int cooked_batched_send(struct pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids) {
 
     for (int i= 0; i < num_pkts; i++) {
         struct pkt_rqst pkt = pkts[i];
         struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ether_frame + ETH_HDRLEN);
         struct udphdr *udphdr = (struct udphdr *)((char *)ether_frame + ETH_HDRLEN + IP6_HDRLEN);
+        pkt.dst_addr.args = pkt.dst_addr.args | sub_ids[pkt.dst_addr.subid]<<16;
         //Set destination IP
-        iphdr->ip6_dst = *(struct in6_addr *)pkt.dst_addr;
+        iphdr->ip6_dst = *(struct in6_addr *)&pkt.dst_addr;
         // Payload length (16 bits): UDP header + UDP data
         iphdr->ip6_plen = htons (UDP_HDRLEN + pkt.datalen);
         // UDP header
@@ -366,7 +367,7 @@ int cooked_batched_send(struct pkt_rqst *pkts, int num_pkts) {
         // Copy our data
         memcpy (ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, pkt.data, pkt.datalen * sizeof (uint8_t));
         // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
-        int frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + pkt.datalen;
+        int frame_length = ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + pkt.datalen;
         /*    char dst_ip[INET6_ADDRSTRLEN];
         inet_ntop(AF_INET6,&iphdr->ip6_dst, dst_ip, sizeof dst_ip);
         printf("Sending to part two %s::%d\n", dst_ip, ntohs(udphdr->dest));*/
@@ -384,7 +385,7 @@ int cooked_send(struct pkt_rqst pkt) {
     struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ether_frame + ETH_HDRLEN);
     struct udphdr *udphdr = (struct udphdr *)((char *)ether_frame + ETH_HDRLEN + IP6_HDRLEN);
     //Set destination IP
-    iphdr->ip6_dst = *(struct in6_addr *)pkt.dst_addr;
+    iphdr->ip6_dst = *(struct in6_addr *)&pkt.dst_addr;
     // Payload length (16 bits): UDP header + UDP data
     iphdr->ip6_plen = htons (UDP_HDRLEN + pkt.datalen);
     // UDP header
@@ -402,7 +403,7 @@ int cooked_send(struct pkt_rqst pkt) {
 
     memcpy (ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, pkt.data, pkt.datalen * sizeof (uint8_t));
     // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
-    int frame_length = 6 + 6 + 2 + IP6_HDRLEN + UDP_HDRLEN + pkt.datalen;
+    int frame_length = ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + pkt.datalen;
     /*    char dst_ip[INET6_ADDRSTRLEN];
     inet_ntop(AF_INET6,&iphdr->ip6_dst, dst_ip, sizeof dst_ip);
     printf("Sending to part two %s::%d\n", dst_ip, ntohs(udphdr->dest));*/

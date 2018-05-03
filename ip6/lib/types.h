@@ -3,14 +3,14 @@
 #include <stdint.h>
 
 struct in6_memaddr {
-    uint32_t wildcard;
     uint16_t subid;
     uint16_t cmd;
+    uint32_t args;
     uint64_t paddr;
 };
 
 struct pkt_rqst {
-    struct in6_memaddr *dst_addr;
+    struct in6_memaddr dst_addr;
     int dst_port;
     char *data;
     int datalen;

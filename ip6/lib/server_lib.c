@@ -97,10 +97,12 @@ int write_mem_bulk(char *receiveBuffer, struct sockaddr_in6 *target_ip, struct i
 #else
     rte_memcpy((void *) *(&r_addr->paddr), receiveBuffer, BLOCK_SIZE);
 #endif
-    // struct in6_memaddr *returnID = (struct in6_memaddr *) (&target_ip->sin6_addr);
-    // returnID->cmd = r_addr->cmd;
-    // returnID->paddr = r_addr->paddr;
-    // send_udp_raw("", 0, (struct in6_memaddr *)&target_ip->sin6_addr, target_ip->sin6_port);
+    if ((r_addr->args & 0x0000ffff) == ((r_addr->args & 0xffff0000) >> 16)) {
+        struct in6_memaddr *returnID = (struct in6_memaddr *) (&target_ip->sin6_addr);
+        returnID->cmd = r_addr->cmd;
+        returnID->paddr = r_addr->paddr;
+        send_udp_raw("", 0, (struct in6_memaddr *)&target_ip->sin6_addr, target_ip->sin6_port);
+    }
     // TODO change to be meaningful, i.e., error message
     return EXIT_SUCCESS;
 }

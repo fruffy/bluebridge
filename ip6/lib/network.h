@@ -7,7 +7,7 @@
 #include "config.h"
 
 int send_udp_raw(char * sendBuffer, int msgBlockSize, struct in6_memaddr *remoteAddr, int dst_port);
-int send_udp_raw_batched(char *tx_buf, int msg_size, struct in6_memaddr *remote_addrs, int num_addrs, int dst_port);
+int send_udp_raw_batched(struct pkt_rqst *pkts, uint32_t *sub_ids, int num_addrs);
 int rcv_udp6_raw(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
 int rcv_udp6_raw_id(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
 

@@ -27,7 +27,7 @@ struct rx_ring {
 };
 
 extern int cooked_send(struct pkt_rqst pkt);
-extern int cooked_batched_send(struct pkt_rqst *pkts, int num_pkts);
+extern int cooked_batched_send(struct pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids);
 
 extern int epoll_client_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
 extern int epoll_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);

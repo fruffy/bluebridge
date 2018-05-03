@@ -1,17 +1,16 @@
 #define _GNU_SOURCE
-
+#include <stdio.h>            // printf() and sprintf()
+#include <stdlib.h>           // free(), alloc, and calloc()
+#include <string.h>           // strcpy, memset(), and memcpy()
+#include <arpa/inet.h>        // inet_pton() and inet_ntop()
+#include <unistd.h>           // close()
+#include <pthread.h>          // close()
 #include "network.h"
 #include "utils.h"
 #include "raw_backend/udp_raw_common.h"
 #ifndef DEFAULT
 #include "dpdk_backend/dpdk_common.h"
 #endif
-#include <stdio.h>            // printf() and sprintf()
-#include <stdlib.h>           // free(), alloc, and calloc()
-#include <string.h>           // strcpy, memset(), and memcpy()
-#include <arpa/inet.h>        // inet_pton() and inet_ntop()
-#include <unistd.h>           // close()
-#include <pthread.h>           // close()
 
 static __thread uint64_t sendLat = 0;
 static __thread uint64_t send_calls = 0;
@@ -29,7 +28,7 @@ static __thread uint64_t rcv_calls = 0;
 int send_udp_raw(char *tx_buf, int msg_size, struct in6_memaddr *remote_addr, int dst_port) {
     uint64_t start = getns(); 
     struct pkt_rqst pkt = {
-        .dst_addr = remote_addr,
+        .dst_addr = *remote_addr,
         .dst_port = dst_port,
         .data = tx_buf,
         .datalen = msg_size
@@ -51,17 +50,10 @@ int send_udp_raw(char *tx_buf, int msg_size, struct in6_memaddr *remote_addr, in
  */
 // TODO: Evaluate what variables and structures are actually needed here
 // TODO: Error handling
-int send_udp_raw_batched(char *tx_buf, int msg_size, struct in6_memaddr *remote_addrs, int num_addrs, int dst_port) {
+int send_udp_raw_batched(struct pkt_rqst *pkts, uint32_t *sub_ids, int num_addrs) {
     uint64_t start = getns();
-    struct pkt_rqst pkts[num_addrs];
-    for (int i = 0; i < num_addrs; i++){
-        pkts[i].dst_addr = &remote_addrs[i];
-        pkts[i].dst_port = dst_port;
-        pkts[i].data = tx_buf + msg_size * i;
-        pkts[i].datalen = msg_size;
-    }
 #ifdef DEFAULT
-    cooked_batched_send(pkts,num_addrs);
+    cooked_batched_send(pkts, num_addrs, sub_ids);
 #else
     dpdk_send(pkt);
 #endif

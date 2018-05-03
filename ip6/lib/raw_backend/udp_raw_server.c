@@ -37,13 +37,12 @@ void init_rx_socket_server(struct config *cfg) {
 int epoll_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     struct epoll_event events[1024];
     while (1) {
-        int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, 0);
+        int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, -1);
         //int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
         /*if (num_events == 0 && !server) {
             //printf("TIMEOUT!\n");
             return -1;
         }*/
-
         for (int i = 0; i < num_events; i++)  {
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
@@ -91,7 +90,7 @@ int epoll_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 
 int raw_rcv_loop(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
     struct epoll_event events[1024];
     while (1){
-        int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, 0);
+        int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, -1);
         //int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
         /*if (num_events == 0 && !server) {
             //printf("TIMEOUT!\n");
@@ -101,8 +100,14 @@ int raw_rcv_loop(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *tar
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
                 struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
-                if ( tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
-                    continue;
+                //printf("Got %d %d \n", event->events, tpacket_hdr->tp_status);
+                // if ( tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
+                //     //printf("Dis Kernel\n");
+                //     continue;
+                // }
+                if ((tpacket_hdr->tp_status & TP_STATUS_USER) == 0) {
+                    printf("Not ready yet\n");
+                    break;
                 }
                 if (tpacket_hdr->tp_status & TP_STATUS_COPY) {
                     next_packet(&ring_rx_g);

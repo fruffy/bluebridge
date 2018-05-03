@@ -54,14 +54,14 @@ def configureHosts(net):
         # Insert host configuration
         configString = "\"INTERFACE=" + \
             str(host) + \
-            "-eth0\n\HOSTS=0:0:102::,0:0:103::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=0:0:01" + \
+            "-eth0\n\HOSTS=102::,103::\n\SERVERPORT=5000\n\SRCPORT=0\n\SRCADDR=1" + \
             '{0:02x}'.format(hostNum) + "::\n\DEBUG=1\" > ./tmp/config/distMem.cnf"
         host.cmdPrint('echo ' + configString)
 
         # Configure the interface and respective routing
         host.cmdPrint('ip address change dev ' + str(host) +
-                      '-eth0 scope global 0:0:01' + '{0:02x}'.format(hostNum) + '::/48')
-        host.cmdPrint('ip -6 route add local 0:0:0100::/40  dev ' +
+                      '-eth0 scope global 01' + '{0:02x}'.format(hostNum) + '::/16')
+        host.cmdPrint('ip -6 route add local 0100::/8  dev ' +
                       str(host) + '-eth0')
         # host.cmdPrint('ip -6 route add local 0:0:01' +
         #               '{0:02x}'.format(hostNum) + '::/48 dev lo')
@@ -108,23 +108,23 @@ def run():
 
     # switch.cmdPrint('ifconfig -a')
     # switch = net.switch(name=('s1'))
-    # switch.cmdPrint('ip -6 route add local 0:0:01' +
-    #                 '{0:02x}'.format(hostNum) + '::/48 dev s1-eth' + str(hostNum))
+    # switch.cmdPrint('ip -6 route add local 01' +
+    #                 '{0:02x}'.format(hostNum) + '::/16 dev s1-eth' + str(hostNum))
     # switch.cmdPrint('ifconfig s1-eth' + str(hostNum) +' mtu 5000')
     # Our current "switch"
     i = 1
     while i <= HOSTS:
         # Routing entries per port
-        # cmd = "ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=0:0:10%d::/48,priority=1,actions=output:%d" % (i, i)
-        # os.system(cmd)
-        # cmd = "ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_src=0:0:10%d::/48,ipv6_dst=0:0:10%d::/48,priority=2,actions=output:in_port" % (
-        #     i, i)
-        # os.system(cmd)
+        cmd = "ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=10%d::/16,priority=1,actions=output:%d" % (i, i)
+        os.system(cmd)
+        cmd = "ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_src=10%d::/16,ipv6_dst=10%d::/16,priority=2,actions=output:in_port" % (
+            i, i)
+        os.system(cmd)
         # Gotta get dem jumbo frames
         os.system('ifconfig s1-eth' + str(i) + ' mtu 9000')
         i += 1
     # Flood ndp request messages (Deprecated)
-    os.system("ovs-ofctl add-flow s1 priority=1,actions=output:flood")
+    # os.system("ovs-ofctl add-flow s1 priority=1,actions=output:flood")
 
     # os.system("ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=ff02::1:ff00:0,priority=1,actions=output:flood")
     #net.hosts[0].cmdPrint('./applications/bin/testing tmp/config/distMem.cnf')

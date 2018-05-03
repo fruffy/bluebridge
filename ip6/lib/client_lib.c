@@ -7,6 +7,7 @@
 #include <stdlib.h>           // free(), alloc, and calloc()
 #include <stdio.h>            // printf() and sprintf()
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
+#include <limits.h>           // USHRT_MAX
 
 #include "client_lib.h"
 #include "utils.h"
@@ -70,11 +71,11 @@ struct in6_memaddr allocate_rmem(struct sockaddr_in6 *target_ip) {
     // Send the command to the target host and wait for response
     ((struct in6_memaddr *)&target_ip->sin6_addr)->cmd = ALLOC_CMD;
     print_debug("******ALLOCATE******");
-    send_udp_raw(tx_buf, BLOCK_SIZE, (struct in6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port);
+    send_udp_raw(tx_buf, BLOCK_SIZE, (struct in6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port); 
     struct in6_memaddr retAddr;
     memcpy(&retAddr, &target_ip->sin6_addr, IPV6_SIZE);
     rcv_udp6_raw_id(NULL, 0, target_ip, &retAddr);
-    memcpy(&retAddr.subid, ((char*)&target_ip->sin6_addr)+4, 2);
+    retAddr.subid = ((struct in6_memaddr *)&target_ip->sin6_addr)->subid;
     return retAddr;
 }
 
@@ -87,11 +88,11 @@ struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *target_ip, uint64_t 
     memcpy(tx_buf, &size, sizeof(uint64_t));
     ((struct in6_memaddr *)&target_ip->sin6_addr)->cmd = ALLOC_BULK_CMD;
     print_debug("******ALLOCATE BULK******");
-    send_udp_raw(tx_buf, BLOCK_SIZE, (struct in6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port);
+    send_udp_raw(tx_buf, BLOCK_SIZE, (struct in6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port); 
     struct in6_memaddr retAddr;
     memcpy(&retAddr, &target_ip->sin6_addr, IPV6_SIZE);
     rcv_udp6_raw_id(NULL, 0, target_ip, &retAddr);
-    memcpy(&retAddr.subid, ((char*)&target_ip->sin6_addr)+4, 2);
+    retAddr.subid = ((struct in6_memaddr *)&target_ip->sin6_addr)->subid;
     struct in6_memaddr *addrList = malloc(size * sizeof(struct in6_memaddr));
     // Convert the returned pointer into an array of pointers
     for (uint64_t i = 0; i < size; i++) {
@@ -112,7 +113,7 @@ int get_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, struct in
     remote_addr->cmd =  GET_CMD;
     print_debug("******GET DATA******");
     // Send request and store response
-    send_udp_raw(tx_buf, 0, remote_addr, target_ip->sin6_port);
+    send_udp_raw(NULL, 0, remote_addr, target_ip->sin6_port);
     int numBytes = rcv_udp6_raw_id(rx_buf, length, target_ip, remote_addr);
     return numBytes;
 }
@@ -134,13 +135,28 @@ int write_rmem(struct sockaddr_in6 *target_ip, char *payload, struct in6_memaddr
  * Sends a write command to the server based on remote_addr
  */
 // TODO: Implement meaningful return types and error messages
+static __thread uint32_t sub_ids[USHRT_MAX];
 int write_rmem_bulk(struct sockaddr_in6 *target_ip, char *payload, struct in6_memaddr *remote_addrs, int num_addrs) {
     // Send the command to the target host and wait for response
-    for (int i = 0; i< num_addrs; i++)
-        remote_addrs[i].cmd =  WRITE_BULK_CMD;
+    struct pkt_rqst pkts[num_addrs];
+    memset(sub_ids, 0, USHRT_MAX * sizeof(uint32_t));
+    for (int i = 0; i < num_addrs; i++){
+        pkts[i].dst_addr = remote_addrs[i];
+        pkts[i].dst_port = target_ip->sin6_port;
+        pkts[i].data = payload + BLOCK_SIZE * i;
+        pkts[i].datalen = BLOCK_SIZE;
+        pkts[i].dst_addr.args =sub_ids[remote_addrs[i].subid]+1; 
+        pkts[i].dst_addr.cmd =  WRITE_BULK_CMD;
+        sub_ids[remote_addrs[i].subid]++;
+    }
     print_debug("******WRITE DATA******");
-    send_udp_raw_batched(payload, BLOCK_SIZE, remote_addrs, num_addrs, target_ip->sin6_port);
-    //rcv_udp6_raw_id(NULL, 0, target_ip, remote_addr);
+    send_udp_raw_batched(pkts, sub_ids, num_addrs);
+    for (int i = 0; i< USHRT_MAX; i++) {
+        if (sub_ids[i] != 0){
+            //printf("BLOCKING on %d %u\n", i, sub_ids[i]);
+            rcv_udp6_raw_id(NULL, 0, target_ip, NULL);
+        }
+    }
     return EXIT_SUCCESS;
 }
 
@@ -176,7 +192,7 @@ int read_raid_mem(struct sockaddr_in6 *target_ip, int hosts, char (*bufs)[MAX_HO
     print_debug("******GET DATA******");
     for (int i=0; i<hosts;i++) {
         remote_addrs[i]->cmd =  GET_CMD;
-        send_udp_raw(tx_buf, BLOCK_SIZE, remote_addrs[i], target_ip->sin6_port);
+        send_udp_raw(NULL, 0, remote_addrs[i], target_ip->sin6_port);
     }
     for (int i=0; i <hosts;i++) {
         //TODO check a list to ensure that the correct messages are
