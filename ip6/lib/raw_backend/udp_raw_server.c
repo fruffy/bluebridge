@@ -107,6 +107,7 @@ int raw_rcv_loop(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *tar
                 // }
                 if ((tpacket_hdr->tp_status & TP_STATUS_USER) == 0) {
                     printf("Not ready yet\n");
+                    next_packet(&ring_rx_g);
                     break;
                 }
                 if (tpacket_hdr->tp_status & TP_STATUS_COPY) {

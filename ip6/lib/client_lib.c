@@ -102,8 +102,6 @@ struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *target_ip, uint64_t 
     return addrList;
 }
 
-
-
 /*
  * Reads the remote memory based on remote_addr
  */
@@ -159,7 +157,6 @@ int write_rmem_bulk(struct sockaddr_in6 *target_ip, char *payload, struct in6_me
     }
     return EXIT_SUCCESS;
 }
-
 
 /*
  * Releases the remote memory based on remote_addr
