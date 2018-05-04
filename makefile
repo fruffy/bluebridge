@@ -1,7 +1,7 @@
 MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 MSG_DIR    := $(MAKE_ROOT)/ip6
 APP_DIR    := $(MSG_DIR)/apps
-THRIFT_DIR    := $(MSG_DIR)/thrift
+THRIFT_DIR    := $(APP_DIR)/thrift
 
 CC = gcc
 CFLAGS += -c -Wextra -Wall -Wall -Wshadow -Wpointer-arith -Wcast-qual

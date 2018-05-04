@@ -10,19 +10,18 @@ ARR_SERVER_GLIB = $(GLIB_DIR)/$(ARR_SERVER).c $(GLIB_DIR)/$(ARR_SERVER)_types.c
 CLIENT = client
 CLIENT_DEPS = thrift_client.c $(MEM_SERVER_GLIB) $(ARR_SERVER_GLIB)
 
-LD_LIBRARY_PATH=/storage/Projects/bluebridge/ip6/thrift/lib/c_glib/.libs/
-C_GLIB_LIB = -L/storage/Projects/bluebridge/ip6/thrift/lib/c_glib/.libs/ -lthrift_c_glib
+C_GLIB_LIB = ../../../thrift/lib/c_glib/.libs/libthrift_c_glib.a
 BB_LIB = -L../../../ -lbluebridge
 BB_SRC = ../../../
-C_GLIB_SRC = /storage/Projects/bluebridge/ip6/thrift/lib/c_glib/src
+C_GLIB_SRC = ../../../thrift/lib/c_glib/src
 
 GEN_TEMPLATE = thrift --gen c_glib
 
 CC = gcc
-INCLUDES += -I$(BB_SRC) -I$(C_GLIB_SRC) `pkg-config --cflags glib-2.0 gobject-2.0`
+INCLUDES += -I$(C_GLIB_SRC) -I$(BB_SRC) `pkg-config --cflags glib-2.0 gobject-2.0`
 LIBS = $(INCLUDES)
+LIBS += $(C_GLIB_LIB)  $(BB_LIB) 
 LIBS += `pkg-config --libs glib-2.0 gobject-2.0`
-LIBS += -I$(BB_SRC) -I$(C_GLIB_SRC) $(BB_LIB) $(C_GLIB_LIB)
 
 all: $(SHARED_GLIB) $(MEM_SERVER) $(ARR_SERVER) $(CLIENT)
 

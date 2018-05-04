@@ -10,7 +10,7 @@ ARR_SERVER_GLIB = $(GLIB_DIR)/$(ARR_SERVER).c $(GLIB_DIR)/$(ARR_SERVER)_types.c
 CLIENT = client
 CLIENT_DEPS = thrift_client.c $(MEM_SERVER_GLIB) $(ARR_SERVER_GLIB)
 
-C_GLIB_LIB = -L../../../thrift/lib/c_glib/.libs/ -lthrift_c_glib
+C_GLIB_LIB = ../../../thrift/lib/c_glib/.libs/libthrift_c_glib.a
 BB_LIB = -L../../../ -lbluebridge
 BB_SRC = ../../../
 C_GLIB_SRC = ../../../thrift/lib/c_glib/src
