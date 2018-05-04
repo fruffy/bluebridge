@@ -67,17 +67,17 @@ class BlueBridgeTopo(Topo):
 
 def configureThrift(host, host_id):
 
-    if ARGS.thrift_udp:
-        folder = "tutorial_thrift"
+    if ARGS.thrift_tcp:
+        folder = "./apps/thrift/tcp"
     elif ARGS.thrift_ddc:
-        folder = "tutorial"
+        folder = "./apps/thrift/ddc"
     if (host_id == 1):
         host.cmdPrint('xterm  -T \"thrift%s\" -e \"'
-                      './thrift/%s/c_glib/tutorial_remote_mem_test_server '
+                      '%s/remote_mem_test '
                       '-c ./tmp/config/distMem.cnf; bash\" &' % (str(host)[1], folder))
     elif (host_id == 2):
         host.cmdPrint('xterm  -T \"thrift%s\" -e \"'
-                      './thrift/%s/c_glib/tutorial_simple_array_comp_server '
+                      '%s/simple_arr_comp '
                       '-c ./tmp/config/distMem.cnf; bash\" &' % (str(host)[1], folder))
     else:
         # Run bluebridge servers on the remaining hosts
@@ -135,8 +135,6 @@ def configureSwitch(num_hosts):
     if ARGS.is_p4:
         os.system('p4_switch/simple_switch/simple_switch_CLI < p4_switch/commands.txt')
     elif ARGS.use_broadcast:
-        # Flood NDP requests (Deprecated)
-        # os.system("ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=ff02::1:ff00:0,priority=1,actions=output:flood")
         # Flood all packets
         os.system("ovs-ofctl add-flow s1 priority=3,actions=output:flood")
     else:
@@ -152,7 +150,8 @@ def configureSwitch(num_hosts):
     for host_id in range(1, num_hosts + 1):
         # Gotta get dem jumbo frames
         os.system('ifconfig s1-eth%d mtu 9000' % host_id)
-
+    # Flood NDP requests (Deprecated)
+    os.system("ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=ff02::1:ff00:0,priority=1,actions=output:flood")
 
 def clean():
     ''' Clean any the running instances of POX '''
