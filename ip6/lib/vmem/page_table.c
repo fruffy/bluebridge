@@ -12,7 +12,6 @@
 #include <pthread.h>
 #include <time.h>
 #include <signal.h>
-
 static int *frameState;     // keeps track of how long a page has been in a frame
 static uint64_t *framePage;      // keeps track of which page is in a frame
 static struct page_table *the_page_table = 0;
@@ -99,7 +98,7 @@ void LRU_page_fault_handler(struct page_table *pt, uint64_t page) {
             readData(page,&pt->physmem[i*PAGE_SIZE]);
         }
         else {
-            uint64_t tempPage;
+            uint64_t tempPage = 0;
             deleteLRU(&tempPage);
             page_table_get_entry(pt, tempPage, &frame, &bits);
             if(bits == (PROT_READ|PROT_WRITE)) // if page has been written
@@ -138,7 +137,7 @@ void LFU_page_fault_handler(struct page_table *pt, uint64_t page) {
             readData(page,&pt->physmem[i*PAGE_SIZE]);
         }
         else {
-            uint64_t tempPage;
+            uint64_t tempPage = 0;
             deleteLFU(&tempPage);
             page_table_get_entry(pt, tempPage, &frame, &bits);
             if(bits == (PROT_READ|PROT_WRITE)) // if page has been written
@@ -471,7 +470,8 @@ struct page_table *page_table_create(uint64_t npages, uint64_t nframes, page_fau
     pt->fd = shm_open(filename,O_CREAT|O_RDWR,0777);
     if(!pt->fd) return 0;
 
-    ftruncate(pt->fd, page_space);
+    if (ftruncate(pt->fd, page_space) < 0)
+        perror("ftruncate");
 
     //unlink(filename);
     pt->physmem = mmap64(0,frame_space,PROT_READ|PROT_WRITE,MAP_SHARED, pt->fd, 0);
@@ -668,13 +668,13 @@ void print_page_faults() {
 void clean_page_table(struct page_table *pt) {
     if(replacementPolicy == LRU || replacementPolicy == FFIFO) {
         while(dllList->count > 0) {
-            uint64_t tempPage;
+            uint64_t tempPage = 0;
             deleteLRU(&tempPage);
         }
     }
     else if(replacementPolicy == LFU) {
         while(freqList->count > 0) {
-            uint64_t tempPage;
+            uint64_t tempPage = 0;
             deleteLFU(&tempPage);
         }
     }

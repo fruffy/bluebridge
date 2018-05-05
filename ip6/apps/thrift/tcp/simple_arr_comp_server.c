@@ -111,8 +111,8 @@ G_DEFINE_TYPE (TutorialSimpleArrCompHandler,
 
 static gboolean
 tutorial_simple_arr_comp_handler_increment_array (SimpleArrCompIf *iface,
-                                                           GArray                  **_return,
-                                                           const GArray             *arr,
+                                                           GByteArray                  **_return,
+                                                           const GByteArray             *arr,
                                                            const gint8               value,
                                                            const gint32              length,
                                                            CallException           **ouch,
@@ -122,26 +122,25 @@ tutorial_simple_arr_comp_handler_increment_array (SimpleArrCompIf *iface,
   THRIFT_UNUSED_VAR (error);
   THRIFT_UNUSED_VAR (ouch);
 
-  printf("Increment array\n");
+  //printf("Increment array\n");
 
-  *_return = g_array_sized_new(FALSE, TRUE, sizeof(gint8), length);
+  *_return = g_byte_array_sized_new(length);
   // result_arr = g_array_append_vals(result_arr, arr, length);
 
   // Increment the values
   for (int i = 0; i < length; i++) {
     gint8 val = g_array_index(arr, gint8, i) + value;
-    g_array_append_val(*_return, val);
+    g_byte_array_append(*_return, &val, sizeof(gint8));
   }
-
   // *_return = result_arr;
   return TRUE;
 }
 
 static gboolean
 tutorial_simple_arr_comp_handler_add_arrays (SimpleArrCompIf *iface,
-                                                      GArray                  **_return,
-                                                      const GArray             *array1,
-                                                      const GArray             *array2,
+                                                      GByteArray                  **_return,
+                                                      const GByteArray             *array1,
+                                                      const GByteArray             *array2,
                                                       const gint32              length,
                                                       CallException           **ouch,
                                                       GError                  **error)
@@ -150,13 +149,13 @@ tutorial_simple_arr_comp_handler_add_arrays (SimpleArrCompIf *iface,
   THRIFT_UNUSED_VAR (error);
   THRIFT_UNUSED_VAR (ouch);
 
-  printf("Add arrays\n");
+  //printf("Add arrays\n");
 
-  *_return = g_array_new(FALSE, TRUE, sizeof(gint8));
+  *_return = g_byte_array_new();
 
   for (int i = 0; i < length; i++) {
     gint8 val = g_array_index(array1, gint8, i) + g_array_index(array2, gint8, i);
-    g_array_append_val(*_return, val);
+    g_byte_array_append(*_return, &val, sizeof(gint8));
   }
 
   // *_return = result_array;
@@ -186,7 +185,7 @@ tutorial_simple_arr_comp_handler_mat_multiply (SimpleArrCompIf *iface,
   THRIFT_UNUSED_VAR (iface);
   THRIFT_UNUSED_VAR (error);
 
-  printf("Matrix multiply\n");
+  //printf("Matrix multiply\n");
 
   if (length != dimension->m) {
 
@@ -236,7 +235,7 @@ tutorial_simple_arr_comp_handler_word_count (SimpleArrCompIf *iface,
 
   *_return = wordcount;
 
-  printf("word_count (%d): ", length);
+  //printf("word_count (%d): ", length);
   // print_n_bytes(story->data, story->len);
 
   return TRUE;
@@ -278,17 +277,17 @@ tutorial_simple_arr_comp_handler_sort_array (SimpleArrCompIf *iface,
 
 static gboolean
 tutorial_simple_arr_comp_handler_no_op (SimpleArrCompIf  *iface,
-                                                 GArray                   **_return,
-                                                 const GArray              *num_array,
+                                                 GByteArray                   **_return,
+                                                 const GByteArray              *num_array,
                                                  const gint32               length,
                                                  GError                   **error)
 {
   THRIFT_UNUSED_VAR (iface);
   THRIFT_UNUSED_VAR (error);
 
-  GArray* result_array = g_array_sized_new(FALSE, TRUE, sizeof(gint8), length);
+  GByteArray* result_array = g_byte_array_new();
 
-  result_array = g_array_append_vals(result_array, num_array->data, length);
+  g_byte_array_append(result_array, num_array->data, length);
 
   *_return = result_array;
 
@@ -392,7 +391,6 @@ int main (int argc, char *argv[])
     printf("usage\n");
     return -1;
   }
-
   TutorialSimpleArrCompHandler *handler;
   SimpleArrCompProcessor *processor;
 

@@ -140,7 +140,7 @@ uint64_t test_server_alloc(RemoteMemTestIf *client, GByteArray **res, CallExcept
     printf("Testing allocate_mem...\t\t");
   
   uint64_t alloc_start = getns();
-  gboolean success = remote_mem_test_if_allocate_mem(client, res, 4096, &exception, &error);
+  gboolean success = remote_mem_test_if_allocate_mem(client, res, BLOCK_SIZE, &exception, &error);
   uint64_t alloc_time = getns() - alloc_start;
 
   if (print) {
@@ -161,7 +161,7 @@ uint64_t test_server_write(RemoteMemTestIf *client, GByteArray *res, CallExcepti
   if (print)
     printf("Testing write_mem...\t\t");
   // Clear payload
-  char *payload = malloc(4096);
+  char *payload = malloc(BLOCK_SIZE);
   snprintf(payload, 50, "HELLO WORLD! How are you?");
 
   uint64_t write_start = getns();
@@ -532,8 +532,8 @@ uint64_t no_op_rpc(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targe
 }
 
 void test_shared_pointer_rpc(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP) {
-  test_increment_array(client, 4095, targetIP, TRUE);
-  test_add_arrays(client, 4095, targetIP, TRUE);
+  test_increment_array(client, BLOCK_SIZE, targetIP, TRUE);
+  test_add_arrays(client, BLOCK_SIZE, targetIP, TRUE);
   // mat_multiply(client, targetIP);
   // word_count(client, targetIP);
   // sort_array(client, targetIP);
@@ -774,7 +774,7 @@ int main (int argc, char *argv[]) {
   int c; 
   struct config myConf;
   struct sockaddr_in6 *targetIP;
-  int iterations = 0, max_size = 4096, incr = 100;
+  int iterations = 0, max_size = BLOCK_SIZE, incr = 100;
 
   if (argc < 5) {
     usage(argv[0], "Not enough arguments");

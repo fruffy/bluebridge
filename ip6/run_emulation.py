@@ -25,13 +25,13 @@ PARSER.add_argument('--p4', '-p', dest='is_p4', default=False,
                     action='store_true', help='Use the P4 switch instead of OVS.')
 PARSER.add_argument('--broadcast', '-b', dest='use_broadcast', default=False,
                     action='store_true', help='Run the OVS with broadcast instead of individual forwarding.')
-PARSER.add_argument('--bb_servers', '-e', dest='servers', type=int, default=2,
+PARSER.add_argument('--bb-servers', '-e', dest='servers', type=int, default=2,
                     help='Specify the number of memory servers that should be launched.')
-PARSER.add_argument('--thrift_tcp', '-tt', dest='thrift_tcp', default=False,
+PARSER.add_argument('--thrift-tcp', '-tt', dest='thrift_tcp', default=False,
                     action='store_true', help='Run the testing framework with default Thrift.')
-PARSER.add_argument('--thrift_udp', '-tu', dest='thrift_udp', default=False,
+PARSER.add_argument('--thrift-udp', '-tu', dest='thrift_udp', default=False,
                     action='store_true', help='Run the testing framework with UDP Thrift.')
-PARSER.add_argument('--thrift_ddc', '-td', dest='thrift_ddc', default=False,
+PARSER.add_argument('--thrift-ddc', '-td', dest='thrift_ddc', default=False,
                     action='store_true', help='Run the testing framework with memory backed Thrift.')
 
 ARGS = PARSER.parse_args()
@@ -69,16 +69,17 @@ def configureThrift(host, host_id):
 
     if ARGS.thrift_tcp:
         folder = "./apps/thrift/tcp"
+        args = ""
     elif ARGS.thrift_ddc:
         folder = "./apps/thrift/ddc"
+        args = "-c ./tmp/config/distMem.cnf"
     if (host_id == 1):
+        args = "-c ./tmp/config/distMem.cnf"
         host.cmdPrint('xterm  -T \"thrift%s\" -e \"'
-                      '%s/remote_mem_test '
-                      '-c ./tmp/config/distMem.cnf; bash\" &' % (str(host)[1], folder))
+                      '%s/remote_mem_test %s; bash\" &' % (str(host)[1], folder, args))
     elif (host_id == 2):
         host.cmdPrint('xterm  -T \"thrift%s\" -e \"'
-                      '%s/simple_arr_comp '
-                      '-c ./tmp/config/distMem.cnf; bash\" &' % (str(host)[1], folder))
+                      '%s/simple_arr_comp %s; bash\" &' % (str(host)[1], folder, args))
     else:
         # Run bluebridge servers on the remaining hosts
         host.cmdPrint('xterm  -T \"server%s\" -e \"./apps/bin/event_server '

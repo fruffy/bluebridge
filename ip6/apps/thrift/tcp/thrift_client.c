@@ -24,7 +24,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-
+#include <netinet/tcp.h>
 
 #include <thrift/c_glib/protocol/thrift_binary_protocol.h>
 #include <thrift/c_glib/transport/thrift_buffered_transport.h>
@@ -33,9 +33,9 @@
 
 #include "gen-c_glib/remote_mem_test.h"
 #include "gen-c_glib/simple_arr_comp.h"
-#include "lib/client_lib.h"
 #include "lib/config.h"
 #include "lib/utils.h"
+#include "lib/types.h"
 
 
 
@@ -49,43 +49,7 @@ struct result {
   uint64_t rpc_end;
 };
 
-// UTILS --> copied to server b/c it's a pain to create a shared file (build issues)
-void get_args_pointer(struct in6_memaddr *ptr, struct sockaddr_in6 *targetIP) {
-  // Get random memory server
-  struct in6_addr *ipv6Pointer = gen_rdm_ip6_target();
-
-  // Put it's address in targetIP (why?)
-  memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-
-  // Allocate memory and receive the remote memory pointer
-  struct in6_memaddr temp = allocate_rmem(targetIP);
-
-  // Copy the remote memory pointer into the give struct pointer
-  memcpy(ptr, &temp, sizeof(struct in6_memaddr));
-}
-
-void marshall_shmem_ptr(GByteArray **ptr, struct in6_memaddr *addr) {
-  // Blank cmd section
-  uint16_t cmd = 0u;
-
-  // Copy subid (i.e., 103)
-  *ptr = g_byte_array_append(*ptr, (const gpointer) &(addr->subid), sizeof(uint16_t));
-  // Copy cmd (0)
-  *ptr = g_byte_array_append(*ptr, (const gpointer) &addr->cmd, sizeof(uint16_t));
-  // Copy args ()
-  *ptr = g_byte_array_append(*ptr, (const gpointer) &(addr->args), sizeof(uint32_t));
-  // Copy memory address (XXXX:XXXX)
-  *ptr = g_byte_array_append(*ptr, (const gpointer) &(addr->paddr), sizeof(uint64_t));
-}
-
-void unmarshall_shmem_ptr(struct in6_memaddr *result_addr, GByteArray *result_ptr) {
-  // Clear struct
-  memset(result_addr, 0, sizeof(struct in6_memaddr));
-  // Copy over received bytes
-  memcpy(result_addr, result_ptr->data, sizeof(struct in6_memaddr));
-}
-
-void populate_array(uint8_t **array, int array_len, uint8_t start_num, gboolean random) {
+void populate_array(uint8_t *array, int array_len, uint8_t start_num, gboolean random) {
   uint8_t num = start_num;
   if (!srand_called && random) {
     srand(time(NULL));
@@ -93,7 +57,7 @@ void populate_array(uint8_t **array, int array_len, uint8_t start_num, gboolean 
   }
 
   for (int i = 0; i < array_len; i++) {
-    (*array)[i] = num;
+    array[i] = num;
     if (!random) {
       num++;
       num = num % UINT8_MAX;
@@ -138,7 +102,7 @@ uint64_t test_server_alloc(RemoteMemTestIf *client, GByteArray **res, CallExcept
     printf("Testing allocate_mem...\t\t");
   
   uint64_t alloc_start = getns();
-  gboolean success = remote_mem_test_if_allocate_mem(client, res, 4096, &exception, &error);
+  gboolean success = remote_mem_test_if_allocate_mem(client, res, BLOCK_SIZE, &exception, &error);
   uint64_t alloc_time = getns() - alloc_start;
 
   if (print) {
@@ -160,7 +124,7 @@ uint64_t test_server_write(RemoteMemTestIf *client, GByteArray *res, CallExcepti
     printf("Testing write_mem...\t\t");
 
   // Clear payload
-  char *payload = malloc(4096);
+  char *payload = malloc(BLOCK_SIZE);
   snprintf(payload, 50, "HELLO WORLD! How are you?");
 
   uint64_t write_start = getns();
@@ -244,24 +208,23 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, gboolean p
   struct result res;
   GError *error = NULL;                       // Error (in transport, socket, etc.)
   CallException *exception = NULL;            // Exception (thrown by server)
-  GArray* result_array = g_array_new(FALSE, FALSE, sizeof(uint8_t));              // Result pointer
-  int arr_len = size;                           // Size of array to be sent
+  GByteArray* result_arr = NULL;            // Result pointer
+  int arr_len = size;                         // Size of array to be sent
   uint8_t incr_val = 1;                       // Value to increment each value in the array by
-  GArray* arr = g_array_new(TRUE, TRUE, sizeof(uint8_t));                               // Array to be sent (must be uint8_t to match char size)
-  uint8_t* temp = NULL;
+  GByteArray* arr = g_byte_array_new();       // Array to be sent (must be uint8_t to match char size)
 
   if (print)
-    printf("Testing increment_array...\t");
+    printf("Testing increment_array...\n");
 
   // Create argument array
-  temp = malloc(arr_len*sizeof(uint8_t));
-  populate_array(&temp, arr_len, 0, FALSE);
+  uint8_t temp[arr_len];
+  populate_array(temp, arr_len, 0, FALSE);
 
-  g_array_append_vals(arr, temp, arr_len);
-
+  g_byte_array_append(arr, temp, arr_len);
   // CALL RPC
   res.rpc_start = getns();
-  simple_arr_comp_if_increment_array(client, &result_array, arr, incr_val, arr_len, &exception, &error);
+  simple_arr_comp_if_increment_array(client, &result_arr, arr, incr_val, arr_len, &exception, &error);
+  // simple_arr_comp_if_increment_array(client, &result_ptr, args_ptr, incr_val, arr_len, &exception, &error);
   res.rpc_end = getns();
 
   if (print) {
@@ -271,11 +234,9 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, gboolean p
     } else if (exception) {
       gint32 err_code;
       gchar *message;
-
       g_object_get(exception, "message", &message,
                               "err_code", &err_code,
                               NULL);
-
       // TODO: make a print macro that changes the message based on the error_code
       printf("EXCEPTION %d: %s\n", err_code, message);
     }
@@ -284,15 +245,13 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, gboolean p
   if (print) {
     // Make sure the server returned the correct result
     for (int i = 0; i < arr_len; i++) {
-      if (g_array_index(result_array, uint8_t, i) != g_array_index(arr, uint8_t, i) + incr_val) {
-        printf("FAILED: result (%d) does not match expected result (%d) at index (%d)\n", g_array_index(result_array, uint8_t, i), g_array_index(arr, uint8_t, i) + incr_val, i);
+      if (g_array_index(result_arr, uint8_t, i) != g_array_index(arr, uint8_t, i) + incr_val) {
+        printf("FAILED: result (%d) does not match expected result (%d) at index (%d)\n", g_array_index(result_arr, uint8_t, i), g_array_index(arr, uint8_t, i) + incr_val, i);
       }
     }
   }
 
   // Free malloc'd and GByteArray memory
-  free(temp);
-
   if (print)
     printf("SUCCESS\n");
 
@@ -302,25 +261,22 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, gboolean p
 struct result test_add_arrays(SimpleArrCompIf *client, int size, gboolean print) {
   GError *error = NULL;                       // Error (in transport, socket, etc.)
   CallException *exception = NULL;            // Exception (thrown by server)
-  int arrays_len = size;                        // Size of array to be sent
-  GArray* array1 = g_array_sized_new(TRUE, TRUE, sizeof(uint8_t), arrays_len);  // Argument pointer
-  GArray* array2 = g_array_sized_new(TRUE, TRUE, sizeof(uint8_t), arrays_len);  // Argument pointer
-  GArray* result_arr = g_array_new(TRUE, TRUE, sizeof(uint8_t));;              // Result pointer
-  uint8_t *temp1;                              // Array 1 to be added
-  uint8_t *temp2;                              // Array 2 to be added
+  int arrays_len = size;                      // Size of array to be sent
+  GByteArray* array1 = g_byte_array_new();    // Argument pointer
+  GByteArray* array2 = g_byte_array_new();    // Argument pointer
+  GByteArray* result_arr = NULL;            // Result pointer
   struct result res;
 
   if (print)
     printf("Testing add_arrays...\t\t");
 
   // Populate arrays
-  temp1 = malloc(arrays_len*sizeof(uint8_t));
-  temp2 = malloc(arrays_len*sizeof(uint8_t));
-  populate_array(&temp1, arrays_len, 3, TRUE);
-  populate_array(&temp2, arrays_len, 5, TRUE);
-
-  g_array_append_vals(array1, temp1, arrays_len);
-  g_array_append_vals(array2, temp2, arrays_len);
+  uint8_t temp1[arrays_len];
+  uint8_t temp2[arrays_len];
+  populate_array(temp1, arrays_len, 3, TRUE);
+  populate_array(temp2, arrays_len, 5, TRUE);
+  g_byte_array_append(array1, temp1, arrays_len);
+  g_byte_array_append(array2, temp2, arrays_len);
 
   res.rpc_start = getns();
   // CALL RPC
@@ -354,11 +310,6 @@ struct result test_add_arrays(SimpleArrCompIf *client, int size, gboolean print)
       printf("SUCCESS\n");
     }
   }
-
-  // Free malloc'd and GByteArray memory
-  free(temp1);
-  free(temp2);
-
   return res;
 }
 
@@ -372,75 +323,75 @@ gint8 dot_prod_helper(GArray* x, const GArray* y, int m) {
   return res;
 }
 
-void mat_multiply(SimpleArrCompIf *client, gboolean print) {
-  GError *error = NULL;                       // Error (in transport, socket, etc.)
-  CallException *exception = NULL;            // Exception (thrown by server)
-  int32_t length = 10;
-  tuple* dimension = g_object_new(TYPE_TUPLE,
-                                 "n", 15,
-                                 "m", length,
-                                 NULL);
-  GArray* vector = g_array_sized_new(FALSE, FALSE, sizeof(uint8_t), length);  // Argument pointer
-  GPtrArray* matrix = g_ptr_array_sized_new(dimension->n);
-  GArray* result_vector = g_array_new(FALSE, FALSE, sizeof(uint8_t));              // Result pointer
+// void mat_multiply(SimpleArrCompIf *client, gboolean print) {
+//   GError *error = NULL;                       // Error (in transport, socket, etc.)
+//   CallException *exception = NULL;            // Exception (thrown by server)
+//   int32_t length = 10;
+//   tuple* dimension = g_object_new(TYPE_TUPLE,
+//                                  "n", 15,
+//                                  "m", length,
+//                                  NULL);
+//   GArray* vector = g_array_sized_new(FALSE, FALSE, sizeof(uint8_t), length);  // Argument pointer
+//   GPtrArray* matrix = g_ptr_array_sized_new(dimension->n);
+//   GArray* result_vector = g_array_new(FALSE, FALSE, sizeof(uint8_t));              // Result pointer
 
-  if(print) {
-    printf("Testing matrix multiply...");
-  }
+//   if(print) {
+//     printf("Testing matrix multiply...");
+//   }
 
-  // Populate vector
-  uint8_t *temp = malloc(length*sizeof(uint8_t));
-  populate_array(&temp, length, 1, FALSE);
-  g_array_append_vals(vector, temp, length);
+//   // Populate vector
+//   uint8_t *temp = malloc(length*sizeof(uint8_t));
+//   populate_array(temp, length, 1, FALSE);
+//   g_array_append_vals(vector, temp, length);
 
-  // Populate Matrix
-  for (int i = 0; i < dimension->n; i++) {
-    uint8_t *vec = malloc(length*sizeof(uint8_t));
-    populate_array(&vec, length, i, FALSE);
-    GArray* temp_row = g_array_sized_new(FALSE, FALSE, sizeof(uint8_t), length);
-    g_array_append_vals(temp_row, vec, length);
-    g_ptr_array_add(matrix, temp_row);
-    g_array_ref(temp_row);
-  }
+//   // Populate Matrix
+//   for (int i = 0; i < dimension->n; i++) {
+//     uint8_t *vec = malloc(length*sizeof(uint8_t));
+//     populate_array(vec, length, i, FALSE);
+//     GArray* temp_row = g_array_sized_new(FALSE, FALSE, sizeof(uint8_t), length);
+//     g_array_append_vals(temp_row, vec, length);
+//     g_ptr_array_add(matrix, temp_row);
+//     g_array_ref(temp_row);
+//   }
 
-  // for (int i = 0; i < dimension->n; i++) {
-  //   GArray* row = g_ptr_array_index(matrix, i);
-  //   for (int j = 0; j < dimension->m; j++) {
-  //     printf("%d,", g_array_index(row, uint8_t, j));
-  //   }
-  //   printf("\n");
-  // }
+//   // for (int i = 0; i < dimension->n; i++) {
+//   //   GArray* row = g_ptr_array_index(matrix, i);
+//   //   for (int j = 0; j < dimension->m; j++) {
+//   //     printf("%d,", g_array_index(row, uint8_t, j));
+//   //   }
+//   //   printf("\n");
+//   // }
 
-  simple_arr_comp_if_mat_multiply (client, &result_vector, vector, matrix, length, dimension, &exception, &error);
-  if (error) {
-    printf ("ERROR: %s\n", error->message);
-    g_clear_error (&error);
-  } else if (exception) {
-    gint32 err_code;
-    gchar *message;
+//   simple_arr_comp_if_mat_multiply (client, &result_vector, vector, matrix, length, dimension, &exception, &error);
+//   if (error) {
+//     printf ("ERROR: %s\n", error->message);
+//     g_clear_error (&error);
+//   } else if (exception) {
+//     gint32 err_code;
+//     gchar *message;
 
-    g_object_get(exception, "message", &message,
-                            "err_code", &err_code,
-                            NULL);
+//     g_object_get(exception, "message", &message,
+//                             "err_code", &err_code,
+//                             NULL);
 
-    // TODO: make a print macro that changes the message based on the error_code
-    printf("EXCEPTION %d: %s\n", err_code, message);
-  } else {
-    if (print) {
-      // Make sure the server returned the correct result
-      for (int i = 0; i < dimension->n; i++) {
-        gint8 expected = dot_prod_helper(g_ptr_array_index(matrix, i), vector, dimension->m);
-        gint8 got = g_array_index(result_vector, gint8, i);
-        if (got != expected) {
-          printf("FAILED: result (%d) does not match expected result (%d) at index (%d)\n", got, expected, i);
-        }
-      }
+//     // TODO: make a print macro that changes the message based on the error_code
+//     printf("EXCEPTION %d: %s\n", err_code, message);
+//   } else {
+//     if (print) {
+//       // Make sure the server returned the correct result
+//       for (int i = 0; i < dimension->n; i++) {
+//         gint8 expected = dot_prod_helper(g_ptr_array_index(matrix, i), vector, dimension->m);
+//         gint8 got = g_array_index(result_vector, gint8, i);
+//         if (got != expected) {
+//           printf("FAILED: result (%d) does not match expected result (%d) at index (%d)\n", got, expected, i);
+//         }
+//       }
 
-      printf("\tSUCCESS\n");
-    }
-  }
+//       printf("\tSUCCESS\n");
+//     }
+//   }
 
-}
+// }
 
 void word_count(SimpleArrCompIf *client) {
   // GError *error = NULL;                       // Error (in transport, socket, etc.)
@@ -461,21 +412,18 @@ void sort_array(SimpleArrCompIf *client) {
 uint64_t no_op_rpc(SimpleArrCompIf *client, int size) {
   GError *error = NULL;                       // Error (in transport, socket, etc.)
   int arr_len = size;                           // Size of array to be sent
-  GArray* arr = g_array_sized_new(TRUE, TRUE, sizeof(uint8_t), arr_len);  // Argument pointer
-  GArray* result_array = g_array_new(FALSE, FALSE, sizeof(uint8_t));              // Result pointer
-  uint8_t *temp;                               // Array to be sent (must be uint8_t to match char size)
-
+  GByteArray* arr = g_byte_array_new();                       // Argument pointer
+  GByteArray* result_arr = NULL;              // Result pointer
   THRIFT_UNUSED_VAR(client);
-
   // Create argument array
-  temp = malloc(arr_len*sizeof(uint8_t));
-  populate_array(&temp, arr_len, 0, FALSE);
+  uint8_t temp[arr_len];
+  populate_array(temp, arr_len, 0, FALSE);
 
-  g_array_append_vals(arr, temp, arr_len);
+  g_byte_array_append(arr, temp, arr_len);
 
   // CALL RPC
   uint64_t start = getns();
-  simple_arr_comp_if_no_op(client, &result_array, arr, arr_len, &error);
+  simple_arr_comp_if_no_op(client, &result_arr, arr, arr_len, &error);
   uint64_t rpc_time = getns() - start;
   if (error) {
     printf ("ERROR: %s\n", error->message);
@@ -486,8 +434,8 @@ uint64_t no_op_rpc(SimpleArrCompIf *client, int size) {
 }
 
 void test_shared_pointer_rpc(SimpleArrCompIf *client) {
-  test_increment_array(client, 4095, TRUE);
-  test_add_arrays(client, 4095, TRUE);
+  test_increment_array(client, BLOCK_SIZE, TRUE);
+  test_add_arrays(client, BLOCK_SIZE, TRUE);
   // mat_multiply(client, TRUE);
   // word_count(client, TRUE);
   // sort_array(client, TRUE);
@@ -544,9 +492,8 @@ void microbenchmark_perf(RemoteMemTestIf *client, int iterations) {
 void no_op_perf(SimpleArrCompIf *client, int iterations) {
   uint64_t *no_op_rpc_times = malloc(iterations*sizeof(uint64_t));
   uint64_t no_op_rpc_total = 0;
-
   for (int i = 0; i < iterations; i++) {
-    no_op_rpc_times[i] = no_op_rpc(client, 4095);
+    no_op_rpc_times[i] = no_op_rpc(client, BLOCK_SIZE);
     no_op_rpc_total += no_op_rpc_times[i];
   }
 
@@ -580,6 +527,7 @@ FILE* generate_file_handle(char* method_name, char* operation, int size) {
 
 void increment_array_perf(SimpleArrCompIf *client, int iterations, int max_size, int incr, char* method_name) {
   for (int s = 0; s < max_size; s+=incr) {
+    //printf("Increment Array Size: %d\n", s );
     FILE* rpc_start_file = generate_file_handle(method_name, "rpc_start", s);
     FILE* send_file = generate_file_handle(method_name, "c1_send", s);
     FILE* recv_file = generate_file_handle(method_name, "c1_recv", s);
@@ -600,6 +548,7 @@ void increment_array_perf(SimpleArrCompIf *client, int iterations, int max_size,
 
 void add_arrays_perf(SimpleArrCompIf *client, int iterations, int max_size, int incr, char* method_name) {
   for (int s = 0; s < max_size; s+=incr) {
+    //printf("Add Array Size: %d\n", s );
     FILE* rpc_start_file = generate_file_handle(method_name, "rpc_start", s);
     FILE* send_file = generate_file_handle(method_name, "c1_send", s);
     FILE* recv_file = generate_file_handle(method_name, "c1_recv", s);
@@ -652,19 +601,11 @@ int main (int argc, char *argv[]) {
   int c; 
   struct config myConf;
   struct sockaddr_in6 *targetIP;
-  int iterations = 0, max_size = 4096, incr = 100;
-
-  if (argc < 5) {
-    usage(argv[0], "Not enough arguments");
-    return -1;
-  }
+  int iterations = 0, max_size = BLOCK_SIZE, incr = 100;
 
   while ((c = getopt (argc, argv, "c:i:m:s:")) != -1) { 
   switch (c) 
     { 
-    case 'c':
-      myConf = set_bb_config(optarg, 0);
-      break;
     case 'i':
       iterations = atoi(optarg);
       break;
@@ -685,9 +626,6 @@ int main (int argc, char *argv[]) {
       return -1;
     } 
   }
-
-  targetIP = init_sockets(&myConf, 0);
-  set_host_list(myConf.hosts, myConf.num_hosts);
 
 #if (!GLIB_CHECK_VERSION (2, 36, 0))
   g_type_init ();
@@ -710,7 +648,7 @@ int main (int argc, char *argv[]) {
     g_clear_error (&error);
     return 1;
   }
-
+  int enable =1;
   remmem_client = g_object_new (TYPE_REMOTE_MEM_TEST_CLIENT,
                                 "input_protocol",  remmem_protocol,
                                 "output_protocol", remmem_protocol,

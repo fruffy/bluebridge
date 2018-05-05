@@ -1,13 +1,14 @@
 MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-MSG_DIR    := $(MAKE_ROOT)/ip6
-APP_DIR    := $(MSG_DIR)/apps
-THRIFT_DIR    := $(APP_DIR)/thrift
+MSG_DIR        := $(MAKE_ROOT)/ip6
+APP_DIR        := $(MSG_DIR)/apps
+THRIFT_APP_DIR := $(APP_DIR)/thrift
+THRIFT_DIR     := $(MSG_DIR)/thrift
 
-CC = gcc
-CFLAGS += -c -Wextra -Wall -Wall -Wshadow -Wpointer-arith -Wcast-qual
+CC = gcc 
+CFLAGS += -c -Wextra -Wall -Wshadow -Wpointer-arith -Wcast-qual
 CFLAGS += -std=gnu11 -pedantic
 # performance flags
-CFLAGS += -oFast
+CFLAGS += -O3
 # CFLAGS += -Wstrict-prototypes -Wmissing-prototypes
 LDFLAGS := -lpcap -pthread -lm -lrt
 
@@ -48,12 +49,18 @@ $(apps):
 	$(MAKE) -C $(APP_DIR) -f dpdk.mk O=dpdk/ APP=$@
 	@find $(MAKE_ROOT)/ip6/ -name '*.o*' -delete
 
-thrift: lib
-	@echo "Running thrift build in $(MAKE_ROOT)"
-	@$(MAKE) -C $(THRIFT_DIR) -f thrift.mk
+thrift:
+	@echo "Creating the thrift build in $(MAKE_ROOT)"
+	@$(MAKE) -C $(THRIFT_DIR)
+
+thrift-apps: lib
+	@$(MAKE) -C $(THRIFT_APP_DIR) -f thrift.mk
+
+thrift-all: thrift lib thrift-apps
 
 thrift-clean:
 	@echo "Cleaning thrift build in $(MAKE_ROOT)"
+	@$(MAKE) -C $(THRIFT_APP_DIR) -f thrift.mk clean
 	@$(MAKE) -C $(THRIFT_DIR) -f thrift.mk clean
 
 clean: 
