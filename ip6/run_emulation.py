@@ -66,20 +66,25 @@ class BlueBridgeTopo(Topo):
 
 
 def configureThrift(host, host_id):
-
-    if ARGS.thrift_tcp:
-        folder = "./apps/thrift/tcp"
-        args = ""
-    elif ARGS.thrift_ddc:
-        folder = "./apps/thrift/ddc"
-        args = "-c ./tmp/config/distMem.cnf"
+    args = ""
+    folder = "./apps/thrift"
     if (host_id == 1):
-        args = "-c ./tmp/config/distMem.cnf"
-        host.cmdPrint('xterm  -T \"thrift%s\" -e \"'
-                      '%s/remote_mem_test %s; bash\" &' % (str(host)[1], folder, args))
+        if ARGS.thrift_tcp:
+            args = "-c ./tmp/config/distMem.cnf -t "
+            host.cmdPrint('xterm  -T \"thrift%s\" -e \"'
+                          '%s/remote_mem_test %s; bash\" &' % (str(host)[1], folder, args))
+        elif ARGS.thrift_ddc:
+            args = "-c ./tmp/config/distMem.cnf "
+            host.cmdPrint('xterm  -T \"thrift%s\" -e \"'
+                          '%s/remote_mem_test %s; bash\" &' % (str(host)[1], folder, args))
     elif (host_id == 2):
-        host.cmdPrint('xterm  -T \"thrift%s\" -e \"'
-                      '%s/simple_arr_comp %s; bash\" &' % (str(host)[1], folder, args))
+        if ARGS.thrift_tcp:
+            host.cmdPrint('xterm  -T \"thrift%s\" -e \"'
+                          '%s/tcp_simple_arr_comp %s; bash\" &' % (str(host)[1], folder, args))
+        elif ARGS.thrift_ddc:
+            args = "-c ./tmp/config/distMem.cnf"
+            host.cmdPrint('xterm  -T \"thrift%s\" -e \"'
+                          '%s/ddc_simple_arr_comp %s; bash\" &' % (str(host)[1], folder, args))
     else:
         # Run bluebridge servers on the remaining hosts
         host.cmdPrint('xterm  -T \"server%s\" -e \"./apps/bin/event_server '
@@ -153,6 +158,7 @@ def configureSwitch(num_hosts):
         os.system('ifconfig s1-eth%d mtu 9000' % host_id)
     # Flood NDP requests (Deprecated)
     os.system("ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dst=ff02::1:ff00:0,priority=1,actions=output:flood")
+
 
 def clean():
     ''' Clean any the running instances of POX '''

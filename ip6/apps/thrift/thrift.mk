@@ -1,6 +1,5 @@
 MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-TCP_DIR = $(MAKE_ROOT)/tcp
-DDC_DIR = $(MAKE_ROOT)/ddc
+#DDC_DIR = $(MAKE_ROOT)
 
 C_GLIB_LIB = $(MAKE_ROOT)/../../thrift/lib/c_glib/.libs/libthrift_c_glib.a
 BB_LIB = -L$(MAKE_ROOT)/../../ -lbluebridge
@@ -15,20 +14,52 @@ LIBS = $(INCLUDES)
 LIBS += $(C_GLIB_LIB) $(BB_LIB) 
 LIBS += `pkg-config --libs glib-2.0 gobject-2.0`
 CFLAGS = 
-# CFLAGS = -Wextra -Wall -Wshadow -Wpointer-arith -Wcast-qual
-# CFLAGS += -std=gnu11
-# performance flags
 
-export C_GLIB_LIB BB_LIB BB_SRC C_GLIB_SRC LIBS CC CFLAGS GEN_TEMPLATE
-all:
-	@-rm -rf $(TCP_DIR)/gen-c_glib
-	@-rm -rf $(DDC_DIR)/gen-c_glib
-	@$(MAKE) -C $(TCP_DIR)
-	@$(MAKE) -C $(DDC_DIR)
-	#-rm -rf $(objDir)
+
+GLIB_DIR = gen-c_glib
+SHARED_GLIB = $(GLIB_DIR)/shared_types.c
+
+MEM_SERVER = remote_mem_test
+MEM_SERVER_GLIB =  $(GLIB_DIR)/$(MEM_SERVER).c $(GLIB_DIR)/$(MEM_SERVER)_types.c
+
+ARR_SERVER = simple_arr_comp
+ARR_SERVER_GLIB = $(GLIB_DIR)/$(ARR_SERVER).c $(GLIB_DIR)/$(ARR_SERVER)_types.c
+
+DDC_CLIENT = ddc_client
+TCP_CLIENT = tcp_client
+
+DDC_CLIENT_DEPS = $(DDC_CLIENT).c $(MEM_SERVER_GLIB) $(ARR_SERVER_GLIB) client_common.c
+TCP_CLIENT_DEPS = $(TCP_CLIENT).c $(MEM_SERVER_GLIB) $(ARR_SERVER_GLIB) client_common.c
+
+all: $(SHARED_GLIB) $(MEM_SERVER) $(ARR_SERVER) $(DDC_CLIENT) $(TCP_CLIENT)
+
+$(SHARED_GLIB):
+	@$(GEN_TEMPLATE) shared.thrift
+
+gen-c_glib/$(MEM_SERVER).c:
+	@$(GEN_TEMPLATE) $(MEM_SERVER).thrift
+
+gen-c_glib/$(ARR_SERVER).c:
+	@$(GEN_TEMPLATE) $(ARR_SERVER).thrift
+
+$(ARR_SERVER): ddc_$(ARR_SERVER)_server.c tcp_$(ARR_SERVER)_server.c $(ARR_SERVER_GLIB)
+	@echo "Building $(ARR_SERVER)"
+	@$(CC) -o ddc_$(ARR_SERVER) ddc_$(ARR_SERVER)_server.c $(ARR_SERVER_GLIB) $(SHARED_GLIB) $(CFLAGS) $(LIBS)
+	@$(CC) -o tcp_$(ARR_SERVER) tcp_$(ARR_SERVER)_server.c $(ARR_SERVER_GLIB) $(SHARED_GLIB) $(CFLAGS) $(LIBS)
+
+$(MEM_SERVER): $(MEM_SERVER)_server.c $(MEM_SERVER_GLIB)
+	@echo "Building $(MEM_SERVER)"
+	@$(CC) -o $@ $(MEM_SERVER)_server.c $(MEM_SERVER_GLIB) $(SHARED_GLIB) $(CFLAGS) $(LIBS)
+
+$(DDC_CLIENT): $(DDC_CLIENT_DEPS)
+	@echo "Building client"
+	@$(CC) -o $@ $(DDC_CLIENT_DEPS) $(SHARED_GLIB) $(CFLAGS) $(LIBS)
+
+$(TCP_CLIENT): $(TCP_CLIENT_DEPS)
+	@echo "Building client"
+	@$(CC) -o $@ $(TCP_CLIENT_DEPS) $(SHARED_GLIB) $(CFLAGS) $(LIBS)
 
 clean:
 	@echo "Cleaning..."
-	@$(MAKE) -C $(TCP_DIR) clean
-	@$(MAKE) -C $(DDC_DIR) clean
-
+	@$(RM) -r $(GLIB_DIR)
+	@$(RM) ddc_$(ARR_SERVER) tcp_$(ARR_SERVER) $(MEM_SERVER) $(DDC_CLIENT) $(TCP_CLIENT)

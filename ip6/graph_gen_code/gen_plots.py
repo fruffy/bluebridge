@@ -82,17 +82,29 @@ def get_bw(input_file):
     return avg_rate
 
 
-def get_latencies(input_file, lat_types, thread):
+def get_latencies(input_dir, lat_types, thread):
 
     lat_results = {}
-    for latency in lat_types:
-        data = read_list("%s/%s_t%d.csv" % (input_file, latency, thread))
+    for lat_type in lat_types:
+        data = read_list("%s/%s_t%d.csv" % (input_dir, lat_type, thread))
         flat_data = [item for subdata in data[1:] for item in subdata]
-        lat_results[latency] = avg(flat_data) / 1000
+        lat_results[lat_type] = avg(flat_data) / 1000
     return lat_results
 
 
-def plot_results():
+def get_thrift_latencies(input_dir, lat_types, max_size, step_size):
+
+    lat_results = {}
+    for lat_type in lat_types:
+        lat_results[lat_type] = []
+        for chunk in range(0, max_size, step_size):
+            data = read_list("%s/%s_%d.txt" % (input_dir, lat_type, chunk))
+            flat_data = [item for subdata in data[1:] for item in subdata]
+            lat_results[lat_type].append(avg(flat_data) / 1000)
+    return lat_results
+
+
+def plot_thread_latency():
 
     N_THREADS = 65
     it = 1000000
@@ -146,4 +158,25 @@ def plot_results():
     plt.savefig("graph_gen_code/microbench_latency.png")
 
 
-plot_results()
+def plot_thrift_latencies():
+    lat_types = ["add_arr_rpc_lat", "incr_arr_rpc_lat"]
+    tests = ["ddc", "tcp"]
+    max_size = 4096
+    step_size = 100
+    dir = "../results/thrift/"
+    lats = {}
+    for lat_type in lat_types:
+        x_step = list(range(0, max_size, step_size))
+        for test in tests:
+            lats = get_thrift_latencies(dir + test, lat_types, max_size, step_size)
+            plt.plot(x_step, lats[lat_type], label="Latency %s" % test)
+        plt.xlabel('Array Size')
+        plt.ylabel('Latency')
+        plt.legend(loc='upper left')
+        plt.savefig("%s_%d" % (lat_type, max_size))
+        plt.gcf().clear()
+
+
+if __name__ == '__main__':
+    # plot_thread_latency()
+    plot_thrift_latencies()

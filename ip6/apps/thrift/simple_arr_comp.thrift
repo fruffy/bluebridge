@@ -22,13 +22,13 @@ service SimpleArrComp {
 	 * Multiply an array and matrix. Store the result in result_ptr. 
 	 * Will throw an exception if the dimension and length of the matrix and array do not match
 	 */
-	binary mat_multiply(1:binary array, 2:binary matrix, 3:i32 length, 4:tuple dimension) throws (1:shared.CallException ouch),
+	void mat_multiply(1:binary array, 2:binary matrix, 3:i32 length, 4:tuple dimension, 5:binary result_ptr) throws (1:shared.CallException ouch),
 
 	/**
 	 * Gets the word count for a specific pointer and length
 	 * Will throw an exception if the pointer is invalid
 	 */
-	i32 word_count(1:string story, 2:i32 length) throws (1:shared.CallException ouch),
+	i32 word_count(1:binary story, 2:i32 length) throws (1:shared.CallException ouch),
 
 	/**
 	 * Sort a number array, return the sorted array

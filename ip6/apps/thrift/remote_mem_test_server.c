@@ -33,6 +33,11 @@
 #include <thrift/c_glib/transport/thrift_buffered_udp_transport_factory.h>
 #include <thrift/c_glib/transport/thrift_udp_socket.h>
 #include <thrift/c_glib/transport/thrift_buffered_udp_transport.h>
+#include <thrift/c_glib/server/thrift_simple_server.h>
+#include <thrift/c_glib/transport/thrift_buffered_transport_factory.h>
+#include <thrift/c_glib/transport/thrift_server_socket.h>
+#include <thrift/c_glib/transport/thrift_server_transport.h>
+
 
 #include "gen-c_glib/remote_mem_test.h"
 #include "lib/client_lib.h"
@@ -201,12 +206,12 @@ tutorial_remote_mem_test_handler_read_mem (RemoteMemTestIf *iface,
   THRIFT_UNUSED_VAR (error);
   THRIFT_UNUSED_VAR (ouch);
 
-  char *payload = malloc(4096);
+  char *payload = malloc(BLOCK_SIZE);
 
   struct in6_memaddr args_addr;
   unmarshall_shmem_ptr(&args_addr, (GByteArray *)pointer);
 
-  get_rmem(payload, 4096, targetIP, &args_addr);
+  get_rmem(payload, BLOCK_SIZE, targetIP, &args_addr);
 
   // printf("read_mem()\n");
 
@@ -355,11 +360,15 @@ int main (int argc, char *argv[])
     printf("usage\n");
     return -1;
   }
+  int isTCP = 0;
   int c; 
   struct config myConf;
-  while ((c = getopt (argc, argv, "c:")) != -1) { 
+  while ((c = getopt (argc, argv, "tc:")) != -1) { 
   switch (c) 
     { 
+    case 't':
+      isTCP = 1;
+      break;
     case 'c':
       myConf = set_bb_config(optarg, 0);
       break;
@@ -378,7 +387,8 @@ int main (int argc, char *argv[])
   TutorialRemoteMemTestHandler *handler;
   RemoteMemTestProcessor *processor;
 
-  ThriftTransport *server_transport;
+  ThriftServerTransport *server_transport;
+  ThriftTransport *udp_transport;
   ThriftTransportFactory *transport_factory;
   ThriftProtocolFactory *protocol_factory;
 
@@ -405,19 +415,20 @@ int main (int argc, char *argv[])
                   "handler", handler,
                   NULL);
 
+  if (isTCP) {
+  printf("Switching to TCP server...\n");
   /* Create our server socket, which binds to the specified port and
      listens for client connections */
   server_transport =
-    g_object_new (THRIFT_TYPE_UDP_SOCKET,
-                  "listen_port", 9080,
-                  "server", TRUE,
+    g_object_new (THRIFT_TYPE_SERVER_SOCKET,
+                  "port", 9080,
                   NULL);
 
   /* Create our transport factory, used by the server to wrap "raw"
      incoming connections from the client (in this case with a
      ThriftBufferedUDPTransport to improve performance) */
   transport_factory =
-    g_object_new (THRIFT_TYPE_BUFFERED_UDP_TRANSPORT_FACTORY,
+    g_object_new (THRIFT_TYPE_BUFFERED_TRANSPORT_FACTORY,
                   NULL);
 
   /* Create our protocol factory, which determines which wire protocol
@@ -428,21 +439,55 @@ int main (int argc, char *argv[])
 
   /* Create the server itself */
   server =
-    g_object_new (THRIFT_TYPE_SIMPLE_UDP_SERVER,
+    g_object_new (THRIFT_TYPE_SIMPLE_SERVER,
                   "processor",                processor,
-                  "server_udp_transport",         server_transport,
+                  "server_transport",         server_transport,
                   "input_transport_factory",  transport_factory,
                   "output_transport_factory", transport_factory,
                   "input_protocol_factory",   protocol_factory,
                   "output_protocol_factory",  protocol_factory,
                   NULL);
+  } else {
 
-  // Open our socket so we can use it
-  thrift_transport_open (server_transport, &error);
-  if (error) {
-    printf ("ERROR: %s\n", error->message);
-    g_clear_error (&error);
-    return 1;
+    /* Create our server socket, which binds to the specified port and
+       listens for client connections */
+    udp_transport =
+      g_object_new (THRIFT_TYPE_UDP_SOCKET,
+                    "listen_port", 9080,
+                    "server", TRUE,
+                    NULL);
+
+    /* Create our transport factory, used by the server to wrap "raw"
+       incoming connections from the client (in this case with a
+       ThriftBufferedUDPTransport to improve performance) */
+    transport_factory =
+      g_object_new (THRIFT_TYPE_BUFFERED_UDP_TRANSPORT_FACTORY,
+                    NULL);
+  /* Create our protocol factory, which determines which wire protocol
+     the server will use (in this case, Thrift's binary protocol) */
+  protocol_factory =
+    g_object_new (THRIFT_TYPE_BINARY_PROTOCOL_FACTORY,
+                  NULL);
+  /* Create the server itself */
+  server =
+    g_object_new (THRIFT_TYPE_SIMPLE_UDP_SERVER,
+                  "processor",                processor,
+                  "server_udp_transport",         udp_transport,
+                  "input_transport_factory",  transport_factory,
+                  "output_transport_factory", transport_factory,
+                  "input_protocol_factory",   protocol_factory,
+                  "output_protocol_factory",  protocol_factory,
+                  NULL);
+  }
+
+  if (isTCP == 0) {
+    // Open our socket so we can use it
+    thrift_transport_open (udp_transport, &error);
+    if (error) {
+      printf ("ERROR: %s\n", error->message);
+      g_clear_error (&error);
+      return 1;
+    }
   }
 
   /* Install our SIGINT handler, which handles Ctrl-C being pressed by
