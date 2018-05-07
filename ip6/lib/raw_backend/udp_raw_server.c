@@ -34,7 +34,7 @@ void init_rx_socket_server(struct config *cfg) {
     setup_rx_socket(cfg, my_port, thread_id, &epoll_fd_g, &ring_rx_g);
 }
 
-int epoll_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
+int epoll_server_rcv(char *receiveBuffer, int msg_size, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
     struct epoll_event events[1024];
     while (1) {
         int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, -1);
@@ -71,23 +71,48 @@ int epoll_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 
                 printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
                 printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udphdr->dest) );
                 */
-                memcpy(receiveBuffer, payload, msgBlockSize);
-                if (remoteAddr != NULL) {
-                    memcpy(remoteAddr, &iphdr->ip6_dst, IPV6_SIZE);
+                memcpy(receiveBuffer, payload, msg_size);
+                if (remote_addr != NULL) {
+                    memcpy(remote_addr, &iphdr->ip6_dst, IPV6_SIZE);
                 }
-                memcpy(targetIP->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
-                targetIP->sin6_port = udphdr->source;
+                memcpy(target_ip->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
+                target_ip->sin6_port = udphdr->source;
                 tpacket_hdr->tp_status = TP_STATUS_KERNEL;
                 next_packet(&ring_rx_g);
-                return msgBlockSize;
+                return msg_size;
            }
         }
     }
     return EXIT_SUCCESS;
 }
 
+void handle_packet(struct tpacket_hdr *tpacket_hdr, char* receiveBuffer, int msg_size, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
+    struct eth_hdr *eth_hdr = (struct eth_hdr *)((char *) tpacket_hdr + tpacket_hdr->tp_mac);
+    struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((char *)eth_hdr + ETH_HDRLEN);
+    struct udphdr *udp_hdr = (struct udphdr *)((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
+    char *payload = ((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
+    // This should be debug code...
+    /*
+    char s[INET6_ADDRSTRLEN];
+    char s1[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6, &ip_hdr->ip6_src, s, sizeof s);
+    inet_ntop(AF_INET6, &ip_hdr->ip6_dst, s1, sizeof s1);
+    printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
+    printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udphdr->dest) );
+    */
+    memcpy(receiveBuffer, payload, msg_size);
+    if (remote_addr != NULL) {
+        memcpy(remote_addr, &ip_hdr->ip6_dst, IPV6_SIZE);
+    }
+    memcpy(target_ip->sin6_addr.s6_addr, &ip_hdr->ip6_src, IPV6_SIZE);
+    target_ip->sin6_port = udp_hdr->source;
+    tpacket_hdr->tp_status = TP_STATUS_KERNEL;
+    next_packet(&ring_rx_g);
+    process_request(payload, target_ip, (struct in6_memaddr *)&ip_hdr->ip6_dst);
+}
+
 //This function is hacky bullshit, needs a lot of improvement.
-int raw_rcv_loop(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
+int raw_rcv_loop(char *receiveBuffer, int msg_size, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
     struct epoll_event events[1024];
     while (1){
         int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, -1);
@@ -118,28 +143,7 @@ int raw_rcv_loop(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *tar
                     next_packet(&ring_rx_g);
                     continue;
                 }
-                struct eth_hdr *eth_hdr = (struct eth_hdr *)((char *) tpacket_hdr + tpacket_hdr->tp_mac);
-                struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((char *)eth_hdr + ETH_HDRLEN);
-                struct udphdr *udp_hdr = (struct udphdr *)((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
-                char *payload = ((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
-                // This should be debug code...
-                /*
-                char s[INET6_ADDRSTRLEN];
-                char s1[INET6_ADDRSTRLEN];
-                inet_ntop(AF_INET6, &ip_hdr->ip6_src, s, sizeof s);
-                inet_ntop(AF_INET6, &ip_hdr->ip6_dst, s1, sizeof s1);
-                printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
-                printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udphdr->dest) );
-                */
-                memcpy(receiveBuffer, payload, msgBlockSize);
-                if (remoteAddr != NULL) {
-                    memcpy(remoteAddr, &ip_hdr->ip6_dst, IPV6_SIZE);
-                }
-                memcpy(targetIP->sin6_addr.s6_addr, &ip_hdr->ip6_src, IPV6_SIZE);
-                targetIP->sin6_port = udp_hdr->source;
-                tpacket_hdr->tp_status = TP_STATUS_KERNEL;
-                next_packet(&ring_rx_g);
-                process_request(payload, targetIP, (struct in6_memaddr *)&ip_hdr->ip6_dst);
+                handle_packet(tpacket_hdr, receiveBuffer, msg_size, target_ip, remote_addr);
            }
         }
     }
@@ -148,10 +152,10 @@ int raw_rcv_loop(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *tar
 
 void enter_raw_server_loop(uint16_t server_port) {
     char receiveBuffer[BLOCK_SIZE];
-    struct sockaddr_in6 *targetIP = calloc(1, sizeof(struct sockaddr_in6));
-    targetIP->sin6_port = htons(server_port);
-    struct in6_memaddr remoteAddr;
-    raw_rcv_loop(receiveBuffer, BLOCK_SIZE, targetIP, &remoteAddr);
+    struct sockaddr_in6 *target_ip = calloc(1, sizeof(struct sockaddr_in6));
+    target_ip->sin6_port = htons(server_port);
+    struct in6_memaddr remote_addr;
+    raw_rcv_loop(receiveBuffer, BLOCK_SIZE, target_ip, &remote_addr);
 }
 
 int get_rx_socket_server() {

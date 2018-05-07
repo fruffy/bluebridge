@@ -398,7 +398,8 @@ struct page_table *init_virtual_memory(uint64_t npages, uint64_t nframes, const 
         hashTable = (struct hash *) calloc(nframes, sizeof(struct hash));
         pt = page_table_create( npages, nframes, RAND_page_fault_handler );
     }
-    else if(replacementPolicy == FFIFO) {
+    //FFIFO
+    else {
         hashTable = (struct hash *) calloc(nframes, sizeof(struct hash));
         dllList = (struct dllList*) calloc(nframes, sizeof(struct dllListNode));
         dllList->count = 0;
