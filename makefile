@@ -54,7 +54,8 @@ thrift:
 	@$(MAKE) -C $(THRIFT_DIR)
 
 thrift-apps: lib
-	@$(MAKE) -C $(THRIFT_APP_DIR) -f thrift.mk
+	@$(MAKE) -C $(THRIFT_APP_DIR) clean
+	@$(MAKE) -C $(THRIFT_APP_DIR)
 
 thrift-all: thrift lib thrift-apps
 

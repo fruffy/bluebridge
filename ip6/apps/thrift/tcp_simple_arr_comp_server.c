@@ -39,6 +39,8 @@
 #include "lib/client_lib.h"
 #include "lib/config.h"
 #include "lib/utils.h"
+#include "thrift_utils.h"
+
 
 G_BEGIN_DECLS
 

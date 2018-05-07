@@ -38,6 +38,7 @@
 #include "lib/client_lib.h"
 #include "lib/config.h"
 #include "lib/utils.h"
+#include "thrift_utils.h"
 
 G_BEGIN_DECLS
 
@@ -106,41 +107,6 @@ struct sockaddr_in6 *targetIP;
 
 /* The implementation of TutorialSimpleArrCompHandler follows. */
 
-void get_result_pointer(struct in6_memaddr *ptr) {
-  // Get random memory server
-  struct in6_addr *ipv6Pointer = gen_rdm_ip6_target();
-
-  // Put it's address in targetIP (why?)
-  memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-
-  // Allocate memory and receive the remote memory pointer
-  struct in6_memaddr temp = allocate_rmem(targetIP);
-
-  // Copy the remote memory pointer into the give struct pointer
-  memcpy(ptr, &temp, sizeof(struct in6_memaddr));
-}
-
-void marshall_shmem_ptr(GByteArray **ptr, struct in6_memaddr *addr) {
-  // Blank cmd section
-  //uint16_t cmd = 0u;
-
-  // Copy subid (i.e., 103)
-  *ptr = g_byte_array_append(*ptr, (const gpointer) &(addr->subid), sizeof(uint16_t));
-  // Copy cmd (0)
-  *ptr = g_byte_array_append(*ptr, (const gpointer) &addr->cmd, sizeof(uint16_t));
-  // Copy args ()
-  *ptr = g_byte_array_append(*ptr, (const gpointer) &(addr->args), sizeof(uint32_t));
-  // Copy memory address (XXXX:XXXX)
-  *ptr = g_byte_array_append(*ptr, (const gpointer) &(addr->paddr), sizeof(uint64_t));
-}
-
-void unmarshall_shmem_ptr(struct in6_memaddr *result_addr, GByteArray *result_ptr) {
-  // Clear struct
-  memset(result_addr, 0, sizeof(struct in6_memaddr));
-  // Copy over received bytes
-  memcpy(result_addr, result_ptr->data, sizeof(struct in6_memaddr));
-}
-
 
 G_DEFINE_TYPE (TutorialSimpleArrCompHandler,
                tutorial_simple_arr_comp_handler,
@@ -162,7 +128,7 @@ tutorial_simple_arr_comp_handler_increment_array (SimpleArrCompIf *iface,
   GByteArray* result_ptr = g_byte_array_new();
   struct in6_memaddr result_addr;
 
-  get_result_pointer(&result_addr);
+  get_result_pointer(targetIP, &result_addr);
 
   marshall_shmem_ptr(&result_ptr, &result_addr);
 
@@ -215,7 +181,7 @@ tutorial_simple_arr_comp_handler_add_arrays (SimpleArrCompIf *iface,
   struct in6_memaddr result_addr;
 
   // printf("Get result pointer\n");
-  get_result_pointer(&result_addr);
+  get_result_pointer(targetIP, &result_addr);
 
   // printf("marshall_shmem_ptr\n");
   marshall_shmem_ptr(&result_ptr, &result_addr);
@@ -353,7 +319,7 @@ tutorial_simple_arr_comp_handler_no_op (SimpleArrCompIf  *iface,
   GByteArray* result_ptr = g_byte_array_new();
   struct in6_memaddr result_addr;
 
-  get_result_pointer(&result_addr);
+  get_result_pointer(targetIP, &result_addr);
 
   marshall_shmem_ptr(&result_ptr, &result_addr);
 

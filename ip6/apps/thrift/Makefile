@@ -17,23 +17,22 @@ CFLAGS =
 
 
 GLIB_DIR = gen-c_glib
-SHARED_GLIB = $(GLIB_DIR)/shared_types.c
+SHARED_GLIB = $(GLIB_DIR)/shared_types.c thrift_utils.c
 
 MEM_SERVER = remote_mem_test
-MEM_SERVER_GLIB =  $(GLIB_DIR)/$(MEM_SERVER).c $(GLIB_DIR)/$(MEM_SERVER)_types.c
+MEM_SERVER_GLIB =  $(GLIB_DIR)/$(MEM_SERVER).c $(GLIB_DIR)/$(MEM_SERVER)_types.c 
 
 ARR_SERVER = simple_arr_comp
-ARR_SERVER_GLIB = $(GLIB_DIR)/$(ARR_SERVER).c $(GLIB_DIR)/$(ARR_SERVER)_types.c
-
+ARR_SERVER_GLIB = $(GLIB_DIR)/$(ARR_SERVER).c $(GLIB_DIR)/$(ARR_SERVER)_types.c 
 DDC_CLIENT = ddc_client
 TCP_CLIENT = tcp_client
 
-DDC_CLIENT_DEPS = $(DDC_CLIENT).c $(MEM_SERVER_GLIB) $(ARR_SERVER_GLIB) client_common.c
-TCP_CLIENT_DEPS = $(TCP_CLIENT).c $(MEM_SERVER_GLIB) $(ARR_SERVER_GLIB) client_common.c
+DDC_CLIENT_DEPS = $(DDC_CLIENT).c $(MEM_SERVER_GLIB) $(ARR_SERVER_GLIB) mem_tests.c
+TCP_CLIENT_DEPS = $(TCP_CLIENT).c $(MEM_SERVER_GLIB) $(ARR_SERVER_GLIB) mem_tests.c
 
 all: $(SHARED_GLIB) $(MEM_SERVER) $(ARR_SERVER) $(DDC_CLIENT) $(TCP_CLIENT)
 
-$(SHARED_GLIB):
+$(GLIB_DIR)/shared_types.c:
 	@$(GEN_TEMPLATE) shared.thrift
 
 gen-c_glib/$(MEM_SERVER).c:
@@ -45,8 +44,7 @@ gen-c_glib/$(ARR_SERVER).c:
 $(ARR_SERVER): ddc_$(ARR_SERVER)_server.c tcp_$(ARR_SERVER)_server.c $(ARR_SERVER_GLIB)
 	@echo "Building $(ARR_SERVER)"
 	@$(CC) -o ddc_$(ARR_SERVER) ddc_$(ARR_SERVER)_server.c $(ARR_SERVER_GLIB) $(SHARED_GLIB) $(CFLAGS) $(LIBS)
-	@$(CC) -o tcp_$(ARR_SERVER) tcp_$(ARR_SERVER)_server.c $(ARR_SERVER_GLIB) $(SHARED_GLIB) $(CFLAGS) $(LIBS)
-
+	@$(CC) -o tcp_$(ARR_SERVER) tcp_$(ARR_SERVER)_server.c $(ARR_SERVER_GLIB) $(SHARED_GLIB) $(CFLAGS) $(LIBS) 
 $(MEM_SERVER): $(MEM_SERVER)_server.c $(MEM_SERVER_GLIB)
 	@echo "Building $(MEM_SERVER)"
 	@$(CC) -o $@ $(MEM_SERVER)_server.c $(MEM_SERVER_GLIB) $(SHARED_GLIB) $(CFLAGS) $(LIBS)

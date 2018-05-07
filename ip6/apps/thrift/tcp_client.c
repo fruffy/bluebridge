@@ -17,7 +17,8 @@
 #include "lib/client_lib.h"
 #include "lib/config.h"
 #include "lib/utils.h"
-#include "client_common.h"
+#include "thrift_utils.h"
+#include "mem_tests.h"
 
 ThriftProtocol *remmem_protocol;
 ThriftProtocol *arrcomp_protocol;
