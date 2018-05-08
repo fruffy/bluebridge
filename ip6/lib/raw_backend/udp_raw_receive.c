@@ -72,7 +72,7 @@ struct rx_ring setup_packet_mmap(int sd_rx) {
         .tp_frame_nr = C_RING_FRAMES * C_RING_BLOCKS
     };
 
-    int size = tpacket_req.tp_block_size *tpacket_req.tp_block_nr;
+    uint64_t size = tpacket_req.tp_block_size * tpacket_req.tp_block_nr;
 
     void *mapped_memory = NULL;
 
@@ -81,7 +81,7 @@ struct rx_ring setup_packet_mmap(int sd_rx) {
         exit(1);
     }
 
-    mapped_memory = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, sd_rx, 0);
+    mapped_memory = mmap64(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, sd_rx, 0);
 
     if (MAP_FAILED == mapped_memory) {
         close(sd_rx);
@@ -148,7 +148,7 @@ void close_epoll(int epoll_fd, struct rx_ring ring_rx) {
     munmap(ring_rx.first_tpacket_hdr, ring_rx.mapped_memory_size);
 }
 
-struct tpacket_hdr *get_packet(struct rx_ring *ring_p) {
+volatile struct tpacket_hdr *get_packet(struct rx_ring *ring_p) {
     return (void *)((char *)ring_p->first_tpacket_hdr + ring_p->tpacket_i * ring_p->tpacket_req.tp_frame_size);
 }
 

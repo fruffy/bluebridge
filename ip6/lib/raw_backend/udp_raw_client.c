@@ -46,11 +46,10 @@ int epoll_client_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 
             //printf("TIMEOUT!\n");
             return -1;
         }*/
-
         for (int i = 0; i < num_events; i++)  {
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
-                struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
+                volatile struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
                 if ( tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
                     next_packet(&ring_rx_g);
                     continue;
@@ -77,6 +76,7 @@ int epoll_client_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 
                 struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
                 int isMyID = 1;
                 // Terrible hacks inbound, this code needs to be burned.
+
                 if (remoteAddr != NULL) {
                     //printf("Thread %d Their ID\n", thread_id);
                     //printNBytes(inAddress, 16);

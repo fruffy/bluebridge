@@ -46,7 +46,7 @@ int epoll_server_rcv(char *receiveBuffer, int msg_size, struct sockaddr_in6 *tar
         for (int i = 0; i < num_events; i++)  {
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
-                struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
+                volatile struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
                 if ( tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
                     continue;
                 }
@@ -86,7 +86,7 @@ int epoll_server_rcv(char *receiveBuffer, int msg_size, struct sockaddr_in6 *tar
     return EXIT_SUCCESS;
 }
 
-void handle_packet(struct tpacket_hdr *tpacket_hdr, char* receiveBuffer, int msg_size, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
+void handle_packet(volatile struct tpacket_hdr *tpacket_hdr, char* receiveBuffer, int msg_size, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
     struct eth_hdr *eth_hdr = (struct eth_hdr *)((char *) tpacket_hdr + tpacket_hdr->tp_mac);
     struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((char *)eth_hdr + ETH_HDRLEN);
     struct udphdr *udp_hdr = (struct udphdr *)((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
@@ -124,8 +124,9 @@ int raw_rcv_loop(char *receiveBuffer, int msg_size, struct sockaddr_in6 *target_
         for (int i = 0; i < num_events; i++)  {
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
-                struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
-                //printf("Got %d %d \n", event->events, tpacket_hdr->tp_status);
+                volatile struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
+                if (event->events > 1)
+                    printf("Got %d \n", event->events);
                 // if ( tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
                 //     //printf("Dis Kernel\n");
                 //     continue;

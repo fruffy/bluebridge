@@ -15,7 +15,7 @@
 
 static int NUM_THREADS = 1;
 static int BATCHED_MODE = 0;
-static int BATCH_SIZE = 25;
+static int BATCH_SIZE = 40;
 static uint64_t NUM_ITERATIONS;
 
 
@@ -109,20 +109,21 @@ void *testing_loop(void *arg) {
     // Initialize BlueBridge
     struct config myConf = get_bb_config();
     struct sockaddr_in6 *target_ip = init_net_thread(data->tid, &myConf, 0);
-    struct in6_memaddr *r_addr = malloc(data->length * sizeof(struct in6_memaddr)); 
+    struct in6_memaddr *r_addr = calloc(data->length,sizeof(struct in6_memaddr)); 
     if(!r_addr) 
         perror("Allocation too large"); 
  
     // ALLOC TEST
+    printf("Thread %d Allocating...\n", data->tid);
     uint64_t aStart = getns();
     struct in6_addr *ipv6Pointer = gen_ip6_target(data->tid % myConf.num_hosts);
     memcpy(&(target_ip->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
     struct in6_memaddr *temp = allocate_rmem_bulk(target_ip, data->length);
     memcpy(r_addr, temp, data->length * sizeof(struct in6_memaddr));
-    free(temp);
+    //free(temp);
     alloc_latency[0] = getns() - aStart;
     // WRITE TEST
-    printf("Starting write test...\n");
+    printf("Thread %d Starting write test...\n", data->tid);
     if (BATCHED_MODE) {
         for (uint64_t i = 0; i < data->length/BATCH_SIZE; i++) {
             char payload[BLOCK_SIZE * BATCH_SIZE];
@@ -139,23 +140,22 @@ void *testing_loop(void *arg) {
         for (uint64_t i = 0; i < data->length; i++) {
             struct in6_memaddr remoteMemory = r_addr[i];
             print_debug("Creating payload");
-            char *payload = malloc(BLOCK_SIZE);
+            char payload[BLOCK_SIZE];
             snprintf(payload, 50, "HELLO WORLD! How are you? %lu", i);
             uint64_t wStart = getns();
             write_rmem(target_ip, payload, &remoteMemory);
             write_latency[i] = getns() - wStart;
-            free(payload);
         }
     }
     char test[BLOCK_SIZE];
     // READ TEST
-    printf("Starting read test...\n");
+    printf("Thread %d Starting read test...\n", data->tid);
     for (uint64_t i = 0; i < data->length; i++) {
         struct in6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
         get_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
         read_latency[i] = getns() - rStart;
-        char *payload = malloc(BLOCK_SIZE);
+        char payload[BLOCK_SIZE];
         snprintf(payload, 50, "HELLO WORLD! How are you? %lu", i);
         print_debug("Results of memory store: %.50s", test);
         if (strncmp(test, payload, 50) < 0) {
@@ -163,10 +163,9 @@ void *testing_loop(void *arg) {
             printf("Expected %s Got %s\n", payload, test );
             exit(1);
         }
-        free(payload);
     }
     // WRITE TEST 2
-    printf("Starting second write test...\n");
+    printf("Thread %d Starting second write test...\n", data->tid);
     if (BATCHED_MODE) {
         for (uint64_t i = 0; i < data->length/BATCH_SIZE; i++) {
             char payload[BLOCK_SIZE * BATCH_SIZE];
@@ -183,22 +182,21 @@ void *testing_loop(void *arg) {
         for (uint64_t i = 0; i < data->length; i++) {
             struct in6_memaddr remoteMemory = r_addr[i];
             print_debug("Creating payload");
-            char *payload = malloc(BLOCK_SIZE);
+            char payload[BLOCK_SIZE];
             snprintf(payload, 50, "Bye WORLD! I am done? %lu", i);
             uint64_t wStart = getns();
             write_rmem(target_ip, payload, &remoteMemory);
             write_latency2[i] = getns() - wStart;
-            free(payload);
         }
     }
     // READ TEST 2
-    printf("Starting second read test...\n");
+    printf("Thread %d Starting second read test...\n", data->tid);
     for (uint64_t i = 0; i < data->length; i++) {
         struct in6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
         get_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
         read_latency2[i] = getns() - rStart;
-        char *payload = malloc(BLOCK_SIZE);
+        char payload[BLOCK_SIZE];
         snprintf(payload, 50, "Bye WORLD! I am done? %lu", i);
         print_debug("Results of memory store: %.50s", test);
         if (strncmp(test, payload, 50) < 0) {
@@ -206,9 +204,9 @@ void *testing_loop(void *arg) {
             printf("Expected %s Got %s\n", payload, test );
             exit(1);
         }
-        free(payload);
     }
     // FREE TEST
+    printf("Thread %d Freeing memory...\n", data->tid);
     uint64_t rStart = getns();
     free_rmem(target_ip, r_addr);
     free_latency[0] = getns() - rStart;
@@ -228,7 +226,6 @@ void *testing_loop(void *arg) {
     save_time(fname, free_latency, 1);
     memset(fname, 0, MAX_FNAME);
 
-    free(r_addr);
     close_sockets();
     return NULL;
 }
@@ -339,12 +336,11 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
         for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
             struct in6_memaddr remoteMemory = r_addr[i];
             print_debug("Creating payload");
-            char *payload = malloc(BLOCK_SIZE);
+            char payload[BLOCK_SIZE];
             snprintf(payload, 50, "HELLO WORLD! How are you? %lu", i);
             uint64_t wStart = getns();
             write_rmem(target_ip, payload, &remoteMemory);
             write_latency[i] = getns() - wStart;
-            free(payload);
         }
     }
     char test[BLOCK_SIZE];
@@ -355,7 +351,7 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
         uint64_t rStart = getns();
         get_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
         read_latency[i] = getns() - rStart;
-        char *payload = malloc(BLOCK_SIZE);
+        char payload[BLOCK_SIZE];
         snprintf(payload, 50, "HELLO WORLD! How are you? %lu", i);
         print_debug("Results of memory store: %.50s", test);
         if (strncmp(test, payload, 50) < 0) {
@@ -363,7 +359,6 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
             printf("Expected %s Got %s\n", payload, test );
             exit(1);
         }
-        free(payload);
     }
     // WRITE TEST 2
     printf("Starting second write test...\n");
@@ -383,12 +378,11 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
         for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
             struct in6_memaddr remoteMemory = r_addr[i];
             print_debug("Creating payload");
-            char *payload = malloc(BLOCK_SIZE);
+            char payload[BLOCK_SIZE];
             snprintf(payload, 50, "Bye WORLD! I am done? %lu", i);
             uint64_t wStart = getns();
             write_rmem(target_ip, payload, &remoteMemory);
             write_latency2[i] = getns() - wStart;
-            free(payload);
         }
     }
     // READ TEST 2
@@ -398,7 +392,7 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
         uint64_t rStart = getns();
         get_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
         read_latency2[i] = getns() - rStart;
-        char *payload = malloc(BLOCK_SIZE);
+        char payload[BLOCK_SIZE];
         snprintf(payload, 50, "Bye WORLD! I am done? %lu", i);
         print_debug("Results of memory store: %.50s", test);
         if (strncmp(test, payload, 50) < 0) {
@@ -406,7 +400,6 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
             printf("Expected %s Got %s\n", payload, test );
             exit(1);
         }
-        free(payload);
     }
 
     //FREE TEST BULK

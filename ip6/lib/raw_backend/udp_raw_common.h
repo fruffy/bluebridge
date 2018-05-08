@@ -14,8 +14,8 @@
 // tp_frame_nr   must be exactly frames_per_block*tp_block_nr
 /// The number of frames in the ring
 //  This number is not set in stone. Nor are block_size, block_nr or frame_size
-#define C_RING_FRAMES        16384 //8192
-#define C_RING_BLOCKS        4
+#define C_RING_FRAMES        8192 //16384
+#define C_RING_BLOCKS        16
 #define C_FRAMESIZE               8192 //(4096 + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + 2 + 32)
 #define C_BLOCKSIZE               (C_FRAMESIZE) * (C_RING_FRAMES)
 
@@ -48,6 +48,6 @@ extern void set_thread_id_rx_server(int id);
 
 extern int setup_rx_socket();
 extern void next_packet(struct rx_ring *ring_p);
-extern struct tpacket_hdr *get_packet(struct rx_ring *ring_p);
+extern volatile struct tpacket_hdr *get_packet(struct rx_ring *ring_p);
 extern void close_epoll(int epoll_fd, struct rx_ring ring_rx);
 #endif

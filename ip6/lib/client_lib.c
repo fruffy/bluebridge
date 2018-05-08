@@ -19,7 +19,6 @@
 
 struct in6_addr *hostList;
 int nhosts;
-static char tx_buf[BLOCK_SIZE];
 
 /*
  * Generates a random IPv6 address target under specific constraints
@@ -68,6 +67,7 @@ void set_host_list(struct in6_addr *host_addrs, int num_hosts) {
  */
 // TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
 struct in6_memaddr allocate_rmem(struct sockaddr_in6 *target_ip) {
+    char tx_buf[BLOCK_SIZE];
     // Send the command to the target host and wait for response
     ((struct in6_memaddr *)&target_ip->sin6_addr)->cmd = ALLOC_CMD;
     print_debug("******ALLOCATE******");
@@ -84,6 +84,7 @@ struct in6_memaddr allocate_rmem(struct sockaddr_in6 *target_ip) {
  */
 // TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
 struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *target_ip, uint64_t size) {
+    char tx_buf[BLOCK_SIZE];
     // Send the command to the target host and wait for response
     memcpy(tx_buf, &size, sizeof(uint64_t));
     ((struct in6_memaddr *)&target_ip->sin6_addr)->cmd = ALLOC_BULK_CMD;
@@ -163,6 +164,7 @@ int write_rmem_bulk(struct sockaddr_in6 *target_ip, char *payload, struct in6_me
  */
 // TODO: Implement meaningful return types and error messages
 int free_rmem(struct sockaddr_in6 *target_ip,  struct in6_memaddr *remote_addr) {
+    char tx_buf[BLOCK_SIZE];
     // Create message
     remote_addr->cmd =  FREE_CMD;
     print_debug("******FREE DATA******");
