@@ -72,7 +72,7 @@ struct rx_ring setup_packet_mmap(int sd_rx) {
         .tp_frame_nr = C_RING_FRAMES * C_RING_BLOCKS
     };
 
-    uint64_t size = tpacket_req.tp_block_size * tpacket_req.tp_block_nr;
+    uint64_t size = tpacket_req.tp_frame_nr * tpacket_req.tp_frame_size;
 
     void *mapped_memory = NULL;
 
