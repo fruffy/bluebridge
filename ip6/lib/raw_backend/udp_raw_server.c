@@ -34,7 +34,7 @@ void init_rx_socket_server(struct config *cfg) {
     setup_rx_socket(cfg, my_port, thread_id, &epoll_fd_g, &ring_rx_g);
 }
 
-int epoll_server_rcv(char *receiveBuffer, int msg_size, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
+int epoll_server_rcv(char *rcv_buf, int msg_size, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
     struct epoll_event events[1024];
     while (1) {
         int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, -1);
@@ -46,8 +46,10 @@ int epoll_server_rcv(char *receiveBuffer, int msg_size, struct sockaddr_in6 *tar
         for (int i = 0; i < num_events; i++)  {
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
-                volatile struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
-                if ( tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
+                struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
+                // Why volatile? See here:
+                // https://stackoverflow.com/questions/16359158/some-issues-with-packet-mmap
+                if ((volatile uint32_t)tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
                     continue;
                 }
                 if (tpacket_hdr->tp_status & TP_STATUS_COPY) {
@@ -58,25 +60,26 @@ int epoll_server_rcv(char *receiveBuffer, int msg_size, struct sockaddr_in6 *tar
                     next_packet(&ring_rx_g);
                     continue;
                 }
-                struct ethhdr *ethhdr = (struct ethhdr *)((char *) tpacket_hdr + tpacket_hdr->tp_mac);
-                struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ethhdr + ETH_HDRLEN);
-                struct udphdr *udphdr = (struct udphdr *)((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN);
-                char *payload = ((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
+                struct ethhdr *eth_hdr = (struct ethhdr *)((char *) tpacket_hdr + tpacket_hdr->tp_mac);
+                struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((char *)eth_hdr + ETH_HDRLEN);
+                struct udphdr *udp_hdr = (struct udphdr *)((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
+                char *payload = ((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
                 // This should be debug code...
                 /*
                 char s[INET6_ADDRSTRLEN];
                 char s1[INET6_ADDRSTRLEN];
                 inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
                 inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
-                printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
-                printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udphdr->dest) );
+                printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udp_hdr->source), s1, ntohs(udp_hdr->dest) );
+                printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udp_hdr->dest) );
                 */
-                memcpy(receiveBuffer, payload, msg_size);
+                msg_size = udp_hdr->len;
+                memcpy(rcv_buf, payload, msg_size);
                 if (remote_addr != NULL) {
-                    memcpy(remote_addr, &iphdr->ip6_dst, IPV6_SIZE);
+                    memcpy(remote_addr, &ip_hdr->ip6_dst, IPV6_SIZE);
                 }
-                memcpy(target_ip->sin6_addr.s6_addr, &iphdr->ip6_src, IPV6_SIZE);
-                target_ip->sin6_port = udphdr->source;
+                memcpy(target_ip->sin6_addr.s6_addr, &ip_hdr->ip6_src, IPV6_SIZE);
+                target_ip->sin6_port = udp_hdr->source;
                 tpacket_hdr->tp_status = TP_STATUS_KERNEL;
                 next_packet(&ring_rx_g);
                 return msg_size;
@@ -86,7 +89,7 @@ int epoll_server_rcv(char *receiveBuffer, int msg_size, struct sockaddr_in6 *tar
     return EXIT_SUCCESS;
 }
 
-void handle_packet(volatile struct tpacket_hdr *tpacket_hdr, char* receiveBuffer, int msg_size, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
+void handle_packet(struct tpacket_hdr *tpacket_hdr, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
     struct eth_hdr *eth_hdr = (struct eth_hdr *)((char *) tpacket_hdr + tpacket_hdr->tp_mac);
     struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((char *)eth_hdr + ETH_HDRLEN);
     struct udphdr *udp_hdr = (struct udphdr *)((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
@@ -100,7 +103,7 @@ void handle_packet(volatile struct tpacket_hdr *tpacket_hdr, char* receiveBuffer
     printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
     printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udphdr->dest) );
     */
-    memcpy(receiveBuffer, payload, msg_size);
+    //int msg_size = udp_hdr->len;
     if (remote_addr != NULL) {
         memcpy(remote_addr, &ip_hdr->ip6_dst, IPV6_SIZE);
     }
@@ -112,7 +115,7 @@ void handle_packet(volatile struct tpacket_hdr *tpacket_hdr, char* receiveBuffer
 }
 
 //This function is hacky bullshit, needs a lot of improvement.
-int raw_rcv_loop(char *receiveBuffer, int msg_size, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
+int raw_rcv_loop(struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
     struct epoll_event events[1024];
     while (1){
         int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, -1);
@@ -124,15 +127,10 @@ int raw_rcv_loop(char *receiveBuffer, int msg_size, struct sockaddr_in6 *target_
         for (int i = 0; i < num_events; i++)  {
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
-                volatile struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
-                // if ( tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
-                //     //printf("Dis Kernel\n");
-                //     continue;
-                // }
-                if ((tpacket_hdr->tp_status & TP_STATUS_USER) == 0) {
-                    //printf("Not ready yet\n");
-                    //next_packet(&ring_rx_g);
-                    break;
+                struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
+                if ((volatile uint32_t)tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
+                    //printf("Dis Kernel\n");
+                    continue;
                 }
                 if (tpacket_hdr->tp_status & TP_STATUS_COPY) {
                     next_packet(&ring_rx_g);
@@ -142,7 +140,7 @@ int raw_rcv_loop(char *receiveBuffer, int msg_size, struct sockaddr_in6 *target_
                     next_packet(&ring_rx_g);
                     continue;
                 }
-                handle_packet(tpacket_hdr, receiveBuffer, msg_size, target_ip, remote_addr);
+                handle_packet(tpacket_hdr, target_ip, remote_addr);
            }
         }
     }
@@ -150,11 +148,10 @@ int raw_rcv_loop(char *receiveBuffer, int msg_size, struct sockaddr_in6 *target_
 
 
 void enter_raw_server_loop(uint16_t server_port) {
-    char receiveBuffer[BLOCK_SIZE];
     struct sockaddr_in6 *target_ip = calloc(1, sizeof(struct sockaddr_in6));
     target_ip->sin6_port = htons(server_port);
     struct in6_memaddr remote_addr;
-    raw_rcv_loop(receiveBuffer, BLOCK_SIZE, target_ip, &remote_addr);
+    raw_rcv_loop(target_ip, &remote_addr);
 }
 
 int get_rx_socket_server() {

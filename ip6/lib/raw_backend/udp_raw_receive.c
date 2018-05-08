@@ -151,7 +151,7 @@ void close_epoll(int epoll_fd, struct rx_ring ring_rx) {
     munmap(ring_rx.first_tpacket_hdr, ring_rx.mapped_memory_size);
 }
 
-volatile struct tpacket_hdr *get_packet(struct rx_ring *ring_p) {
+struct tpacket_hdr *get_packet(struct rx_ring *ring_p) {
     return (void *)((char *)ring_p->first_tpacket_hdr + ring_p->tpacket_i * ring_p->tpacket_req.tp_frame_size);
 }
 

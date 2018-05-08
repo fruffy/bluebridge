@@ -25,7 +25,7 @@ PARSER.add_argument('--p4', '-p', dest='is_p4', default=False,
                     action='store_true', help='Use the P4 switch instead of OVS.')
 PARSER.add_argument('--broadcast', '-b', dest='use_broadcast', default=False,
                     action='store_true', help='Run the OVS with broadcast instead of individual forwarding.')
-PARSER.add_argument('--bb-servers', '-e', dest='servers', type=int, default=2,
+PARSER.add_argument('--bb-servers', '-e', dest='servers', type=int, default=1,
                     help='Specify the number of memory servers that should be launched.')
 PARSER.add_argument('--thrift-tcp', '-tt', dest='thrift_tcp', default=False,
                     action='store_true', help='Run the testing framework with default Thrift.')
@@ -94,7 +94,7 @@ def configureThrift(host, host_id):
 def generateServerTargets(num_hosts):
     server_str = ""
     if ARGS.thrift_tcp or ARGS.thrift_udp or ARGS.thrift_ddc:
-        for host_id in range(4, num_hosts + 1):
+        for host_id in range(num_hosts + 1 - ARGS.servers, num_hosts + 1):
             server_str += "01%02x::," % host_id
     else:
         for host_id in range(2, num_hosts + 1):

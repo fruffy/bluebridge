@@ -146,9 +146,8 @@ tutorial_remote_mem_test_handler_allocate_mem (RemoteMemTestIf *iface,
   // TODO: change so it allocates a certain amount of memory
 
   GByteArray *result_ptr = g_byte_array_new();
-  struct in6_memaddr result_addr;
+  struct in6_memaddr result_addr = get_result_pointer(targetIP);
 
-  get_result_pointer(targetIP, &result_addr);
 
   marshall_shmem_ptr(&result_ptr, &result_addr);
 

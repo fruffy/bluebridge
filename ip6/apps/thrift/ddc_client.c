@@ -31,7 +31,7 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, struct soc
   GByteArray* args_ptr = g_byte_array_new();  // Argument pointer
   GByteArray* result_ptr = NULL;              // Result pointer
   int arr_len = size;                           // Size of array to be sent
-  uint8_t arr[arr_len];                               // Array to be sent (must be uint8_t to match char size)
+  uint8_t *arr;                               // Array to be sent (must be uint8_t to match char size)
   uint8_t incr_val = 1;                       // Value to increment each value in the array by
   struct result res;
   uint64_t start;
@@ -45,11 +45,14 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, struct soc
   res.alloc = getns() - start;
 
   // Create argument array
+  arr = malloc(arr_len);
   populate_array(arr, arr_len, 0, FALSE);
 
   char temp[BLOCK_SIZE];
-
-  memcpy(temp, arr, arr_len);
+  if (arr_len > BLOCK_SIZE)
+    memcpy(temp, arr, BLOCK_SIZE);
+  else
+    memcpy(temp, arr, arr_len);
 
   start = getns();
   // Write array to shared memory
@@ -87,10 +90,12 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, struct soc
 
   // Create result array to read into
   char* result_arr = malloc(arr_len);
-
   start = getns();
   // Read in result array
-  get_rmem(result_arr, arr_len, targetIP, &result_addr);
+  if (arr_len > BLOCK_SIZE)
+    get_rmem(result_arr, BLOCK_SIZE, targetIP, &result_addr);
+  else
+    get_rmem(result_arr, arr_len, targetIP, &result_addr);
   res.read = getns() - start;
 
   if (print) {
@@ -103,6 +108,7 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, struct soc
   }
 
   // Free malloc'd and GByteArray memory
+  free(arr);
   free(result_arr);
   start = getns();
   free_rmem(targetIP, &args_addr);
@@ -127,8 +133,8 @@ struct result test_add_arrays(SimpleArrCompIf *client, int size, struct sockaddr
   GByteArray* result_ptr = NULL;              // Result pointer
   struct in6_memaddr result_addr;             // Shared memory address of result
   int arr_len = size;                        // Size of array to be sent
-  uint8_t arr1[arr_len];                              // Array 1 to be added
-  uint8_t arr2[arr_len];                              // Array 2 to be added
+  uint8_t *arr1;                              // Array 1 to be added
+  uint8_t *arr2;                              // Array 2 to be added
   struct result res;
   uint64_t start;
   res.free = 0;
@@ -143,14 +149,22 @@ struct result test_add_arrays(SimpleArrCompIf *client, int size, struct sockaddr
   res.alloc = getns() - start;
 
   // Populate arrays
+  arr1 = malloc(arr_len);
+  arr2 = malloc(arr_len);
   populate_array(arr1, arr_len, 3, TRUE);
   populate_array(arr2, arr_len, 5, TRUE);
 
   char temp1[BLOCK_SIZE];
   char temp2[BLOCK_SIZE];
 
-  memcpy(temp1, arr1, arr_len);
-  memcpy(temp2, arr2, arr_len);
+  if (arr_len > BLOCK_SIZE){
+    memcpy(temp1, arr1, BLOCK_SIZE);
+    memcpy(temp2, arr2, BLOCK_SIZE);
+  }
+  else {
+    memcpy(temp1, arr1, arr_len);
+    memcpy(temp2, arr2, arr_len);
+  }
 
   // Write arrays to shared memory
   start = getns();
@@ -189,7 +203,10 @@ struct result test_add_arrays(SimpleArrCompIf *client, int size, struct sockaddr
 
     // Read in result array
     start = getns();
-    get_rmem(result_arr, arr_len, targetIP, &result_addr);
+    if (arr_len > BLOCK_SIZE)
+      get_rmem(result_arr, BLOCK_SIZE, targetIP, &result_addr);
+    else
+      get_rmem(result_arr, arr_len, targetIP, &result_addr);
     res.read = getns() - start;
 
     if (print) {
@@ -202,11 +219,14 @@ struct result test_add_arrays(SimpleArrCompIf *client, int size, struct sockaddr
           goto cleanupres;
         }
       }
-
+      free(result_arr);
       printf("SUCCESS\n");
     }
 cleanupres:
-    free(result_arr);
+    start = getns();
+    // free(arr1);
+    // free(arr2);
+    //free(result_arr);
     start = getns();
     free_rmem(targetIP, &result_addr);
     res.free += getns() - start;
@@ -214,6 +234,8 @@ cleanupres:
 
   // Free malloc'd and GByteArray memory
   start = getns();
+  free(arr1);
+  free(arr2);
   free_rmem(targetIP, &arg1_addr);    // Free the shared memory
   free_rmem(targetIP, &arg2_addr);    // Free the shared memory
   res.free += getns() - start;
@@ -261,22 +283,26 @@ uint64_t no_op_rpc(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targe
   GByteArray* args_ptr = g_byte_array_new();  // Argument pointer
   GByteArray* result_ptr = NULL;              // Result pointer
   int arr_len = size;                           // Size of array to be sent
-  uint8_t arr[arr_len];                               // Array to be sent (must be uint8_t to match char size)
+  uint8_t *arr;                               // Array to be sent (must be uint8_t to match char size)
   uint64_t start, rpc_time;
 
-
+  //int num_pointers = (arr_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
   // Get a shared memory pointer for argument array
   get_args_pointer(&args_addr, targetIP);
-
+  //args_addr = get_args_pointers(targetIP, num_pointers);
   // Create argument array
+  arr = malloc(arr_len);
   populate_array(arr, arr_len, 0, FALSE);
 
   char temp[BLOCK_SIZE];
-  memcpy(temp, arr, arr_len);
+  if (arr_len > BLOCK_SIZE)
+    memcpy(temp, arr, BLOCK_SIZE);
+  else
+    memcpy(temp, arr, arr_len);
 
   // Write array to shared memory
   write_rmem(targetIP, (char*) temp, &args_addr);
-
+  //write_rmem_bulk(targetIP, (char*) temp, args_addr, num_pointers);
   // Marshall shared pointer address
   marshall_shmem_ptr(&args_ptr, &args_addr);
 
@@ -290,12 +316,16 @@ uint64_t no_op_rpc(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targe
   unmarshall_shmem_ptr(&result_addr, result_ptr);
 
   // Create result array to read into
-  char* result_arr = malloc(arr_len);
+  char *result_arr = malloc(arr_len);
 
   // Read in result array
-  get_rmem(result_arr, arr_len, targetIP, &result_addr);
+  if (arr_len > BLOCK_SIZE)
+    get_rmem(result_arr, BLOCK_SIZE, targetIP, &result_addr);
+  else
+    get_rmem(result_arr, arr_len, targetIP, &result_addr);
 
   // Free malloc'd and GByteArray memory
+  free(arr);
   free(result_arr);
   free_rmem(targetIP, &args_addr);
   free_rmem(targetIP, &result_addr);
@@ -485,7 +515,7 @@ int main (int argc, char *argv[]) {
   struct config myConf;
   struct sockaddr_in6 *targetIP;
   int iterations = 0;
-  int max_size = BLOCK_SIZE;
+  int max_size = BLOCK_SIZE * 8;
   int incr = 100;
 
   if (argc < 5) {

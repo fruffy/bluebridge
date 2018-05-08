@@ -7,7 +7,7 @@ if [ $ID -ne 0 ]; then
    echo "This command must be run as root."
    exit 1
 fi
-#sudo ethtool -N enp66s0f0 rx-flow-hash udp6 sdfn
+sudo ethtool -N enp66s0f0 rx-flow-hash udp6 sdfn
 ethtool -C enp66s0f0 rx-usecs 0
 #sudo ethtool --offload  enp66s0f0  rx on tx on
 ethtool -K enp66s0f0 ntuple off

@@ -125,12 +125,8 @@ tutorial_simple_arr_comp_handler_increment_array (SimpleArrCompIf *iface,
   THRIFT_UNUSED_VAR (error);
   THRIFT_UNUSED_VAR (ouch);
 
-  GByteArray* result_ptr = g_byte_array_new();
-  struct in6_memaddr result_addr;
-
-  get_result_pointer(targetIP, &result_addr);
-
-  marshall_shmem_ptr(&result_ptr, &result_addr);
+  //GByteArray* result_ptr = g_byte_array_new();
+  struct in6_memaddr result_addr= get_result_pointer(targetIP);
 
   // Read in array from shared memory
   uint8_t *int_arr = malloc(length);
@@ -138,28 +134,36 @@ tutorial_simple_arr_comp_handler_increment_array (SimpleArrCompIf *iface,
   struct in6_memaddr args_addr;
   unmarshall_shmem_ptr(&args_addr, (GByteArray *) pointer);
 
-  get_rmem((char *) int_arr, length, targetIP, &args_addr);
-
+  if (length > BLOCK_SIZE) {
+    get_rmem((char *) int_arr, BLOCK_SIZE, targetIP, &args_addr);
+  } else {
+    get_rmem((char *) int_arr, length, targetIP, &args_addr);
+  }
   // Increment the values
   for (int i = 0; i < length; i++) {
     int_arr[i] += value;
   }
 
   char temp[BLOCK_SIZE];
-
-  memcpy(temp, int_arr, length);
-
+  if (length > BLOCK_SIZE)
+    memcpy(temp, int_arr, BLOCK_SIZE);
+  else
+    memcpy(temp, int_arr, length);
   // Write it to the array
   write_rmem(targetIP, (char*) temp, &result_addr);
+  //*_return = result_ptr;
+  *_return = g_byte_array_new();
+  marshall_shmem_ptr(_return, &result_addr);
 
-  g_byte_array_ref(result_ptr);
+  //g_byte_array_ref(result_ptr);
 
-  *_return = result_ptr;
-
+  //memcpy(*_return, result_ptr, 16);
+  g_byte_array_append(*_return, (uint8_t *)&result_addr, 16);
   // printf("increment_array() returning ");
   // print_n_bytes(result_ptr->data, result_ptr->len);
 
   free(int_arr);
+  //g_byte_array_unref(*_return);  // We allocated this, so we free it
   return TRUE;
 
 }
@@ -177,14 +181,12 @@ tutorial_simple_arr_comp_handler_add_arrays (SimpleArrCompIf *iface,
   THRIFT_UNUSED_VAR (error);
   THRIFT_UNUSED_VAR (ouch);
 
-  GByteArray* result_ptr = g_byte_array_new();
-  struct in6_memaddr result_addr;
-
+  *_return = g_byte_array_new();
   // printf("Get result pointer\n");
-  get_result_pointer(targetIP, &result_addr);
+  struct in6_memaddr result_addr= get_result_pointer(targetIP);
 
   // printf("marshall_shmem_ptr\n");
-  marshall_shmem_ptr(&result_ptr, &result_addr);
+  marshall_shmem_ptr(_return, &result_addr);
   // printf("result pointer: ");
   // print_n_bytes(result_ptr->data, result_ptr->len);
 
@@ -199,9 +201,14 @@ tutorial_simple_arr_comp_handler_add_arrays (SimpleArrCompIf *iface,
   unmarshall_shmem_ptr(&arg1_addr, (GByteArray *) array1);
   unmarshall_shmem_ptr(&arg2_addr, (GByteArray *) array2);
 
+  if (length > BLOCK_SIZE) {
+    get_rmem((char*) arr1, BLOCK_SIZE, targetIP, &arg1_addr);
+    get_rmem((char*) arr2, BLOCK_SIZE, targetIP, &arg2_addr);
+  } else {
+    get_rmem((char*) arr1, length, targetIP, &arg1_addr);
+    get_rmem((char*) arr2, length, targetIP, &arg2_addr);
+  }
   // printf("get_rmem\n");
-  get_rmem((char*) arr1, length, targetIP, &arg1_addr);
-  get_rmem((char*) arr2, length, targetIP, &arg2_addr);
 
   // Create result array
   uint8_t *result_array = malloc(length);
@@ -215,23 +222,26 @@ tutorial_simple_arr_comp_handler_add_arrays (SimpleArrCompIf *iface,
   // printf("write_rmem\n");
 
   char temp[BLOCK_SIZE];
-
-  memcpy(temp, result_array, length);
+  if (length > BLOCK_SIZE)
+    memcpy(temp, result_array, BLOCK_SIZE);
+  else
+    memcpy(temp, result_array, length);
   // Write computation to shared memory
   write_rmem(targetIP, (char*) temp, &result_addr);
 
   // printf("increase ref\n");
-  g_byte_array_ref(result_ptr);
+  //g_byte_array_ref(result_ptr);
 
   // printf ("add_arrays (%d): \n\t1: ", length);
   // print_n_bytes(array1->data, array1->len);
   // printf("\t2: ");
   // print_n_bytes(array2->data, array2->len);
 
-  *_return = result_ptr;
+  //*_return = result_ptr;
 
-  free(result_array);
-
+  //free(result_array);
+  free(arr1);
+  free(arr2);
   return TRUE;
 
 }
@@ -316,12 +326,10 @@ tutorial_simple_arr_comp_handler_no_op (SimpleArrCompIf  *iface,
   THRIFT_UNUSED_VAR (iface);
   THRIFT_UNUSED_VAR (error);
 
-  GByteArray* result_ptr = g_byte_array_new();
-  struct in6_memaddr result_addr;
+  *_return = g_byte_array_new();
+  struct in6_memaddr result_addr = get_result_pointer(targetIP);
 
-  get_result_pointer(targetIP, &result_addr);
-
-  marshall_shmem_ptr(&result_ptr, &result_addr);
+  marshall_shmem_ptr(_return, &result_addr);
 
   // Read in array from shared memory
   uint8_t *int_arr = malloc(length);
@@ -329,20 +337,23 @@ tutorial_simple_arr_comp_handler_no_op (SimpleArrCompIf  *iface,
   struct in6_memaddr args_addr;
   unmarshall_shmem_ptr(&args_addr, (GByteArray *) num_array);
 
-  get_rmem((char *) int_arr, length, targetIP, &args_addr);
-
-  // COMPUTATION
+  //COMPUTATION
 
   char temp[BLOCK_SIZE];
-
-  memcpy(temp, int_arr, length);
-
-  // Write it to the array
+  if (length > BLOCK_SIZE) {
+    get_rmem((char *) int_arr, BLOCK_SIZE, targetIP, &args_addr);
+    memcpy(temp, int_arr, BLOCK_SIZE);
+  }
+  else {
+    get_rmem((char *) int_arr, length, targetIP, &args_addr);
+    memcpy(temp, int_arr, length);
+  }
+  //Write it to the array
   write_rmem(targetIP, (char*) temp, &result_addr);
 
-  g_byte_array_ref(result_ptr);
+  //g_byte_array_ref(result_ptr);
 
-  *_return = result_ptr;
+  //*_return = result_ptr;
 
   // printf("no_op() returning ");
   // print_n_bytes(result_ptr->data, result_ptr->len);

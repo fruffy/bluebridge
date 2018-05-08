@@ -373,7 +373,7 @@ int main (int argc, char *argv[]) {
   struct config myConf;
   struct sockaddr_in6 *targetIP;
   int iterations = 0;
-  int max_size = BLOCK_SIZE * 2000;
+  int max_size = BLOCK_SIZE * 8;
   int incr = 100;
 
   while ((c = getopt (argc, argv, "c:i:m:s:")) != -1) { 

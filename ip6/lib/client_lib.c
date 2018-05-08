@@ -67,11 +67,10 @@ void set_host_list(struct in6_addr *host_addrs, int num_hosts) {
  */
 // TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
 struct in6_memaddr allocate_rmem(struct sockaddr_in6 *target_ip) {
-    char tx_buf[BLOCK_SIZE];
     // Send the command to the target host and wait for response
     ((struct in6_memaddr *)&target_ip->sin6_addr)->cmd = ALLOC_CMD;
     print_debug("******ALLOCATE******");
-    send_udp_raw(tx_buf, BLOCK_SIZE, (struct in6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port); 
+    send_udp_raw(NULL, 0, (struct in6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port); 
     struct in6_memaddr retAddr;
     memcpy(&retAddr, &target_ip->sin6_addr, IPV6_SIZE);
     rcv_udp6_raw_id(NULL, 0, target_ip, &retAddr);
@@ -118,6 +117,24 @@ int get_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, struct in
 }
 
 /*
+ * Reads the remote memory based on remote_addr
+ */
+// TODO: Implement meaningful return types and error messages
+int read_continuous_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
+      int packets = length / BLOCK_SIZE;
+      int residual = length % BLOCK_SIZE;
+      for (int i = 0; i < packets; i++ ) {
+        struct in6_memaddr tmp_addr = *remote_addr;
+        tmp_addr.paddr = remote_addr->paddr +i*BLOCK_SIZE;
+        get_rmem(&rx_buf[i*BLOCK_SIZE], length, target_ip, &tmp_addr);
+      }
+    struct in6_memaddr tmp_addr = *remote_addr;
+    tmp_addr.paddr = remote_addr->paddr + packets * BLOCK_SIZE;
+    get_rmem(&rx_buf[packets*BLOCK_SIZE], residual, target_ip, &tmp_addr);
+    return length;
+}
+
+/*
  * Sends a write command to the server based on remote_addr
  */
 // TODO: Implement meaningful return types and error messages
@@ -150,13 +167,11 @@ void batch_write(struct sockaddr_in6 *target_ip, char *payload, struct in6_memad
         pkts[i].dst_addr.cmd =  WRITE_BULK_CMD;
         sub_ids[remote_addrs[i].subid]++;
     }
-    print_debug("******WRITE DATA******");
+    print_debug("******WRITE BULK DATA %d packets ******", num_packets );
     send_udp_raw_batched(pkts, sub_ids, num_packets);
     for (int i = 0; i< USHRT_MAX; i++) {
-        if (sub_ids[i] != 0){
-            //printf("BLOCKING on %d %u\n", i, sub_ids[i]);
+        if (sub_ids[i] != 0)
             rcv_udp6_raw_id(NULL, 0, target_ip, NULL);
-        }
     }
 }
 
