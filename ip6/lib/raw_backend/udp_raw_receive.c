@@ -122,6 +122,7 @@ int setup_rx_socket(struct config *cfg, int my_port, int thread_id, int *my_epol
 
     struct sockaddr_ll device;
     char my_addr[INET6_ADDRSTRLEN];
+    int one = 1;
     inet_ntop(AF_INET6, &cfg->src_addr, my_addr, INET6_ADDRSTRLEN);
     memset(&device, 0, sizeof(struct sockaddr_ll));
     if ((device.sll_ifindex = if_nametoindex (cfg->interface)) == 0)
@@ -134,6 +135,8 @@ int setup_rx_socket(struct config *cfg, int my_port, int thread_id, int *my_epol
     int sd_rx = socket(AF_PACKET, SOCK_RAW|SOCK_NONBLOCK, htons(ETH_P_ALL));
     if (-1 == sd_rx)
         perror("Could not set socket"), exit(EXIT_FAILURE);
+    setsockopt(sd_rx, SOL_PACKET, PACKET_QDISC_BYPASS, &one, sizeof(one));
+
     //set_packet_filter(sd_rx, (char*) &cfg->src_addr, cfg->interface, htons((ntohs(my_port) + thread_id)));
     set_packet_filter(sd_rx, my_addr, cfg->interface,htons((ntohs(my_port) + thread_id)));
     *my_epoll = init_epoll(sd_rx);

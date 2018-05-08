@@ -78,6 +78,7 @@ int write_mem(char *receiveBuffer, struct sockaddr_in6 *target_ip, struct in6_me
 #else
     rte_memcpy((void *) *(&r_addr->paddr), receiveBuffer, BLOCK_SIZE);
 #endif
+    __sync_synchronize();
     struct in6_memaddr *returnID = (struct in6_memaddr *) (&target_ip->sin6_addr);
     returnID->cmd = r_addr->cmd;
     returnID->paddr = r_addr->paddr;

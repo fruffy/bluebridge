@@ -125,8 +125,6 @@ int raw_rcv_loop(char *receiveBuffer, int msg_size, struct sockaddr_in6 *target_
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {
                 volatile struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
-                if (event->events > 1)
-                    printf("Got %d \n", event->events);
                 // if ( tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
                 //     //printf("Dis Kernel\n");
                 //     continue;

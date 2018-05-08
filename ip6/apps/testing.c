@@ -18,8 +18,6 @@ static int BATCHED_MODE = 0;
 static int BATCH_SIZE = 40;
 static uint64_t NUM_ITERATIONS;
 
-
-
 /////////////////////////////////// TO DOs ////////////////////////////////////
 //  1. Check correctness of pointer on server side, it should never segfault.
 //      (Ignore illegal operations)
@@ -125,17 +123,16 @@ void *testing_loop(void *arg) {
     // WRITE TEST
     printf("Thread %d Starting write test...\n", data->tid);
     if (BATCHED_MODE) {
-        for (uint64_t i = 0; i < data->length/BATCH_SIZE; i++) {
-            char payload[BLOCK_SIZE * BATCH_SIZE];
+        char *payload = malloc(BLOCK_SIZE * data->length);
+        for (uint64_t i = 0; i < data->length; i++) {
             print_debug("Creating payload");
-            for (int j = 0; j < BATCH_SIZE; j++) {
-                print_debug("Writing %lu to offset %d\n", i*BATCH_SIZE + j, BLOCK_SIZE *j );
-                snprintf(&payload[BLOCK_SIZE *(j)], 50, "HELLO WORLD! How are you? %lu", i*BATCH_SIZE + j);
-            }
-            uint64_t wStart = getns();
-            write_rmem_bulk(target_ip, payload, (struct in6_memaddr *)&r_addr[i * BATCH_SIZE], BATCH_SIZE);
-            write_latency[i] = getns() - wStart;
+            print_debug("Writing %lu to offset %lu\n", i, i *BLOCK_SIZE);
+            snprintf(&payload[BLOCK_SIZE *i], 50, "HELLO WORLD! How are you? %lu", i);
         }
+        uint64_t wStart = getns();
+        write_rmem_bulk(target_ip, payload, r_addr, data->length);
+        write_latency[0] = getns() - wStart;
+        free(payload);
     } else {
         for (uint64_t i = 0; i < data->length; i++) {
             struct in6_memaddr remoteMemory = r_addr[i];
@@ -167,17 +164,16 @@ void *testing_loop(void *arg) {
     // WRITE TEST 2
     printf("Thread %d Starting second write test...\n", data->tid);
     if (BATCHED_MODE) {
-        for (uint64_t i = 0; i < data->length/BATCH_SIZE; i++) {
-            char payload[BLOCK_SIZE * BATCH_SIZE];
+        char *payload = malloc(BLOCK_SIZE * data->length);
+        for (uint64_t i = 0; i < data->length; i++) {
             print_debug("Creating payload");
-            for (int j = 0; j < BATCH_SIZE; j++) {
-                print_debug("Writing %lu to offset %d\n", i*BATCH_SIZE + j, BLOCK_SIZE *j );
-                snprintf(&payload[BLOCK_SIZE *(j)], 50, "Bye WORLD! I am done? %lu", i*BATCH_SIZE + j);
-            }
-            uint64_t wStart = getns();
-            write_rmem_bulk(target_ip, payload, (struct in6_memaddr *)&r_addr[i * BATCH_SIZE], BATCH_SIZE);
-            write_latency[i] = getns() - wStart;
+            print_debug("Writing %lu to offset %lu\n", i, i *BLOCK_SIZE);
+            snprintf(&payload[BLOCK_SIZE *i], 50, "HELLO WORLD! How are you? %lu", i);
         }
+        uint64_t wStart = getns();
+        write_rmem_bulk(target_ip, payload, r_addr, data->length);
+        write_latency[0] = getns() - wStart;
+        free(payload);
     } else {
         for (uint64_t i = 0; i < data->length; i++) {
             struct in6_memaddr remoteMemory = r_addr[i];
@@ -321,17 +317,16 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
     // WRITE TEST
     printf("Starting write test...\n");
     if (BATCHED_MODE) {
-        for (uint64_t i = 0; i < NUM_ITERATIONS/BATCH_SIZE; i++) {
-            char payload[BLOCK_SIZE * BATCH_SIZE];
+        char *payload = malloc(BLOCK_SIZE * NUM_ITERATIONS);
+        for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
             print_debug("Creating payload");
-            for (int j = 0; j < BATCH_SIZE; j++) {
-                print_debug("Writing %lu to offset %d\n", i*BATCH_SIZE + j, BLOCK_SIZE *j );
-                snprintf(&payload[BLOCK_SIZE *(j)], 50, "HELLO WORLD! How are you? %lu", i*BATCH_SIZE + j);
-            }
-            uint64_t wStart = getns();
-            write_rmem_bulk(target_ip, payload, (struct in6_memaddr *)&r_addr[i * BATCH_SIZE], BATCH_SIZE);
-            write_latency[i] = getns() - wStart;
+            print_debug("Writing %lu to offset %lu\n", i, i *BLOCK_SIZE);
+            snprintf(&payload[BLOCK_SIZE *i], 50, "HELLO WORLD! How are you? %lu", i);
         }
+        uint64_t wStart = getns();
+        write_rmem_bulk(target_ip, payload, r_addr, NUM_ITERATIONS);
+        write_latency[0] = getns() - wStart;
+        free(payload);
     } else {
         for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
             struct in6_memaddr remoteMemory = r_addr[i];
@@ -363,17 +358,16 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
     // WRITE TEST 2
     printf("Starting second write test...\n");
     if (BATCHED_MODE) {
-        for (uint64_t i = 0; i < NUM_ITERATIONS/BATCH_SIZE; i++) {
-            char payload[BLOCK_SIZE * BATCH_SIZE];
+        char *payload = malloc(BLOCK_SIZE * NUM_ITERATIONS);
+        for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
             print_debug("Creating payload");
-            for (int j = 0; j < BATCH_SIZE; j++) {
-                print_debug("Writing %lu to offset %d\n", i*BATCH_SIZE + j, BLOCK_SIZE *j );
-                snprintf(&payload[BLOCK_SIZE *(j)], 50, "Bye WORLD! I am done? %lu", i*BATCH_SIZE + j);
-            }
-            uint64_t wStart = getns();
-            write_rmem_bulk(target_ip, payload, (struct in6_memaddr *)&r_addr[i * BATCH_SIZE], BATCH_SIZE);
-            write_latency[i] = getns() - wStart;
+            print_debug("Writing %lu to offset %lu\n", i, i *BLOCK_SIZE);
+            snprintf(&payload[BLOCK_SIZE *i], 50, "HELLO WORLD! How are you? %lu", i);
         }
+        uint64_t wStart = getns();
+        write_rmem_bulk(target_ip, payload, r_addr, NUM_ITERATIONS);
+        write_latency[0] = getns() - wStart;
+        free(payload);
     } else {
         for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
             struct in6_memaddr remoteMemory = r_addr[i];

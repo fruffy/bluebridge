@@ -86,13 +86,13 @@ int init_packetsock_ring(int sd){
 
     // tell kernel to export data through mmap()ped ring
     tp.tp_block_size = C_BLOCKSIZE;
-    tp.tp_block_nr = 1;
+    tp.tp_block_nr = TX_RING_BLOCKS;
     tp.tp_frame_size = C_FRAMESIZE;
     tp.tp_frame_nr = C_RING_FRAMES;
     if (setsockopt(sd, SOL_PACKET, PACKET_TX_RING, (void*) &tp, sizeof(tp)))
         RETURN_ERROR(-1, "setsockopt() ring_tx\n");
     int on = 1;
-    //setsockopt(sd, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
+    setsockopt(sd, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
 
     int val = TPACKET_V3;
     setsockopt(sd, SOL_PACKET, PACKET_HDRLEN, &val, sizeof(val));
@@ -139,7 +139,7 @@ void set_thread_id_tx(int id) {
 }
 
 int close_tx_socket() {
-    if (munmap(ring_tx, C_RING_BLOCKS * C_BLOCKSIZE)) {
+    if (munmap(ring_tx, TX_RING_BLOCKS * C_BLOCKSIZE)) {
         perror("munmap");
         return 1;
     }
