@@ -15,7 +15,6 @@
 
 static int NUM_THREADS = 1;
 static int BATCHED_MODE = 0;
-static int BATCH_SIZE = 40;
 static uint64_t NUM_ITERATIONS;
 
 /////////////////////////////////// TO DOs ////////////////////////////////////

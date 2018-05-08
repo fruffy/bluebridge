@@ -135,29 +135,29 @@ int write_rmem(struct sockaddr_in6 *target_ip, char *payload, struct in6_memaddr
  */
 // TODO: Implement meaningful return types and error messages
 static __thread uint32_t sub_ids[USHRT_MAX];
-const static int BATCH_SIZE = 40;
+static const int BATCH_SIZE = 40;
 
 void batch_write(struct sockaddr_in6 *target_ip, char *payload, struct in6_memaddr *remote_addrs, int num_packets){
-        // Send the command to the target host and wait for response
-        struct pkt_rqst pkts[num_packets];
-        memset(sub_ids, 0, USHRT_MAX * sizeof(uint32_t));
-        for (int i = 0; i < num_packets; i++){
-            pkts[i].dst_addr = remote_addrs[i];
-            pkts[i].dst_port = target_ip->sin6_port;
-            pkts[i].data = payload + BLOCK_SIZE * i;
-            pkts[i].datalen = BLOCK_SIZE;
-            pkts[i].dst_addr.args =sub_ids[remote_addrs[i].subid]+1; 
-            pkts[i].dst_addr.cmd =  WRITE_BULK_CMD;
-            sub_ids[remote_addrs[i].subid]++;
+    // Send the command to the target host and wait for response
+    struct pkt_rqst pkts[num_packets];
+    memset(sub_ids, 0, USHRT_MAX * sizeof(uint32_t));
+    for (int i = 0; i < num_packets; i++){
+        pkts[i].dst_addr = remote_addrs[i];
+        pkts[i].dst_port = target_ip->sin6_port;
+        pkts[i].data = payload + BLOCK_SIZE * i;
+        pkts[i].datalen = BLOCK_SIZE;
+        pkts[i].dst_addr.args =sub_ids[remote_addrs[i].subid]+1; 
+        pkts[i].dst_addr.cmd =  WRITE_BULK_CMD;
+        sub_ids[remote_addrs[i].subid]++;
+    }
+    print_debug("******WRITE DATA******");
+    send_udp_raw_batched(pkts, sub_ids, num_packets);
+    for (int i = 0; i< USHRT_MAX; i++) {
+        if (sub_ids[i] != 0){
+            //printf("BLOCKING on %d %u\n", i, sub_ids[i]);
+            rcv_udp6_raw_id(NULL, 0, target_ip, NULL);
         }
-        print_debug("******WRITE DATA******");
-        send_udp_raw_batched(pkts, sub_ids, num_packets);
-        for (int i = 0; i< USHRT_MAX; i++) {
-            if (sub_ids[i] != 0){
-                //printf("BLOCKING on %d %u\n", i, sub_ids[i]);
-                rcv_udp6_raw_id(NULL, 0, target_ip, NULL);
-            }
-        }
+    }
 }
 
 int write_rmem_bulk(struct sockaddr_in6 *target_ip, char *payload, struct in6_memaddr *remote_addrs, int num_addrs) {
