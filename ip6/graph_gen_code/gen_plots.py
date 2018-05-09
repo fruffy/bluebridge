@@ -163,8 +163,9 @@ def plot_thrift_latencies():
     tests = ["ddc", "tcp"]
     # max_size = 4096 * 8 # 8192000
     # step_size = 100
-    NUM_STEPS = 24
-    steps_arr = list((2**exp for exp in range(NUM_STEPS)))
+    NUM_STEPS = 10000/10
+    # steps_arr = list((2**exp for exp in range(NUM_STEPS)))
+    steps_arr = list(range(0,10000,10))
     dir = "../results/thrift/"
     lats = {}
     for lat_type in lat_types:
