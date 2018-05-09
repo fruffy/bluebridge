@@ -161,9 +161,9 @@ def plot_thread_latency():
 def plot_thrift_latencies():
     lat_types = ["incr_arr_rpc_lat"]
     tests = ["ddc", "tcp"]
-    max_size = 4096 * 8 # 8192000
-    step_size = 100
-    NUM_STEPS = 25
+    # max_size = 4096 * 8 # 8192000
+    # step_size = 100
+    NUM_STEPS = 24
     steps_arr = (2**exp for exp in range(MAX_STEP))
     dir = "../results/thrift/"
     lats = {}

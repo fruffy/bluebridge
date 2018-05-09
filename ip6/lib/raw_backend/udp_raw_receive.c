@@ -35,31 +35,30 @@ int set_fanout(int sd_rx) {
     return EXIT_SUCCESS;
 }
 
-int set_packet_filter(int sd, char *addr, char *interfaceName, int port) {
+// Super shitty hack. Do not try this at home kids.
+int set_packet_filter(int sd, char *addr, char *iface, int port) {
     struct sock_fprog filter;
     int i, lineCount = 0;
-    char tcpdump_command[512];
+    char cmd[512];
     FILE* tcpdump_output;
-    sprintf(tcpdump_command, "tcpdump -i %s dst port %d and ip6 net %s/16 -ddd",interfaceName, ntohs(port), addr);
-    // Super shitty hack. Do not try this at home kids.
-    //sprintf(tcpdump_command, "tcpdump -i %s ether proto 0xffff and ether[56:2] == 0x%02x and ether[42:2] == 0x%02x%02x -ddd",interfaceName, ntohs(port), addr[4],addr[5]);
-    printf("Active Filter: %s\n",tcpdump_command );
-    if ( (tcpdump_output = popen(tcpdump_command, "r")) == NULL ) {
+    sprintf(cmd, "tcpdump -i %s dst port %d and ip6 net %s/16 -ddd", iface, ntohs(port), addr); 
+    //sprintf(cmd, "tcpdump -i %s ether[56:2] == 0x%02x and ether[38:2] == 0x%02x%02x -ddd",iface, ntohs(port), addr[0],addr[1]);
+    printf("Active Filter: %s\n",cmd );
+    if ( (tcpdump_output = popen(cmd, "r")) == NULL )
         RETURN_ERROR(-1, "Cannot compile filter using tcpdump.");
-    }
-    if ( fscanf(tcpdump_output, "%d\n", &lineCount) < 1 ) {
+    if ( fscanf(tcpdump_output, "%d\n", &lineCount) < 1 )
         RETURN_ERROR(-1, "cannot read lineCount.");
-    }
-    filter.filter = calloc(sizeof(struct sock_filter)*lineCount,1);
+    filter.filter = calloc(1, sizeof(struct sock_filter)*lineCount);
     filter.len = lineCount;
     for ( i = 0; i < lineCount; i++ ) {
         if (fscanf(tcpdump_output, "%u %u %u %u\n", (unsigned int *)&(filter.filter[i].code),(unsigned int *) &(filter.filter[i].jt),(unsigned int *) &(filter.filter[i].jf), &(filter.filter[i].k)) < 4 ) {
             free(filter.filter);
             RETURN_ERROR(-1, "fscanf: error in reading");
-    }
-    setsockopt(sd, SOL_SOCKET, SO_ATTACH_FILTER, &filter, sizeof(filter));
+        }
+        setsockopt(sd, SOL_SOCKET, SO_ATTACH_FILTER, &filter, sizeof(filter));
     }
     pclose(tcpdump_output);
+    free(filter.filter);
     return EXIT_SUCCESS;
 }
 
@@ -137,10 +136,10 @@ int setup_rx_socket(struct config *cfg, int my_port, int thread_id, int *my_epol
         perror("Could not set socket"), exit(EXIT_FAILURE);
     setsockopt(sd_rx, SOL_PACKET, PACKET_QDISC_BYPASS, &one, sizeof(one));
 
-    //set_packet_filter(sd_rx, (char*) &cfg->src_addr, cfg->interface, htons((ntohs(my_port) + thread_id)));
-    set_packet_filter(sd_rx, my_addr, cfg->interface,htons((ntohs(my_port) + thread_id)));
     *my_epoll = init_epoll(sd_rx);
     *my_ring = setup_packet_mmap(sd_rx);
+    //set_packet_filter(sd_rx, (char*) &cfg->src_addr, cfg->interface, htons((ntohs(my_port) + thread_id)));
+    set_packet_filter(sd_rx, my_addr, cfg->interface, htons((ntohs(my_port) + thread_id)));
     if (-1 == bind(sd_rx, (struct sockaddr *)&device, sizeof(device)))
         perror("Could not bind socket."), exit(EXIT_FAILURE);
     return sd_rx;

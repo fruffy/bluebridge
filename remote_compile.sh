@@ -2,8 +2,8 @@
 set +x
 USER_R="fruffy"
 DIR_LOCAL="./"
-DIR_REMOTE="/home/$USER_R/ip6/BlueBridge"
-SERVERS=("192.168.79.28" "192.168.79.41" "192.168.79.27")
+DIR_REMOTE="/home/$USER_R/bluebridge"
+SERVERS=("192.168.79.41" "192.168.79.27" "192.168.79.53" "192.168.79.43")
 
 IP6TARGET="$DIR_LOCAL/ip6/lib "
 IP6TARGET+="$DIR_LOCAL/ip6/*.mk "

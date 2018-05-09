@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <netinet/tcp.h>
+#include <math.h>
 
 #include <thrift/c_glib/protocol/thrift_binary_protocol.h>
 #include <thrift/c_glib/transport/thrift_buffered_transport.h>
@@ -24,7 +25,7 @@ ThriftProtocol *remmem_protocol;
 ThriftProtocol *arrcomp_protocol;
 
 static const char *RESULTS_DIR = "results/thrift/tcp";
-#define DATA_POINTS 25
+#define DATA_POINTS 24
 static int SIZE_STEPS[DATA_POINTS];
 
 struct result test_increment_array(SimpleArrCompIf *client, int size, gboolean print) {
@@ -35,12 +36,11 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, gboolean p
   int arr_len = size;                         // Size of array to be sent
   uint8_t incr_val = 1;                       // Value to increment each value in the array by
   GByteArray *arr = g_byte_array_new();       // Array to be sent (must be uint8_t to match char size)
-
   if (print)
     printf("Testing increment_array...\n");
 
   // Create argument array
-  uint8_t temp[arr_len];
+  uint8_t *temp = malloc(arr_len);
   populate_array(temp, arr_len, 0, FALSE);
 
   g_byte_array_append(arr, temp, arr_len);
@@ -75,6 +75,7 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, gboolean p
   }
 
   // Free malloc'd and GByteArray memory
+  free(temp);
   g_byte_array_free (arr,TRUE);
   g_byte_array_free (result_arr,TRUE);
   if (print)
@@ -96,8 +97,8 @@ struct result test_add_arrays(SimpleArrCompIf *client, int size, gboolean print)
     printf("Testing add_arrays...\t\t");
 
   // Populate arrays
-  uint8_t temp1[arrays_len];
-  uint8_t temp2[arrays_len];
+  uint8_t *temp1 = malloc(arrays_len);
+  uint8_t *temp2 = malloc(arrays_len);
   populate_array(temp1, arrays_len, 3, TRUE);
   populate_array(temp2, arrays_len, 5, TRUE);
   g_byte_array_append(array1, temp1, arrays_len);
@@ -136,6 +137,8 @@ struct result test_add_arrays(SimpleArrCompIf *client, int size, gboolean print)
     }
   }
   // Free malloc'd and GByteArray memory
+  free(temp1);
+  free(temp2);
   g_byte_array_free (array1,TRUE);
   g_byte_array_free (array2,TRUE);
   g_byte_array_free (result_arr,TRUE);
@@ -245,7 +248,7 @@ uint64_t no_op_rpc(SimpleArrCompIf *client, int size) {
   GByteArray* result_arr = NULL;              // Result pointer
   THRIFT_UNUSED_VAR(client);
   // Create argument array
-  uint8_t temp[arr_len];
+  uint8_t *temp = malloc(arr_len);
   populate_array(temp, arr_len, 0, FALSE);
 
   g_byte_array_append(arr, temp, arr_len);
@@ -258,7 +261,7 @@ uint64_t no_op_rpc(SimpleArrCompIf *client, int size) {
     printf ("ERROR: %s\n", error->message);
     g_clear_error (&error);
   }
-  
+  free(temp);
   return rpc_time;
 }
 
@@ -287,13 +290,13 @@ void increment_array_perf(SimpleArrCompIf *client, int iterations, int max_size,
   for (int s = 0; s < DATA_POINTS; s++) {
   //for (int s = 0; s < max_size; s+= incr) {
   //printf("Increment Array Size: %d\n", s );
-    FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", SIZE_STEPS[DATA_POINTS]);
-    FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", SIZE_STEPS[DATA_POINTS]);
-    FILE* rpc_lat_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_lat", SIZE_STEPS[DATA_POINTS]);
-    FILE* send_file = generate_file_handle(RESULTS_DIR, method_name, "c1_send", SIZE_STEPS[DATA_POINTS]);
-    FILE* recv_file = generate_file_handle(RESULTS_DIR, method_name, "c1_recv", SIZE_STEPS[DATA_POINTS]);
+    FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", SIZE_STEPS[s]);
+    FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", SIZE_STEPS[s]);
+    FILE* rpc_lat_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_lat", SIZE_STEPS[s]);
+    FILE* send_file = generate_file_handle(RESULTS_DIR, method_name, "c1_send", SIZE_STEPS[s]);
+    FILE* recv_file = generate_file_handle(RESULTS_DIR, method_name, "c1_recv", SIZE_STEPS[s]);
     for (int i = 0; i < iterations; i++) {
-      struct result res = test_increment_array(client, SIZE_STEPS[DATA_POINTS], FALSE);
+      struct result res = test_increment_array(client, SIZE_STEPS[s], FALSE);
       fprintf(rpc_start_file, "%lu\n", res.rpc_start);
       fprintf(rpc_end_file, "%lu\n", res.rpc_end);
       fprintf(rpc_lat_file, "%lu\n", res.rpc_end - res.rpc_start);
@@ -312,13 +315,13 @@ void add_arrays_perf(SimpleArrCompIf *client, int iterations, int max_size, int 
   for (int s = 0; s < DATA_POINTS; s++) {
   //for (int s = 0; s < max_size; s+= incr) {
     //printf("Add Array Size: %d\n", s );
-    FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", SIZE_STEPS[DATA_POINTS]);
-    FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", SIZE_STEPS[DATA_POINTS]);
-    FILE* rpc_lat_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_lat", SIZE_STEPS[DATA_POINTS]);
-    FILE* send_file = generate_file_handle(RESULTS_DIR, method_name, "c1_send", SIZE_STEPS[DATA_POINTS]);
-    FILE* recv_file = generate_file_handle(RESULTS_DIR, method_name, "c1_recv", SIZE_STEPS[DATA_POINTS]);
+    FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", SIZE_STEPS[s]);
+    FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", SIZE_STEPS[s]);
+    FILE* rpc_lat_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_lat", SIZE_STEPS[s]);
+    FILE* send_file = generate_file_handle(RESULTS_DIR, method_name, "c1_send", SIZE_STEPS[s]);
+    FILE* recv_file = generate_file_handle(RESULTS_DIR, method_name, "c1_recv", SIZE_STEPS[s]);
     for (int i = 0; i < iterations; i++) {
-      struct result res = test_add_arrays(client, SIZE_STEPS[DATA_POINTS], FALSE);
+      struct result res = test_add_arrays(client, SIZE_STEPS[s], FALSE);
       fprintf(rpc_start_file, "%lu\n", res.rpc_start);
       fprintf(rpc_end_file, "%lu\n", res.rpc_end);
       fprintf(rpc_lat_file, "%lu\n", res.rpc_end - res.rpc_start);
@@ -335,18 +338,18 @@ void add_arrays_perf(SimpleArrCompIf *client, int iterations, int max_size, int 
 }
 
 void test_shared_pointer_perf(RemoteMemTestIf *remmem_client, SimpleArrCompIf *arrcomp_client, int iterations, int max_size, int incr) {
-  microbenchmark_perf(remmem_client, iterations);
+  // microbenchmark_perf(remmem_client, iterations);
 
-  printf("Starting no-op performance test...\n");
-  // Call perf test for no-op RPC
-  no_op_perf(arrcomp_client, iterations);
+  // printf("Starting no-op performance test...\n");
+  // // Call perf test for no-op RPC
+  // no_op_perf(arrcomp_client, iterations);
 
-  thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_SEND, FALSE);
-  thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_RECV, FALSE);
+  // thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_SEND, FALSE);
+  // thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_RECV, FALSE);
 
-  printf("Starting increment array performance test...\n");
-  // Call perf test for increment array rpc
-  increment_array_perf(arrcomp_client, iterations, max_size, incr, "incr_arr");
+  // printf("Starting increment array performance test...\n");
+  // // Call perf test for increment array rpc
+  // increment_array_perf(arrcomp_client, iterations, max_size, incr, "incr_arr");
 
   printf("Starting add arrays performance test...\n");
   // Call perf test for add arrays
@@ -449,23 +452,28 @@ int main (int argc, char *argv[]) {
     return 1;
   }
 
-  /* Clean up previous files */
-  int MAX_FNAME = 256;
-  char cmd[MAX_FNAME];
-  snprintf(cmd, MAX_FNAME, "rm -rf %s", RESULTS_DIR);
-  printf("Deleting dir %s...\n", RESULTS_DIR);
-  system(cmd);
+  // /* Clean up previous files */
+  // int MAX_FNAME = 256;
+  // char cmd[MAX_FNAME];
+  // snprintf(cmd, MAX_FNAME, "rm -rf %s", RESULTS_DIR);
+  // printf("\nDeleting dir %s...", RESULTS_DIR);
+  // system(cmd);
+
+  // Fill the global array with data values
+  for (int i = 0; i < DATA_POINTS; i++ ) {
+    SIZE_STEPS[i] = pow(2,i);
+  }
 
   arrcomp_client = g_object_new (TYPE_SIMPLE_ARR_COMP_CLIENT,
                                  "input_protocol",  arrcomp_protocol,
                                  "output_protocol", arrcomp_protocol,
                                  NULL);
 
-  printf("\n\n###### Server functionality tests ######\n");
-  test_server_functionality(remmem_client);
+  // printf("\n\n###### Server functionality tests ######\n");
+  // test_server_functionality(remmem_client);
 
-  printf("\n####### Shared pointer RPC tests #######\n");
-  test_shared_pointer_rpc(arrcomp_client);
+  // printf("\n####### Shared pointer RPC tests #######\n");
+  // test_shared_pointer_rpc(arrcomp_client);
 
   printf("\n####### Shared pointer performance tests #######\n");
   test_shared_pointer_perf(remmem_client, arrcomp_client, iterations, max_size, incr);

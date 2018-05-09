@@ -24,7 +24,7 @@
 ThriftProtocol *remmem_protocol;
 ThriftProtocol *arrcomp_protocol;
 static const char *RESULTS_DIR = "results/thrift/ddc";
-#define DATA_POINTS 25
+#define DATA_POINTS 24
 static int SIZE_STEPS[DATA_POINTS];
 
 struct result test_increment_array(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targetIP, gboolean print) {
@@ -484,12 +484,12 @@ void test_shared_pointer_perf(RemoteMemTestIf *remmem_client,
   thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_SEND, FALSE);
   thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_RECV, FALSE);
 
-  // printf("Starting increment array performance test...\n");
-  // // Call perf test for increment array rpc
-  // increment_array_perf(arrcomp_client, targetIP, iterations, max_size, incr, "incr_arr");
+  printf("Starting increment array performance test...\n");
+  // Call perf test for increment array rpc
+  increment_array_perf(arrcomp_client, targetIP, iterations, max_size, incr, "incr_arr");
 
-  // thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_SEND, FALSE);
-  // thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_RECV, FALSE);
+  thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_SEND, FALSE);
+  thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_RECV, FALSE);
 
   printf("Starting add arrays performance test...\n");
   // Call perf test for add arrays
