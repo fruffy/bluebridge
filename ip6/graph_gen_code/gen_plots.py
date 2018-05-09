@@ -92,12 +92,12 @@ def get_latencies(input_dir, lat_types, thread):
     return lat_results
 
 
-def get_thrift_latencies(input_dir, lat_types, max_size, step_size):
+def get_thrift_latencies(input_dir, lat_types, steps_arr):
 
     lat_results = {}
     for lat_type in lat_types:
         lat_results[lat_type] = []
-        for chunk in range(0, max_size, step_size):
+        for chunk in steps_arr # range(0, max_size, step_size):
             data = read_list("%s/%s_%d.txt" % (input_dir, lat_type, chunk))
             flat_data = [item for subdata in data[1:] for item in subdata]
             lat_results[lat_type].append(avg(flat_data) / 1000)
@@ -163,17 +163,19 @@ def plot_thrift_latencies():
     tests = ["ddc", "tcp"]
     max_size = 4096 * 8 # 8192000
     step_size = 100
+    NUM_STEPS = 25
+    steps_arr = (2**exp for exp in range(MAX_STEP))
     dir = "../results/thrift/"
     lats = {}
     for lat_type in lat_types:
-        x_step = list(range(0, max_size, step_size))
+        x_step = steps_arr # list(range(0, max_size, step_size))
         for test in tests:
-            lats = get_thrift_latencies(dir + test, lat_types, max_size, step_size)
+            lats = get_thrift_latencies(dir + test, lat_types, steps_arr)
             plt.plot(x_step, lats[lat_type], label="Latency %s" % test)
         plt.xlabel('Array Size')
         plt.ylabel('Latency')
         plt.legend(loc='upper left')
-        plt.savefig("%s_%d" % (lat_type, max_size))
+        plt.savefig("%s_%d" % (lat_type, steps[NUM_STEPS]))
         plt.gcf().clear()
 
 

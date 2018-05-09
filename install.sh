@@ -10,7 +10,20 @@ else
     (cd includes && ./setup_includes.sh)
     make
 fi
+
+read -r -p "Do you also want to install thrift? [y/N]: " response
+response=${response,,} # tolower
+if [[ $response =~ ^(yes|y) ]]; then
+    cd ip6/thrift
+    git submodule update --init .
+    ./autogen
+    ./configure --without-cpp
+    cd ../..
+    make thrift-all
+fi
+
 sudo chown -R $USER:$USER .
+
 echo "All done! You are good to go!"
 
 

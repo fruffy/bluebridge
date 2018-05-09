@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <math.h>
 
 #include <thrift/c_glib/protocol/thrift_binary_protocol.h>
 #include <thrift/c_glib/transport/thrift_buffered_udp_transport.h>
@@ -23,6 +24,8 @@
 ThriftProtocol *remmem_protocol;
 ThriftProtocol *arrcomp_protocol;
 static const char *RESULTS_DIR = "results/thrift/ddc";
+#define DATA_POINTS 25
+static int SIZE_STEPS[DATA_POINTS];
 
 struct result test_increment_array(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targetIP, gboolean print) {
   GError *error = NULL;                       // Error (in transport, socket, etc.)
@@ -343,23 +346,6 @@ void test_shared_pointer_rpc(SimpleArrCompIf *client, struct sockaddr_in6 *targe
   // sort_array(client, targetIP);
 }
 
-void no_op_perf(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP,
-                int iterations, int max_size, int incr) {
-  // uint64_t *no_op_rpc_times = malloc(iterations*sizeof(uint64_t));
-  uint64_t no_op_rpc_total;
-  int s = BLOCK_SIZE;
-
-  // for (int s = 10; s < max_size; s+= incr) {
-    no_op_rpc_total = 0;
-    for (int i = 0; i < iterations; i++) {
-      no_op_rpc_total += no_op_rpc(client, s, targetIP);
-       // no_op_rpc_times[i];
-    }
-    printf("Average %s latency (%d): "KRED"%lu us\n"RESET, "no_op_rpcs", s, no_op_rpc_total / (iterations*1000));
-  // }
-  // free(no_op_rpc_times);
-}
-
 void increment_array_perf(SimpleArrCompIf *client, 
                           struct sockaddr_in6 *targetIP, int iterations, 
                           int max_size, int incr, char* method_name) {
@@ -374,18 +360,19 @@ void increment_array_perf(SimpleArrCompIf *client,
   fprintf(write_file, "size,avg latency\n");
   fprintf(free_file, "size,avg latency\n");
 
-  for (int s = 0; s < max_size; s+= incr) {
-    FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", s);
-    FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", s);
-    FILE* rpc_lat_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_lat", s);
-    FILE* send_file = generate_file_handle(RESULTS_DIR, method_name, "c1_send", s);
-    FILE* recv_file = generate_file_handle(RESULTS_DIR, method_name, "c1_recv", s);
+  for (int s = 0; s < DATA_POINTS; s++) {
+  //for (int s = 0; s < max_size; s+= incr) {
+    FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", SIZE_STEPS[s]);
+    FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", SIZE_STEPS[s]);
+    FILE* rpc_lat_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_lat", SIZE_STEPS[s]);
+    FILE* send_file = generate_file_handle(RESULTS_DIR, method_name, "c1_send", SIZE_STEPS[s]);
+    FILE* recv_file = generate_file_handle(RESULTS_DIR, method_name, "c1_recv", SIZE_STEPS[s]);
     alloc_times = 0;
     read_times = 0;
     write_times = 0;
     free_times = 0;
     for (int i = 0; i < iterations; i++) {
-      struct result res = test_increment_array(client, s, targetIP, FALSE);
+      struct result res = test_increment_array(client, SIZE_STEPS[s], targetIP, FALSE);
       alloc_times += res.alloc;
       read_times += res.read;
       write_times += res.write;
@@ -394,10 +381,10 @@ void increment_array_perf(SimpleArrCompIf *client,
       fprintf(rpc_end_file, "%lu\n", res.rpc_end);
       fprintf(rpc_lat_file, "%lu\n", res.rpc_end - res.rpc_start);
     }
-    fprintf(alloc_file, "%d,%lu\n", s, alloc_times / (iterations*1000) );
-    fprintf(read_file, "%d,%lu\n", s, read_times / (iterations*1000) );
-    fprintf(write_file, "%d,%lu\n", s, write_times / (iterations*1000) );
-    fprintf(free_file, "%d,%lu\n", s, free_times / (iterations*1000) );
+    fprintf(alloc_file, "%d,%lu\n", SIZE_STEPS[s], alloc_times / (iterations*1000) );
+    fprintf(read_file, "%d,%lu\n", SIZE_STEPS[s], read_times / (iterations*1000) );
+    fprintf(write_file, "%d,%lu\n", SIZE_STEPS[s], write_times / (iterations*1000) );
+    fprintf(free_file, "%d,%lu\n", SIZE_STEPS[s], free_times / (iterations*1000) );
     thrift_protocol_flush_timestamps(arrcomp_protocol, send_file, THRIFT_PERF_SEND, TRUE);
     thrift_protocol_flush_timestamps(arrcomp_protocol, recv_file, THRIFT_PERF_RECV, TRUE);
     fclose(send_file);
@@ -425,18 +412,19 @@ void add_arrays_perf(SimpleArrCompIf *client,
   fprintf(write_file, "size,avg latency\n");
   fprintf(free_file, "size,avg latency\n");
 
-  for (int s = 0; s < max_size; s+= incr) {
-    FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", s);
-    FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", s);
-    FILE* rpc_lat_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_lat", s);
-    FILE* send_file = generate_file_handle(RESULTS_DIR, method_name, "c1_send", s);
-    FILE* recv_file = generate_file_handle(RESULTS_DIR, method_name, "c1_recv", s);
+  for (int s = 0; s < DATA_POINTS; s++) {
+  //for (int s = 0; s < max_size; s+= incr) {
+    FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", SIZE_STEPS[s]);
+    FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", SIZE_STEPS[s]);
+    FILE* rpc_lat_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_lat", SIZE_STEPS[s]);
+    FILE* send_file = generate_file_handle(RESULTS_DIR, method_name, "c1_send", SIZE_STEPS[s]);
+    FILE* recv_file = generate_file_handle(RESULTS_DIR, method_name, "c1_recv", SIZE_STEPS[s]);
     alloc_times = 0;
     read_times = 0;
     write_times = 0;
     free_times = 0;
     for (int i = 0; i < iterations; i++) {
-      struct result res = test_add_arrays(client, s, targetIP, FALSE);
+      struct result res = test_add_arrays(client, SIZE_STEPS[s], targetIP, FALSE);
       alloc_times += res.alloc;
       read_times += res.read;
       write_times += res.write;
@@ -445,10 +433,10 @@ void add_arrays_perf(SimpleArrCompIf *client,
       fprintf(rpc_end_file, "%lu\n", res.rpc_end);
       fprintf(rpc_lat_file, "%lu\n", res.rpc_end - res.rpc_start);
     }
-    fprintf(alloc_file, "%d,%lu\n", s, alloc_times / (iterations*1000) );
-    fprintf(read_file, "%d,%lu\n", s, read_times / (iterations*1000) );
-    fprintf(write_file, "%d,%lu\n", s, write_times / (iterations*1000) );
-    fprintf(free_file, "%d,%lu\n", s, free_times / (iterations*1000) );
+    fprintf(alloc_file, "%d,%lu\n", SIZE_STEPS[s], alloc_times / (iterations*1000) );
+    fprintf(read_file, "%d,%lu\n", SIZE_STEPS[s], read_times / (iterations*1000) );
+    fprintf(write_file, "%d,%lu\n", SIZE_STEPS[s], write_times / (iterations*1000) );
+    fprintf(free_file, "%d,%lu\n", SIZE_STEPS[s], free_times / (iterations*1000) );
     thrift_protocol_flush_timestamps(arrcomp_protocol, send_file, THRIFT_PERF_SEND, TRUE);
     thrift_protocol_flush_timestamps(arrcomp_protocol, recv_file, THRIFT_PERF_RECV, TRUE);
     fclose(send_file);
@@ -461,6 +449,23 @@ void add_arrays_perf(SimpleArrCompIf *client,
   fclose(read_file);
   fclose(write_file);
   fclose(free_file);
+}
+
+void no_op_perf(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP,
+                int iterations, int max_size, int incr) {
+  // uint64_t *no_op_rpc_times = malloc(iterations*sizeof(uint64_t));
+  uint64_t no_op_rpc_total;
+  int s = BLOCK_SIZE;
+
+  // for (int s = 10; s < max_size; s+= incr) {
+    no_op_rpc_total = 0;
+    for (int i = 0; i < iterations; i++) {
+      no_op_rpc_total += no_op_rpc(client, s, targetIP);
+       // no_op_rpc_times[i];
+    }
+    printf("Average %s latency (%d): "KRED"%lu us\n"RESET, "no_op_rpcs", s, no_op_rpc_total / (iterations*1000));
+  // }
+  // free(no_op_rpc_times);
 }
 
 void test_shared_pointer_perf(RemoteMemTestIf *remmem_client, 
@@ -479,12 +484,12 @@ void test_shared_pointer_perf(RemoteMemTestIf *remmem_client,
   thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_SEND, FALSE);
   thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_RECV, FALSE);
 
-  printf("Starting increment array performance test...\n");
-  // Call perf test for increment array rpc
-  increment_array_perf(arrcomp_client, targetIP, iterations, max_size, incr, "incr_arr");
+  // printf("Starting increment array performance test...\n");
+  // // Call perf test for increment array rpc
+  // increment_array_perf(arrcomp_client, targetIP, iterations, max_size, incr, "incr_arr");
 
-  thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_SEND, FALSE);
-  thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_RECV, FALSE);
+  // thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_SEND, FALSE);
+  // thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_RECV, FALSE);
 
   printf("Starting add arrays performance test...\n");
   // Call perf test for add arrays
@@ -609,6 +614,11 @@ int main (int argc, char *argv[]) {
   snprintf(cmd, MAX_FNAME, "rm -rf %s", RESULTS_DIR);
   printf("\nDeleting dir %s...", RESULTS_DIR);
   system(cmd);
+
+  // Fill the global array with data values
+  for (int i = 0; i < DATA_POINTS; i++ ) {
+    SIZE_STEPS[i] = pow(2,i);
+  }
 
   printf("\n\n###### Server functionality tests ######\n");
   test_server_functionality(remmem_client);

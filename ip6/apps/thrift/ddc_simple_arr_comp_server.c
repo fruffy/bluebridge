@@ -183,7 +183,7 @@ tutorial_simple_arr_comp_handler_add_arrays (SimpleArrCompIf *iface,
 
   *_return = g_byte_array_new();
   // printf("Get result pointer\n");
-  struct in6_memaddr result_addr= get_result_pointer(targetIP);
+  struct in6_memaddr result_addr = get_result_pointer(targetIP);
 
   // printf("marshall_shmem_ptr\n");
   marshall_shmem_ptr(_return, &result_addr);
@@ -239,7 +239,7 @@ tutorial_simple_arr_comp_handler_add_arrays (SimpleArrCompIf *iface,
 
   //*_return = result_ptr;
 
-  //free(result_array);
+  free(result_array);
   free(arr1);
   free(arr2);
   return TRUE;

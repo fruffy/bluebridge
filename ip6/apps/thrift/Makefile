@@ -11,7 +11,7 @@ GEN_TEMPLATE = thrift --gen c_glib
 CC = gcc
 INCLUDES += -I$(C_GLIB_SRC) -I$(BB_SRC) `pkg-config --cflags glib-2.0 gobject-2.0`
 LIBS = $(INCLUDES)
-LIBS += $(C_GLIB_LIB) $(BB_LIB) 
+LIBS += $(C_GLIB_LIB) $(BB_LIB) -lm
 LIBS += `pkg-config --libs glib-2.0 gobject-2.0`
 CFLAGS = 
 

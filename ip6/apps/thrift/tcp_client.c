@@ -24,6 +24,8 @@ ThriftProtocol *remmem_protocol;
 ThriftProtocol *arrcomp_protocol;
 
 static const char *RESULTS_DIR = "results/thrift/tcp";
+#define DATA_POINTS 25
+static int SIZE_STEPS[DATA_POINTS];
 
 struct result test_increment_array(SimpleArrCompIf *client, int size, gboolean print) {
   struct result res;
@@ -282,15 +284,16 @@ void no_op_perf(SimpleArrCompIf *client, int iterations) {
 }
 
 void increment_array_perf(SimpleArrCompIf *client, int iterations, int max_size, int incr, char* method_name) {
-  for (int s = 0; s < max_size; s+=incr) {
-    //printf("Increment Array Size: %d\n", s );
-    FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", s);
-    FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", s);
-    FILE* rpc_lat_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_lat", s);
-    FILE* send_file = generate_file_handle(RESULTS_DIR, method_name, "c1_send", s);
-    FILE* recv_file = generate_file_handle(RESULTS_DIR, method_name, "c1_recv", s);
+  for (int s = 0; s < DATA_POINTS; s++) {
+  //for (int s = 0; s < max_size; s+= incr) {
+  //printf("Increment Array Size: %d\n", s );
+    FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", SIZE_STEPS[DATA_POINTS]);
+    FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", SIZE_STEPS[DATA_POINTS]);
+    FILE* rpc_lat_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_lat", SIZE_STEPS[DATA_POINTS]);
+    FILE* send_file = generate_file_handle(RESULTS_DIR, method_name, "c1_send", SIZE_STEPS[DATA_POINTS]);
+    FILE* recv_file = generate_file_handle(RESULTS_DIR, method_name, "c1_recv", SIZE_STEPS[DATA_POINTS]);
     for (int i = 0; i < iterations; i++) {
-      struct result res = test_increment_array(client, s, FALSE);
+      struct result res = test_increment_array(client, SIZE_STEPS[DATA_POINTS], FALSE);
       fprintf(rpc_start_file, "%lu\n", res.rpc_start);
       fprintf(rpc_end_file, "%lu\n", res.rpc_end);
       fprintf(rpc_lat_file, "%lu\n", res.rpc_end - res.rpc_start);
@@ -306,15 +309,16 @@ void increment_array_perf(SimpleArrCompIf *client, int iterations, int max_size,
 }
 
 void add_arrays_perf(SimpleArrCompIf *client, int iterations, int max_size, int incr, char* method_name) {
-  for (int s = 0; s < max_size; s+=incr) {
+  for (int s = 0; s < DATA_POINTS; s++) {
+  //for (int s = 0; s < max_size; s+= incr) {
     //printf("Add Array Size: %d\n", s );
-    FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", s);
-    FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", s);
-    FILE* rpc_lat_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_lat", s);
-    FILE* send_file = generate_file_handle(RESULTS_DIR, method_name, "c1_send", s);
-    FILE* recv_file = generate_file_handle(RESULTS_DIR, method_name, "c1_recv", s);
+    FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", SIZE_STEPS[DATA_POINTS]);
+    FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", SIZE_STEPS[DATA_POINTS]);
+    FILE* rpc_lat_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_lat", SIZE_STEPS[DATA_POINTS]);
+    FILE* send_file = generate_file_handle(RESULTS_DIR, method_name, "c1_send", SIZE_STEPS[DATA_POINTS]);
+    FILE* recv_file = generate_file_handle(RESULTS_DIR, method_name, "c1_recv", SIZE_STEPS[DATA_POINTS]);
     for (int i = 0; i < iterations; i++) {
-      struct result res = test_add_arrays(client, s, FALSE);
+      struct result res = test_add_arrays(client, SIZE_STEPS[DATA_POINTS], FALSE);
       fprintf(rpc_start_file, "%lu\n", res.rpc_start);
       fprintf(rpc_end_file, "%lu\n", res.rpc_end);
       fprintf(rpc_lat_file, "%lu\n", res.rpc_end - res.rpc_start);

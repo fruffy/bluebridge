@@ -116,17 +116,15 @@ void handle_packet(struct tpacket_hdr *tpacket_hdr, struct sockaddr_in6 *target_
 
 //This function is hacky bullshit, needs a lot of improvement.
 int raw_rcv_loop(struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
-    struct epoll_event events[1024];
+    struct epoll_event event;
     while (1){
-        int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, -1);
+        epoll_wait(epoll_fd_g, &event, sizeof event, -1);
         //int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
         /*if (num_events == 0 && !server) {
             //printf("TIMEOUT!\n");
             return -1;
         }*/
-        for (int i = 0; i < num_events; i++)  {
-            struct epoll_event *event = &events[i];
-            if (event->events & EPOLLIN) {
+            if (event.events & EPOLLIN) {
                 struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
                 if ((volatile uint32_t)tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
                     //printf("Dis Kernel\n");
@@ -142,7 +140,6 @@ int raw_rcv_loop(struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr
                 }
                 handle_packet(tpacket_hdr, target_ip, remote_addr);
            }
-        }
     }
 }
 
