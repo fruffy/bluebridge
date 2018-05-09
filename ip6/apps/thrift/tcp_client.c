@@ -25,7 +25,7 @@ ThriftProtocol *remmem_protocol;
 ThriftProtocol *arrcomp_protocol;
 
 static const char *RESULTS_DIR = "results/thrift/tcp";
-#define DATA_POINTS 24
+#define DATA_POINTS 1000
 static int SIZE_STEPS[DATA_POINTS];
 
 struct result test_increment_array(SimpleArrCompIf *client, int size, gboolean print) {
@@ -288,6 +288,7 @@ void no_op_perf(SimpleArrCompIf *client, int iterations) {
 
 void increment_array_perf(SimpleArrCompIf *client, int iterations, int max_size, int incr, char* method_name) {
   for (int s = 0; s < DATA_POINTS; s++) {
+    printf("Starting Size %d with %d Iterations \n", SIZE_STEPS[s], iterations );
   //for (int s = 0; s < max_size; s+= incr) {
   //printf("Increment Array Size: %d\n", s );
     FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", SIZE_STEPS[s]);
@@ -313,6 +314,7 @@ void increment_array_perf(SimpleArrCompIf *client, int iterations, int max_size,
 
 void add_arrays_perf(SimpleArrCompIf *client, int iterations, int max_size, int incr, char* method_name) {
   for (int s = 0; s < DATA_POINTS; s++) {
+    printf("Starting Size %d with %d Iterations \n", SIZE_STEPS[s], iterations );
   //for (int s = 0; s < max_size; s+= incr) {
     //printf("Add Array Size: %d\n", s );
     FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", SIZE_STEPS[s]);
@@ -338,18 +340,18 @@ void add_arrays_perf(SimpleArrCompIf *client, int iterations, int max_size, int 
 }
 
 void test_shared_pointer_perf(RemoteMemTestIf *remmem_client, SimpleArrCompIf *arrcomp_client, int iterations, int max_size, int incr) {
-  // microbenchmark_perf(remmem_client, iterations);
+  microbenchmark_perf(remmem_client, iterations);
 
-  // printf("Starting no-op performance test...\n");
-  // // Call perf test for no-op RPC
-  // no_op_perf(arrcomp_client, iterations);
+  printf("Starting no-op performance test...\n");
+  // Call perf test for no-op RPC
+  no_op_perf(arrcomp_client, iterations);
 
-  // thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_SEND, FALSE);
-  // thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_RECV, FALSE);
+  thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_SEND, FALSE);
+  thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_RECV, FALSE);
 
-  // printf("Starting increment array performance test...\n");
-  // // Call perf test for increment array rpc
-  // increment_array_perf(arrcomp_client, iterations, max_size, incr, "incr_arr");
+  printf("Starting increment array performance test...\n");
+  // Call perf test for increment array rpc
+  increment_array_perf(arrcomp_client, iterations, max_size, incr, "incr_arr");
 
   printf("Starting add arrays performance test...\n");
   // Call perf test for add arrays
@@ -452,16 +454,16 @@ int main (int argc, char *argv[]) {
     return 1;
   }
 
-  // /* Clean up previous files */
-  // int MAX_FNAME = 256;
-  // char cmd[MAX_FNAME];
-  // snprintf(cmd, MAX_FNAME, "rm -rf %s", RESULTS_DIR);
-  // printf("\nDeleting dir %s...", RESULTS_DIR);
-  // system(cmd);
+  /* Clean up previous files */
+  int MAX_FNAME = 256;
+  char cmd[MAX_FNAME];
+  snprintf(cmd, MAX_FNAME, "rm -rf %s", RESULTS_DIR);
+  printf("\nDeleting dir %s...", RESULTS_DIR);
+  system(cmd);
 
   // Fill the global array with data values
   for (int i = 0; i < DATA_POINTS; i++ ) {
-    SIZE_STEPS[i] = pow(2,i);
+    SIZE_STEPS[i] = i*10;//pow(2,i);
   }
 
   arrcomp_client = g_object_new (TYPE_SIMPLE_ARR_COMP_CLIENT,
@@ -469,11 +471,11 @@ int main (int argc, char *argv[]) {
                                  "output_protocol", arrcomp_protocol,
                                  NULL);
 
-  // printf("\n\n###### Server functionality tests ######\n");
-  // test_server_functionality(remmem_client);
+  printf("\n\n###### Server functionality tests ######\n");
+  test_server_functionality(remmem_client);
 
-  // printf("\n####### Shared pointer RPC tests #######\n");
-  // test_shared_pointer_rpc(arrcomp_client);
+  printf("\n####### Shared pointer RPC tests #######\n");
+  test_shared_pointer_rpc(arrcomp_client);
 
   printf("\n####### Shared pointer performance tests #######\n");
   test_shared_pointer_perf(remmem_client, arrcomp_client, iterations, max_size, incr);

@@ -10,11 +10,6 @@
 
 #include "config.h"
 
-// Define some constants.
-#define ETH_HDRLEN 14  // Ethernet header length
-#define IP6_HDRLEN 40  // IPv6 header length
-#define UDP_HDRLEN 8  // UDP header length, excludes data
-
 #define ifreq_offsetof(x)  offsetof(struct ifreq, x)
 
 struct in6_ifreq {
@@ -33,31 +28,26 @@ int set_interface_ip(struct config *config) {
     //struct sockaddr_in6* addr = (struct sockaddr_in6*) &ifr.ifr6_addr;
     ifr.ifr_addr.sa_family = AF_INET6;
     //memcpy(&addr->sin6_addr, &config->src_addr, IPV6_SIZE);
-    if(ioctl(fd, SIOCGIFHWADDR, &ifr) < 0) {
+    if(ioctl(fd, SIOCGIFHWADDR, &ifr) < 0)
         perror("SIOCGIFHWADDR");
-    }
-    if(ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
+    if(ioctl(fd, SIOCGIFFLAGS, &ifr) < 0)
         perror("SIOCGIFFLAGS");
-    }
-    if (ioctl(fd, SIOGIFINDEX, &ifr) < 0) {
+    if (ioctl(fd, SIOGIFINDEX, &ifr) < 0)
         perror("SIOGIFINDEX");
-    }
+    
     memcpy(&ifr6.ifr6_addr, &config->src_addr,
                sizeof(struct in6_addr));
     ifr6.ifr6_ifindex = ifr.ifr_ifindex;
     ifr6.ifr6_prefixlen = 64;
-    if (ioctl(fd, SIOCSIFADDR, &ifr6) < 0) {
+    if (ioctl(fd, SIOCSIFADDR, &ifr6) < 0)
         perror("SIOCSIFADDR");
-    }
     strncpy(ifr.ifr_name, config->interface, IFNAMSIZ);
     ifr.ifr_flags |= (IFF_UP | IFF_RUNNING);
-    if(ioctl(fd, SIOCSIFFLAGS, &ifr) != 0) {
+    if(ioctl(fd, SIOCSIFFLAGS, &ifr) != 0)
         perror("SIOCSIFFLAGS");
-    }
     ifr.ifr_mtu = 9000;
-    if(ioctl(fd, SIOCSIFMTU, &ifr) < 0) {
+    if(ioctl(fd, SIOCSIFMTU, &ifr) < 0)
         perror("SIOCSIFMTU");
-    } 
     close(fd);
     return EXIT_SUCCESS;
 }

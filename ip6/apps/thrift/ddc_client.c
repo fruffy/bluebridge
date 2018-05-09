@@ -24,7 +24,7 @@
 ThriftProtocol *remmem_protocol;
 ThriftProtocol *arrcomp_protocol;
 static const char *RESULTS_DIR = "results/thrift/ddc";
-#define DATA_POINTS 24
+#define DATA_POINTS 1000
 static int SIZE_STEPS[DATA_POINTS];
 
 struct result test_increment_array(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targetIP, gboolean print) {
@@ -361,6 +361,7 @@ void increment_array_perf(SimpleArrCompIf *client,
   fprintf(free_file, "size,avg latency\n");
 
   for (int s = 0; s < DATA_POINTS; s++) {
+    printf("Starting Size %d with %d Iterations \n", SIZE_STEPS[s], iterations );
   //for (int s = 0; s < max_size; s+= incr) {
     FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", SIZE_STEPS[s]);
     FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", SIZE_STEPS[s]);
@@ -413,6 +414,7 @@ void add_arrays_perf(SimpleArrCompIf *client,
   fprintf(free_file, "size,avg latency\n");
 
   for (int s = 0; s < DATA_POINTS; s++) {
+    printf("Starting Size %d with %d Iterations \n", SIZE_STEPS[s], iterations );
   //for (int s = 0; s < max_size; s+= incr) {
     FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", SIZE_STEPS[s]);
     FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", SIZE_STEPS[s]);
@@ -614,10 +616,10 @@ int main (int argc, char *argv[]) {
   snprintf(cmd, MAX_FNAME, "rm -rf %s", RESULTS_DIR);
   printf("\nDeleting dir %s...", RESULTS_DIR);
   system(cmd);
-
+  
   // Fill the global array with data values
   for (int i = 0; i < DATA_POINTS; i++ ) {
-    SIZE_STEPS[i] = pow(2,i);
+    SIZE_STEPS[i] = i*10;//pow(2,i);
   }
 
   printf("\n\n###### Server functionality tests ######\n");

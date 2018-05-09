@@ -18,12 +18,13 @@ struct pkt_rqst {
 
 
 // Define some constants.
-#define ETH_HDRLEN 14  // Ethernet header length
-#define IP6_HDRLEN 40  // IPv6 header length
-#define UDP_HDRLEN 8  // UDP header length, excludes data
-#define IPV6_SIZE 16
-#define BLOCK_SIZE 4096
+#define ETH_HDRLEN 14   // Ethernet header length
+#define IP6_HDRLEN 40   // IPv6 header length
+#define UDP_HDRLEN 8    // UDP header length, excludes data
+#define IPV6_SIZE 16    // Length of an IPV6 Address
+#define BLOCK_SIZE 4096 // Our current default transport size
 
+// BlueBridge commands
 #define ALLOC_CMD       01
 #define WRITE_CMD       02
 #define GET_CMD         03
@@ -33,6 +34,7 @@ struct pkt_rqst {
 #define WRITE_BULK_CMD  07
 #define CMD_SIZE        02
 
+// Get used to seeing this structure a lot... 
 /*          struct sockaddr_in6 {
                sa_family_t     sin6_family;   AF_INET6
                in_port_t       sin6_port;     port number
@@ -40,6 +42,7 @@ struct pkt_rqst {
                struct in6_addr sin6_addr;     IPv6 address
                uint32_t        sin6_scope_id; Scope ID (new in 2.4)};
 */
+
 /// Offset of data from start of frame
 #define PKT_OFFSET      (TPACKET_ALIGN(sizeof(struct tpacket_hdr)) + \
                          TPACKET_ALIGN(sizeof(struct sockaddr_ll)))

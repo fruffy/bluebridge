@@ -3,22 +3,17 @@
 #include "../config.h"
 #include "../types.h"
 
-// Send an IPv6 UDP packet via raw socket at the link layer (ethernet frame).
-// Need to have destination MAC address.
-// Includes some UDP data.
-
-
 // tp_block_size must be a multiple of PAGE_SIZE (1)
 // tp_frame_size must be greater than TPACKET_HDRLEN (obvious)
 // tp_frame_size must be a multiple of TPACKET_ALIGNMENT
 // tp_frame_nr   must be exactly frames_per_block*tp_block_nr
-/// The number of frames in the ring
+
 //  This number is not set in stone. Nor are block_size, block_nr or frame_size
-#define C_RING_FRAMES        256 //16384
-#define C_RING_BLOCKS        16
-#define TX_RING_BLOCKS        1    // NUM BLOCKS for the TX RING
-#define C_FRAMESIZE               8192 //(4096 + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + 2 + 32)
-#define C_BLOCKSIZE               (C_FRAMESIZE) * (C_RING_FRAMES)
+#define C_RING_FRAMES        1024 //16384 // The number of frames per block
+#define RX_RING_BLOCKS       16   // NUM BLOCKS for the RX RING
+#define TX_RING_BLOCKS       1    // NUM BLOCKS for the TX RING
+#define C_FRAMESIZE          8192 //(4096 + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + 2 + 32)
+#define C_BLOCKSIZE          (C_FRAMESIZE) * (C_RING_FRAMES)
 
 struct rx_ring {
     struct tpacket_hdr *first_tpacket_hdr;

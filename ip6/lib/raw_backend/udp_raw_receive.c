@@ -22,14 +22,11 @@ int set_fanout(int sd_rx) {
             // PACKET_FANOUT_LB - round robin
             // PACKET_FANOUT_CPU - send packets to CPU where packet arrived
             int fanout_type = PACKET_FANOUT_CPU; 
-
             int fanout_arg = (fanout_group_id | (fanout_type << 16));
-
             int setsockopt_fanout = setsockopt(sd_rx, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg));
-
             if (setsockopt_fanout < 0) {
                 printf("Can't configure fanout\n");
-               return EXIT_FAILURE;
+                return EXIT_FAILURE;
             }
     }
     return EXIT_SUCCESS;
@@ -46,11 +43,11 @@ int set_packet_filter(int sd, char *addr, char *iface, int port) {
     printf("Active Filter: %s\n",cmd );
     if ( (tcpdump_output = popen(cmd, "r")) == NULL )
         RETURN_ERROR(-1, "Cannot compile filter using tcpdump.");
-    if ( fscanf(tcpdump_output, "%d\n", &lineCount) < 1 )
+    if (fscanf(tcpdump_output, "%d\n", &lineCount) < 1 )
         RETURN_ERROR(-1, "cannot read lineCount.");
     filter.filter = calloc(1, sizeof(struct sock_filter)*lineCount);
     filter.len = lineCount;
-    for ( i = 0; i < lineCount; i++ ) {
+    for (i = 0; i < lineCount; i++) {
         if (fscanf(tcpdump_output, "%u %u %u %u\n", (unsigned int *)&(filter.filter[i].code),(unsigned int *) &(filter.filter[i].jt),(unsigned int *) &(filter.filter[i].jf), &(filter.filter[i].k)) < 4 ) {
             free(filter.filter);
             RETURN_ERROR(-1, "fscanf: error in reading");
@@ -66,26 +63,19 @@ struct rx_ring setup_packet_mmap(int sd_rx) {
 
     struct tpacket_req tpacket_req = {
         .tp_block_size = C_BLOCKSIZE,
-        .tp_block_nr = C_RING_BLOCKS,
+        .tp_block_nr = RX_RING_BLOCKS,
         .tp_frame_size = C_FRAMESIZE,
-        .tp_frame_nr = C_RING_FRAMES * C_RING_BLOCKS
+        .tp_frame_nr = C_RING_FRAMES * RX_RING_BLOCKS
     };
 
     uint64_t size = tpacket_req.tp_frame_nr * tpacket_req.tp_frame_size;
+    if (setsockopt(sd_rx, SOL_PACKET, PACKET_RX_RING, &tpacket_req, sizeof tpacket_req))
+        close(sd_rx),perror("packet_mmap setsockopt"),exit(EXIT_FAILURE);
 
     void *mapped_memory = NULL;
-
-    if (setsockopt(sd_rx, SOL_PACKET, PACKET_RX_RING, &tpacket_req, sizeof tpacket_req)) {
-        close(sd_rx);
-        exit(1);
-    }
-
     mapped_memory = mmap64(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, sd_rx, 0);
+    if (MAP_FAILED == mapped_memory) close(sd_rx),perror("packet_mmap failed"),exit(EXIT_FAILURE);
 
-    if (MAP_FAILED == mapped_memory) {
-        close(sd_rx);
-        exit(1);
-    }
     struct rx_ring ring_rx;
     memset(&ring_rx, 0, sizeof(ring_rx));
     ring_rx.first_tpacket_hdr = mapped_memory;
@@ -96,24 +86,14 @@ struct rx_ring setup_packet_mmap(int sd_rx) {
 }
 
 int init_epoll(int sd_rx) {
-
     struct epoll_event event = {
         .events = EPOLLIN,
         .data = {.fd = sd_rx }
     };
-
     int epoll_fd = epoll_create1(0);
-
-    if (-1 == epoll_fd) {
-        perror("epoll_create failed.");
-       exit(1);
-    }
-
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sd_rx, &event)) {
-        perror("epoll_ctl failed");
-        close(epoll_fd);
-       exit(1);
-    }
+    if (-1 == epoll_fd) perror("epoll_create failed."),exit(EXIT_FAILURE);
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sd_rx, &event))
+        close(epoll_fd),perror("epoll_ctl failed"),exit(EXIT_FAILURE);
     return epoll_fd;
 }
 
@@ -121,25 +101,22 @@ int setup_rx_socket(struct config *cfg, int my_port, int thread_id, int *my_epol
 
     struct sockaddr_ll device;
     char my_addr[INET6_ADDRSTRLEN];
-    int one = 1;
     inet_ntop(AF_INET6, &cfg->src_addr, my_addr, INET6_ADDRSTRLEN);
     memset(&device, 0, sizeof(struct sockaddr_ll));
     if ((device.sll_ifindex = if_nametoindex (cfg->interface)) == 0)
         perror ("if_nametoindex() failed to obtain interface index "), exit (EXIT_FAILURE);
     device.sll_family = AF_PACKET;
     device.sll_protocol = htons (ETH_P_ALL);
-    device.sll_ifindex = if_nametoindex (cfg->interface);
-    printf("interface name: %s\n",cfg->interface);
-    printf("ip:%d\n",device.sll_ifindex);
+    printf("Interface name: %s Index: %d\n",cfg->interface, device.sll_ifindex);
     int sd_rx = socket(AF_PACKET, SOCK_RAW|SOCK_NONBLOCK, htons(ETH_P_ALL));
-    if (-1 == sd_rx)
-        perror("Could not set socket"), exit(EXIT_FAILURE);
-    setsockopt(sd_rx, SOL_PACKET, PACKET_QDISC_BYPASS, &one, sizeof(one));
+    if (-1 == sd_rx) perror("Could not set socket"), exit(EXIT_FAILURE);
+    //int one = 1;
+    //setsockopt(sd_rx, SOL_PACKET, PACKET_QDISC_BYPASS, &one, sizeof(one));
 
-    *my_epoll = init_epoll(sd_rx);
-    *my_ring = setup_packet_mmap(sd_rx);
     //set_packet_filter(sd_rx, (char*) &cfg->src_addr, cfg->interface, htons((ntohs(my_port) + thread_id)));
     set_packet_filter(sd_rx, my_addr, cfg->interface, htons((ntohs(my_port) + thread_id)));
+    *my_epoll = init_epoll(sd_rx);
+    *my_ring  = setup_packet_mmap(sd_rx);
     if (-1 == bind(sd_rx, (struct sockaddr *)&device, sizeof(device)))
         perror("Could not bind socket."), exit(EXIT_FAILURE);
     return sd_rx;

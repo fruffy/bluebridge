@@ -35,56 +35,48 @@ void init_rx_socket_server(struct config *cfg) {
 }
 
 int epoll_server_rcv(char *rcv_buf, int msg_size, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
-    struct epoll_event events[1024];
+    struct epoll_event event;
     while (1) {
-        int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, -1);
-        //int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
-        /*if (num_events == 0 && !server) {
-            //printf("TIMEOUT!\n");
-            return -1;
-        }*/
-        for (int i = 0; i < num_events; i++)  {
-            struct epoll_event *event = &events[i];
-            if (event->events & EPOLLIN) {
-                struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
-                // Why volatile? See here:
-                // https://stackoverflow.com/questions/16359158/some-issues-with-packet-mmap
-                if ((volatile uint32_t)tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
-                    continue;
-                }
-                if (tpacket_hdr->tp_status & TP_STATUS_COPY) {
-                    next_packet(&ring_rx_g);
-                    continue;
-                }
-                if (tpacket_hdr->tp_status & TP_STATUS_LOSING) {
-                    next_packet(&ring_rx_g);
-                    continue;
-                }
-                struct ethhdr *eth_hdr = (struct ethhdr *)((char *) tpacket_hdr + tpacket_hdr->tp_mac);
-                struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((char *)eth_hdr + ETH_HDRLEN);
-                struct udphdr *udp_hdr = (struct udphdr *)((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
-                char *payload = ((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
-                // This should be debug code...
-                /*
-                char s[INET6_ADDRSTRLEN];
-                char s1[INET6_ADDRSTRLEN];
-                inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
-                inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
-                printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udp_hdr->source), s1, ntohs(udp_hdr->dest) );
-                printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udp_hdr->dest) );
-                */
-                msg_size = udp_hdr->len;
-                memcpy(rcv_buf, payload, msg_size);
-                if (remote_addr != NULL) {
-                    memcpy(remote_addr, &ip_hdr->ip6_dst, IPV6_SIZE);
-                }
-                memcpy(target_ip->sin6_addr.s6_addr, &ip_hdr->ip6_src, IPV6_SIZE);
-                target_ip->sin6_port = udp_hdr->source;
-                tpacket_hdr->tp_status = TP_STATUS_KERNEL;
+        epoll_wait(epoll_fd_g, &event, sizeof event, -1);
+        if (event.events & EPOLLIN) {
+            struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
+            // Why volatile? See here:
+            // https://stackoverflow.com/questions/16359158/some-issues-with-packet-mmap
+            if ((volatile uint32_t)tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
+                continue;
+            }
+            if (tpacket_hdr->tp_status & TP_STATUS_COPY) {
                 next_packet(&ring_rx_g);
-                return msg_size;
-           }
-        }
+                continue;
+            }
+            if (tpacket_hdr->tp_status & TP_STATUS_LOSING) {
+                next_packet(&ring_rx_g);
+                continue;
+            }
+            struct ethhdr *eth_hdr = (struct ethhdr *)((char *) tpacket_hdr + tpacket_hdr->tp_mac);
+            struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((char *)eth_hdr + ETH_HDRLEN);
+            struct udphdr *udp_hdr = (struct udphdr *)((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
+            char *payload = ((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
+            // This should be debug code...
+            /*
+            char s[INET6_ADDRSTRLEN];
+            char s1[INET6_ADDRSTRLEN];
+            inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
+            inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
+            printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udp_hdr->source), s1, ntohs(udp_hdr->dest) );
+            printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udp_hdr->dest) );
+            */
+            msg_size = udp_hdr->len;
+            memcpy(rcv_buf, payload, msg_size);
+            if (remote_addr != NULL) {
+                memcpy(remote_addr, &ip_hdr->ip6_dst, IPV6_SIZE);
+            }
+            memcpy(target_ip->sin6_addr.s6_addr, &ip_hdr->ip6_src, IPV6_SIZE);
+            target_ip->sin6_port = udp_hdr->source;
+            tpacket_hdr->tp_status = TP_STATUS_KERNEL;
+            next_packet(&ring_rx_g);
+            return msg_size;
+       }
     }
     return EXIT_SUCCESS;
 }
@@ -104,14 +96,13 @@ void handle_packet(struct tpacket_hdr *tpacket_hdr, struct sockaddr_in6 *target_
     printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udphdr->dest) );
     */
     //int msg_size = udp_hdr->len;
-    if (remote_addr != NULL) {
+    if (remote_addr != NULL)
         memcpy(remote_addr, &ip_hdr->ip6_dst, IPV6_SIZE);
-    }
     memcpy(target_ip->sin6_addr.s6_addr, &ip_hdr->ip6_src, IPV6_SIZE);
     target_ip->sin6_port = udp_hdr->source;
+    process_request(payload, target_ip, (struct in6_memaddr *)&ip_hdr->ip6_dst);
     tpacket_hdr->tp_status = TP_STATUS_KERNEL;
     next_packet(&ring_rx_g);
-    process_request(payload, target_ip, (struct in6_memaddr *)&ip_hdr->ip6_dst);
 }
 
 //This function is hacky bullshit, needs a lot of improvement.
