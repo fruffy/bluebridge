@@ -152,7 +152,7 @@ int write_rmem(struct sockaddr_in6 *target_ip, char *payload, struct in6_memaddr
  */
 // TODO: Implement meaningful return types and error messages
 static __thread uint32_t sub_ids[USHRT_MAX];
-static const int BATCH_SIZE = 50;
+static const int BATCH_SIZE = 40; // For some reason this is the maximum batch size we can do...
 
 void batch_write(struct sockaddr_in6 *target_ip, char *payload, struct in6_memaddr *remote_addrs, int num_packets){
     // Send the command to the target host and wait for response

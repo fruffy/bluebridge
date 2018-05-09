@@ -17,4 +17,5 @@
 	path = ip6/thrift
 	url = git@github.com:acarb95/thrift.git
 [submodule "includes/p4c"]
+	path = includes/p4c
 	url = https://github.com/p4lang/p4c
