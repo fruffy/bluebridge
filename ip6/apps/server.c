@@ -17,7 +17,7 @@ static int NUM_THREADS = 1;
  * Request handler for socket sock_fd
  * TODO: get message format
  */
-void handle_requests(char *receiveBuffer, int size, struct sockaddr_in6 *target_ip, struct in6_memaddr *remoteAddr) {
+void handle_requests(char *receiveBuffer, int size, struct sockaddr_in6 *target_ip, ip6_memaddr *remoteAddr) {
     // Switch on the client command
     if (remoteAddr->cmd == ALLOC_CMD) {
         print_debug("******ALLOCATE******");
@@ -49,7 +49,7 @@ void handle_requests(char *receiveBuffer, int size, struct sockaddr_in6 *target_
         allocate_mem_bulk(target_ip, *alloc_size);
     } else {
         printf("Cannot match command %d!\n",remoteAddr->cmd);
-        if (send_udp_raw("Hello, world!", 13, (struct in6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port) == -1) {
+        if (send_udp_raw("Hello, world!", 13, (ip6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port) == -1) {
             perror("ERROR writing to socket");
             exit(1);
         }
@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
 
     struct sockaddr_in6 *target_ip = init_sockets(&myConf, 1);
    // Start waiting for connections
-    struct in6_memaddr remoteAddr;
+    ip6_memaddr remoteAddr;
     char receiveBuffer[BLOCK_SIZE];
     while (1) {
         //TODO: Error handling (numbytes = -1)

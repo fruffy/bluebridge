@@ -33,7 +33,7 @@
 static int xmpl_debug = 1;
 
 struct rmem {
-    struct in6_memaddr *memList;
+    ip6_memaddr *memList;
     int block_size;
     uint64_t nblocks;
     struct sockaddr_in6 *targetIP;
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
     set_host_list(myConf.hosts, myConf.num_hosts);
     r.nblocks = aop.size_blocks;
     printf("Allocating %lu MB of memory, %lu blocks\n", (aop.size_blocks * aop.blksize / (1024*1024)), r.nblocks);
-    r.memList = malloc(sizeof(struct in6_memaddr) * r.nblocks);
+    r.memList = malloc(sizeof(ip6_memaddr) * r.nblocks);
     uint64_t split = r.nblocks/myConf.num_hosts;
     uint64_t length;
     for (int i = 0; i < myConf.num_hosts; i++) {
@@ -125,8 +125,8 @@ int main(int argc, char *argv[]) {
             length = split;
         struct in6_addr *ipv6Pointer = gen_ip6_target(i);
         memcpy(&(r.targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-        struct in6_memaddr *temp = allocate_rmem_bulk(r.targetIP, length);
-        memcpy(&r.memList[offset],temp,length *sizeof(struct in6_memaddr) );
+        ip6_memaddr *temp = allocate_rmem_bulk(r.targetIP, length);
+        memcpy(&r.memList[offset],temp,length *sizeof(ip6_memaddr) );
         free(temp);
     }
 

@@ -4,7 +4,7 @@ uint16_t src_client_port = 0;
 
 //This function is hacky bullshit, needs a lot of improvement.
 struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
-int dpdk_client_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
+int dpdk_client_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, ip6_memaddr *remoteAddr) {
     while (1) {
         /*
          * Read packet from RX queues
@@ -18,7 +18,7 @@ int dpdk_client_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *
             struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ethhdr + ETH_HDRLEN);
             struct udphdr *udphdr = (struct udphdr *)((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN);
             char *payload = ((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
-            struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
+            ip6_memaddr *inAddress =  (ip6_memaddr *) &iphdr->ip6_dst;
             int isMyID = 1;
             // char s[INET6_ADDRSTRLEN];
             // char s1[INET6_ADDRSTRLEN];

@@ -25,7 +25,7 @@ static __thread uint64_t rcv_calls = 0;
  */
 // TODO: Evaluate what variables and structures are actually needed here
 // TODO: Error handling
-int send_udp_raw(char *tx_buf, int msg_size, struct in6_memaddr *remote_addr, int dst_port) {
+int send_udp_raw(char *tx_buf, int msg_size, ip6_memaddr *remote_addr, int dst_port) {
     uint64_t start = getns(); 
     struct pkt_rqst pkt = {
         .dst_addr = *remote_addr,
@@ -69,7 +69,7 @@ int send_udp_raw_batched(struct pkt_rqst *pkts, uint32_t *sub_ids, int num_addrs
  * RAW version, we craft our own packet.
  */
 // TODO: Error handling
-int rcv_udp6_raw(char *rx_buf, int msg_size, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
+int rcv_udp6_raw(char *rx_buf, int msg_size, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
     uint64_t start = getns();
     int numbytes;
 #ifdef DEFAULT
@@ -87,7 +87,7 @@ int rcv_udp6_raw(char *rx_buf, int msg_size, struct sockaddr_in6 *target_ip, str
  * RAW version, we craft our own packet.
  */
 // TODO: Error handling
-int rcv_udp6_raw_id(char *rx_buf, int msg_size, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
+int rcv_udp6_raw_id(char *rx_buf, int msg_size, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
     uint64_t start = getns();
     int numbytes;
 #ifdef DEFAULT

@@ -9,9 +9,9 @@ Make all of your changes to main.c instead.
 
 #define BLOCK_SIZE 4096
 #include <stdint.h>
-
+#include "../types.h"
 struct rmem {
-    struct in6_memaddr *memList;
+    ip6_memaddr *memList;
     int block_size;
     uint64_t nblocks;
 };

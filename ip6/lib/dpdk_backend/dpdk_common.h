@@ -127,5 +127,5 @@ void enter_dpdk_server_loop(uint16_t server_port);
 extern void init_client_dpdk(struct config *configstruct);
 extern void init_server_dpdk(struct config *configstruct);
 extern int dpdk_send(struct pkt_rqst pkt);
-extern int dpdk_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
-extern int dpdk_client_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
+extern int dpdk_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, ip6_memaddr *remoteAddr);
+extern int dpdk_client_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, ip6_memaddr *remoteAddr);

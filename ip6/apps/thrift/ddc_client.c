@@ -30,7 +30,7 @@ static int SIZE_STEPS[DATA_POINTS];
 struct result test_increment_array(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targetIP, gboolean print) {
   GError *error = NULL;                       // Error (in transport, socket, etc.)
   CallException *exception = NULL;            // Exception (thrown by server)
-  struct in6_memaddr args_addr;               // Shared memory address of the argument pointer
+  ip6_memaddr args_addr;               // Shared memory address of the argument pointer
   GByteArray* args_ptr = g_byte_array_new();  // Argument pointer
   GByteArray* result_ptr = NULL;              // Result pointer
   int arr_len = size;                           // Size of array to be sent
@@ -88,7 +88,7 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, struct soc
   }
 
   // Unmarshall shared pointer address
-  struct in6_memaddr result_addr;
+  ip6_memaddr result_addr;
   unmarshall_shmem_ptr(&result_addr, result_ptr);
 
   // Create result array to read into
@@ -129,12 +129,12 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, struct soc
 struct result test_add_arrays(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targetIP, gboolean print) {
   GError *error = NULL;                       // Error (in transport, socket, etc.)
   CallException *exception = NULL;            // Exception (thrown by server)
-  struct in6_memaddr arg1_addr;               // Shared memory address of the argument pointer
-  struct in6_memaddr arg2_addr;               // Shared memory address of the argument pointer
+  ip6_memaddr arg1_addr;               // Shared memory address of the argument pointer
+  ip6_memaddr arg2_addr;               // Shared memory address of the argument pointer
   GByteArray* arg1_ptr = g_byte_array_new();  // Argument pointer
   GByteArray* arg2_ptr = g_byte_array_new();  // Argument pointer
   GByteArray* result_ptr = NULL;              // Result pointer
-  struct in6_memaddr result_addr;             // Shared memory address of result
+  ip6_memaddr result_addr;             // Shared memory address of result
   int arr_len = size;                        // Size of array to be sent
   uint8_t *arr1;                              // Array 1 to be added
   uint8_t *arr2;                              // Array 2 to be added
@@ -252,7 +252,7 @@ cleanupres:
 void mat_multiply(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP) {
   // GError *error = NULL;                       // Error (in transport, socket, etc.)
   // CallException *exception = NULL;            // Exception (thrown by server)
-  // struct in6_memaddr args_addr;               // Shared memory address of the argument pointer
+  // ip6_memaddr args_addr;               // Shared memory address of the argument pointer
   // GByteArray* args_ptr = g_byte_array_new();  // Argument pointer
   // GByteArray* result_ptr = NULL;              // Result pointer
 
@@ -263,7 +263,7 @@ void mat_multiply(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP) {
 void word_count(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP) {
   // GError *error = NULL;                       // Error (in transport, socket, etc.)
   // CallException *exception = NULL;            // Exception (thrown by server)
-  // struct in6_memaddr args_addr;               // Shared memory address of the argument pointer
+  // ip6_memaddr args_addr;               // Shared memory address of the argument pointer
   // GByteArray* args_ptr = g_byte_array_new();  // Argument pointer
   // GByteArray* result_ptr = NULL;              // Result pointer
   THRIFT_UNUSED_VAR(client);
@@ -273,7 +273,7 @@ void word_count(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP) {
 void sort_array(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP) {
   // GError *error = NULL;                       // Error (in transport, socket, etc.)
   // CallException *exception = NULL;            // Exception (thrown by server)
-  // struct in6_memaddr args_addr;               // Shared memory address of the argument pointer
+  // ip6_memaddr args_addr;               // Shared memory address of the argument pointer
   // GByteArray* args_ptr = g_byte_array_new();  // Argument pointer
   // GByteArray* result_ptr = NULL;              // Result pointer
   THRIFT_UNUSED_VAR(client);
@@ -282,7 +282,7 @@ void sort_array(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP) {
 
 uint64_t no_op_rpc(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targetIP) {
   GError *error = NULL;                       // Error (in transport, socket, etc.)
-  struct in6_memaddr args_addr;               // Shared memory address of the argument pointer
+  ip6_memaddr args_addr;               // Shared memory address of the argument pointer
   GByteArray* args_ptr = g_byte_array_new();  // Argument pointer
   GByteArray* result_ptr = NULL;              // Result pointer
   int arr_len = size;                           // Size of array to be sent
@@ -315,7 +315,7 @@ uint64_t no_op_rpc(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targe
   rpc_time = getns() - start;
 
   // Unmarshall shared pointer address
-  struct in6_memaddr result_addr;
+  ip6_memaddr result_addr;
   unmarshall_shmem_ptr(&result_addr, result_ptr);
 
   // Create result array to read into

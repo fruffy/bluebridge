@@ -2,15 +2,16 @@
 #define PROJECT_TYPES
 #include <stdint.h>
 
-struct in6_memaddr {
+typedef struct ip6_memaddr {
     uint16_t subid;
     uint16_t cmd;
     uint32_t args;
     uint64_t paddr;
-};
+}ip6_memaddr;
+
 
 struct pkt_rqst {
-    struct in6_memaddr dst_addr;
+    ip6_memaddr dst_addr;
     int dst_port;
     char *data;
     int datalen;

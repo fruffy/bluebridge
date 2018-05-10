@@ -7,16 +7,15 @@
 #include "network.h"
 
 
-struct in6_memaddr allocate_rmem(struct sockaddr_in6 *targetIP);
-struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *targetIP, uint64_t size);
-int write_rmem(struct sockaddr_in6 *targetIP, char *payload,  struct in6_memaddr *remoteAddr);
-int write_rmem_bulk(struct sockaddr_in6 *target_ip, char *payload, struct in6_memaddr *remote_addrs, int num_addrs);
-int free_rmem(struct sockaddr_in6 *targetIP,  struct in6_memaddr *remoteAddr);
-int get_rmem(char *receiveBuffer, int length, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr);
-int read_continuous_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr);
-
-int write_raid_mem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remoteAddrs, int needed);
-int read_raid_mem(struct sockaddr_in6 *targetIP, int hosts, char (*bufs)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remoteAddrs, int needed);
+ip6_memaddr allocate_rmem(struct sockaddr_in6 *targetIP);
+ip6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *targetIP, uint64_t size);
+int write_rmem(struct sockaddr_in6 *targetIP, char *payload,  ip6_memaddr *remoteAddr);
+int write_rmem_bulk(struct sockaddr_in6 *target_ip, char *payload, ip6_memaddr *remote_addrs, int num_addrs);
+int free_rmem(struct sockaddr_in6 *targetIP,  ip6_memaddr *remoteAddr);
+int get_rmem(char *receiveBuffer, int length, struct sockaddr_in6 *targetIP, ip6_memaddr *remoteAddr);
+// int read_continuous_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr);
+int write_raid_mem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_HOSTS][BLOCK_SIZE], ip6_memaddr **remoteAddrs, int needed);
+int read_raid_mem(struct sockaddr_in6 *targetIP, int hosts, char (*bufs)[MAX_HOSTS][BLOCK_SIZE], ip6_memaddr **remoteAddrs, int needed);
 struct in6_addr *gen_rdm_ip6_target();
 struct in6_addr *gen_ip6_target();
 void set_host_list(struct in6_addr *host_addrs, int num_hosts);

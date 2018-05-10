@@ -66,15 +66,15 @@ void set_host_list(struct in6_addr *host_addrs, int num_hosts) {
  * Allocate memory from a remote machine.
  */
 // TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
-struct in6_memaddr allocate_rmem(struct sockaddr_in6 *target_ip) {
+ip6_memaddr allocate_rmem(struct sockaddr_in6 *target_ip) {
     // Send the command to the target host and wait for response
-    ((struct in6_memaddr *)&target_ip->sin6_addr)->cmd = ALLOC_CMD;
+    ((ip6_memaddr *)&target_ip->sin6_addr)->cmd = ALLOC_CMD;
     print_debug("******ALLOCATE******");
-    send_udp_raw(NULL, 0, (struct in6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port); 
-    struct in6_memaddr retAddr;
+    send_udp_raw(NULL, 0, (ip6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port); 
+    ip6_memaddr retAddr;
     memcpy(&retAddr, &target_ip->sin6_addr, IPV6_SIZE);
     rcv_udp6_raw_id(NULL, 0, target_ip, &retAddr);
-    retAddr.subid = ((struct in6_memaddr *)&target_ip->sin6_addr)->subid;
+    retAddr.subid = ((ip6_memaddr *)&target_ip->sin6_addr)->subid;
     return retAddr;
 }
 
@@ -82,18 +82,18 @@ struct in6_memaddr allocate_rmem(struct sockaddr_in6 *target_ip) {
  * Allocates a bulk of memory from a remote machine.
  */
 // TODO: Implement error handling, struct in6_addr *  retVal is passed as pointer into function and we return int error codes
-struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *target_ip, uint64_t size) {
+ip6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *target_ip, uint64_t size) {
     char tx_buf[BLOCK_SIZE];
     // Send the command to the target host and wait for response
     memcpy(tx_buf, &size, sizeof(uint64_t));
-    ((struct in6_memaddr *)&target_ip->sin6_addr)->cmd = ALLOC_BULK_CMD;
+    ((ip6_memaddr *)&target_ip->sin6_addr)->cmd = ALLOC_BULK_CMD;
     print_debug("******ALLOCATE BULK******");
-    send_udp_raw(tx_buf, BLOCK_SIZE, (struct in6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port); 
-    struct in6_memaddr retAddr;
+    send_udp_raw(tx_buf, BLOCK_SIZE, (ip6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port); 
+    ip6_memaddr retAddr;
     memcpy(&retAddr, &target_ip->sin6_addr, IPV6_SIZE);
     rcv_udp6_raw_id(NULL, 0, target_ip, &retAddr);
-    retAddr.subid = ((struct in6_memaddr *)&target_ip->sin6_addr)->subid;
-    struct in6_memaddr *addrList = malloc(size * sizeof(struct in6_memaddr));
+    retAddr.subid = ((ip6_memaddr *)&target_ip->sin6_addr)->subid;
+    ip6_memaddr *addrList = malloc(size * sizeof(ip6_memaddr));
     // Convert the returned pointer into an array of pointers
     for (uint64_t i = 0; i < size; i++) {
         addrList[i] = retAddr;
@@ -106,7 +106,7 @@ struct in6_memaddr *allocate_rmem_bulk(struct sockaddr_in6 *target_ip, uint64_t 
  * Reads the remote memory based on remote_addr
  */
 // TODO: Implement meaningful return types and error messages
-int get_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
+int get_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
     // Send the command to the target host and wait for response
     remote_addr->cmd =  GET_CMD;
     print_debug("******GET DATA******");
@@ -120,15 +120,15 @@ int get_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, struct in
  * Reads the remote memory based on remote_addr
  */
 // TODO: Implement meaningful return types and error messages
-int read_continuous_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, struct in6_memaddr *remote_addr) {
+int read_continuous_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
       int packets = length / BLOCK_SIZE;
       int residual = length % BLOCK_SIZE;
       for (int i = 0; i < packets; i++ ) {
-        struct in6_memaddr tmp_addr = *remote_addr;
+        ip6_memaddr tmp_addr = *remote_addr;
         tmp_addr.paddr = remote_addr->paddr +i*BLOCK_SIZE;
         get_rmem(&rx_buf[i*BLOCK_SIZE], length, target_ip, &tmp_addr);
       }
-    struct in6_memaddr tmp_addr = *remote_addr;
+    ip6_memaddr tmp_addr = *remote_addr;
     tmp_addr.paddr = remote_addr->paddr + packets * BLOCK_SIZE;
     get_rmem(&rx_buf[packets*BLOCK_SIZE], residual, target_ip, &tmp_addr);
     return length;
@@ -138,7 +138,7 @@ int read_continuous_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_i
  * Sends a write command to the server based on remote_addr
  */
 // TODO: Implement meaningful return types and error messages
-int write_rmem(struct sockaddr_in6 *target_ip, char *payload, struct in6_memaddr *remote_addr) {
+int write_rmem(struct sockaddr_in6 *target_ip, char *payload, ip6_memaddr *remote_addr) {
     // Send the command to the target host and wait for response
     remote_addr->cmd =  WRITE_CMD;
     print_debug("******WRITE DATA******");
@@ -152,9 +152,9 @@ int write_rmem(struct sockaddr_in6 *target_ip, char *payload, struct in6_memaddr
  */
 // TODO: Implement meaningful return types and error messages
 static __thread uint32_t sub_ids[USHRT_MAX];
-static const int BATCH_SIZE = 40; // For some reason this is the maximum batch size we can do...
+static const int BATCH_SIZE = 50; // For some reason this is the maximum batch size we can do...
 
-void batch_write(struct sockaddr_in6 *target_ip, char *payload, struct in6_memaddr *remote_addrs, int num_packets){
+void batch_write(struct sockaddr_in6 *target_ip, char *payload, ip6_memaddr *remote_addrs, int num_packets){
     // Send the command to the target host and wait for response
     struct pkt_rqst pkts[num_packets];
     memset(sub_ids, 0, USHRT_MAX * sizeof(uint32_t));
@@ -175,7 +175,7 @@ void batch_write(struct sockaddr_in6 *target_ip, char *payload, struct in6_memad
     }
 }
 
-int write_rmem_bulk(struct sockaddr_in6 *target_ip, char *payload, struct in6_memaddr *remote_addrs, int num_addrs) {
+int write_rmem_bulk(struct sockaddr_in6 *target_ip, char *payload, ip6_memaddr *remote_addrs, int num_addrs) {
     int batches = num_addrs / BATCH_SIZE;
     int batch_residual = num_addrs % BATCH_SIZE;
     for (int i = 0; i < batches; i++ ) {
@@ -190,7 +190,7 @@ int write_rmem_bulk(struct sockaddr_in6 *target_ip, char *payload, struct in6_me
  * Releases the remote memory based on remote_addr
  */
 // TODO: Implement meaningful return types and error messages
-int free_rmem(struct sockaddr_in6 *target_ip,  struct in6_memaddr *remote_addr) {
+int free_rmem(struct sockaddr_in6 *target_ip,  ip6_memaddr *remote_addr) {
     char tx_buf[BLOCK_SIZE];
     // Create message
     remote_addr->cmd =  FREE_CMD;
@@ -206,7 +206,7 @@ int free_rmem(struct sockaddr_in6 *target_ip,  struct in6_memaddr *remote_addr) 
 
 
 //Returns the missing raid read -1 if everything is read
-int read_raid_mem(struct sockaddr_in6 *target_ip, int hosts, char (*bufs)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remote_addrs, int needed) {
+int read_raid_mem(struct sockaddr_in6 *target_ip, int hosts, char (*bufs)[MAX_HOSTS][BLOCK_SIZE], ip6_memaddr **remote_addrs, int needed) {
     int host;
     char rx_buf[BLOCK_SIZE];
 
@@ -258,7 +258,7 @@ int read_raid_mem(struct sockaddr_in6 *target_ip, int hosts, char (*bufs)[MAX_HO
     return -1;
 }
 
-int write_raid_mem(struct sockaddr_in6 *target_ip, int hosts, char (*payload)[MAX_HOSTS][BLOCK_SIZE], struct in6_memaddr **remote_addrs, int needed) {
+int write_raid_mem(struct sockaddr_in6 *target_ip, int hosts, char (*payload)[MAX_HOSTS][BLOCK_SIZE], ip6_memaddr **remote_addrs, int needed) {
     int host;
     char rx_buf[BLOCK_SIZE];
 

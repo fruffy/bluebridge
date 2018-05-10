@@ -1,10 +1,10 @@
 MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 #DDC_DIR = $(MAKE_ROOT)
-
-C_GLIB_LIB = $(MAKE_ROOT)/../../thrift/lib/c_glib/.libs/libthrift_c_glib.a
+THRIFT_DIR = $(MAKE_ROOT)/../../../includes/thrift
+C_GLIB_LIB = $(THRIFT_DIR)/lib/c_glib/.libs/libthrift_c_glib.a
 BB_LIB = -L$(MAKE_ROOT)/../../ -lbluebridge
 BB_SRC = $(MAKE_ROOT)/../../
-C_GLIB_SRC = $(MAKE_ROOT)/../../thrift/lib/c_glib/src
+C_GLIB_SRC = $(THRIFT_DIR)/lib/c_glib/src
 
 GEN_TEMPLATE = thrift --gen c_glib
 

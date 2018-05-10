@@ -42,7 +42,7 @@ FILE* generate_file_handle(const char * results_dir, char* method_name, char* op
 }
 
 // UTILS --> copied to server b/c it's a pain to create a shared file (build issues)
-void get_args_pointer(struct in6_memaddr *ptr, struct sockaddr_in6 *targetIP) {
+void get_args_pointer(ip6_memaddr *ptr, struct sockaddr_in6 *targetIP) {
   // Get random memory server
   struct in6_addr *ipv6Pointer = gen_rdm_ip6_target();
 
@@ -50,14 +50,14 @@ void get_args_pointer(struct in6_memaddr *ptr, struct sockaddr_in6 *targetIP) {
   memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
 
   // Allocate memory and receive the remote memory pointer
-  struct in6_memaddr temp = allocate_rmem(targetIP);
+  ip6_memaddr temp = allocate_rmem(targetIP);
 
   // Copy the remote memory pointer into the give struct pointer
-  memcpy(ptr, &temp, sizeof(struct in6_memaddr));
+  memcpy(ptr, &temp, sizeof(ip6_memaddr));
 }
 
 // UTILS --> copied to server b/c it's a pain to create a shared file (build issues)
-struct in6_memaddr *get_args_pointers(struct sockaddr_in6 *targetIP, int num_pointers) {
+ip6_memaddr *get_args_pointers(struct sockaddr_in6 *targetIP, int num_pointers) {
   // Get random memory server
   struct in6_addr *ipv6Pointer = gen_rdm_ip6_target();
 
@@ -70,7 +70,7 @@ struct in6_memaddr *get_args_pointers(struct sockaddr_in6 *targetIP, int num_poi
 
 
 
-struct in6_memaddr get_result_pointer(struct sockaddr_in6 *targetIP) {
+ip6_memaddr get_result_pointer(struct sockaddr_in6 *targetIP) {
   // Get random memory server
   struct in6_addr *ipv6Pointer = gen_rdm_ip6_target();
 
@@ -81,7 +81,7 @@ struct in6_memaddr get_result_pointer(struct sockaddr_in6 *targetIP) {
   return allocate_rmem(targetIP);
 }
 
-void marshall_shmem_ptr(GByteArray **ptr, struct in6_memaddr *addr) {
+void marshall_shmem_ptr(GByteArray **ptr, ip6_memaddr *addr) {
   // Blank cmd section
   //uint16_t cmd = 0u;
 
@@ -95,11 +95,11 @@ void marshall_shmem_ptr(GByteArray **ptr, struct in6_memaddr *addr) {
   *ptr = g_byte_array_append(*ptr, (const gpointer) &(addr->paddr), sizeof(uint64_t));
 }
 
-void unmarshall_shmem_ptr(struct in6_memaddr *result_addr, GByteArray *result_ptr) {
+void unmarshall_shmem_ptr(ip6_memaddr *result_addr, GByteArray *result_ptr) {
   // Clear struct
-  memset(result_addr, 0, sizeof(struct in6_memaddr));
+  memset(result_addr, 0, sizeof(ip6_memaddr));
   // Copy over received bytes
-  memcpy(result_addr, result_ptr->data, sizeof(struct in6_memaddr));
+  memcpy(result_addr, result_ptr->data, sizeof(ip6_memaddr));
 }
 
 void populate_array(uint8_t *array, int array_len, uint8_t start_num, gboolean random) {

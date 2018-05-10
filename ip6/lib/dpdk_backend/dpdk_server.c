@@ -8,7 +8,7 @@ struct in6_addr src_addr;
 
 //This function is hacky bullshit, needs a lot of improvement.
 struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
-int dpdk_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
+int dpdk_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, ip6_memaddr *remoteAddr) {
     while (1) {
         /*
          * Read packet from RX queues
@@ -22,7 +22,7 @@ int dpdk_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *
             struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ethhdr + ETH_HDRLEN);
             struct udphdr *udphdr = (struct udphdr *)((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN);
             char *payload = ((char *)ethhdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
-            struct in6_memaddr *inAddress =  (struct in6_memaddr *) &iphdr->ip6_dst;
+            ip6_memaddr *inAddress =  (ip6_memaddr *) &iphdr->ip6_dst;
             int isMyID = 1;
             // char s[INET6_ADDRSTRLEN];
             // char s1[INET6_ADDRSTRLEN];
@@ -31,7 +31,7 @@ int dpdk_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *
             // printf("Thread %d Got message from %s:%d to %s:%d\n", 0, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
             // printf("Thread %d My port %d their dest port %d\n",0, ntohs(packetinfo.udphdr.source), ntohs(udphdr->dest) );
             if (udphdr->dest == src_server_port) {
-                isMyID = (inAddress->subid == ((struct in6_memaddr *)&src_addr.s6_addr)->subid);
+                isMyID = (inAddress->subid == ((ip6_memaddr *)&src_addr.s6_addr)->subid);
                 // printf("Thread %d Their ID\n", 0);
                 // print_n_bytes(inAddress, 16);
                 // printf("Thread %d MY ID\n", 0);
@@ -53,7 +53,7 @@ int dpdk_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *
 }
 
 //This function is hacky bullshit, needs a lot of improvement.
-int rcv_loop(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_memaddr *remoteAddr) {
+int rcv_loop(char *receiveBuffer, struct sockaddr_in6 *targetIP, ip6_memaddr *remoteAddr) {
     struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
     while (1) {
         /*
@@ -68,13 +68,13 @@ int rcv_loop(char *receiveBuffer, struct sockaddr_in6 *targetIP, struct in6_mema
             struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((char *)eth_hdr + ETH_HDRLEN);
             struct udphdr *udp_hdr = (struct udphdr *)((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
             char *payload = ((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
-            struct in6_memaddr *inAddress =  (struct in6_memaddr *) &ip_hdr->ip6_dst;
+            ip6_memaddr *inAddress =  (ip6_memaddr *) &ip_hdr->ip6_dst;
             if (udp_hdr->dest == src_server_port) {
-                int isMyID = (inAddress->subid==((struct in6_memaddr *)&src_addr.s6_addr)->subid);
+                int isMyID = (inAddress->subid==((ip6_memaddr *)&src_addr.s6_addr)->subid);
                 if (isMyID) {
                     rte_memcpy(targetIP->sin6_addr.s6_addr, &ip_hdr->ip6_src, IPV6_SIZE);
                     targetIP->sin6_port = udp_hdr->source;
-                    process_request(payload, targetIP, (struct in6_memaddr *)&ip_hdr->ip6_dst);
+                    process_request(payload, targetIP, (ip6_memaddr *)&ip_hdr->ip6_dst);
                 }
             }
             rte_pktmbuf_free(m);
@@ -93,6 +93,6 @@ void enter_dpdk_server_loop(uint16_t server_port) {
     char receiveBuffer[BLOCK_SIZE];
     struct sockaddr_in6 *targetIP = rte_malloc(NULL, sizeof(struct sockaddr_in6), 0);
     targetIP->sin6_port = htons(server_port);
-    struct in6_memaddr remoteAddr;
+    ip6_memaddr remoteAddr;
     rcv_loop(receiveBuffer, targetIP, &remoteAddr);
 }

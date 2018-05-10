@@ -16,7 +16,7 @@ from mininet.link import TCLink
 from mininet.topolib import TreeNet
 from mininet.node import Host
 from mininet.term import makeTerm
-from p4.p4_mininet.p4_mininet import P4Switch
+from p4.p4_mininet import P4Switch
 
 
 PARSER = argparse.ArgumentParser()
@@ -25,7 +25,7 @@ PARSER.add_argument('--p4', '-p', dest='is_p4', default=False,
                     action='store_true', help='Use the P4 switch instead of OVS.')
 PARSER.add_argument('--broadcast', '-b', dest='use_broadcast', default=False,
                     action='store_true', help='Run the OVS with broadcast instead of individual forwarding.')
-PARSER.add_argument('--bb-servers', '-e', dest='servers', type=int, default=1,
+PARSER.add_argument('--bb-servers', '-e', dest='servers', type=int, default=2,
                     help='Specify the number of memory servers that should be launched.')
 PARSER.add_argument('--thrift-tcp', '-tt', dest='thrift_tcp', default=False,
                     action='store_true', help='Run the testing framework with default Thrift.')

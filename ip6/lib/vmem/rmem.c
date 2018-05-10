@@ -37,14 +37,14 @@ void rmem_init_thread_sockets(int t_id) {
 }
 
 void fill_rmem(struct rmem *r) {
-/*    struct in6_memaddr *memList = malloc(sizeof(struct in6_addr) * r->nblocks);
+/*    ip6_memaddr *memList = malloc(sizeof(struct in6_addr) * r->nblocks);
     for (int i = 0; i<r->nblocks; i++){
         // Generate a random IPv6 address out of a set of available hosts
         struct in6_addr *ipv6Pointer = gen_rdm_IPv6Target();
         memcpy(&(r->targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
         memList[i] = allocate_rmem(r->targetIP);
     }*/
-    struct in6_memaddr *memList = malloc(sizeof(struct in6_memaddr) * r->nblocks);
+    ip6_memaddr *memList = malloc(sizeof(ip6_memaddr) * r->nblocks);
     uint64_t split = r->nblocks/myConf.num_hosts;
     uint64_t length;
     for (int i = 0; i < myConf.num_hosts; i++) {
@@ -55,8 +55,8 @@ void fill_rmem(struct rmem *r) {
             length = split;
         struct in6_addr *ipv6Pointer = gen_ip6_target(i);
         memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-        struct in6_memaddr *temp = allocate_rmem_bulk(targetIP, length);
-        memcpy(&memList[offset],temp,length *sizeof(struct in6_memaddr) );
+        ip6_memaddr *temp = allocate_rmem_bulk(targetIP, length);
+        memcpy(&memList[offset],temp,length *sizeof(ip6_memaddr) );
         free(temp);
     }
     r->memList = memList;

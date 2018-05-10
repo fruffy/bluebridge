@@ -146,7 +146,7 @@ tutorial_remote_mem_test_handler_allocate_mem (RemoteMemTestIf *iface,
   // TODO: change so it allocates a certain amount of memory
 
   GByteArray *result_ptr = g_byte_array_new();
-  struct in6_memaddr result_addr = get_result_pointer(targetIP);
+  ip6_memaddr result_addr = get_result_pointer(targetIP);
 
 
   marshall_shmem_ptr(&result_ptr, &result_addr);
@@ -174,7 +174,7 @@ tutorial_remote_mem_test_handler_read_mem (RemoteMemTestIf *iface,
 
   char *payload = malloc(BLOCK_SIZE);
 
-  struct in6_memaddr args_addr;
+  ip6_memaddr args_addr;
   unmarshall_shmem_ptr(&args_addr, (GByteArray *)pointer);
 
   get_rmem(payload, BLOCK_SIZE, targetIP, &args_addr);
@@ -200,7 +200,7 @@ tutorial_remote_mem_test_handler_write_mem (RemoteMemTestIf *iface,
   // printf ("write_mem(): ");
   // print_n_bytes(pointer->data, pointer->len);
 
-  struct in6_memaddr args_addr;
+  ip6_memaddr args_addr;
   unmarshall_shmem_ptr(&args_addr, (GByteArray *) pointer);
 
   char temp[BLOCK_SIZE];
@@ -229,7 +229,7 @@ tutorial_remote_mem_test_handler_free_mem (RemoteMemTestIf *iface,
   // printf ("free_mem: ");
   // print_n_bytes(pointer->data, pointer->len);
 
-  struct in6_memaddr args_addr;
+  ip6_memaddr args_addr;
   unmarshall_shmem_ptr(&args_addr, (GByteArray *) pointer);
 
   free_rmem(targetIP, &args_addr);

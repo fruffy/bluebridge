@@ -126,12 +126,12 @@ tutorial_simple_arr_comp_handler_increment_array (SimpleArrCompIf *iface,
   THRIFT_UNUSED_VAR (ouch);
 
   //GByteArray* result_ptr = g_byte_array_new();
-  struct in6_memaddr result_addr= get_result_pointer(targetIP);
+  ip6_memaddr result_addr= get_result_pointer(targetIP);
 
   // Read in array from shared memory
   uint8_t *int_arr = malloc(length);
 
-  struct in6_memaddr args_addr;
+  ip6_memaddr args_addr;
   unmarshall_shmem_ptr(&args_addr, (GByteArray *) pointer);
 
   if (length > BLOCK_SIZE) {
@@ -183,7 +183,7 @@ tutorial_simple_arr_comp_handler_add_arrays (SimpleArrCompIf *iface,
 
   *_return = g_byte_array_new();
   // printf("Get result pointer\n");
-  struct in6_memaddr result_addr = get_result_pointer(targetIP);
+  ip6_memaddr result_addr = get_result_pointer(targetIP);
 
   // printf("marshall_shmem_ptr\n");
   marshall_shmem_ptr(_return, &result_addr);
@@ -194,8 +194,8 @@ tutorial_simple_arr_comp_handler_add_arrays (SimpleArrCompIf *iface,
   uint8_t *arr1 = malloc(length);
   uint8_t *arr2 = malloc(length);
 
-  struct in6_memaddr arg1_addr;
-  struct in6_memaddr arg2_addr;
+  ip6_memaddr arg1_addr;
+  ip6_memaddr arg2_addr;
 
   // printf("unmarshall_shmem_ptr\n");
   unmarshall_shmem_ptr(&arg1_addr, (GByteArray *) array1);
@@ -327,14 +327,14 @@ tutorial_simple_arr_comp_handler_no_op (SimpleArrCompIf  *iface,
   THRIFT_UNUSED_VAR (error);
 
   *_return = g_byte_array_new();
-  struct in6_memaddr result_addr = get_result_pointer(targetIP);
+  ip6_memaddr result_addr = get_result_pointer(targetIP);
 
   marshall_shmem_ptr(_return, &result_addr);
 
   // Read in array from shared memory
   uint8_t *int_arr = malloc(length);
 
-  struct in6_memaddr args_addr;
+  ip6_memaddr args_addr;
   unmarshall_shmem_ptr(&args_addr, (GByteArray *) num_array);
 
   //COMPUTATION

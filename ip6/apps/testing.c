@@ -36,7 +36,7 @@ static uint64_t NUM_ITERATIONS;
 //sudo ip -6 route add local ::3131:0:0:0:0/64  dev lo
 //ovs-ofctl add-flow s1 dl_type=0x86DD,ipv6_dest=0:0:01ff:0:ffff:ffff:0:0,actions=output:2
 struct LinkedPointer {
-    struct in6_memaddr AddrString;
+    ip6_memaddr AddrString;
     struct LinkedPointer * Pointer;
 };
 
@@ -78,7 +78,7 @@ void save_time(const char *type, uint64_t* latency, uint64_t length){
 typedef struct _thread_data_t {
   int tid;
   struct sockaddr_in6 *target_ip;
-  struct in6_memaddr *r_addr; 
+  ip6_memaddr *r_addr; 
   uint64_t length;
 } thread_data_t;
 
@@ -106,7 +106,7 @@ void *testing_loop(void *arg) {
     // Initialize BlueBridge
     struct config myConf = get_bb_config();
     struct sockaddr_in6 *target_ip = init_net_thread(data->tid, &myConf, 0);
-    struct in6_memaddr *r_addr = calloc(data->length,sizeof(struct in6_memaddr)); 
+    ip6_memaddr *r_addr = calloc(data->length,sizeof(ip6_memaddr)); 
     if(!r_addr) 
         perror("Allocation too large"); 
  
@@ -115,8 +115,8 @@ void *testing_loop(void *arg) {
     uint64_t aStart = getns();
     struct in6_addr *ipv6Pointer = gen_ip6_target(data->tid % myConf.num_hosts);
     memcpy(&(target_ip->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-    struct in6_memaddr *temp = allocate_rmem_bulk(target_ip, data->length);
-    memcpy(r_addr, temp, data->length * sizeof(struct in6_memaddr));
+    ip6_memaddr *temp = allocate_rmem_bulk(target_ip, data->length);
+    memcpy(r_addr, temp, data->length * sizeof(ip6_memaddr));
     //free(temp);
     alloc_latency[0] = getns() - aStart;
     // WRITE TEST
@@ -134,7 +134,7 @@ void *testing_loop(void *arg) {
         free(payload);
     } else {
         for (uint64_t i = 0; i < data->length; i++) {
-            struct in6_memaddr remoteMemory = r_addr[i];
+            ip6_memaddr remoteMemory = r_addr[i];
             print_debug("Creating payload");
             char payload[BLOCK_SIZE];
             snprintf(payload, 50, "HELLO WORLD! How are you? %lu", i);
@@ -147,7 +147,7 @@ void *testing_loop(void *arg) {
     // READ TEST
     printf("Thread %d Starting read test...\n", data->tid);
     for (uint64_t i = 0; i < data->length; i++) {
-        struct in6_memaddr remoteMemory = r_addr[i];
+        ip6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
         get_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
         read_latency[i] = getns() - rStart;
@@ -175,7 +175,7 @@ void *testing_loop(void *arg) {
         free(payload);
     } else {
         for (uint64_t i = 0; i < data->length; i++) {
-            struct in6_memaddr remoteMemory = r_addr[i];
+            ip6_memaddr remoteMemory = r_addr[i];
             print_debug("Creating payload");
             char payload[BLOCK_SIZE];
             snprintf(payload, 50, "Bye WORLD! I am done? %lu", i);
@@ -187,7 +187,7 @@ void *testing_loop(void *arg) {
     // READ TEST 2
     printf("Thread %d Starting second read test...\n", data->tid);
     for (uint64_t i = 0; i < data->length; i++) {
-        struct in6_memaddr remoteMemory = r_addr[i];
+        ip6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
         get_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
         read_latency2[i] = getns() - rStart;
@@ -281,7 +281,7 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
     uint64_t *free_latency_single = calloc(NUM_ITERATIONS, sizeof(uint64_t));
 
     // Allocate the address space we will use
-    struct in6_memaddr *r_addr = malloc(sizeof(struct in6_memaddr) * NUM_ITERATIONS);
+    ip6_memaddr *r_addr = malloc(sizeof(ip6_memaddr) * NUM_ITERATIONS);
     if(!r_addr)
         perror("Allocation too large");
 
@@ -298,8 +298,8 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
             length = split;
         struct in6_addr *ipv6Pointer = gen_ip6_target(i);
         memcpy(&(target_ip->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-        struct in6_memaddr *temp = allocate_rmem_bulk(target_ip, length);
-        memcpy(&r_addr[offset],temp,length *sizeof(struct in6_memaddr) );
+        ip6_memaddr *temp = allocate_rmem_bulk(target_ip, length);
+        memcpy(&r_addr[offset],temp,length *sizeof(ip6_memaddr) );
         free(temp);
         alloc_latency[i] = getns() - start; 
     }
@@ -328,7 +328,7 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
         free(payload);
     } else {
         for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
-            struct in6_memaddr remoteMemory = r_addr[i];
+            ip6_memaddr remoteMemory = r_addr[i];
             print_debug("Creating payload");
             char payload[BLOCK_SIZE];
             snprintf(payload, 50, "HELLO WORLD! How are you? %lu", i);
@@ -341,7 +341,7 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
     // READ TEST
     printf("Starting read test...\n");
     for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
-        struct in6_memaddr remoteMemory = r_addr[i];
+        ip6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
         get_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
         read_latency[i] = getns() - rStart;
@@ -369,7 +369,7 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
         free(payload);
     } else {
         for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
-            struct in6_memaddr remoteMemory = r_addr[i];
+            ip6_memaddr remoteMemory = r_addr[i];
             print_debug("Creating payload");
             char payload[BLOCK_SIZE];
             snprintf(payload, 50, "Bye WORLD! I am done? %lu", i);
@@ -381,7 +381,7 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
     // READ TEST 2
     printf("Starting second read test...\n");
     for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
-        struct in6_memaddr remoteMemory = r_addr[i];
+        ip6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
         get_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
         read_latency2[i] = getns() - rStart;
@@ -405,7 +405,7 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
     }
     //FREE TEST Single
     // for (int i = 0; i < NUM_ITERATIONS; i++) {
-    //     struct in6_memaddr remoteMemory = r_addr[i];
+    //     ip6_memaddr remoteMemory = r_addr[i];
     //     uint64_t fStart = getns();
     //     free_rmem(target_ip, &remoteMemory);
     //     free_latency_single[i] = getns() - fStart;
@@ -466,7 +466,7 @@ int main(int argc, char *argv[]) {
         basicOperations(temp);
     gettimeofday(&et,NULL);
     int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
-    printf("Total Time: %d micro seconds\n",elapsed);
+    printf("Total Time: %d micro %d milli %d seconds\n", elapsed, elapsed/1000, elapsed/(1000*1000));
     printf(KRED "Finished\n");
     printf(RESET);
     printSendLat();
