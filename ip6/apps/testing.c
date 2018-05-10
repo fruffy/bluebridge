@@ -115,7 +115,7 @@ void *testing_loop(void *arg) {
     uint64_t aStart = getns();
     struct in6_addr *ipv6Pointer = gen_ip6_target(data->tid % myConf.num_hosts);
     memcpy(&(target_ip->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-    ip6_memaddr *temp = allocate_rmem_bulk(target_ip, data->length);
+    ip6_memaddr *temp = allocate_bulk_rmem(target_ip, data->length);
     memcpy(r_addr, temp, data->length * sizeof(ip6_memaddr));
     //free(temp);
     alloc_latency[0] = getns() - aStart;
@@ -129,7 +129,7 @@ void *testing_loop(void *arg) {
             snprintf(&payload[BLOCK_SIZE *i], 50, "HELLO WORLD! How are you? %lu", i);
         }
         uint64_t wStart = getns();
-        write_rmem_bulk(target_ip, payload, r_addr, data->length);
+        write_bulk_rmem(target_ip, payload, r_addr, data->length);
         write_latency[0] = getns() - wStart;
         free(payload);
     } else {
@@ -170,7 +170,7 @@ void *testing_loop(void *arg) {
             snprintf(&payload[BLOCK_SIZE *i], 50, "HELLO WORLD! How are you? %lu", i);
         }
         uint64_t wStart = getns();
-        write_rmem_bulk(target_ip, payload, r_addr, data->length);
+        write_bulk_rmem(target_ip, payload, r_addr, data->length);
         write_latency[0] = getns() - wStart;
         free(payload);
     } else {
@@ -298,7 +298,7 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
             length = split;
         struct in6_addr *ipv6Pointer = gen_ip6_target(i);
         memcpy(&(target_ip->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-        ip6_memaddr *temp = allocate_rmem_bulk(target_ip, length);
+        ip6_memaddr *temp = allocate_bulk_rmem(target_ip, length);
         memcpy(&r_addr[offset],temp,length *sizeof(ip6_memaddr) );
         free(temp);
         alloc_latency[i] = getns() - start; 
@@ -312,7 +312,7 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
     //     r_addr[i] = allocate_rmem(target_ip);
     //     alloc_latency_single[i] = getns() - start; 
     // }
-
+    //ip6_memaddr_block temp1 = allocate_uniform_rmem(target_ip, NUM_ITERATIONS);
     // WRITE TEST
     printf("Starting write test...\n");
     if (BATCHED_MODE) {
@@ -323,7 +323,8 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
             snprintf(&payload[BLOCK_SIZE *i], 50, "HELLO WORLD! How are you? %lu", i);
         }
         uint64_t wStart = getns();
-        write_rmem_bulk(target_ip, payload, r_addr, NUM_ITERATIONS);
+        write_bulk_rmem(target_ip, payload, r_addr, NUM_ITERATIONS);
+        //write_uniform_rmem(target_ip, payload, temp1);
         write_latency[0] = getns() - wStart;
         free(payload);
     } else {
@@ -364,7 +365,7 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
             snprintf(&payload[BLOCK_SIZE *i], 50, "HELLO WORLD! How are you? %lu", i);
         }
         uint64_t wStart = getns();
-        write_rmem_bulk(target_ip, payload, r_addr, NUM_ITERATIONS);
+        write_bulk_rmem(target_ip, payload, r_addr, NUM_ITERATIONS);
         write_latency[0] = getns() - wStart;
         free(payload);
     } else {

@@ -9,6 +9,10 @@ typedef struct ip6_memaddr {
     uint64_t paddr;
 }ip6_memaddr;
 
+typedef struct ip6_memaddr_block {
+  struct ip6_memaddr memaddr;
+  uint64_t length;
+}ip6_memaddr_block;
 
 struct pkt_rqst {
     ip6_memaddr dst_addr;

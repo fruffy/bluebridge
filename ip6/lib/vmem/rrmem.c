@@ -51,7 +51,7 @@ void fill_rrmem(struct rrmem *r) {
         ip6_memaddr *memList = malloc(sizeof(ip6_memaddr) *r->nblocks );
         struct in6_addr *ipv6Pointer = gen_ip6_target(i);
         memcpy(&(r->targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-        ip6_memaddr *temp = allocate_rmem_bulk(r->targetIP, r->nblocks);
+        ip6_memaddr *temp = allocate_bulk_rmem(r->targetIP, r->nblocks);
         memcpy(memList,temp,r->nblocks *sizeof(ip6_memaddr) );
         free(temp);
         hostlist[i].memList = memList;

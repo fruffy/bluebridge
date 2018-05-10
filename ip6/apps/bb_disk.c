@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
             length = split;
         struct in6_addr *ipv6Pointer = gen_ip6_target(i);
         memcpy(&(r.targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-        ip6_memaddr *temp = allocate_rmem_bulk(r.targetIP, length);
+        ip6_memaddr *temp = allocate_bulk_rmem(r.targetIP, length);
         memcpy(&r.memList[offset],temp,length *sizeof(ip6_memaddr) );
         free(temp);
     }

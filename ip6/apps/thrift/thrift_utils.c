@@ -65,7 +65,7 @@ ip6_memaddr *get_args_pointers(struct sockaddr_in6 *targetIP, int num_pointers) 
   memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
 
   // Allocate memory and receive the remote memory pointer
-  return allocate_rmem_bulk(targetIP, num_pointers);
+  return allocate_bulk_rmem(targetIP, num_pointers);
 }
 
 
