@@ -6,6 +6,7 @@
 #include <string.h>           // strcpy, memset(), and memcpy()
 #include <net/if.h>           // struct ifreq
 #include <linux/if_ether.h>   // ETH_P_IP = 0x0800, ETH_P_IPV6 = 0x86DD
+#include <netinet/udp.h>      // struct udphdr
 #include <sys/mman.h>         // mmap()
 #include <sys/epoll.h>        // epoll_wait(), epoll_event
 #include <sys/poll.h>         // pollfd, poll

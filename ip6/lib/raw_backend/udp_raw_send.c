@@ -191,68 +191,29 @@ int send_mmap(unsigned const char *pkt, int pktlen) {
 
 int flush_buffer() {
     while (1) {
-        if (sendto(sd_send, NULL, 0, MSG_DONTWAIT, (struct sockaddr *)NULL, sizeof(struct sockaddr_ll)) < 0) {
-            perror( "sendto failed");
-            printf("Retrying....\n");
-        } else {
+        if (sendto(sd_send, NULL, 0, MSG_DONTWAIT, (struct sockaddr *)NULL, sizeof(struct sockaddr_ll)) < 0)
+            perror( "sendto failed"), printf("Retrying....\n");
+        else
             return EXIT_SUCCESS;
-        }
     }
 }
 
-int cooked_batched_send(struct pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids) {
-
-    for (int i= 0; i < num_pkts; i++) {
-        struct pkt_rqst pkt = pkts[i];
-        struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ether_frame + ETH_HDRLEN);
-        struct udphdr *udphdr = (struct udphdr *)((char *)ether_frame + ETH_HDRLEN + IP6_HDRLEN);
-        pkt.dst_addr.args = pkt.dst_addr.args | sub_ids[pkt.dst_addr.subid]<<16;
-        //Set destination IP
-        iphdr->ip6_dst = *(struct in6_addr *)&pkt.dst_addr;
-        // Payload length (16 bits): UDP header + UDP data
-        iphdr->ip6_plen = htons (UDP_HDRLEN + pkt.datalen);
-        // UDP header
-        // Destination port number (16 bits): pick a number
-        // We expect the port to already be in network byte order
-        udphdr->dest = pkt.dst_port;
-        // Length of UDP datagram (16 bits): UDP header + UDP data
-        udphdr->len = htons (UDP_HDRLEN + pkt.datalen);
-        // Static UDP checksum
-        udphdr->check = 0xFFAA;
-        //udphdr->check = udp6_checksum (iphdr, udphdr, (uint8_t *) data, datalen);
-        // Copy our data
-        memcpy (ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, pkt.data, pkt.datalen * sizeof (uint8_t));
-        // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
-        int frame_length = ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + pkt.datalen;
-        /*    char dst_ip[INET6_ADDRSTRLEN];
-        inet_ntop(AF_INET6,&iphdr->ip6_dst, dst_ip, sizeof dst_ip);
-        printf("Sending to part two %s::%d\n", dst_ip, ntohs(udphdr->dest));*/
-        if (i >= 16384) {
-            flush_buffer();
-        }
-        send_mmap(ether_frame, frame_length);
-    }
-    flush_buffer();
-    return EXIT_SUCCESS;
-}
-
-int cooked_send(struct pkt_rqst pkt) {
-
-    struct ip6_hdr *iphdr = (struct ip6_hdr *)((char *)ether_frame + ETH_HDRLEN);
-    struct udphdr *udphdr = (struct udphdr *)((char *)ether_frame + ETH_HDRLEN + IP6_HDRLEN);
+int prepare_packet(struct pkt_rqst pkt) {
+    struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((char *)ether_frame + ETH_HDRLEN);
+    struct udphdr *udp_hdr = (struct udphdr *)((char *)ether_frame + ETH_HDRLEN + IP6_HDRLEN);
     //Set destination IP
-    iphdr->ip6_dst = *(struct in6_addr *)&pkt.dst_addr;
+    memcpy(&ip_hdr->ip6_dst, &pkt.dst_addr, IPV6_SIZE);
     // Payload length (16 bits): UDP header + UDP data
-    iphdr->ip6_plen = htons (UDP_HDRLEN + pkt.datalen);
+    ip_hdr->ip6_plen = htons (UDP_HDRLEN + pkt.datalen);
     // UDP header
     // Destination port number (16 bits): pick a number
     // We expect the port to already be in network byte order
-    udphdr->dest = pkt.dst_port;
+    udp_hdr->dest = pkt.dst_port;
     // Length of UDP datagram (16 bits): UDP header + UDP data
-    udphdr->len = htons (UDP_HDRLEN + pkt.datalen);
+    udp_hdr->len = htons (UDP_HDRLEN + pkt.datalen);
     // Static UDP checksum
-    udphdr->check = 0xFFAA;
-    //udphdr->check = udp6_checksum (iphdr, udphdr, (uint8_t *) data, datalen);
+    udp_hdr->check = 0xFFAA;
+    //udp_hdr->check = udp6_checksum (ip_hdr, udp_hdr, (uint8_t *) data, datalen);
     // Copy our data
     // printf("Memcpy: %s, ether_frame: ", pkt.data);
     // print_n_bytes(ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, pkt.datalen);
@@ -261,15 +222,33 @@ int cooked_send(struct pkt_rqst pkt) {
     // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
     int frame_length = ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + pkt.datalen;
     /*    char dst_ip[INET6_ADDRSTRLEN];
-    inet_ntop(AF_INET6,&iphdr->ip6_dst, dst_ip, sizeof dst_ip);
+    inet_ntop(AF_INET6,&ip_hdr->ip6_dst, dst_ip, sizeof dst_ip);
     printf("Sending to part two %s::%d\n", dst_ip, ntohs(udphdr->dest));*/
     // Place the packet in the ring buffer
-    // printf("Send mmap\n");
+    // print_debug("Send mmap\n");
     send_mmap(ether_frame, frame_length);
-    // printf("Flushing buffer\n");
     // Flush the buffer
+    // print_debug("Flushing buffer\n");
     flush_buffer();
-    // printf("returning\n");
+    return EXIT_SUCCESS;
+}
+
+int cooked_batched_send(struct pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids) {
+    for (int i= 0; i < num_pkts; i++) {
+        pkts[i].dst_addr.args = pkts[i].dst_addr.args | sub_ids[pkts[i].dst_addr.subid]<<16; 
+        prepare_packet(pkts[i]);
+        if (i >= TX_RING_BLOCKS * C_RING_FRAMES) {
+            flush_buffer();
+        }
+    }
+    flush_buffer();
+    return EXIT_SUCCESS;
+}
+
+
+int cooked_send(struct pkt_rqst pkt) {
+    prepare_packet(pkt);
+    flush_buffer();
     return EXIT_SUCCESS;
 }
 

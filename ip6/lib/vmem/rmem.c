@@ -90,7 +90,7 @@ void rmem_read( struct rmem *r, uint64_t block, char *data ) {
     }
     // Get pointer to page data in (simulated) physical memory
 
-     get_rmem(data,r->block_size, targetIP, &r->memList[block]);
+     read_rmem(data,r->block_size, targetIP, &r->memList[block]);
 }
 
 uint64_t rmem_blocks(struct rmem *r) {

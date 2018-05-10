@@ -91,7 +91,7 @@ int rcv_udp6_raw_id(char *rx_buf, int msg_size, struct sockaddr_in6 *target_ip, 
     uint64_t start = getns();
     int numbytes;
 #ifdef DEFAULT
-    numbytes = epoll_client_rcv(rx_buf, msg_size, target_ip, remote_addr);
+    numbytes = simple_epoll_rcv(rx_buf, msg_size, target_ip, remote_addr);
 #else
     numbytes = dpdk_client_rcv(rx_buf, msg_size, target_ip, remote_addr);
 #endif

@@ -75,7 +75,7 @@ int epoll_server_rcv(char *rcv_buf, int msg_size, struct sockaddr_in6 *target_ip
                 printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udp_hdr->source), s1, ntohs(udp_hdr->dest) );
                 printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udp_hdr->dest) );
                 */
-                msg_size = udp_hdr->len;
+                //msg_size = udp_hdr->len;
                 memcpy(rcv_buf, payload, msg_size);
                 if (remote_addr != NULL) {
                     memcpy(remote_addr, &ip_hdr->ip6_dst, IPV6_SIZE);
@@ -144,7 +144,6 @@ int raw_rcv_loop(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
            }
     }
 }
-
 
 void enter_raw_server_loop(uint16_t server_port) {
     struct sockaddr_in6 *target_ip = calloc(1, sizeof(struct sockaddr_in6));

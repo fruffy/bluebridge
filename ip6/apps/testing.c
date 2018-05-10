@@ -149,7 +149,7 @@ void *testing_loop(void *arg) {
     for (uint64_t i = 0; i < data->length; i++) {
         ip6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
-        get_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
+        read_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
         read_latency[i] = getns() - rStart;
         char payload[BLOCK_SIZE];
         snprintf(payload, 50, "HELLO WORLD! How are you? %lu", i);
@@ -189,7 +189,7 @@ void *testing_loop(void *arg) {
     for (uint64_t i = 0; i < data->length; i++) {
         ip6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
-        get_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
+        read_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
         read_latency2[i] = getns() - rStart;
         char payload[BLOCK_SIZE];
         snprintf(payload, 50, "Bye WORLD! I am done? %lu", i);
@@ -344,7 +344,7 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
     for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
         ip6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
-        get_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
+        read_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
         read_latency[i] = getns() - rStart;
         char payload[BLOCK_SIZE];
         snprintf(payload, 50, "HELLO WORLD! How are you? %lu", i);
@@ -384,7 +384,7 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
     for (uint64_t i = 0; i < NUM_ITERATIONS; i++) {
         ip6_memaddr remoteMemory = r_addr[i];
         uint64_t rStart = getns();
-        get_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
+        read_rmem(test, BLOCK_SIZE, target_ip, &remoteMemory);
         read_latency2[i] = getns() - rStart;
         char payload[BLOCK_SIZE];
         snprintf(payload, 50, "Bye WORLD! I am done? %lu", i);

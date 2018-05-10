@@ -19,6 +19,8 @@
 
 struct in6_addr *hostList;
 int nhosts;
+static const int BATCH_SIZE = 40; // For some reason this is the maximum batch size we can do...
+static __thread uint32_t sub_ids[USHRT_MAX]; // This should be a hashmap, right now it's just an array 
 
 /*
  * Generates a random IPv6 address target under specific constraints
@@ -125,7 +127,49 @@ ip6_memaddr_block allocate_uniform_rmem(struct sockaddr_in6 *target_ip, uint64_t
  * Reads the remote memory based on remote_addr
  */
 // TODO: Implement meaningful return types and error messages
-int get_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
+void batch_read(struct sockaddr_in6 *target_ip, char *payload, ip6_memaddr *remote_addrs, int num_packets){
+    struct pkt_rqst pkts[num_packets];
+    for (int i = 0; i < num_packets; i++){
+        pkts[i].dst_addr = remote_addrs[i];
+        pkts[i].dst_port = target_ip->sin6_port;
+        memcpy(pkts[i].data, &payload[BLOCK_SIZE * i], sizeof(void *));
+        pkts[i].datalen = sizeof(void *);
+        pkts[i].dst_addr.args =sub_ids[remote_addrs[i].subid] + 1; 
+        pkts[i].dst_addr.cmd =  WRITE_BULK_CMD;
+        sub_ids[remote_addrs[i].subid]++;
+    }
+    print_debug("******WRITE BULK DATA %d packets ******", num_packets );
+    send_udp_raw_batched(pkts, sub_ids, num_packets);
+    for (int i = 0; i< USHRT_MAX; i++) {
+        if (sub_ids[i] != 0)
+            rcv_udp6_raw_id(NULL, 0, target_ip, NULL);
+    }
+}
+
+int read_bulk_rmem(char *rx_buf, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addrs, int num_addrs) {
+    int batches = num_addrs / BATCH_SIZE;
+    int batch_residual = num_addrs % BATCH_SIZE;
+    for (int i = 0; i < batches; i++ ) {
+        batch_read(target_ip, &rx_buf[BLOCK_SIZE*i*BATCH_SIZE], &remote_addrs[i*BATCH_SIZE], BATCH_SIZE);
+    }
+    int offset = num_addrs - batch_residual;
+    batch_read(target_ip, &rx_buf[BLOCK_SIZE*offset], &remote_addrs[offset], batch_residual);
+    return EXIT_SUCCESS;
+}
+
+/*
+ * Reads the remote memory based on remote_addr
+ */
+// TODO: Implement meaningful return types and error messages
+// int read_uniform_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, ip6_memaddr_block remote_addr) {
+//     return EXIT_FAILURE;
+// }
+
+/*
+ * Reads the remote memory based on remote_addr
+ */
+// TODO: Implement meaningful return types and error messages
+int read_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
     // Send the command to the target host and wait for response
     remote_addr->cmd =  GET_CMD;
     print_debug("******GET DATA******");
@@ -135,61 +179,6 @@ int get_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, ip6_memad
     return numBytes;
 }
 
-/*
- * Reads the remote memory based on remote_addr
- */
-// TODO: Implement meaningful return types and error messages
-void batch_read(struct sockaddr_in6 *target_ip, char *payload, ip6_memaddr *remote_addrs, int num_packets){
-      int packets = length / BLOCK_SIZE;
-      int residual = length % BLOCK_SIZE;
-      for (int i = 0; i < packets; i++ ) {
-        ip6_memaddr tmp_addr = *remote_addr;
-        tmp_addr.paddr = remote_addr->paddr +i*BLOCK_SIZE;
-        get_rmem(&rx_buf[i*BLOCK_SIZE], length, target_ip, &tmp_addr);
-      }
-    ip6_memaddr tmp_addr = *remote_addr;
-    tmp_addr.paddr = remote_addr->paddr + packets * BLOCK_SIZE;
-    get_rmem(&rx_buf[packets*BLOCK_SIZE], residual, target_ip, &tmp_addr);
-    return length;
-}
-
-/*
- * Reads the remote memory based on remote_addr
- */
-// TODO: Implement meaningful return types and error messages
-int read_uniform_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
-      int packets = length / BLOCK_SIZE;
-      int residual = length % BLOCK_SIZE;
-      for (int i = 0; i < packets; i++ ) {
-        ip6_memaddr tmp_addr = *remote_addr;
-        tmp_addr.paddr = remote_addr->paddr +i*BLOCK_SIZE;
-        get_rmem(&rx_buf[i*BLOCK_SIZE], length, target_ip, &tmp_addr);
-      }
-    ip6_memaddr tmp_addr = *remote_addr;
-    tmp_addr.paddr = remote_addr->paddr + packets * BLOCK_SIZE;
-    get_rmem(&rx_buf[packets*BLOCK_SIZE], residual, target_ip, &tmp_addr);
-    return length;
-}
-
-/*
- * Sends a write command to the server based on remote_addr
- */
-// TODO: Implement meaningful return types and error messages
-static __thread uint32_t sub_ids[USHRT_MAX]; // This should be a hashmap, right now it's just an array
-static const int BATCH_SIZE = 40; // For some reason this is the maximum batch size we can do...
-
-/*
- * Sends a write command to the server based on remote_addr
- */
-// TODO: Implement meaningful return types and error messages
-int write_rmem(struct sockaddr_in6 *target_ip, char *payload, ip6_memaddr *remote_addr) {
-    // Send the command to the target host and wait for response
-    remote_addr->cmd =  WRITE_CMD;
-    print_debug("******WRITE DATA******");
-    send_udp_raw(payload, BLOCK_SIZE, remote_addr, target_ip->sin6_port);
-    rcv_udp6_raw_id(NULL, 0, target_ip, remote_addr);
-    return EXIT_SUCCESS;
-}
 
 void batch_write(struct sockaddr_in6 *target_ip, char *payload, ip6_memaddr *remote_addrs, int num_packets){
     // Send the command to the target host and wait for response
@@ -240,6 +229,19 @@ int write_uniform_rmem(struct sockaddr_in6 *target_ip, char *payload, ip6_memadd
         tmp_addrs[j].paddr = remote_block.memaddr.paddr +batches*BLOCK_SIZE;
     }
     batch_write(target_ip, &payload[batches*BLOCK_SIZE], tmp_addrs, batch_residual);
+    return EXIT_SUCCESS;
+}
+
+/*
+ * Sends a write command to the server based on remote_addr
+ */
+// TODO: Implement meaningful return types and error messages
+int write_rmem(struct sockaddr_in6 *target_ip, char *payload, ip6_memaddr *remote_addr) {
+    // Send the command to the target host and wait for response
+    remote_addr->cmd =  WRITE_CMD;
+    print_debug("******WRITE DATA******");
+    send_udp_raw(payload, BLOCK_SIZE, remote_addr, target_ip->sin6_port);
+    rcv_udp6_raw_id(NULL, 0, target_ip, remote_addr);
     return EXIT_SUCCESS;
 }
 

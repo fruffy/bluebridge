@@ -47,10 +47,10 @@ static int xmp_read(void *buf, u_int32_t len, u_int64_t offset, void *userdata) 
     u_int64_t page_offset = offset/PAGE_SIZE;
     if (len > PAGE_SIZE) {
         for (u_int32_t i = 0; i< len/PAGE_SIZE; i++) {
-            get_rmem((char *) buf + (PAGE_SIZE *i), PAGE_SIZE, r.targetIP, &r.memList[page_offset + i]);
+            read_rmem((char *) buf + (PAGE_SIZE *i), PAGE_SIZE, r.targetIP, &r.memList[page_offset + i]);
         }
     } else {
-        get_rmem(buf, len, r.targetIP, &r.memList[page_offset]);
+        read_rmem(buf, len, r.targetIP, &r.memList[page_offset]);
     }
     return 0;
 }
