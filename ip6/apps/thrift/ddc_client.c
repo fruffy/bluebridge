@@ -24,7 +24,7 @@
 ThriftProtocol *remmem_protocol;
 ThriftProtocol *arrcomp_protocol;
 static const char *RESULTS_DIR = "results/thrift/ddc";
-#define DATA_POINTS 1000
+#define DATA_POINTS 500
 static int SIZE_STEPS[DATA_POINTS];
 
 struct result test_increment_array(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targetIP, gboolean print) {
@@ -493,9 +493,9 @@ void test_shared_pointer_perf(RemoteMemTestIf *remmem_client,
   thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_SEND, FALSE);
   thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_RECV, FALSE);
 
-  printf("Starting add arrays performance test...\n");
-  // Call perf test for add arrays
-  add_arrays_perf(arrcomp_client, targetIP, iterations, max_size, incr, "add_arr");
+  // printf("Starting add arrays performance test...\n");
+  // // Call perf test for add arrays
+  // add_arrays_perf(arrcomp_client, targetIP, iterations, max_size, incr, "add_arr");
 }
 
 void usage(char* prog_name, char* message) {
@@ -619,7 +619,7 @@ int main (int argc, char *argv[]) {
   
   // Fill the global array with data values
   for (int i = 0; i < DATA_POINTS; i++ ) {
-    SIZE_STEPS[i] = i*10;//pow(2,i);
+    SIZE_STEPS[i] = i*50;//pow(2,i);
   }
 
   printf("\n\n###### Server functionality tests ######\n");

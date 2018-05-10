@@ -2,7 +2,7 @@ MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 MSG_DIR        := $(MAKE_ROOT)/ip6
 APP_DIR        := $(MSG_DIR)/apps
 THRIFT_APP_DIR := $(APP_DIR)/thrift
-THRIFT_DIR     := $(MSG_DIR)/thrift
+THRIFT_DIR     := includes/thrift
 
 CC = gcc 
 CFLAGS += -c -Wextra -Wall -Wshadow -Wpointer-arith -Wcast-qual
@@ -61,8 +61,8 @@ thrift-all: thrift lib thrift-apps
 
 thrift-clean:
 	@echo "Cleaning thrift build in $(MAKE_ROOT)"
-	@$(MAKE) -C $(THRIFT_APP_DIR) -f thrift.mk clean
-	@$(MAKE) -C $(THRIFT_DIR) -f thrift.mk clean
+	@$(MAKE) -C $(THRIFT_APP_DIR) clean
+	@$(MAKE) -C $(THRIFT_DIR) clean
 
 clean: 
 	@$(MAKE) -C $(MSG_DIR) -f default.mk clean

@@ -14,8 +14,8 @@
 	url = https://github.com/fruffy/dpdk
 	path = includes/dpdk
 [submodule "ip6/thrift"]
-	path = ip6/thrift
-	url = git@github.com:acarb95/thrift.git
+	path = includes/thrift
+	url = https://github.com/acarb95/thrift
 [submodule "includes/p4c"]
 	path = includes/p4c
 	url = https://github.com/p4lang/p4c

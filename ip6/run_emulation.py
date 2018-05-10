@@ -16,7 +16,7 @@ from mininet.link import TCLink
 from mininet.topolib import TreeNet
 from mininet.node import Host
 from mininet.term import makeTerm
-from p4_mininet.p4_mininet import P4Switch
+from p4.p4_mininet.p4_mininet import P4Switch
 
 
 PARSER = argparse.ArgumentParser()
@@ -139,7 +139,7 @@ def configureHosts(net, num_hosts):
 def configureSwitch(num_hosts):
 
     if ARGS.is_p4:
-        os.system('p4_switch/simple_switch/simple_switch_CLI < p4_switch/commands.txt')
+        os.system('p4/p4_switch/simple_switch/simple_switch_CLI < p4_switch/commands.txt')
     elif ARGS.use_broadcast:
         # Flood all packets
         os.system("ovs-ofctl add-flow s1 priority=3,actions=output:flood")
@@ -174,8 +174,8 @@ def run():
     privateDirs = [('./tmp/config', '/tmp/%(name)s/var/config')]
     host = partial(Host, privateDirs=privateDirs)
     if ARGS.is_p4:
-        switch_model = 'p4_switch/simple_switch/simple_switch'
-        json_router = 'p4_switch/ip6_16.json'
+        switch_model = 'p4/p4_switch/simple_switch/simple_switch'
+        json_router = 'p4/p4_switch/ip6_16.json'
         topo = BlueBridgeTopo(sw_path=switch_model, json_path=json_router,
                               thrift_port=9090, pcap_dump=False, num_hosts=num_hosts)
         heimdall = RemoteController('c', '0.0.0.0', 6633)

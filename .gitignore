@@ -435,3 +435,5 @@ ip6/apps/thrift/ddc_client
 ip6/apps/thrift/tcp_client
 
 ip6/apps/thrift/ddc_simple_arr_comp
+
+ip6/apps/thrift/gen-c_glib/

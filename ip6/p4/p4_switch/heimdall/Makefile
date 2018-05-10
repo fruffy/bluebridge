@@ -313,9 +313,9 @@ sharedstatedir = ${prefix}/com
 srcdir = .
 sysconfdir = ${prefix}/etc
 target_alias = 
-top_build_prefix = ../../../includes/p4
-top_builddir = ../../../includes/p4
-top_srcdir = ../../../includes/p4
+top_build_prefix = ../../../../includes/p4
+top_builddir = ../../../../includes/p4
+top_srcdir = ../../../../includes/p4
 heimdall_SOURCES = heimdall.cpp
 heimdall_LDADD = $(top_builddir)/src/bm_apps/libbmapps.la
 all: all-am

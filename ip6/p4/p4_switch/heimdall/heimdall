@@ -64,7 +64,7 @@ _LTECHO_EOF'
 # --lt-dump-script. There is, deliberately, no --lt-help.
 #
 # The first argument to this parsing function should be the
-# script's ../../../includes/p4/libtool value, followed by no.
+# script's ../../../../includes/p4/libtool value, followed by no.
 lt_option_debug=
 func_parse_lt_options ()
 {

@@ -25,7 +25,7 @@ ThriftProtocol *remmem_protocol;
 ThriftProtocol *arrcomp_protocol;
 
 static const char *RESULTS_DIR = "results/thrift/tcp";
-#define DATA_POINTS 1000
+#define DATA_POINTS 500
 static int SIZE_STEPS[DATA_POINTS];
 
 struct result test_increment_array(SimpleArrCompIf *client, int size, gboolean print) {
@@ -353,9 +353,9 @@ void test_shared_pointer_perf(RemoteMemTestIf *remmem_client, SimpleArrCompIf *a
   // Call perf test for increment array rpc
   increment_array_perf(arrcomp_client, iterations, max_size, incr, "incr_arr");
 
-  printf("Starting add arrays performance test...\n");
-  // Call perf test for add arrays
-  add_arrays_perf(arrcomp_client, iterations, max_size, incr, "add_arr");
+  // printf("Starting add arrays performance test...\n");
+  // // Call perf test for add arrays
+  // add_arrays_perf(arrcomp_client, iterations, max_size, incr, "add_arr");
 }
 
 
@@ -463,7 +463,7 @@ int main (int argc, char *argv[]) {
 
   // Fill the global array with data values
   for (int i = 0; i < DATA_POINTS; i++ ) {
-    SIZE_STEPS[i] = i*10;//pow(2,i);
+    SIZE_STEPS[i] = i*50;//pow(2,i);
   }
 
   arrcomp_client = g_object_new (TYPE_SIMPLE_ARR_COMP_CLIENT,

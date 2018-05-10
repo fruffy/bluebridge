@@ -14,9 +14,10 @@ fi
 read -r -p "Do you also want to install thrift? [y/N]: " response
 response=${response,,} # tolower
 if [[ $response =~ ^(yes|y) ]]; then
-    cd ip6/thrift
+    sudo apt-get install libglib2.0-dev
+    cd includes/thrift
     git submodule update --init .
-    ./autogen
+    ./bootstrap.sh
     ./configure --without-cpp
     cd ../..
     make thrift-all
