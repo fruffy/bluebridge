@@ -100,6 +100,22 @@ int rcv_udp6_raw_id(char *rx_buf, int msg_size, struct sockaddr_in6 *target_ip, 
     return numbytes;
 }
 
+/*
+ * Receives message on socket
+ * RAW version, we craft our own packet.
+ */
+// TODO: Error handling
+void rcv_udp6_raw_bulk(int num_packets) {
+    uint64_t start = getns();
+#ifdef DEFAULT
+    write_packets(num_packets);
+#else
+#endif
+    rcv_lat += getns() - start;
+    rcv_calls++;
+}
+
+
 struct sockaddr_in6 *init_sockets(struct config *bb_conf, int server) {
 #ifdef DEFAULT
     if (server)

@@ -217,7 +217,6 @@ int prepare_packet(struct pkt_rqst pkt) {
     // Copy our data
     // printf("Memcpy: %s, ether_frame: ", pkt.data);
     // print_n_bytes(ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, pkt.datalen);
-
     memcpy (ether_frame + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN, pkt.data, pkt.datalen * sizeof (uint8_t));
     // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
     int frame_length = ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + pkt.datalen;

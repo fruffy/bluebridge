@@ -57,7 +57,7 @@ int allocate_mem_bulk( struct sockaddr_in6 *target_ip, uint64_t size) {
 /*
  * Gets memory and sends it
  */
-int get_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr) {
+int read_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr) {
     // Send the sendBuffer (entire BLOCK_SIZE)
     ip6_memaddr *returnID = (ip6_memaddr *) (&target_ip->sin6_addr);
     returnID->cmd = r_addr->cmd;
@@ -66,6 +66,20 @@ int get_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr) {
     // TODO change to be meaningful, i.e., error message
     return EXIT_SUCCESS;
 }
+
+/*
+ * Gets memory and sends it
+ */
+int read_mem_ptr(char *receiveBuffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr) {
+    // Send the sendBuffer (entire BLOCK_SIZE)
+    ip6_memaddr *returnID = (ip6_memaddr *) (&target_ip->sin6_addr);
+    returnID->cmd = r_addr->cmd;
+    memcpy(&returnID->paddr, receiveBuffer, POINTER_SIZE);
+    send_udp_raw((void *) *&r_addr->paddr, BLOCK_SIZE, (ip6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port);
+    // TODO change to be meaningful, i.e., error message
+    return EXIT_SUCCESS;
+}
+
 
 /*
  * TODO: explain.
@@ -135,13 +149,17 @@ void process_request(char *receiveBuffer, struct sockaddr_in6 *targetIP, ip6_mem
         if (DEBUG) print_n_bytes((char *) remoteAddr, IPV6_SIZE);
         write_mem(receiveBuffer, targetIP, remoteAddr);
     } else if (remoteAddr->cmd == WRITE_BULK_CMD) {
-        print_debug("******WRITE DATA: ");
+        print_debug("******WRITE DATA BULK: ");
         if (DEBUG) print_n_bytes((char *) remoteAddr, IPV6_SIZE);
         write_mem_bulk(receiveBuffer, targetIP, remoteAddr);
-    } else if (remoteAddr->cmd == GET_CMD) {
-        print_debug("******GET DATA: ");
+    } else if (remoteAddr->cmd == READ_CMD) {
+        print_debug("******READ DATA: ");
         if (DEBUG) print_n_bytes((char *) remoteAddr, IPV6_SIZE);
-        get_mem(targetIP, remoteAddr);
+        read_mem(targetIP, remoteAddr);
+    } else if (remoteAddr->cmd == READ_BULK_CMD) {
+        print_debug("******READ DATA PTR: ");
+        if (DEBUG) print_n_bytes((char *) remoteAddr, IPV6_SIZE);
+        read_mem_ptr(receiveBuffer, targetIP, remoteAddr);
     } else if (remoteAddr->cmd == FREE_CMD) {
         print_debug("******FREE DATA: ");
         if (DEBUG) print_n_bytes((char *) remoteAddr, IPV6_SIZE);

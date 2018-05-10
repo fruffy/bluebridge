@@ -5,7 +5,7 @@
 
 int allocate_mem(struct sockaddr_in6 *target_ip);
 int allocate_mem_bulk(struct sockaddr_in6 *target_ip, uint64_t size);
-int get_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr);
+int read_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr);
 int write_mem(char * receiveBuffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr);
 int write_mem_bulk(char * receiveBuffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr);
 int free_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr);

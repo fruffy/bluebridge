@@ -38,6 +38,47 @@ void init_rx_socket_client(struct config *cfg) {
     setup_rx_socket(cfg, my_port, thread_id, &epoll_fd_g, NULL, &ring_rx_g);
 }
 
+//This function is hacky bullshit, needs a lot of improvement.
+void write_packets(int num_packets) {
+    struct epoll_event event;
+    int packets = 0;
+    while (1){
+        if (packets == num_packets)
+            break;
+        epoll_wait(epoll_fd_g, &event, sizeof event, -1);
+        //int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
+        /*if (num_events == 0 && !server) {
+            //printf("TIMEOUT!\n");
+            return -1;
+        }*/
+        if (event.events & EPOLLIN) {
+            packets++;
+            struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
+            if ((volatile uint32_t)tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
+                //printf("Dis Kernel\n");
+                continue;
+            }
+            if (tpacket_hdr->tp_status & TP_STATUS_COPY) {
+                next_packet(&ring_rx_g);
+                continue;
+            }
+            if (tpacket_hdr->tp_status & TP_STATUS_LOSING) {
+                next_packet(&ring_rx_g);
+                continue;
+            }
+            struct ethhdr *eth_hdr = (struct ethhdr *)((char *) tpacket_hdr + tpacket_hdr->tp_mac);
+            struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((char *)eth_hdr + ETH_HDRLEN);
+            struct udphdr *udp_hdr = (struct udphdr *)((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
+            char *payload = ((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
+            ip6_memaddr *inAddress =  (ip6_memaddr *) &ip_hdr->ip6_dst;
+            int msg_size = udp_hdr->len - UDP_HDRLEN;
+            memcpy((void *) *(&inAddress->paddr), payload, msg_size);
+            tpacket_hdr->tp_status = TP_STATUS_KERNEL;
+            next_packet(&ring_rx_g);
+        }
+    }
+}
+
 int simple_epoll_rcv(char *rcv_buf, int msg_size, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
     struct epoll_event events[1024];
     while (1) {

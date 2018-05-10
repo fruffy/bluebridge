@@ -28,12 +28,12 @@ void handle_requests(char *receiveBuffer, int size, struct sockaddr_in6 *target_
             print_n_bytes((char *) remoteAddr, IPV6_SIZE);
         }
         write_mem(receiveBuffer, target_ip, remoteAddr);
-    } else if (remoteAddr->cmd == GET_CMD) {
+    } else if (remoteAddr->cmd == READ_CMD) {
         print_debug("******GET DATA: ");
         if (DEBUG) {
             print_n_bytes((char *) remoteAddr, IPV6_SIZE);
         }
-        get_mem(target_ip, remoteAddr);
+        read_mem(target_ip, remoteAddr);
     } else if (remoteAddr->cmd == FREE_CMD) {
         print_debug("******FREE DATA: ");
         if (DEBUG) {

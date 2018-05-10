@@ -5,11 +5,6 @@
 #include <netinet/ip.h>       // IP_MAXPACKET (which is 65535)
 #include <netinet/ip6.h>    // struct ip6_hdr
 
-// Define some constants.
-#define POINTER_SIZE sizeof(void*)
-
-static const int SUBNET_ID = 1; // 16 bits for subnet id
-
 struct config {
     char interface[20];
     char server_port[5];

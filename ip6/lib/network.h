@@ -10,7 +10,7 @@ int send_udp_raw(char * sendBuffer, int msgBlockSize, ip6_memaddr *remoteAddr, i
 int send_udp_raw_batched(struct pkt_rqst *pkts, uint32_t *sub_ids, int num_addrs);
 int rcv_udp6_raw(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, ip6_memaddr *remoteAddr);
 int rcv_udp6_raw_id(char * receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, ip6_memaddr *remoteAddr);
-
+void rcv_udp6_raw_bulk(int num_packets);
 struct sockaddr_in6 *init_sockets(struct config *configstruct, int server);
 void close_sockets();
 struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf, int isServer);

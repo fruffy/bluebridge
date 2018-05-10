@@ -28,15 +28,18 @@ struct pkt_rqst {
 #define UDP_HDRLEN 8    // UDP header length, excludes data
 #define IPV6_SIZE 16    // Length of an IPV6 Address
 #define BLOCK_SIZE 4096 // Our current default transport size
+#define POINTER_SIZE sizeof(void*)
+static const int SUBNET_ID = 1; // 16 bits for subnet id
+
 
 // BlueBridge commands
 #define ALLOC_CMD       01
 #define WRITE_CMD       02
-#define GET_CMD         03
+#define READ_CMD        03
 #define FREE_CMD        04
-#define GET_ADDR_CMD    05
-#define ALLOC_BULK_CMD  06
-#define WRITE_BULK_CMD  07
+#define ALLOC_BULK_CMD  05
+#define WRITE_BULK_CMD  06
+#define READ_BULK_CMD   07
 #define CMD_SIZE        02
 
 // Get used to seeing this structure a lot... 
