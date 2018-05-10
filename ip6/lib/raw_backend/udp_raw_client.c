@@ -7,6 +7,7 @@
 #include <netinet/udp.h>      // struct udphdr
 #include <errno.h>            // errno, perror()
 #include <sys/epoll.h>        // epoll_wait(), epoll_event
+#include <sys/poll.h>         // pollfd, poll
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
 
 
@@ -17,6 +18,7 @@
 static __thread int epoll_fd_g = -1;
 static __thread struct rx_ring ring_rx_g;
 static __thread int sd_rx_g;
+
 static __thread int thread_id;
 const int TIMEOUT = 0;
 
@@ -33,7 +35,7 @@ void set_thread_id_rx_client(int id) {
 void init_rx_socket_client(struct config *cfg) {
     inet_ntop(AF_INET6, &cfg->src_addr, my_addr, INET6_ADDRSTRLEN);
     my_port = cfg->src_port;
-    setup_rx_socket(cfg, my_port, thread_id, &epoll_fd_g, &ring_rx_g);
+    setup_rx_socket(cfg, my_port, thread_id, &epoll_fd_g, NULL, &ring_rx_g);
 }
 
 int epoll_client_rcv(char *rcv_buf, int msg_size, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {

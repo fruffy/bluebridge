@@ -8,6 +8,7 @@
 #include <linux/if_ether.h>   // ETH_P_IP = 0x0800, ETH_P_IPV6 = 0x86DD
 #include <sys/mman.h>         // mmap()
 #include <sys/epoll.h>        // epoll_wait(), epoll_event
+#include <sys/poll.h>         // pollfd, poll
 #include <arpa/inet.h>        // inet_pton() and inet_ntop()
 #include <linux/filter.h>     // struct sock_fprog 
 
@@ -97,7 +98,16 @@ int init_epoll(int sd_rx) {
     return epoll_fd;
 }
 
-int setup_rx_socket(struct config *cfg, int my_port, int thread_id, int *my_epoll, struct rx_ring *my_ring) {
+struct pollfd init_poll(int sd_rx) {
+    struct pollfd poll_fd;
+    memset(&poll_fd, 0, sizeof(poll_fd));
+    poll_fd.fd = sd_rx;
+    poll_fd.events = POLLIN | POLLERR;
+    poll_fd.revents = 0;
+    return poll_fd;
+}
+
+int setup_rx_socket(struct config *cfg, int my_port, int thread_id, int *my_epoll, struct pollfd *my_poll, struct rx_ring *my_ring) {
 
     struct sockaddr_ll device;
     char my_addr[INET6_ADDRSTRLEN];
@@ -115,7 +125,10 @@ int setup_rx_socket(struct config *cfg, int my_port, int thread_id, int *my_epol
 
     //set_packet_filter(sd_rx, (char*) &cfg->src_addr, cfg->interface, htons((ntohs(my_port) + thread_id)));
     set_packet_filter(sd_rx, my_addr, cfg->interface, htons((ntohs(my_port) + thread_id)));
-    *my_epoll = init_epoll(sd_rx);
+    if (my_epoll)
+        *my_epoll = init_epoll(sd_rx);
+    if (my_poll)
+        *my_poll = init_poll(sd_rx);
     *my_ring  = setup_packet_mmap(sd_rx);
     if (-1 == bind(sd_rx, (struct sockaddr *)&device, sizeof(device)))
         perror("Could not bind socket."), exit(EXIT_FAILURE);
@@ -126,6 +139,11 @@ void close_epoll(int epoll_fd, struct rx_ring ring_rx) {
     close(epoll_fd);
     munmap(ring_rx.first_tpacket_hdr, ring_rx.mapped_memory_size);
 }
+
+void close_poll(struct rx_ring ring_rx){
+    munmap(ring_rx.first_tpacket_hdr, ring_rx.mapped_memory_size);
+}
+
 
 struct tpacket_hdr *get_packet(struct rx_ring *ring_p) {
     return (void *)((char *)ring_p->first_tpacket_hdr + ring_p->tpacket_i * ring_p->tpacket_req.tp_frame_size);

@@ -139,7 +139,7 @@ int get_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, ip6_memad
  * Reads the remote memory based on remote_addr
  */
 // TODO: Implement meaningful return types and error messages
-int batch_read(char *rx_buf, int length, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
+void batch_read(struct sockaddr_in6 *target_ip, char *payload, ip6_memaddr *remote_addrs, int num_packets){
       int packets = length / BLOCK_SIZE;
       int residual = length % BLOCK_SIZE;
       for (int i = 0; i < packets; i++ ) {
@@ -176,7 +176,7 @@ int read_uniform_rmem(char *rx_buf, int length, struct sockaddr_in6 *target_ip, 
  */
 // TODO: Implement meaningful return types and error messages
 static __thread uint32_t sub_ids[USHRT_MAX]; // This should be a hashmap, right now it's just an array
-static const int BATCH_SIZE = 50; // For some reason this is the maximum batch size we can do...
+static const int BATCH_SIZE = 40; // For some reason this is the maximum batch size we can do...
 
 /*
  * Sends a write command to the server based on remote_addr

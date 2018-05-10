@@ -46,4 +46,6 @@ extern int setup_rx_socket();
 extern void next_packet(struct rx_ring *ring_p);
 extern struct tpacket_hdr *get_packet(struct rx_ring *ring_p);
 extern void close_epoll(int epoll_fd, struct rx_ring ring_rx);
+extern void close_poll(struct rx_ring ring_rx);
+
 #endif
