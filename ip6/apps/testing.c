@@ -376,19 +376,18 @@ int main(int argc, char *argv[]) {
     set_host_list(my_conf.hosts, my_conf.num_hosts);
 
     struct timeval st, et;
-    gettimeofday(&st,NULL);
+    uint64_t start = getns(); 
     if (NUM_THREADS > 1)
         basic_op_threads(temp);
     else
         basicOperations(temp);
-    gettimeofday(&et,NULL);
-    int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
-    printf("Total Time: %d micro %d milli %d seconds\n", elapsed, elapsed/1000, elapsed/(1000*1000));
-    printf(KRED "Finished\n");
-    printf(RESET);
+    double elapsed = getns() - start;
+    printf(KGRN "Finished\n"RESET);
+    printf("Total Time: "KRED"%.2f"RESET" us "KRED"%.2f"RESET" ms "KRED"%.2f"RESET" seconds\n",
+             elapsed/1000, elapsed/(1000*1000), elapsed/(1000*1000*1000));
     printSendLat();
     free(temp);
     //close_sockets();
-    return 0;
+    return EXIT_SUCCESS;
 }
 

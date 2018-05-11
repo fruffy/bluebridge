@@ -42,43 +42,14 @@ FILE* generate_file_handle(const char * results_dir, char* method_name, char* op
 }
 
 // UTILS --> copied to server b/c it's a pain to create a shared file (build issues)
-void get_args_pointer(ip6_memaddr *ptr, struct sockaddr_in6 *targetIP) {
+ip6_memaddr_block get_pointer(struct sockaddr_in6 *targetIP, uint64_t size) {
   // Get random memory server
   struct in6_addr *ipv6Pointer = gen_rdm_ip6_target();
 
   // Put it's address in targetIP (why?)
   memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-
   // Allocate memory and receive the remote memory pointer
-  ip6_memaddr temp = allocate_rmem(targetIP);
-
-  // Copy the remote memory pointer into the give struct pointer
-  memcpy(ptr, &temp, sizeof(ip6_memaddr));
-}
-
-// UTILS --> copied to server b/c it's a pain to create a shared file (build issues)
-ip6_memaddr *get_args_pointers(struct sockaddr_in6 *targetIP, int num_pointers) {
-  // Get random memory server
-  struct in6_addr *ipv6Pointer = gen_rdm_ip6_target();
-
-  // Put it's address in targetIP (why?)
-  memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-
-  // Allocate memory and receive the remote memory pointer
-  return allocate_bulk_rmem(targetIP, num_pointers);
-}
-
-
-
-ip6_memaddr get_result_pointer(struct sockaddr_in6 *targetIP) {
-  // Get random memory server
-  struct in6_addr *ipv6Pointer = gen_rdm_ip6_target();
-
-  // Put it's address in targetIP (why?)
-  memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-
-  // Allocate memory and receive the remote memory pointer
-  return allocate_rmem(targetIP);
+  return allocate_uniform_rmem(targetIP, size);
 }
 
 void marshall_shmem_ptr(GByteArray **ptr, ip6_memaddr *addr) {

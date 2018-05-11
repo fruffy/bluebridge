@@ -141,25 +141,10 @@ tutorial_remote_mem_test_handler_allocate_mem (RemoteMemTestIf *iface,
   THRIFT_UNUSED_VAR (error);
   THRIFT_UNUSED_VAR (ouch);
   THRIFT_UNUSED_VAR (_return);
-  THRIFT_UNUSED_VAR (size);
-
-  // TODO: change so it allocates a certain amount of memory
-
-  GByteArray *result_ptr = g_byte_array_new();
-  ip6_memaddr result_addr = get_result_pointer(targetIP);
-
-
-  marshall_shmem_ptr(&result_ptr, &result_addr);
-
-  g_byte_array_ref(result_ptr); // Increase the reference count so it doesn't get garbage collected
-
-  *_return = result_ptr;
-
-  // printf("allocate_mem(): returning ");
-  // print_n_bytes(result_ptr->data, result_ptr->len);
-
+  *_return = g_byte_array_new();
+  ip6_memaddr_block result_addr = get_pointer(targetIP, size);
+  marshall_shmem_ptr(_return, &result_addr.memaddr);
   return TRUE;
-
 }
 
 static gboolean
@@ -177,7 +162,7 @@ tutorial_remote_mem_test_handler_read_mem (RemoteMemTestIf *iface,
   ip6_memaddr args_addr;
   unmarshall_shmem_ptr(&args_addr, (GByteArray *)pointer);
 
-  get_rmem(payload, BLOCK_SIZE, targetIP, &args_addr);
+  read_rmem(payload, BLOCK_SIZE, targetIP, &args_addr);
 
   // printf("read_mem()\n");
 

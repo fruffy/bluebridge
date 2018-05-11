@@ -10,9 +10,7 @@ struct result {
 };
 
 FILE* generate_file_handle(const char * results_dir, char* method_name, char* operation, int size);
-void get_args_pointer(ip6_memaddr *ptr, struct sockaddr_in6 *targetIP);
-ip6_memaddr *get_args_pointers(struct sockaddr_in6 *targetIP, int num_pointers);
-ip6_memaddr get_result_pointer(struct sockaddr_in6 *targetIP);
+ip6_memaddr_block get_pointer(struct sockaddr_in6 *targetIP, uint64_t size);
 void marshall_shmem_ptr(GByteArray **ptr, ip6_memaddr *addr);
 void unmarshall_shmem_ptr(ip6_memaddr *result_addr, GByteArray *result_ptr);
 void populate_array(uint8_t *array, int array_len, uint8_t start_num, gboolean random);

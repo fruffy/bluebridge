@@ -30,7 +30,6 @@ static int SIZE_STEPS[DATA_POINTS];
 struct result test_increment_array(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targetIP, gboolean print) {
   GError *error = NULL;                       // Error (in transport, socket, etc.)
   CallException *exception = NULL;            // Exception (thrown by server)
-  ip6_memaddr args_addr;               // Shared memory address of the argument pointer
   GByteArray* args_ptr = g_byte_array_new();  // Argument pointer
   GByteArray* result_ptr = NULL;              // Result pointer
   int arr_len = size;                           // Size of array to be sent
@@ -44,26 +43,24 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, struct soc
   // Get a shared memory pointer for argument array
   // TODO: add individual timers here to get breakdown of costs. 
   start = getns();
-  get_args_pointer(&args_addr, targetIP);
+  ip6_memaddr_block args_addr = get_pointer(targetIP, arr_len);
   res.alloc = getns() - start;
 
   // Create argument array
-  arr = malloc(arr_len);
-  populate_array(arr, arr_len, 0, FALSE);
-
-  char temp[BLOCK_SIZE];
   if (arr_len > BLOCK_SIZE)
-    memcpy(temp, arr, BLOCK_SIZE);
+    arr = malloc((arr_len % BLOCK_SIZE + 1) *BLOCK_SIZE);
   else
-    memcpy(temp, arr, arr_len);
-
+    arr = malloc(BLOCK_SIZE);
+  populate_array(arr, arr_len, 0, FALSE);
+  printf("FAILED\n");
   start = getns();
+  printf("Testing for length %d\n", arr_len );
   // Write array to shared memory
-  write_rmem(targetIP, (char*) temp, &args_addr);
+  write_uniform_rmem(targetIP, (char*) arr, args_addr);
   res.write = getns() - start;
-
+  printf("PASSED\n");
   // Marshall shared pointer address
-  marshall_shmem_ptr(&args_ptr, &args_addr);
+  marshall_shmem_ptr(&args_ptr, &args_addr.memaddr);
 
   res.rpc_start = getns();
   // CALL RPC
@@ -88,17 +85,19 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, struct soc
   }
 
   // Unmarshall shared pointer address
-  ip6_memaddr result_addr;
-  unmarshall_shmem_ptr(&result_addr, result_ptr);
-
+  ip6_memaddr_block result_addr;
+  unmarshall_shmem_ptr(&result_addr.memaddr, result_ptr);
+  result_addr.length = arr_len;
   // Create result array to read into
-  char* result_arr = malloc(arr_len);
-  start = getns();
-  // Read in result array
+  char* result_arr;
   if (arr_len > BLOCK_SIZE)
-    get_rmem(result_arr, BLOCK_SIZE, targetIP, &result_addr);
+    result_arr = malloc((arr_len % BLOCK_SIZE + 1) *BLOCK_SIZE);
   else
-    get_rmem(result_arr, arr_len, targetIP, &result_addr);
+    result_arr = malloc(BLOCK_SIZE);
+  
+  // Read in result array
+  start = getns();
+  read_uniform_rmem(result_arr, targetIP, result_addr);
   res.read = getns() - start;
 
   if (print) {
@@ -114,8 +113,8 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, struct soc
   free(arr);
   free(result_arr);
   start = getns();
-  free_rmem(targetIP, &args_addr);
-  free_rmem(targetIP, &result_addr);
+  free_rmem(targetIP, &args_addr.memaddr);
+  free_rmem(targetIP, &result_addr.memaddr);
   res.free = getns() - start;
   g_byte_array_free(args_ptr, TRUE);  // We allocated this, so we free it
   g_byte_array_unref(result_ptr);     // We only received this, so we dereference it
@@ -129,12 +128,10 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, struct soc
 struct result test_add_arrays(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targetIP, gboolean print) {
   GError *error = NULL;                       // Error (in transport, socket, etc.)
   CallException *exception = NULL;            // Exception (thrown by server)
-  ip6_memaddr arg1_addr;               // Shared memory address of the argument pointer
-  ip6_memaddr arg2_addr;               // Shared memory address of the argument pointer
   GByteArray* arg1_ptr = g_byte_array_new();  // Argument pointer
   GByteArray* arg2_ptr = g_byte_array_new();  // Argument pointer
   GByteArray* result_ptr = NULL;              // Result pointer
-  ip6_memaddr result_addr;             // Shared memory address of result
+  ip6_memaddr_block result_addr;             // Shared memory address of result
   int arr_len = size;                        // Size of array to be sent
   uint8_t *arr1;                              // Array 1 to be added
   uint8_t *arr2;                              // Array 2 to be added
@@ -147,37 +144,30 @@ struct result test_add_arrays(SimpleArrCompIf *client, int size, struct sockaddr
 
   // Get pointers for arrays
   start = getns();
-  get_args_pointer(&arg1_addr, targetIP);
-  get_args_pointer(&arg2_addr, targetIP);
+  ip6_memaddr_block arg1_addr = get_pointer(targetIP, arr_len);
+  ip6_memaddr_block arg2_addr = get_pointer(targetIP, arr_len);
   res.alloc = getns() - start;
 
   // Populate arrays
-  arr1 = malloc(arr_len);
-  arr2 = malloc(arr_len);
-  populate_array(arr1, arr_len, 3, TRUE);
-  populate_array(arr2, arr_len, 5, TRUE);
-
-  char temp1[BLOCK_SIZE];
-  char temp2[BLOCK_SIZE];
-
   if (arr_len > BLOCK_SIZE){
-    memcpy(temp1, arr1, BLOCK_SIZE);
-    memcpy(temp2, arr2, BLOCK_SIZE);
+    arr1 = malloc((arr_len % BLOCK_SIZE + 1) *BLOCK_SIZE);
+    arr2 = malloc((arr_len % BLOCK_SIZE + 1) *BLOCK_SIZE);
   }
   else {
-    memcpy(temp1, arr1, arr_len);
-    memcpy(temp2, arr2, arr_len);
+    arr1 = malloc(BLOCK_SIZE);
+    arr2 = malloc(BLOCK_SIZE);
   }
-
+  populate_array(arr1, arr_len, 3, TRUE);
+  populate_array(arr2, arr_len, 5, TRUE);
   // Write arrays to shared memory
   start = getns();
-  write_rmem(targetIP, (char*) temp1, &arg1_addr);
-  write_rmem(targetIP, (char*) temp2, &arg2_addr);
+  write_uniform_rmem(targetIP, (char*) arr1, arg1_addr);
+  write_uniform_rmem(targetIP, (char*) arr2, arg2_addr);
   res.write = getns() - start;
 
   // Marshall shared pointer addresses
-  marshall_shmem_ptr(&arg1_ptr, &arg1_addr);
-  marshall_shmem_ptr(&arg2_ptr, &arg2_addr);
+  marshall_shmem_ptr(&arg1_ptr, &arg1_addr.memaddr);
+  marshall_shmem_ptr(&arg2_ptr, &arg2_addr.memaddr);
 
   // CALL RPC
   res.rpc_start = getns();
@@ -199,17 +189,20 @@ struct result test_add_arrays(SimpleArrCompIf *client, int size, struct sockaddr
     printf("EXCEPTION %d: %s\n", err_code, message);
   } else {
     // Unmarshall shared pointer address
-    unmarshall_shmem_ptr(&result_addr, result_ptr);
-
+    unmarshall_shmem_ptr(&result_addr.memaddr, result_ptr);
+    result_addr.length = arr_len;
     // Create result array to read into
-    char* result_arr = malloc(arr_len);
-
+    char *result_arr;
+    if (arr_len > BLOCK_SIZE){
+      char* result_arr = malloc((arr_len % BLOCK_SIZE + 1) *BLOCK_SIZE);
+    }
+    else{
+      char* result_arr = malloc(BLOCK_SIZE);
+    }
     // Read in result array
     start = getns();
-    if (arr_len > BLOCK_SIZE)
-      get_rmem(result_arr, BLOCK_SIZE, targetIP, &result_addr);
-    else
-      get_rmem(result_arr, arr_len, targetIP, &result_addr);
+    read_uniform_rmem(result_arr, targetIP, result_addr);
+
     res.read = getns() - start;
 
     if (print) {
@@ -231,7 +224,7 @@ cleanupres:
     // free(arr2);
     //free(result_arr);
     start = getns();
-    free_rmem(targetIP, &result_addr);
+    free_rmem(targetIP, &result_addr.memaddr);
     res.free += getns() - start;
   }
 
@@ -239,8 +232,8 @@ cleanupres:
   start = getns();
   free(arr1);
   free(arr2);
-  free_rmem(targetIP, &arg1_addr);    // Free the shared memory
-  free_rmem(targetIP, &arg2_addr);    // Free the shared memory
+  free_rmem(targetIP, &arg1_addr.memaddr);    // Free the shared memory
+  free_rmem(targetIP, &arg2_addr.memaddr);    // Free the shared memory
   res.free += getns() - start;
   g_byte_array_free(arg1_ptr, TRUE);  // We allocated this, so we free it
   g_byte_array_free(arg2_ptr, TRUE);  // We allocated this, so we free it
@@ -282,7 +275,7 @@ void sort_array(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP) {
 
 uint64_t no_op_rpc(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targetIP) {
   GError *error = NULL;                       // Error (in transport, socket, etc.)
-  ip6_memaddr args_addr;               // Shared memory address of the argument pointer
+  ip6_memaddr_block args_addr;               // Shared memory address of the argument pointer
   GByteArray* args_ptr = g_byte_array_new();  // Argument pointer
   GByteArray* result_ptr = NULL;              // Result pointer
   int arr_len = size;                           // Size of array to be sent
@@ -291,23 +284,21 @@ uint64_t no_op_rpc(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targe
 
   //int num_pointers = (arr_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
   // Get a shared memory pointer for argument array
-  get_args_pointer(&args_addr, targetIP);
+  args_addr = get_pointer(targetIP, arr_len);
   //args_addr = get_args_pointers(targetIP, num_pointers);
   // Create argument array
-  arr = malloc(arr_len);
+
+  if (arr_len > BLOCK_SIZE)
+    arr = malloc((arr_len % BLOCK_SIZE + 1) *BLOCK_SIZE);
+  else
+    arr = malloc(BLOCK_SIZE);
   populate_array(arr, arr_len, 0, FALSE);
 
-  char temp[BLOCK_SIZE];
-  if (arr_len > BLOCK_SIZE)
-    memcpy(temp, arr, BLOCK_SIZE);
-  else
-    memcpy(temp, arr, arr_len);
-
   // Write array to shared memory
-  write_rmem(targetIP, (char*) temp, &args_addr);
+  write_uniform_rmem(targetIP, (char*) arr, args_addr);
   //write_rmem_bulk(targetIP, (char*) temp, args_addr, num_pointers);
   // Marshall shared pointer address
-  marshall_shmem_ptr(&args_ptr, &args_addr);
+  marshall_shmem_ptr(&args_ptr, &args_addr.memaddr);
 
   start = getns();
   // CALL RPC
@@ -315,23 +306,25 @@ uint64_t no_op_rpc(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targe
   rpc_time = getns() - start;
 
   // Unmarshall shared pointer address
-  ip6_memaddr result_addr;
-  unmarshall_shmem_ptr(&result_addr, result_ptr);
-
+  ip6_memaddr_block result_addr;
+  unmarshall_shmem_ptr(&result_addr.memaddr, result_ptr);
+  result_addr.length = size;
   // Create result array to read into
-  char *result_arr = malloc(arr_len);
-
+  char *result_arr;
+  if (arr_len > BLOCK_SIZE){
+    char *result_arr = malloc((arr_len % BLOCK_SIZE + 1) *BLOCK_SIZE);
+  }
+  else{
+    char *result_arr = malloc(BLOCK_SIZE);
+  }
   // Read in result array
-  if (arr_len > BLOCK_SIZE)
-    get_rmem(result_arr, BLOCK_SIZE, targetIP, &result_addr);
-  else
-    get_rmem(result_arr, arr_len, targetIP, &result_addr);
+  read_uniform_rmem(result_arr, targetIP, result_addr);
 
   // Free malloc'd and GByteArray memory
   free(arr);
   free(result_arr);
-  free_rmem(targetIP, &args_addr);
-  free_rmem(targetIP, &result_addr);
+  free_rmem(targetIP, &args_addr.memaddr);
+  free_rmem(targetIP, &result_addr.memaddr);
   // g_byte_array_free(args_ptr, TRUE);  // We allocated this, so we free it
   // g_byte_array_unref(result_ptr);     // We only received this, so we dereference it
 
