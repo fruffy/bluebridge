@@ -27,7 +27,7 @@ static const char *RESULTS_DIR = "results/thrift/ddc";
 #define DATA_POINTS 500
 static int SIZE_STEPS[DATA_POINTS];
 
-struct result test_increment_array(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targetIP, gboolean print) {
+struct result test_increment_array(SimpleArrCompIf *client, int size, struct sockaddr_in6 *target_ip, gboolean print) {
   GError *error = NULL;                       // Error (in transport, socket, etc.)
   CallException *exception = NULL;            // Exception (thrown by server)
   GByteArray* args_ptr = g_byte_array_new();  // Argument pointer
@@ -43,22 +43,16 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, struct soc
   // Get a shared memory pointer for argument array
   // TODO: add individual timers here to get breakdown of costs. 
   start = getns();
-  ip6_memaddr_block args_addr = get_pointer(targetIP, arr_len);
+  ip6_memaddr_block args_addr = get_pointer(target_ip, arr_len);
   res.alloc = getns() - start;
 
   // Create argument array
-  if (arr_len > BLOCK_SIZE)
-    arr = malloc((arr_len % BLOCK_SIZE + 1) *BLOCK_SIZE);
-  else
-    arr = malloc(BLOCK_SIZE);
+  arr = malloc(arr_len);
   populate_array(arr, arr_len, 0, FALSE);
-  printf("FAILED\n");
   start = getns();
-  printf("Testing for length %d\n", arr_len );
   // Write array to shared memory
-  write_uniform_rmem(targetIP, (char*) arr, args_addr);
+  write_uniform_rmem(target_ip, args_addr, (char*) arr, arr_len);
   res.write = getns() - start;
-  printf("PASSED\n");
   // Marshall shared pointer address
   marshall_shmem_ptr(&args_ptr, &args_addr.memaddr);
 
@@ -87,17 +81,13 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, struct soc
   // Unmarshall shared pointer address
   ip6_memaddr_block result_addr;
   unmarshall_shmem_ptr(&result_addr.memaddr, result_ptr);
-  result_addr.length = arr_len;
+  result_addr.length =  arr_len == 0 ? 1 : 1 + ((arr_len - 1) / BLOCK_SIZE);
   // Create result array to read into
-  char* result_arr;
-  if (arr_len > BLOCK_SIZE)
-    result_arr = malloc((arr_len % BLOCK_SIZE + 1) *BLOCK_SIZE);
-  else
-    result_arr = malloc(BLOCK_SIZE);
+  char *result_arr = malloc(arr_len);
   
   // Read in result array
   start = getns();
-  read_uniform_rmem(result_arr, targetIP, result_addr);
+  read_uniform_rmem(target_ip, result_addr, result_arr, arr_len);
   res.read = getns() - start;
 
   if (print) {
@@ -113,8 +103,8 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, struct soc
   free(arr);
   free(result_arr);
   start = getns();
-  free_rmem(targetIP, &args_addr.memaddr);
-  free_rmem(targetIP, &result_addr.memaddr);
+  free_rmem(target_ip, &args_addr.memaddr);
+  free_rmem(target_ip, &result_addr.memaddr);
   res.free = getns() - start;
   g_byte_array_free(args_ptr, TRUE);  // We allocated this, so we free it
   g_byte_array_unref(result_ptr);     // We only received this, so we dereference it
@@ -125,7 +115,7 @@ struct result test_increment_array(SimpleArrCompIf *client, int size, struct soc
   return res;
 }
 
-struct result test_add_arrays(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targetIP, gboolean print) {
+struct result test_add_arrays(SimpleArrCompIf *client, int size, struct sockaddr_in6 *target_ip, gboolean print) {
   GError *error = NULL;                       // Error (in transport, socket, etc.)
   CallException *exception = NULL;            // Exception (thrown by server)
   GByteArray* arg1_ptr = g_byte_array_new();  // Argument pointer
@@ -138,31 +128,24 @@ struct result test_add_arrays(SimpleArrCompIf *client, int size, struct sockaddr
   struct result res;
   uint64_t start;
   res.free = 0;
-
   if (print)
     printf("Testing add_arrays...\t\t");
 
   // Get pointers for arrays
   start = getns();
-  ip6_memaddr_block arg1_addr = get_pointer(targetIP, arr_len);
-  ip6_memaddr_block arg2_addr = get_pointer(targetIP, arr_len);
+  ip6_memaddr_block arg1_addr = get_pointer(target_ip, arr_len);
+  ip6_memaddr_block arg2_addr = get_pointer(target_ip, arr_len);
   res.alloc = getns() - start;
 
-  // Populate arrays
-  if (arr_len > BLOCK_SIZE){
-    arr1 = malloc((arr_len % BLOCK_SIZE + 1) *BLOCK_SIZE);
-    arr2 = malloc((arr_len % BLOCK_SIZE + 1) *BLOCK_SIZE);
-  }
-  else {
-    arr1 = malloc(BLOCK_SIZE);
-    arr2 = malloc(BLOCK_SIZE);
-  }
+  arr1 = malloc(arr_len);
+  arr2 = malloc(arr_len);
+
   populate_array(arr1, arr_len, 3, TRUE);
   populate_array(arr2, arr_len, 5, TRUE);
   // Write arrays to shared memory
   start = getns();
-  write_uniform_rmem(targetIP, (char*) arr1, arg1_addr);
-  write_uniform_rmem(targetIP, (char*) arr2, arg2_addr);
+  write_uniform_rmem(target_ip, arg1_addr, (char*) arr1, arr_len);
+  write_uniform_rmem(target_ip, arg2_addr, (char*) arr2, arr_len);
   res.write = getns() - start;
 
   // Marshall shared pointer addresses
@@ -190,18 +173,12 @@ struct result test_add_arrays(SimpleArrCompIf *client, int size, struct sockaddr
   } else {
     // Unmarshall shared pointer address
     unmarshall_shmem_ptr(&result_addr.memaddr, result_ptr);
-    result_addr.length = arr_len;
+    result_addr.length = arr_len == 0 ? 1 : 1 + ((arr_len - 1) / BLOCK_SIZE);
     // Create result array to read into
-    char *result_arr;
-    if (arr_len > BLOCK_SIZE){
-      char* result_arr = malloc((arr_len % BLOCK_SIZE + 1) *BLOCK_SIZE);
-    }
-    else{
-      char* result_arr = malloc(BLOCK_SIZE);
-    }
+    char* result_arr = malloc(arr_len);
     // Read in result array
     start = getns();
-    read_uniform_rmem(result_arr, targetIP, result_addr);
+    read_uniform_rmem(target_ip, result_addr, result_arr, arr_len);
 
     res.read = getns() - start;
 
@@ -224,7 +201,7 @@ cleanupres:
     // free(arr2);
     //free(result_arr);
     start = getns();
-    free_rmem(targetIP, &result_addr.memaddr);
+    free_rmem(target_ip, &result_addr.memaddr);
     res.free += getns() - start;
   }
 
@@ -232,8 +209,8 @@ cleanupres:
   start = getns();
   free(arr1);
   free(arr2);
-  free_rmem(targetIP, &arg1_addr.memaddr);    // Free the shared memory
-  free_rmem(targetIP, &arg2_addr.memaddr);    // Free the shared memory
+  free_rmem(target_ip, &arg1_addr.memaddr);    // Free the shared memory
+  free_rmem(target_ip, &arg2_addr.memaddr);    // Free the shared memory
   res.free += getns() - start;
   g_byte_array_free(arg1_ptr, TRUE);  // We allocated this, so we free it
   g_byte_array_free(arg2_ptr, TRUE);  // We allocated this, so we free it
@@ -242,7 +219,7 @@ cleanupres:
   return res;
 }
 
-void mat_multiply(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP) {
+void mat_multiply(SimpleArrCompIf *client, struct sockaddr_in6 *target_ip) {
   // GError *error = NULL;                       // Error (in transport, socket, etc.)
   // CallException *exception = NULL;            // Exception (thrown by server)
   // ip6_memaddr args_addr;               // Shared memory address of the argument pointer
@@ -250,30 +227,30 @@ void mat_multiply(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP) {
   // GByteArray* result_ptr = NULL;              // Result pointer
 
   THRIFT_UNUSED_VAR(client);
-  THRIFT_UNUSED_VAR(targetIP);
+  THRIFT_UNUSED_VAR(target_ip);
 }
 
-void word_count(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP) {
+void word_count(SimpleArrCompIf *client, struct sockaddr_in6 *target_ip) {
   // GError *error = NULL;                       // Error (in transport, socket, etc.)
   // CallException *exception = NULL;            // Exception (thrown by server)
   // ip6_memaddr args_addr;               // Shared memory address of the argument pointer
   // GByteArray* args_ptr = g_byte_array_new();  // Argument pointer
   // GByteArray* result_ptr = NULL;              // Result pointer
   THRIFT_UNUSED_VAR(client);
-  THRIFT_UNUSED_VAR(targetIP);
+  THRIFT_UNUSED_VAR(target_ip);
 }
 
-void sort_array(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP) {
+void sort_array(SimpleArrCompIf *client, struct sockaddr_in6 *target_ip) {
   // GError *error = NULL;                       // Error (in transport, socket, etc.)
   // CallException *exception = NULL;            // Exception (thrown by server)
   // ip6_memaddr args_addr;               // Shared memory address of the argument pointer
   // GByteArray* args_ptr = g_byte_array_new();  // Argument pointer
   // GByteArray* result_ptr = NULL;              // Result pointer
   THRIFT_UNUSED_VAR(client);
-  THRIFT_UNUSED_VAR(targetIP);
+  THRIFT_UNUSED_VAR(target_ip);
 }
 
-uint64_t no_op_rpc(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targetIP) {
+uint64_t no_op_rpc(SimpleArrCompIf *client, int size, struct sockaddr_in6 *target_ip) {
   GError *error = NULL;                       // Error (in transport, socket, etc.)
   ip6_memaddr_block args_addr;               // Shared memory address of the argument pointer
   GByteArray* args_ptr = g_byte_array_new();  // Argument pointer
@@ -284,19 +261,16 @@ uint64_t no_op_rpc(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targe
 
   //int num_pointers = (arr_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
   // Get a shared memory pointer for argument array
-  args_addr = get_pointer(targetIP, arr_len);
-  //args_addr = get_args_pointers(targetIP, num_pointers);
+  args_addr = get_pointer(target_ip, arr_len);
+  //args_addr = get_args_pointers(target_ip, num_pointers);
   // Create argument array
 
-  if (arr_len > BLOCK_SIZE)
-    arr = malloc((arr_len % BLOCK_SIZE + 1) *BLOCK_SIZE);
-  else
-    arr = malloc(BLOCK_SIZE);
+  arr = malloc(arr_len);
   populate_array(arr, arr_len, 0, FALSE);
 
   // Write array to shared memory
-  write_uniform_rmem(targetIP, (char*) arr, args_addr);
-  //write_rmem_bulk(targetIP, (char*) temp, args_addr, num_pointers);
+  write_uniform_rmem(target_ip, args_addr, (char*) arr, arr_len);
+  //write_rmem_bulk(target_ip, (char*) temp, args_addr, num_pointers);
   // Marshall shared pointer address
   marshall_shmem_ptr(&args_ptr, &args_addr.memaddr);
 
@@ -308,39 +282,33 @@ uint64_t no_op_rpc(SimpleArrCompIf *client, int size, struct sockaddr_in6 *targe
   // Unmarshall shared pointer address
   ip6_memaddr_block result_addr;
   unmarshall_shmem_ptr(&result_addr.memaddr, result_ptr);
-  result_addr.length = size;
+  result_addr.length =  arr_len == 0 ? 1 : 1 + ((arr_len - 1) / BLOCK_SIZE);
   // Create result array to read into
-  char *result_arr;
-  if (arr_len > BLOCK_SIZE){
-    char *result_arr = malloc((arr_len % BLOCK_SIZE + 1) *BLOCK_SIZE);
-  }
-  else{
-    char *result_arr = malloc(BLOCK_SIZE);
-  }
+  char *result_arr = malloc(arr_len);
   // Read in result array
-  read_uniform_rmem(result_arr, targetIP, result_addr);
+  read_uniform_rmem(target_ip, result_addr, result_arr, arr_len);
 
   // Free malloc'd and GByteArray memory
   free(arr);
   free(result_arr);
-  free_rmem(targetIP, &args_addr.memaddr);
-  free_rmem(targetIP, &result_addr.memaddr);
+  free_rmem(target_ip, &args_addr.memaddr);
+  free_rmem(target_ip, &result_addr.memaddr);
   // g_byte_array_free(args_ptr, TRUE);  // We allocated this, so we free it
   // g_byte_array_unref(result_ptr);     // We only received this, so we dereference it
 
   return rpc_time;
 }
 
-void test_shared_pointer_rpc(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP) {
-  test_increment_array(client, BLOCK_SIZE, targetIP, TRUE);
-  test_add_arrays(client, BLOCK_SIZE, targetIP, TRUE);
-  // mat_multiply(client, targetIP);
-  // word_count(client, targetIP);
-  // sort_array(client, targetIP);
+void test_shared_pointer_rpc(SimpleArrCompIf *client, struct sockaddr_in6 *target_ip) {
+  test_increment_array(client, BLOCK_SIZE, target_ip, TRUE);
+  test_add_arrays(client, BLOCK_SIZE, target_ip, TRUE);
+  // mat_multiply(client, target_ip);
+  // word_count(client, target_ip);
+  // sort_array(client, target_ip);
 }
 
 void increment_array_perf(SimpleArrCompIf *client, 
-                          struct sockaddr_in6 *targetIP, int iterations, 
+                          struct sockaddr_in6 *target_ip, int iterations, 
                           int max_size, int incr, char* method_name) {
 
   uint64_t alloc_times = 0, read_times = 0, write_times = 0, free_times = 0;
@@ -354,7 +322,7 @@ void increment_array_perf(SimpleArrCompIf *client,
   fprintf(free_file, "size,avg latency\n");
 
   for (int s = 0; s < DATA_POINTS; s++) {
-    printf("Starting Size %d with %d Iterations \n", SIZE_STEPS[s], iterations );
+    printf("Starting increment array with size %d and %d Iterations \n", SIZE_STEPS[s], iterations );
   //for (int s = 0; s < max_size; s+= incr) {
     FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", SIZE_STEPS[s]);
     FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", SIZE_STEPS[s]);
@@ -366,7 +334,7 @@ void increment_array_perf(SimpleArrCompIf *client,
     write_times = 0;
     free_times = 0;
     for (int i = 0; i < iterations; i++) {
-      struct result res = test_increment_array(client, SIZE_STEPS[s], targetIP, FALSE);
+      struct result res = test_increment_array(client, SIZE_STEPS[s], target_ip, FALSE);
       alloc_times += res.alloc;
       read_times += res.read;
       write_times += res.write;
@@ -394,7 +362,7 @@ void increment_array_perf(SimpleArrCompIf *client,
 }
 
 void add_arrays_perf(SimpleArrCompIf *client, 
-                     struct sockaddr_in6 *targetIP, int iterations, 
+                     struct sockaddr_in6 *target_ip, int iterations, 
                      int max_size, int incr, char* method_name) {
   uint64_t alloc_times = 0, read_times = 0, write_times = 0, free_times = 0;
   FILE* alloc_file = generate_file_handle(RESULTS_DIR, method_name, "alloc", -1);
@@ -407,7 +375,7 @@ void add_arrays_perf(SimpleArrCompIf *client,
   fprintf(free_file, "size,avg latency\n");
 
   for (int s = 0; s < DATA_POINTS; s++) {
-    printf("Starting Size %d with %d Iterations \n", SIZE_STEPS[s], iterations );
+    printf("Starting add arrays with size %d and %d Iterations \n", SIZE_STEPS[s], iterations );
   //for (int s = 0; s < max_size; s+= incr) {
     FILE* rpc_start_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_start", SIZE_STEPS[s]);
     FILE* rpc_end_file = generate_file_handle(RESULTS_DIR, method_name, "rpc_end", SIZE_STEPS[s]);
@@ -419,7 +387,7 @@ void add_arrays_perf(SimpleArrCompIf *client,
     write_times = 0;
     free_times = 0;
     for (int i = 0; i < iterations; i++) {
-      struct result res = test_add_arrays(client, SIZE_STEPS[s], targetIP, FALSE);
+      struct result res = test_add_arrays(client, SIZE_STEPS[s], target_ip, FALSE);
       alloc_times += res.alloc;
       read_times += res.read;
       write_times += res.write;
@@ -446,7 +414,7 @@ void add_arrays_perf(SimpleArrCompIf *client,
   fclose(free_file);
 }
 
-void no_op_perf(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP,
+void no_op_perf(SimpleArrCompIf *client, struct sockaddr_in6 *target_ip,
                 int iterations, int max_size, int incr) {
   // uint64_t *no_op_rpc_times = malloc(iterations*sizeof(uint64_t));
   uint64_t no_op_rpc_total;
@@ -455,7 +423,7 @@ void no_op_perf(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP,
   // for (int s = 10; s < max_size; s+= incr) {
     no_op_rpc_total = 0;
     for (int i = 0; i < iterations; i++) {
-      no_op_rpc_total += no_op_rpc(client, s, targetIP);
+      no_op_rpc_total += no_op_rpc(client, s, target_ip);
        // no_op_rpc_times[i];
     }
     printf("Average %s latency (%d): "KRED"%lu us\n"RESET, "no_op_rpcs", s, no_op_rpc_total / (iterations*1000));
@@ -465,7 +433,7 @@ void no_op_perf(SimpleArrCompIf *client, struct sockaddr_in6 *targetIP,
 
 void test_shared_pointer_perf(RemoteMemTestIf *remmem_client, 
                               SimpleArrCompIf *arrcomp_client, 
-                              struct sockaddr_in6 *targetIP, int iterations,
+                              struct sockaddr_in6 *target_ip, int iterations,
                               int max_size, int incr) {
   microbenchmark_perf(remmem_client, iterations);
 
@@ -474,21 +442,21 @@ void test_shared_pointer_perf(RemoteMemTestIf *remmem_client,
 
   printf("Starting no-op performance test...\n");
   // Call perf test for no-op RPC
-  no_op_perf(arrcomp_client, targetIP, iterations, max_size, incr);
+  no_op_perf(arrcomp_client, target_ip, iterations, max_size, incr);
 
   thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_SEND, FALSE);
   thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_RECV, FALSE);
 
   printf("Starting increment array performance test...\n");
   // Call perf test for increment array rpc
-  increment_array_perf(arrcomp_client, targetIP, iterations, max_size, incr, "incr_arr");
+  increment_array_perf(arrcomp_client, target_ip, iterations, max_size, incr, "incr_arr");
 
   thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_SEND, FALSE);
   thrift_protocol_flush_timestamps(arrcomp_protocol, NULL, THRIFT_PERF_RECV, FALSE);
 
   // printf("Starting add arrays performance test...\n");
   // // Call perf test for add arrays
-  // add_arrays_perf(arrcomp_client, targetIP, iterations, max_size, incr, "add_arr");
+  // add_arrays_perf(arrcomp_client, target_ip, iterations, max_size, incr, "add_arr");
 }
 
 void usage(char* prog_name, char* message) {
@@ -513,7 +481,7 @@ int main (int argc, char *argv[]) {
 
   int c; 
   struct config myConf;
-  struct sockaddr_in6 *targetIP;
+  struct sockaddr_in6 *target_ip;
   int iterations = 0;
   int max_size = BLOCK_SIZE * 8;
   int incr = 100;
@@ -550,7 +518,7 @@ int main (int argc, char *argv[]) {
     } 
   }
 
-  targetIP = init_sockets(&myConf, 0);
+  target_ip = init_sockets(&myConf, 0);
   set_host_list(myConf.hosts, myConf.num_hosts);
 
 #if (!GLIB_CHECK_VERSION (2, 36, 0))
@@ -612,17 +580,17 @@ int main (int argc, char *argv[]) {
   
   // Fill the global array with data values
   for (int i = 0; i < DATA_POINTS; i++ ) {
-    SIZE_STEPS[i] = i*50;//pow(2,i);
+    SIZE_STEPS[i] = i*500;//pow(2,i);
   }
 
   printf("\n\n###### Server functionality tests ######\n");
   test_server_functionality(remmem_client);
 
   printf("\n####### Shared pointer RPC tests #######\n");
-  test_shared_pointer_rpc(arrcomp_client, targetIP);
+  test_shared_pointer_rpc(arrcomp_client, target_ip);
 
   printf("\n####### Shared pointer performance tests #######\n");
-  test_shared_pointer_perf(remmem_client, arrcomp_client, targetIP, iterations, max_size, incr);
+  test_shared_pointer_perf(remmem_client, arrcomp_client, target_ip, iterations, max_size, incr);
 
   printf("\n\nCleaning up...\n");
   thrift_transport_close (remmem_transport, NULL);

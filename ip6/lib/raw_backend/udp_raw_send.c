@@ -90,7 +90,7 @@ int init_packetsock_ring(int sd){
     tp.tp_frame_size = C_FRAMESIZE;
     tp.tp_frame_nr = C_RING_FRAMES;
     if (setsockopt(sd, SOL_PACKET, PACKET_TX_RING, (void*) &tp, sizeof(tp)))
-        RETURN_ERROR(-1, "setsockopt() ring_tx\n");
+        RETURN_ERROR(EXIT_FAILURE, "setsockopt() ring_tx\n");
     int on = 1;
     setsockopt(sd, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
 
@@ -198,7 +198,7 @@ int flush_buffer() {
     }
 }
 
-int prepare_packet(struct pkt_rqst pkt) {
+int prepare_packet(pkt_rqst pkt) {
     struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((char *)ether_frame + ETH_HDRLEN);
     struct udphdr *udp_hdr = (struct udphdr *)((char *)ether_frame + ETH_HDRLEN + IP6_HDRLEN);
     //Set destination IP
@@ -232,7 +232,7 @@ int prepare_packet(struct pkt_rqst pkt) {
     return EXIT_SUCCESS;
 }
 
-int cooked_batched_send(struct pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids) {
+int cooked_batched_send(pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids) {
     for (int i= 0; i < num_pkts; i++) {
         pkts[i].dst_addr.args = pkts[i].dst_addr.args | sub_ids[pkts[i].dst_addr.subid]<<16; 
         prepare_packet(pkts[i]);
@@ -245,7 +245,7 @@ int cooked_batched_send(struct pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids) 
 }
 
 
-int cooked_send(struct pkt_rqst pkt) {
+int cooked_send(pkt_rqst pkt) {
     prepare_packet(pkt);
     flush_buffer();
     return EXIT_SUCCESS;

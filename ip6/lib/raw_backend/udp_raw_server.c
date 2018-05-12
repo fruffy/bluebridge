@@ -105,15 +105,14 @@ void handle_packet(struct tpacket_hdr *tpacket_hdr, struct sockaddr_in6 *target_
     printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udphdr->source), s1, ntohs(udphdr->dest) );
     printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udphdr->dest) );
     */
-    //int msg_size = udp_hdr->len;
-    if (remote_addr != NULL) {
+    uint16_t msg_size = htons(udp_hdr->len) - UDP_HDRLEN;
+    if (remote_addr != NULL)
         memcpy(remote_addr, &ip_hdr->ip6_dst, IPV6_SIZE);
-    }
     memcpy(target_ip->sin6_addr.s6_addr, &ip_hdr->ip6_src, IPV6_SIZE);
     target_ip->sin6_port = udp_hdr->source;
     tpacket_hdr->tp_status = TP_STATUS_KERNEL;
     next_packet(&ring_rx_g);
-    process_request(payload, target_ip, (ip6_memaddr *)&ip_hdr->ip6_dst);
+    process_request(target_ip, (ip6_memaddr *)&ip_hdr->ip6_dst, payload, msg_size);
 }
 
 //This function is hacky bullshit, needs a lot of improvement.

@@ -32,7 +32,7 @@ void set_thread_id_rx_client(int id) {
 
 /* Initialize a listening socket
    epoll_fd and ring_rx geht filled by the function */
-void init_rx_socket_client(struct config *cfg) {
+void init_simple_rx_socket(struct config *cfg) {
     inet_ntop(AF_INET6, &cfg->src_addr, my_addr, INET6_ADDRSTRLEN);
     my_port = cfg->src_port;
     setup_rx_socket(cfg, my_port, thread_id, &epoll_fd_g, NULL, &ring_rx_g);
@@ -71,7 +71,7 @@ void write_packets(int num_packets) {
             struct udphdr *udp_hdr = (struct udphdr *)((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
             char *payload = ((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
             ip6_memaddr *inAddress =  (ip6_memaddr *) &ip_hdr->ip6_dst;
-            int msg_size = udp_hdr->len - UDP_HDRLEN;
+            uint16_t msg_size = ntohs(udp_hdr->len) - UDP_HDRLEN;
             memcpy((void *) *(&inAddress->paddr), payload, msg_size);
             tpacket_hdr->tp_status = TP_STATUS_KERNEL;
             next_packet(&ring_rx_g);
@@ -79,7 +79,7 @@ void write_packets(int num_packets) {
     }
 }
 
-int simple_epoll_rcv(char *rcv_buf, int msg_size, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
+int simple_epoll_rcv(char *rcv_buf, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
     struct epoll_event events[1024];
     while (1) {
         int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, 0);
@@ -118,8 +118,10 @@ int simple_epoll_rcv(char *rcv_buf, int msg_size, struct sockaddr_in6 *target_ip
                 printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udp_hdr->source), s1, ntohs(udp_hdr->dest) );
                 printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udp_hdr->dest) );
                 */
-                //msg_size = udp_hdr->len;
-                memcpy(rcv_buf, payload, msg_size);
+                uint16_t msg_size = ntohs(udp_hdr->len) - UDP_HDRLEN;
+                if (rcv_buf != NULL) {
+                    memcpy(rcv_buf, payload, msg_size);
+                }
                 if (remote_addr != NULL) {
                     memcpy(remote_addr, &ip_hdr->ip6_dst, IPV6_SIZE);
                 }

@@ -14,9 +14,6 @@
 #include <errno.h>
 #include <stdint.h>
 
-#ifndef PAGE_SIZE
-#define PAGE_SIZE 4096
-#endif
 struct page_table;
 typedef void (*page_fault_handler_t) ( struct page_table *pt, uint64_t page );
 struct page_table {

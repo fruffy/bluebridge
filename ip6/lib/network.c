@@ -27,7 +27,7 @@ static __thread uint64_t rcv_calls = 0;
 // TODO: Error handling
 int send_udp_raw(char *tx_buf, int msg_size, ip6_memaddr *remote_addr, int dst_port) {
     uint64_t start = getns(); 
-    struct pkt_rqst pkt = {
+    pkt_rqst pkt = {
         .dst_addr = *remote_addr,
         .dst_port = dst_port,
         .data = tx_buf,
@@ -50,7 +50,7 @@ int send_udp_raw(char *tx_buf, int msg_size, ip6_memaddr *remote_addr, int dst_p
  */
 // TODO: Evaluate what variables and structures are actually needed here
 // TODO: Error handling
-int send_udp_raw_batched(struct pkt_rqst *pkts, uint32_t *sub_ids, int num_addrs) {
+int send_udp_raw_batched(pkt_rqst *pkts, uint32_t *sub_ids, int num_addrs) {
     uint64_t start = getns();
 #ifdef DEFAULT
     cooked_batched_send(pkts, num_addrs, sub_ids);
@@ -69,11 +69,11 @@ int send_udp_raw_batched(struct pkt_rqst *pkts, uint32_t *sub_ids, int num_addrs
  * RAW version, we craft our own packet.
  */
 // TODO: Error handling
-int rcv_udp6_raw(char *rx_buf, int msg_size, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
+int rcv_udp6_raw(char *rx_buf, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
     uint64_t start = getns();
     int numbytes;
 #ifdef DEFAULT
-    numbytes = epoll_server_rcv(rx_buf, msg_size, target_ip, remote_addr);
+    numbytes = simple_epoll_rcv(rx_buf, target_ip, remote_addr);
 #else
     numbytes = dpdk_server_rcv(rx_buf, msg_size, target_ip, remote_addr);
 #endif
@@ -87,11 +87,11 @@ int rcv_udp6_raw(char *rx_buf, int msg_size, struct sockaddr_in6 *target_ip, ip6
  * RAW version, we craft our own packet.
  */
 // TODO: Error handling
-int rcv_udp6_raw_id(char *rx_buf, int msg_size, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
+int rcv_udp6_raw_id(char *rx_buf, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
     uint64_t start = getns();
     int numbytes;
 #ifdef DEFAULT
-    numbytes = simple_epoll_rcv(rx_buf, msg_size, target_ip, remote_addr);
+    numbytes = simple_epoll_rcv(rx_buf, target_ip, remote_addr);
 #else
     numbytes = dpdk_client_rcv(rx_buf, msg_size, target_ip, remote_addr);
 #endif
@@ -121,7 +121,7 @@ struct sockaddr_in6 *init_sockets(struct config *bb_conf, int server) {
     if (server)
         init_rx_socket_server(bb_conf);
     else
-        init_rx_socket_client(bb_conf);
+        init_simple_rx_socket(bb_conf);
     init_tx_socket(bb_conf);
 #else
     if (server)

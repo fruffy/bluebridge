@@ -39,18 +39,16 @@ struct rmem {
     struct sockaddr_in6 *targetIP;
 } r;
 
-const u_int32_t PAGE_SIZE = 4096;
-
 static int xmp_read(void *buf, u_int32_t len, u_int64_t offset, void *userdata) {
     // if (*(int *)userdata) fprintf(stderr, "R - %lu, %u\n", offset, len);
     (void) userdata;
-    u_int64_t page_offset = offset/PAGE_SIZE;
-    if (len > PAGE_SIZE) {
-        for (u_int32_t i = 0; i< len/PAGE_SIZE; i++) {
-            read_rmem((char *) buf + (PAGE_SIZE *i), PAGE_SIZE, r.targetIP, &r.memList[page_offset + i]);
+    u_int64_t page_offset = offset/BLOCK_SIZE;
+    if (len > BLOCK_SIZE) {
+        for (u_int32_t i = 0; i< len/BLOCK_SIZE; i++) {
+            read_rmem(r.targetIP, &r.memList[page_offset + i], (char *) buf + (BLOCK_SIZE *i), BLOCK_SIZE);
         }
     } else {
-        read_rmem(buf, len, r.targetIP, &r.memList[page_offset]);
+        read_rmem(r.targetIP, &r.memList[page_offset], buf, len);
     }
     return 0;
 }
@@ -58,13 +56,13 @@ static int xmp_read(void *buf, u_int32_t len, u_int64_t offset, void *userdata) 
 static int xmp_write(const void *buf, u_int32_t len, u_int64_t offset, void *userdata) {
     // if (*(int *)userdata) fprintf(stderr, "W - %lu, %u\n", offset, len);
     (void) userdata;
-    u_int64_t page_offset = offset/PAGE_SIZE;
-    if (len > PAGE_SIZE) {
-        for (u_int32_t i = 0; i< len/PAGE_SIZE; i++) {
-            write_rmem(r.targetIP, (char *) buf + (PAGE_SIZE *i), &r.memList[page_offset + i]);
+    u_int64_t page_offset = offset/BLOCK_SIZE;
+    if (len > BLOCK_SIZE) {
+        for (u_int32_t i = 0; i< len/BLOCK_SIZE; i++) {
+            write_rmem(r.targetIP, &r.memList[page_offset + i], (char *) buf + (BLOCK_SIZE *i), BLOCK_SIZE);
         }
     } else {
-        write_rmem(r.targetIP, (char *) buf, &r.memList[page_offset]);
+        write_rmem(r.targetIP, &r.memList[page_offset], (char *) buf, BLOCK_SIZE);
     }
     return 0;
 }
@@ -94,9 +92,9 @@ static struct buse_operations aop = {
       .disc = xmp_disc,
       .flush = xmp_flush,
       .trim = xmp_trim,
-      .size_blocks =  (u_int64_t) 42 * 1024 * 1024 * 1024 / 4096,
-      //.size_blocks =  (u_int64_t) 23 * 1024 * 1024 * 1024 / 4096,
-      .blksize = 4096
+      .size_blocks =  (u_int64_t) 42 * 1024 * 1024 * 1024 / BLOCK_SIZE,
+      //.size_blocks =  (u_int64_t) 23 * 1024 * 1024 * 1024 / BLOCK_SIZE,
+      .blksize = BLOCK_SIZE
 };
 
 int main(int argc, char *argv[]) {
@@ -108,7 +106,7 @@ int main(int argc, char *argv[]) {
             "run example from root.\n", argv[0]);
         return 1;
     }
-    r.block_size = PAGE_SIZE;
+    r.block_size = BLOCK_SIZE;
     struct config myConf = set_bb_config("distmem_client.cnf", 0);
     r.targetIP = init_sockets(&myConf, 0);
     set_host_list(myConf.hosts, myConf.num_hosts);

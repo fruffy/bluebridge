@@ -80,7 +80,7 @@ void rmem_write(struct rmem *r, uint64_t block, char *data ) {
         abort();
     }
     // Get pointer to page data in (simulated) physical memory
-    write_rmem(targetIP, data, &r->memList[block]);
+    write_rmem(targetIP, &r->memList[block], data, BLOCK_SIZE);
 }
 
 void rmem_read( struct rmem *r, uint64_t block, char *data ) {
@@ -90,7 +90,7 @@ void rmem_read( struct rmem *r, uint64_t block, char *data ) {
     }
     // Get pointer to page data in (simulated) physical memory
 
-     read_rmem(data,r->block_size, targetIP, &r->memList[block]);
+     read_rmem(targetIP, &r->memList[block], data, r->block_size);
 }
 
 uint64_t rmem_blocks(struct rmem *r) {

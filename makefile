@@ -57,16 +57,17 @@ thrift-apps: lib
 	@$(MAKE) -C $(THRIFT_APP_DIR) clean
 	@$(MAKE) -C $(THRIFT_APP_DIR)
 
-thrift-all: thrift lib thrift-apps
+thrift-all: all thrift thrift-apps
 
 thrift-clean:
 	@echo "Cleaning thrift build in $(MAKE_ROOT)"
 	@$(MAKE) -C $(THRIFT_APP_DIR) clean
 	@$(MAKE) -C $(THRIFT_DIR) clean
 
-clean: 
-	@$(MAKE) -C $(MSG_DIR) -f default.mk clean
+clean: thrift-clean
+	@$(MAKE) -C $(MSG_DIR) -f classic.mk clean
 	@$(MAKE) -C $(MSG_DIR) -f lib.mk clean
-	@$(MAKE) -C $(MSG_DIR) -f dpdk.mk clean
+	@$(MAKE) -C $(MSG_DIR) -f libdpdk.mk clean
+	@$(MAKE) -C $(APP_DIR) -f app.mk clean
 
 

@@ -187,7 +187,7 @@ void wc_program_threads(char *cdata, int npages, int nframes, const char *input)
 /*    pthread_attr_init( &attr );
     pthread_attr_getstacksize( &attr, &stacksize );
     printf("before stacksize : [%lu]\n", stacksize);
-    pthread_attr_setstacksize( &attr, stacksize + (uint64_t) nframes/NUM_THREADS * PAGE_SIZE );
+    pthread_attr_setstacksize( &attr, stacksize + (uint64_t) nframes/NUM_THREADS * BLOCK_SIZE );
     pthread_attr_getstacksize( &attr, &stacksize );
     printf("after  stacksize : [%lu]\n", stacksize);
     */
@@ -551,17 +551,17 @@ int main( int argc, char *argv[] )
 
     printf("Running "KRED"%s"RESET" benchmark...\n", system);
     if(!strcmp(program,"sort")) {
-        sort_program(virtmem,npages*PAGE_SIZE);
+        sort_program(virtmem,npages*BLOCK_SIZE);
     } else if(!strcmp(program,"scan")) {
-        scan_program(virtmem,npages*PAGE_SIZE);
+        scan_program(virtmem,npages*BLOCK_SIZE);
     } else if(!strcmp(program,"focus")) {
-        focus_program(virtmem,npages*PAGE_SIZE);
+        focus_program(virtmem,npages*BLOCK_SIZE);
     } else if(!strcmp(program,"wc")) {
         wc_program(virtmem, npages, nframes, input);
     } else if(!strcmp(program,"wc_t")) {
         wc_program_threads(virtmem, npages, nframes, input);
     } else if(!strcmp(program,"pr")) {
-        pr_program(virtmem,npages*PAGE_SIZE, input);
+        pr_program(virtmem,npages*BLOCK_SIZE, input);
     } else {
         fprintf(stderr,"unknown program: %s\n",program);
     }

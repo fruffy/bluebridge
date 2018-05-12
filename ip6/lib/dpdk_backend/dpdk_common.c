@@ -38,7 +38,7 @@ static int send_packet(uint8_t portid, struct rte_mbuf *m) {
 
 // Frame length is usually 4158
 // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
-struct rte_mbuf *dpdk_assemble(struct pkt_rqst pkt) {
+struct rte_mbuf *dpdk_assemble(pkt_rqst pkt) {
     struct ethhdr *ether_hdr;
     struct ip6_hdr *ip_hdr;
     struct udphdr *udp_hdr;
@@ -80,7 +80,7 @@ struct rte_mbuf *dpdk_assemble(struct pkt_rqst pkt) {
     return frame;
 }
 
-int dpdk_send(struct pkt_rqst pkt) {
+int dpdk_send(pkt_rqst pkt) {
     //Assemble the packet
     struct rte_mbuf *frame = dpdk_assemble(pkt);
     // Commit the dpdk packet

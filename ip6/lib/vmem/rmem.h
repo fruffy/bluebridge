@@ -7,9 +7,9 @@ Make all of your changes to main.c instead.
 #ifndef RMEM_H
 #define RMEM_H
 
-#define BLOCK_SIZE 4096
 #include <stdint.h>
 #include "../types.h"
+
 struct rmem {
     ip6_memaddr *memList;
     int block_size;

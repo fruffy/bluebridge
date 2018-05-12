@@ -7,8 +7,8 @@ Make all of your changes to main.c instead.
 #ifndef RRMEM_H
 #define RRMEM_H
 
-#define BLOCK_SIZE 4096
 #include "../client_lib.h"
+#include "../types.h"
 
 void configure_rrmem(char *filename);
 

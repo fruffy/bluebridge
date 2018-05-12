@@ -104,12 +104,14 @@ uint64_t *write_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64
     if (BATCHED_MODE) {
         char *payload = malloc(BLOCK_SIZE * iterations);
         for (uint64_t i = 0; i < iterations; i++) {
+            unsigned char *id_block = gen_rdm_bytestream(BLOCK_SIZE, i);
             print_debug("Creating payload");
             print_debug("Writing %lu to offset %lu\n", i, i *BLOCK_SIZE);
-            snprintf(&payload[BLOCK_SIZE *i], 50, "%s %lu", text, i);
+            memcpy(&payload[BLOCK_SIZE *i], id_block, BLOCK_SIZE);
+            free(id_block);
         }
         uint64_t wStart = getns();
-        write_bulk_rmem(target_ip, payload, r_addr, iterations);
+        write_bulk_rmem(target_ip, r_addr, iterations, payload, BLOCK_SIZE * iterations);
         //write_uniform_rmem(target_ip, payload, temp1);
         latency[0] = getns() - wStart;
         free(payload);
@@ -120,7 +122,7 @@ uint64_t *write_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64
             char payload[BLOCK_SIZE];
             snprintf(payload, 50, "%s %lu", text, i);
             uint64_t wStart = getns();
-            write_rmem(target_ip, payload, &remote_mem);
+            write_rmem(target_ip, &remote_mem, payload, BLOCK_SIZE);
             latency[i] = getns() - wStart;
         }
     }
@@ -132,18 +134,21 @@ uint64_t *read_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_
     if (BATCHED_MODE) {
         char *test = malloc(BLOCK_SIZE * iterations);
         uint64_t rStart = getns();
-        read_bulk_rmem(test, target_ip, r_addr, iterations);
+        read_bulk_rmem(target_ip, r_addr, iterations, test, BLOCK_SIZE * iterations);
         //write_uniform_rmem(target_ip, payload, temp1);
         latency[0] = getns() - rStart;
         for (uint64_t i = 0; i < iterations; i++) {
-            char payload[BLOCK_SIZE];
-            snprintf(payload, 50, "%s %lu", text, i);
+            unsigned char *expected = gen_rdm_bytestream(BLOCK_SIZE, i);
             print_debug("Results of memory store: %.50s", test);
-            if (strncmp(&test[i*BLOCK_SIZE], payload, 50) < 0) {
-                perror(KRED"ERROR: WRONG RESULT"RESET);
-                printf("Expected %s Got %s\n", payload, test );
+            if (memcmp(&test[i*BLOCK_SIZE], expected, BLOCK_SIZE) < 0) {
+                printf(KRED"ERROR: WRONG RESULT AT ITERATION %lu\n"RESET, i);
+                printf("Expected\t");
+                print_n_bytes(expected, BLOCK_SIZE);
+                printf("Got \t");
+                print_n_bytes(test, BLOCK_SIZE);
                 exit(1);
             }
+            free(expected);
         }
         free(test);
     } else {
@@ -151,14 +156,14 @@ uint64_t *read_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_
         for (uint64_t i = 0; i < iterations; i++) {
             ip6_memaddr remote_mem = r_addr[i];
             uint64_t rStart = getns();
-            read_rmem(test, BLOCK_SIZE, target_ip, &remote_mem);
+            read_rmem(target_ip, &remote_mem, test, BLOCK_SIZE);
             latency[i] = getns() - rStart;
-            char payload[BLOCK_SIZE];
-            snprintf(payload, 50, "%s %lu", text, i);
+            char expected[BLOCK_SIZE];
+            snprintf(expected, 50, "%s %lu", text, i);
             print_debug("Results of memory store: %.50s", test);
-            if (strncmp(test, payload, 50) < 0) {
+            if (strncmp(test, expected, 50) < 0) {
                 perror(KRED"ERROR: WRONG RESULT"RESET);
-                printf("Expected %s Got %s\n", payload, test );
+                printf("Expected %s Got %s\n", expected, test );
                 exit(1);
             }
         }

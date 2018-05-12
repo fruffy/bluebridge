@@ -45,11 +45,13 @@ FILE* generate_file_handle(const char * results_dir, char* method_name, char* op
 ip6_memaddr_block get_pointer(struct sockaddr_in6 *targetIP, uint64_t size) {
   // Get random memory server
   struct in6_addr *ipv6Pointer = gen_rdm_ip6_target();
-
+  // If size is zero for whatever reason, we still allocate at least one pointer
+  // Prevents undefined behaviour
+  int num_ptrs = size == 0 ? 1 : (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
   // Put it's address in targetIP (why?)
   memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
   // Allocate memory and receive the remote memory pointer
-  return allocate_uniform_rmem(targetIP, size);
+  return allocate_uniform_rmem(targetIP, num_ptrs);
 }
 
 void marshall_shmem_ptr(GByteArray **ptr, ip6_memaddr *addr) {

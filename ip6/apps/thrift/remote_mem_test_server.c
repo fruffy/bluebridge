@@ -162,7 +162,7 @@ tutorial_remote_mem_test_handler_read_mem (RemoteMemTestIf *iface,
   ip6_memaddr args_addr;
   unmarshall_shmem_ptr(&args_addr, (GByteArray *)pointer);
 
-  read_rmem(payload, BLOCK_SIZE, targetIP, &args_addr);
+  read_rmem(targetIP, &args_addr, payload, BLOCK_SIZE);
 
   // printf("read_mem()\n");
 
@@ -194,7 +194,7 @@ tutorial_remote_mem_test_handler_write_mem (RemoteMemTestIf *iface,
 
   // printf("Calling bluebridge: %s, args_addr: ", message);
   // print_n_bytes((char*)&args_addr, sizeof(args_addr));
-  write_rmem(targetIP, (char *) temp, &args_addr);
+  write_rmem(targetIP, &args_addr, (char *) temp, BLOCK_SIZE);
 
   // printf("write_mem return true\n");
   return TRUE;

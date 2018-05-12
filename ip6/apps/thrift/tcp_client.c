@@ -463,7 +463,7 @@ int main (int argc, char *argv[]) {
 
   // Fill the global array with data values
   for (int i = 0; i < DATA_POINTS; i++ ) {
-    SIZE_STEPS[i] = i*50;//pow(2,i);
+    SIZE_STEPS[i] = i*500;//pow(2,i);
   }
 
   arrcomp_client = g_object_new (TYPE_SIMPLE_ARR_COMP_CLIENT,

@@ -4,17 +4,17 @@
 #define MAX_HOSTS  5
 
 #include "network.h"
-
+#include "types.h"
 
 ip6_memaddr allocate_rmem(struct sockaddr_in6 *targetIP);
-ip6_memaddr *allocate_bulk_rmem(struct sockaddr_in6 *targetIP, uint64_t size);
-ip6_memaddr_block allocate_uniform_rmem(struct sockaddr_in6 *target_ip, uint64_t size);
-int write_rmem(struct sockaddr_in6 *targetIP, char *payload,  ip6_memaddr *remoteAddr);
-int write_bulk_rmem(struct sockaddr_in6 *target_ip, char *payload, ip6_memaddr *remote_addrs, int num_addrs);
-int write_uniform_rmem(struct sockaddr_in6 *target_ip, char *payload, ip6_memaddr_block remote_block);
-int read_rmem(char *receiveBuffer, int length, struct sockaddr_in6 *targetIP, ip6_memaddr *remoteAddr);
-int read_bulk_rmem(char *rx_buf, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addrs, int num_addrs);
-int read_uniform_rmem(char *rx_buf, struct sockaddr_in6 *target_ip, ip6_memaddr_block remote_addr);
+ip6_memaddr *allocate_bulk_rmem(struct sockaddr_in6 *targetIP, uint64_t num_blocks);
+ip6_memaddr_block allocate_uniform_rmem(struct sockaddr_in6 *target_ip, uint64_t num_blocks);
+int write_rmem(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr, char *payload, uint16_t length);
+int write_bulk_rmem(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addrs, uint64_t num_addrs, char *payload, uint64_t size);
+int write_uniform_rmem(struct sockaddr_in6 *target_ip, ip6_memaddr_block remote_block, char *payload, uint64_t size);
+int read_rmem(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr, char *rx_buf, uint16_t length);
+int read_bulk_rmem(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addrs, uint64_t num_addrs, char *rx_buf, uint64_t size);
+int read_uniform_rmem(struct sockaddr_in6 *target_ip, ip6_memaddr_block remote_block, char *rx_buf, uint64_t size);
 int free_rmem(struct sockaddr_in6 *targetIP,  ip6_memaddr *remoteAddr);
 
 int write_raid_mem(struct sockaddr_in6 *targetIP, int hosts, char (*payload)[MAX_HOSTS][BLOCK_SIZE], ip6_memaddr **remoteAddrs, int needed);

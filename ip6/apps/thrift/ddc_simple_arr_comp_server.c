@@ -101,7 +101,7 @@ GType tutorial_simple_arr_comp_handler_get_type (void);
 
 G_END_DECLS
 
-struct sockaddr_in6 *targetIP;
+struct sockaddr_in6 *target_ip;
 
 /* ---------------------------------------------------------------- */
 
@@ -125,19 +125,15 @@ tutorial_simple_arr_comp_handler_increment_array (SimpleArrCompIf *iface,
   THRIFT_UNUSED_VAR (error);
   THRIFT_UNUSED_VAR (ouch);
 
-  ip6_memaddr_block result_addr = get_pointer(targetIP, length);
+  ip6_memaddr_block result_addr = get_pointer(target_ip, length);
 
   // Read in array from shared memory
-  uint8_t *int_arr;
-  if (length > BLOCK_SIZE)
-    int_arr = malloc((length % BLOCK_SIZE + 1) *BLOCK_SIZE);
-  else 
-    int_arr = malloc(BLOCK_SIZE);
+  uint8_t *int_arr = malloc(length);
 
   ip6_memaddr_block args_addr;
   unmarshall_shmem_ptr(&args_addr.memaddr, (GByteArray *) pointer);
-  args_addr.length = length;
-  read_uniform_rmem((char *) int_arr, targetIP, args_addr);
+  args_addr.length = length == 0 ? 1 : 1 + ((length - 1) / BLOCK_SIZE);
+  read_uniform_rmem(target_ip, args_addr, (char *) int_arr, length);
 
   // Increment the values
   for (int i = 0; i < length; i++) {
@@ -145,7 +141,7 @@ tutorial_simple_arr_comp_handler_increment_array (SimpleArrCompIf *iface,
   }
 
   // Write it to the array
-  write_uniform_rmem(targetIP, (char*) int_arr, result_addr);
+  write_uniform_rmem(target_ip, result_addr, (char*) int_arr, length);
 
   *_return = g_byte_array_new();
   marshall_shmem_ptr(_return, &result_addr.memaddr);
@@ -173,46 +169,34 @@ tutorial_simple_arr_comp_handler_add_arrays (SimpleArrCompIf *iface,
   THRIFT_UNUSED_VAR (error);
   THRIFT_UNUSED_VAR (ouch);
 
-  *_return = g_byte_array_new();
-  ip6_memaddr_block result_addr = get_pointer(targetIP, length);
-  uint8_t *arr1;
-  uint8_t *arr2;
+  ip6_memaddr_block result_addr = get_pointer(target_ip, length);
   // Read in array from shared memory
-  if (length > BLOCK_SIZE){
-    arr1 = malloc((length % BLOCK_SIZE + 1) *BLOCK_SIZE);
-    arr2 = malloc((length % BLOCK_SIZE + 1) *BLOCK_SIZE);
-  }
-  else {
-    arr1 = malloc(BLOCK_SIZE);
-    arr2 = malloc(BLOCK_SIZE);
-  }
-
+  uint8_t *arr1 = malloc(length);
+  uint8_t *arr2 = malloc(length);
   // Read in params from shared memory
   ip6_memaddr_block arg1_addr;
   ip6_memaddr_block arg2_addr;
 
   unmarshall_shmem_ptr(&arg1_addr.memaddr, (GByteArray *) array1);
   unmarshall_shmem_ptr(&arg2_addr.memaddr, (GByteArray *) array2);
-  arg1_addr.length = length;
-  arg2_addr.length = length;
+  arg1_addr.length = length == 0 ? 1 : 1 + ((length - 1) / BLOCK_SIZE);;
+  arg2_addr.length = length == 0 ? 1 : 1 + ((length - 1) / BLOCK_SIZE);;
 
-  read_uniform_rmem((char *) arr1, targetIP, arg1_addr);
-  read_uniform_rmem((char *) arr2, targetIP, arg2_addr);
+  read_uniform_rmem(target_ip, arg1_addr, (char *) arr1, length);
+  read_uniform_rmem(target_ip, arg2_addr, (char *) arr2, length);
 
   // Create result array
   uint8_t *result_array;
-  if (length > BLOCK_SIZE)
-    result_array = malloc((length % BLOCK_SIZE + 1) *BLOCK_SIZE);
-  else
-    result_array = malloc(BLOCK_SIZE);
+  result_array = malloc(length);
   // printf("Perform computation\n");
   // Perform computation
   for (int i = 0; i < length; i++) {
     result_array[i] = arr1[i] + arr2[i];
   }
 
-  write_uniform_rmem(targetIP, (char*) result_array, result_addr);
-
+  write_uniform_rmem(target_ip, result_addr, (char*) result_array, length);
+  *_return = g_byte_array_new();
+  marshall_shmem_ptr(_return, &result_addr.memaddr);
   // printf ("add_arrays (%d): \n\t1: ", length);
   // print_n_bytes(array1->data, array1->len);
   // printf("\t2: ");
@@ -305,23 +289,19 @@ tutorial_simple_arr_comp_handler_no_op (SimpleArrCompIf  *iface,
   THRIFT_UNUSED_VAR (error);
 
   *_return = g_byte_array_new();
-  ip6_memaddr_block result_addr = get_pointer(targetIP, length);
+  ip6_memaddr_block result_addr = get_pointer(target_ip, length);
 
   marshall_shmem_ptr(_return, &result_addr.memaddr);
   result_addr.length = length;
   // Read in array from shared memory
-  uint8_t *int_arr;
-  if (length > BLOCK_SIZE)
-    int_arr = malloc((length % BLOCK_SIZE + 1) *BLOCK_SIZE);
-  else 
-    int_arr = malloc(BLOCK_SIZE);
+  uint8_t *int_arr = malloc(length);
   ip6_memaddr_block args_addr;
   unmarshall_shmem_ptr(&args_addr.memaddr, (GByteArray *) num_array);
-
+  args_addr.length == 0 ? 0 : 1 + ((length - 1) / BLOCK_SIZE);
   //COMPUTATION
-  read_uniform_rmem((char *) int_arr, targetIP, args_addr);
+  read_uniform_rmem(target_ip, args_addr, (char *) int_arr, length);
   //Write it to the array
-  write_uniform_rmem(targetIP, (char*) int_arr, result_addr);
+  write_uniform_rmem(target_ip, result_addr, (char*) int_arr, length);
 
   //g_byte_array_ref(result_ptr);
 
@@ -442,7 +422,7 @@ int main (int argc, char *argv[])
       return -1;
     } 
   } 
-  targetIP = init_sockets(&myConf, 0);
+  target_ip = init_sockets(&myConf, 0);
   set_host_list(myConf.hosts, myConf.num_hosts);
 
   TutorialSimpleArrCompHandler *handler;

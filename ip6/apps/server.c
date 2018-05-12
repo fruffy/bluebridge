@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
     char receiveBuffer[BLOCK_SIZE];
     while (1) {
         //TODO: Error handling (numbytes = -1)
-        int size = rcv_udp6_raw(receiveBuffer, BLOCK_SIZE, target_ip, &remoteAddr);
+        int size = rcv_udp6_raw(receiveBuffer, target_ip, &remoteAddr);
         handle_requests(receiveBuffer, size, target_ip, &remoteAddr);
     }
     close_sockets();

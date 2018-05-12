@@ -6,8 +6,7 @@ Make all of your changes to main.c instead.
 
 #ifndef mem_H
 #define mem_H
-
-#define BLOCK_SIZE 4096
+#include "../types.h"
 
 /*
 Create a new virtual disk in the file "filename", with the given number of blocks.
