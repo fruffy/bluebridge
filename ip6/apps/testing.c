@@ -103,6 +103,7 @@ uint64_t *write_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64
     uint64_t *latency = calloc(iterations, sizeof(uint64_t));
     if (BATCHED_MODE) {
         char *payload = malloc(BLOCK_SIZE * iterations);
+        printf("Creating data...\n");
         for (uint64_t i = 0; i < iterations; i++) {
             unsigned char *id_block = gen_rdm_bytestream(BLOCK_SIZE, i);
             print_debug("Creating payload");
@@ -110,6 +111,7 @@ uint64_t *write_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64
             memcpy(&payload[BLOCK_SIZE *i], id_block, BLOCK_SIZE);
             free(id_block);
         }
+        printf("Transmitting...\n");
         uint64_t wStart = getns();
         write_bulk_rmem(target_ip, r_addr, iterations, payload, BLOCK_SIZE * iterations);
         //write_uniform_rmem(target_ip, payload, temp1);
@@ -133,10 +135,12 @@ uint64_t *read_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_
     uint64_t *latency = calloc(iterations, sizeof(uint64_t));
     if (BATCHED_MODE) {
         char *test = malloc(BLOCK_SIZE * iterations);
+        printf("Retrieving data...\n");
         uint64_t rStart = getns();
         read_bulk_rmem(target_ip, r_addr, iterations, test, BLOCK_SIZE * iterations);
         //write_uniform_rmem(target_ip, payload, temp1);
         latency[0] = getns() - rStart;
+        printf("Comparing...\n");
         for (uint64_t i = 0; i < iterations; i++) {
             unsigned char *expected = gen_rdm_bytestream(BLOCK_SIZE, i);
             print_debug("Results of memory store: %.50s", test);
@@ -150,6 +154,7 @@ uint64_t *read_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_
             }
             free(expected);
         }
+        printf("Everything okay!\n");
         free(test);
     } else {
         char test[BLOCK_SIZE];
@@ -328,13 +333,17 @@ void basicOperations(struct sockaddr_in6 *target_ip) {
     //FREE TEST BULK
     printf("Freeing...\n");
     uint64_t * free_latency = free_test(target_ip, r_addr, NUM_ITERS, my_conf);
-
-    save_time("alloc_t0", alloc_latency, NUM_ITERS);
-    save_time("write_t0", write_latency1, NUM_ITERS);
-    save_time("read_t0", read_latency1, NUM_ITERS);
-    save_time("write2_t0", write_latency2, NUM_ITERS);
-    save_time("read2_t0", read_latency2, NUM_ITERS);
-    save_time("free_t0", free_latency, NUM_ITERS);
+    int samples;
+    if (BATCHED_MODE)
+        samples = 1;
+    else
+        samples = NUM_ITERS;
+    save_time("alloc_t0", alloc_latency, samples);
+    save_time("write_t0", write_latency1, samples);
+    save_time("read_t0", read_latency1, samples);
+    save_time("write2_t0", write_latency2, samples);
+    save_time("read2_t0", read_latency2, samples);
+    save_time("free_t0", free_latency, samples);
     free(alloc_latency);
     free(write_latency1);
     free(read_latency1);

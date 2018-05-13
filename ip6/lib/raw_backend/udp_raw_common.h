@@ -9,8 +9,8 @@
 // tp_frame_nr   must be exactly frames_per_block*tp_block_nr
 
 //  This number is not set in stone. Nor are block_size, block_nr or frame_size
-#define C_RING_FRAMES        1024 //16384 // The number of frames per block
-#define RX_RING_BLOCKS       16   // NUM BLOCKS for the RX RING
+#define C_RING_FRAMES        256 //16384 // The number of frames per block
+#define RX_RING_BLOCKS       4   // NUM BLOCKS for the RX RING
 #define TX_RING_BLOCKS       1    // NUM BLOCKS for the TX RING
 #define C_FRAMESIZE          8192 //(4096 + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN + 2 + 32)
 #define C_BLOCKSIZE          (C_FRAMESIZE) * (C_RING_FRAMES)

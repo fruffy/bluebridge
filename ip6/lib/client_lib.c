@@ -17,7 +17,7 @@
 #include <rte_malloc.h>       // rte_zmalloc_socket()
 #endif
 
-#define BATCH_SIZE 100 // For some reason this is the maximum batch size we can do...
+#define BATCH_SIZE 40 // For some reason this is the maximum batch size we can do...
 
 struct in6_addr *hostList;
 int nhosts;
@@ -131,7 +131,7 @@ int read_rmem(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr, char *rx
     print_debug("******GET DATA******");
     // Send request and store response
     send_udp_raw(NULL, 0, remote_addr, target_ip->sin6_port);
-    int numBytes = rcv_udp6_raw_id(rx_buf, target_ip, remote_addr);
+    int numBytes = rcv_udp6_raw_id(rx_buf, target_ip, NULL);
     return numBytes;
 }
 
@@ -204,7 +204,7 @@ int write_rmem(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr, char *p
     remote_addr->cmd =  WRITE_CMD;
     print_debug("******WRITE DATA******");
     send_udp_raw(payload, length, remote_addr, target_ip->sin6_port);
-    rcv_udp6_raw_id(NULL, target_ip, remote_addr);
+    rcv_udp6_raw_id(NULL, target_ip, NULL);
     return EXIT_SUCCESS;
 }
 

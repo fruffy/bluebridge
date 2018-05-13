@@ -39,7 +39,7 @@ struct sockaddr_ll configure_tx(struct config *cfg) {
     }
     //memcpy(src_mac, packetinfo.device.sll_addr, 6); 
     uint8_t src_mac[6] = { 0xa0, 0x36, 0x9f, 0x45, 0xd8, 0x74 };
-    uint8_t dst_mac[6] = { 0xa0, 0x36, 0x9f, 0x45, 0xd8, 0x75 };
+    uint8_t dst_mac[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
     // Fill out sockaddr_ll.
     iface.sll_family = AF_PACKET;
     memcpy (iface.sll_addr, src_mac, 6 * sizeof (uint8_t));

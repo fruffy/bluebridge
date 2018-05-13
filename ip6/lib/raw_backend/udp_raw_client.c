@@ -45,7 +45,7 @@ void write_packets(int num_packets) {
     while (1){
         if (packets == num_packets)
             break;
-        epoll_wait(epoll_fd_g, &event, sizeof event, -1);
+        epoll_wait(epoll_fd_g, &event, sizeof event, 0);
         //int num_events = epoll_wait(epoll_fd, events, sizeof events / sizeof *events, -1);
         /*if (num_events == 0 && !server) {
             //printf("TIMEOUT!\n");

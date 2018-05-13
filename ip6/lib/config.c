@@ -21,7 +21,7 @@ struct config bb_config;
 
 int set_interface_ip(struct config *config) {
     struct ifreq ifr;
-    struct in6_ifreq ifr6;
+    //struct in6_ifreq ifr6;
     int fd = socket(PF_INET6, SOCK_DGRAM, IPPROTO_IP);
 
     strncpy(ifr.ifr_name, config->interface, IFNAMSIZ);
@@ -34,13 +34,13 @@ int set_interface_ip(struct config *config) {
         perror("SIOCGIFFLAGS");
     if (ioctl(fd, SIOGIFINDEX, &ifr) < 0)
         perror("SIOGIFINDEX");
-    
+/*    
     memcpy(&ifr6.ifr6_addr, &config->src_addr,
                sizeof(struct in6_addr));
     ifr6.ifr6_ifindex = ifr.ifr_ifindex;
     ifr6.ifr6_prefixlen = 64;
     if (ioctl(fd, SIOCSIFADDR, &ifr6) < 0)
-        perror("SIOCSIFADDR");
+        perror("SIOCSIFADDR");*/
     strncpy(ifr.ifr_name, config->interface, IFNAMSIZ);
     ifr.ifr_flags |= (IFF_UP | IFF_RUNNING);
     if(ioctl(fd, SIOCSIFFLAGS, &ifr) != 0)
