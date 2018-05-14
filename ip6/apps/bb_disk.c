@@ -99,7 +99,7 @@ static struct buse_operations aop = {
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        fprintf(stderr, 
+        fprintf(stderr,
             "Usage:\n"
             "  %s /dev/nbd0\n"
             "Don't forget to load nbd kernel module (`modprobe nbd`) and\n"
@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
         uint64_t offset = split * i;
         if (i == myConf.num_hosts-1)
             length = r.nblocks - offset;
-        else 
+        else
             length = split;
         struct in6_addr *ipv6Pointer = gen_ip6_target(i);
         memcpy(&(r.target_ip->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));

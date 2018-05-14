@@ -17,9 +17,17 @@
 #define print_debug(...); \
     if (DEBUG) {                     \
         printf("[DEBUG]: ");         \
-        printf(__VA_ARGS__);     \
+        printf(__VA_ARGS__);         \
         printf("\n");                \
     }                                \
+
+#define PRINT_IP_ADDR(ip_addr, ...)                         \
+    do {                                                    \
+        char s[INET6_ADDRSTRLEN];                           \
+        inet_ntop(AF_INET6, (struct in6_addr *) ip_addr, s, INET6_ADDRSTRLEN);  \
+        printf(__VA_ARGS__);                                \
+        printf("\n");                                       \
+    } while(0);                                             \
 
 // (unimportant) macro for loud failure
 // needs some love in the code
@@ -28,6 +36,7 @@
     perror(msg); \
     return lvl;            \
   } while(0);
+
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 
@@ -42,8 +51,7 @@ int print_addrInfo(struct addrinfo *result);
 int getLine(char *prmpt, char *buff, size_t sz);
 unsigned char *gen_rdm_bytestream(size_t num_bytes, int seed);
 
-static inline uint64_t getns(void)
-{
+static inline uint64_t getns(void) {
     struct timespec ts;
     int ret = clock_gettime(CLOCK_MONOTONIC, &ts);
     assert(ret == 0);

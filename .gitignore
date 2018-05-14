@@ -439,3 +439,5 @@ ip6/apps/thrift/ddc_simple_arr_comp
 ip6/apps/thrift/gen-c_glib/
 
 remote_compile\.sh
+
+*.bat

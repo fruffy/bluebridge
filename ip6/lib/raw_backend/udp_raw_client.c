@@ -110,21 +110,14 @@ int simple_epoll_rcv(char *rcv_buf, struct sockaddr_in6 *target_ip, ip6_memaddr 
                 struct udphdr *udp_hdr = (struct udphdr *)((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
                 char *payload = ((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
                 // This should be debug code...
-                /*
-                char s[INET6_ADDRSTRLEN];
-                char s1[INET6_ADDRSTRLEN];
-                inet_ntop(AF_INET6, &iphdr->ip6_src, s, sizeof s);
-                inet_ntop(AF_INET6, &iphdr->ip6_dst, s1, sizeof s1);
-                printf("Thread %d Got message from %s:%d to %s:%d\n", thread_id, s,ntohs(udp_hdr->source), s1, ntohs(udp_hdr->dest) );
-                printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udp_hdr->dest) );
-                */
+                // PRINT_IP_ADDR(&ip_hdr->ip6_src, "Message from ");
+                // PRINT_IP_ADDR(&ip_hdr->ip6_dst, "to ");
+                // printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udp_hdr->dest) );
                 uint16_t msg_size = ntohs(udp_hdr->len) - UDP_HDRLEN;
-                if (rcv_buf != NULL) {
+                if (rcv_buf != NULL)
                     memcpy(rcv_buf, payload, msg_size);
-                }
-                if (remote_addr != NULL) {
+                if (remote_addr != NULL)
                     memcpy(remote_addr, &ip_hdr->ip6_dst, IPV6_SIZE);
-                }
                 memcpy(target_ip->sin6_addr.s6_addr, &ip_hdr->ip6_src, IPV6_SIZE);
                 target_ip->sin6_port = udp_hdr->source;
                 tpacket_hdr->tp_status = TP_STATUS_KERNEL;
