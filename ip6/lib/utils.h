@@ -21,14 +21,6 @@
         printf("\n");                \
     }                                \
 
-#define PRINT_IP_ADDR(ip_addr, ...)                         \
-    do {                                                    \
-        char s[INET6_ADDRSTRLEN];                           \
-        inet_ntop(AF_INET6, (struct in6_addr *) ip_addr, s, INET6_ADDRSTRLEN);  \
-        printf(__VA_ARGS__);                                \
-        printf("\n");                                       \
-    } while(0);                                             \
-
 // (unimportant) macro for loud failure
 // needs some love in the code
 #define RETURN_ERROR(lvl, msg) \
@@ -46,8 +38,7 @@ int print_n_bytes(void *rcv_buffer, int num);
 
 int print_n_chars(void *rcv_buffer, int num);
 
-int print_addrInfo(struct addrinfo *result);
-
+void print_ip_addr(struct in6_addr *ip_addr);
 int getLine(char *prmpt, char *buff, size_t sz);
 unsigned char *gen_rdm_bytestream(size_t num_bytes, int seed);
 

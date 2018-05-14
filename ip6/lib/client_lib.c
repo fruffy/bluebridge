@@ -17,7 +17,7 @@
 #include <rte_malloc.h>       // rte_zmalloc_socket()
 #endif
 
-#define BATCH_SIZE 40 // For some reason this is the maximum batch size we can do...
+#define BATCH_SIZE 100 // For some reason this is the maximum batch size we can do...
 
 struct in6_addr *hostList;
 int nhosts;
@@ -139,11 +139,11 @@ int read_rmem(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr, char *rx
  * Reads the remote memory based on remote_addr
  */
 // TODO: Implement meaningful return types and error messages
-void batch_read(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addrs, char *buffer, uint16_t chunk_len, int num_packets){
+void batch_read(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addrs, char *buffer, uint16_t chunk_len, uint32_t num_packets){
     pkt_rqst pkts[num_packets];
     memset(sub_ids, 0, USHRT_MAX * sizeof(uint32_t));
     uint64_t ptrs[num_packets];
-    for (int i = 0; i < num_packets; i++){
+    for (uint32_t i = 0; i < num_packets; i++){
         pkts[i].dst_addr = remote_addrs[i];
         pkts[i].dst_port = target_ip->sin6_port;
         ptrs[i] = (uint64_t) &buffer[i*chunk_len];
@@ -167,15 +167,15 @@ int read_bulk_rmem(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addrs, ui
         uint16_t chunk_residual = size % BLOCK_SIZE;
         if (unlikely(num_chunks > num_addrs))
             RETURN_ERROR(EXIT_FAILURE, "Not enough memory addresses provided!");
-        int batches = num_chunks / BATCH_SIZE;
-        int batch_residual = num_chunks % BATCH_SIZE;
-        for (int i = 0; i < batches; i++ ) {
+        uint32_t batches = num_chunks / BATCH_SIZE;
+        uint32_t batch_residual = num_chunks % BATCH_SIZE;
+        for (uint32_t i = 0; i < batches; i++ ) {
             batch_read(target_ip, &remote_addrs[i*BATCH_SIZE], &rx_buf[BLOCK_SIZE*i*BATCH_SIZE], BLOCK_SIZE, BATCH_SIZE);
         }
-        int offset = num_chunks - batch_residual;
+        uint64_t offset = num_chunks - batch_residual;
         batch_read(target_ip, &remote_addrs[offset], &rx_buf[BLOCK_SIZE*offset], BLOCK_SIZE, batch_residual);
         if (chunk_residual)
-            read_rmem(target_ip, remote_addrs, &rx_buf[BLOCK_SIZE*(offset+1)], chunk_residual);
+           read_rmem(target_ip, remote_addrs, &rx_buf[BLOCK_SIZE*(offset+1)], chunk_residual);
     }
     return EXIT_SUCCESS;
 }

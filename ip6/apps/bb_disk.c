@@ -43,13 +43,7 @@ static int xmp_read(void *buf, u_int32_t len, u_int64_t offset, void *userdata) 
     //if (*(int *)userdata) fprintf(stderr, "R - %lu, %u\n", offset, len);
     (void) userdata;
     u_int64_t page_offset = offset/BLOCK_SIZE;
-    if (len > BLOCK_SIZE) {
-        for (u_int32_t i = 0; i < len/BLOCK_SIZE; i++) {
-            read_rmem(r.target_ip, &r.memList[page_offset + i], (char *) buf + (BLOCK_SIZE *i), BLOCK_SIZE);
-        }
-    } else {
-        read_rmem(r.target_ip, &r.memList[page_offset], buf, len);
-    }
+    read_bulk_rmem(r.target_ip, &r.memList[page_offset], len/BLOCK_SIZE, (char *) buf, len);
     return 0;
 }
 
@@ -57,13 +51,7 @@ static int xmp_write(const void *buf, u_int32_t len, u_int64_t offset, void *use
     //if (*(int *)userdata) fprintf(stderr, "W - %lu, %u\n", offset, len);
     (void) userdata;
     u_int64_t page_offset = offset/BLOCK_SIZE;
-    if (len > BLOCK_SIZE) {
-        for (u_int32_t i = 0; i < len/BLOCK_SIZE; i++) {
-            write_rmem(r.target_ip, &r.memList[page_offset + i], (char *) buf + (BLOCK_SIZE *i), BLOCK_SIZE);
-        }
-    } else {
-        write_rmem(r.target_ip, &r.memList[page_offset], (char *) buf, BLOCK_SIZE);
-    }
+    write_bulk_rmem(r.target_ip, &r.memList[page_offset], len/BLOCK_SIZE, (char *) buf, len);
     return 0;
 }
 
@@ -92,9 +80,10 @@ static struct buse_operations aop = {
       .disc = xmp_disc,
       .flush = xmp_flush,
       .trim = xmp_trim,
-      .size_blocks =  (u_int64_t) 4 * 1024 * 1024 * 1024 / BLOCK_SIZE,
+      .size = (u_int64_t) 42 * 1024 * 1024 * 1024
+      //.size_blocks =  (u_int64_t) 4 * 1024 * 1024 * 1024 / BLOCK_SIZE,
       //.size_blocks =  (u_int64_t) 23 * 1024 * 1024 * 1024 / BLOCK_SIZE,
-      .blksize = BLOCK_SIZE
+      //.blksize = BLOCK_SIZE
 };
 
 int main(int argc, char *argv[]) {

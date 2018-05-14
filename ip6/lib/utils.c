@@ -94,3 +94,9 @@ int print_n_chars(void *receiveBuffer, int num) {
     printf("\n");
     return i;
 }
+
+void print_ip_addr(struct in6_addr *ip_addr) {
+        char s[INET6_ADDRSTRLEN];
+        inet_ntop(AF_INET6, ip_addr, s, INET6_ADDRSTRLEN);
+        printf("%s", s);
+}

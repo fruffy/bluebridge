@@ -52,7 +52,6 @@ void write_packets(int num_packets) {
             return -1;
         }*/
         if (event.events & EPOLLIN) {
-            packets++;
             struct tpacket_hdr *tpacket_hdr = get_packet(&ring_rx_g);
             if ((volatile uint32_t)tpacket_hdr->tp_status == TP_STATUS_KERNEL) {
                 //printf("Dis Kernel\n");
@@ -72,9 +71,10 @@ void write_packets(int num_packets) {
             char *payload = ((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
             ip6_memaddr *inAddress =  (ip6_memaddr *) &ip_hdr->ip6_dst;
             uint16_t msg_size = ntohs(udp_hdr->len) - UDP_HDRLEN;
-            memcpy((void *) *(&inAddress->paddr), payload, msg_size);
+            memcpy((void *) (inAddress->paddr), payload, msg_size);
             tpacket_hdr->tp_status = TP_STATUS_KERNEL;
             next_packet(&ring_rx_g);
+            packets++;
         }
     }
 }
@@ -110,9 +110,8 @@ int simple_epoll_rcv(char *rcv_buf, struct sockaddr_in6 *target_ip, ip6_memaddr 
                 struct udphdr *udp_hdr = (struct udphdr *)((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
                 char *payload = ((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
                 // This should be debug code...
-                // PRINT_IP_ADDR(&ip_hdr->ip6_src, "Message from ");
-                // PRINT_IP_ADDR(&ip_hdr->ip6_dst, "to ");
-                // printf("Thread %d My port %d their dest port %d\n",thread_id, ntohs(my_port), ntohs(udp_hdr->dest) );
+                // printf("Thread %d Message from ", thread_id), print_ip_addr(&ip_hdr->ip6_src);
+                // printf("_%d to ", ntohs(udp_hdr->source)), print_ip_addr(&ip_hdr->ip6_dst), printf("_%d\n", ntohs(udp_hdr->dest));
                 uint16_t msg_size = ntohs(udp_hdr->len) - UDP_HDRLEN;
                 if (rcv_buf != NULL)
                     memcpy(rcv_buf, payload, msg_size);

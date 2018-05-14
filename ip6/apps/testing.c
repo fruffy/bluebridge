@@ -107,6 +107,8 @@ uint64_t *write_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64
         for (uint64_t i = 0; i < iterations; i++) {
             unsigned char *id_block = gen_rdm_bytestream(BLOCK_SIZE, i);
             print_debug("Creating payload");
+            print_debug("Iteration %lu Data:\t", i);
+            //print_n_bytes(id_block, 50);
             print_debug("Writing %lu to offset %lu\n", i, i *BLOCK_SIZE);
             memcpy(&payload[BLOCK_SIZE *i], id_block, BLOCK_SIZE);
             free(id_block);
@@ -114,7 +116,6 @@ uint64_t *write_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64
         printf("Transmitting...\n");
         uint64_t wStart = getns();
         write_bulk_rmem(target_ip, r_addr, iterations, payload, BLOCK_SIZE * iterations);
-        //write_uniform_rmem(target_ip, payload, temp1);
         latency[0] = getns() - wStart;
         free(payload);
     } else {
@@ -138,12 +139,12 @@ uint64_t *read_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_
         printf("Retrieving data...\n");
         uint64_t rStart = getns();
         read_bulk_rmem(target_ip, r_addr, iterations, test, BLOCK_SIZE * iterations);
-        //write_uniform_rmem(target_ip, payload, temp1);
         latency[0] = getns() - rStart;
         printf("Comparing...\n");
         for (uint64_t i = 0; i < iterations; i++) {
             unsigned char *expected = gen_rdm_bytestream(BLOCK_SIZE, i);
-            print_debug("Results of memory store: %.50s", test);
+            print_debug("Iteration %lu Expected:\t", i);
+            //print_n_bytes(expected, 50);
             if (memcmp(&test[i*BLOCK_SIZE], expected, BLOCK_SIZE) < 0) {
                 printf(KRED"ERROR: WRONG RESULT AT ITERATION %lu\n"RESET, i);
                 printf("Expected\t");

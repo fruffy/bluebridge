@@ -8,20 +8,20 @@ if [ $ID -ne 0 ]; then
    exit 1
 fi
 #ethtool -N enp66s0f0 rx-flow-hash udp6 sdfn
-sysctl -w net.core.rmem_max=16777216
+sudo sysctl -w net.core.rmem_max=16777216
 sudo ethtool -C enp66s0f0 rx-usecs 0
 sudo ethtool -C enp66s0f0 tx-usecs 0
+sudo ethtool -K enp66s0f0 tso off
+sudo ethtool -K enp66s0f0 gro off
 
-sudo ethtool -K enp66s0f0 rx off 
-sudo ethtool -K enp66s0f0 tx off 
-#ethtool -K enp66s0f0 tso off
-#ethtool -K enp66s0f0 gso off
-#ethtool -K enp66s0f0 gro off
-#ethtool -K enp66s0f0 sg off
-sudo ethtool -G enp66s0f0 rx 4096 tx 4096
-#ethtool --offload  enp66s0f0  rx off tx off
-#ethtool -K enp66s0f0 ntuple off
-#ethtool -A enp66s0f0 autoneg off rx off tx off
+# sudo ethtool -K enp66s0f0 rx off 
+# sudo ethtool -K enp66s0f0 tx off 
+#sudo ethtool -K enp66s0f0 gso off
+#sudo ethtool -K enp66s0f0 sg off
+# sudo ethtool -G enp66s0f0 rx 4096 tx 4096
+# sudo ethtool --offload  enp66s0f0  rx off tx off
+# sudo ethtool -K enp66s0f0 ntuple off
+# sudo ethtool -A enp66s0f0 autoneg off rx off tx off
 #ip6tables -t raw -I PREROUTING 1 --src 100::/8 -j NOTRACK
 #ip6tables -I INPUT 1 --src 100::/8 -j ACCEPT
 

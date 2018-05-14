@@ -92,7 +92,7 @@ int init_packetsock_ring(int sd){
     if (setsockopt(sd, SOL_PACKET, PACKET_TX_RING, (void*) &tp, sizeof(tp)))
         RETURN_ERROR(EXIT_FAILURE, "setsockopt() ring_tx\n");
     int on = 1;
-    setsockopt(sd, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
+    //setsockopt(sd, SOL_PACKET, PACKET_QDISC_BYPASS, &on, sizeof(on));
 
     int val = TPACKET_V3;
     setsockopt(sd, SOL_PACKET, PACKET_HDRLEN, &val, sizeof(val));
