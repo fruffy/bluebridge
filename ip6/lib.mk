@@ -10,15 +10,10 @@ libname = libbluebridge
 # add the raw socket flag to differentiate from other builds
 CFLAGS += -DDEFAULT
 # a list of c files we do not want to compile
-filter:= $(dpdkDir)/dpdk_server.c
-filter+= $(dpdkDir)/dpdk_client.c
-filter+= $(dpdkDir)/dpdk_common.c
-filter+= $(dpdkDir)/dpdk_common.h
-
-sources := $(shell find "$(libDir)" -name '*.$(srcExt)')
-sources_filtered := $(filter-out $(filter), $(sources))
+filter = *$(dpdkDir)*
+sources := $(shell find "$(libDir)" -name '*.$(srcExt)' ! -path "$(filter)" )
 srcDirs := $(shell find . -name '*.$(srcExt)' -exec dirname {} \; | uniq)
-objects := $(patsubst $(MAKE_ROOT)/%.$(srcExt), $(objDir)/%.o, $(sources_filtered))
+objects := $(patsubst $(MAKE_ROOT)/%.$(srcExt), $(objDir)/%.o, $(sources))
 
 all: libmake
 	@-rm -rf $(objDir)

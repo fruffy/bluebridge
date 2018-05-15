@@ -10,5 +10,5 @@ int write_mem(uint8_t * rx_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *
 int write_mem_bulk(uint8_t * rx_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr);
 int free_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr);
 int trim_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_t size);
-void process_request(struct sockaddr_in6 *target_ip, ip6_memaddr *remoteAddr, uint8_t *rx_buffer, uint16_t size);
+void process_request(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr, uint8_t *rx_buffer, uint16_t size);
 #endif

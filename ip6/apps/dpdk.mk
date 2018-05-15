@@ -29,7 +29,6 @@
 #   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-srcExt = c
 LDLIBS+= -L$(MAKE_ROOT)/.. -lbluebridgedpdk
 binDir = dpdk
 

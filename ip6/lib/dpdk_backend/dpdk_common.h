@@ -121,11 +121,12 @@ static const struct rte_eth_conf port_conf = {
 
 #endif
 
-int config_dpdk();
-struct p_skeleton *gen_dpdk_packet_info();
-void enter_dpdk_server_loop(uint16_t server_port);
+extern int config_dpdk();
+extern struct p_skeleton *gen_dpdk_packet_info();
+extern void enter_dpdk_server_loop(uint16_t server_port);
 extern void init_client_dpdk(struct config *configstruct);
 extern void init_server_dpdk(struct config *configstruct);
 extern int dpdk_send(pkt_rqst pkt);
-extern int dpdk_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target_ip, ip6_memaddr *remoteAddr);
-extern int dpdk_client_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *target_ip, ip6_memaddr *remoteAddr);
+extern int dpdk_batched_send(pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids);
+extern int dpdk_server_rcv(char *rx_buffer, int msg_size, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr);
+extern int dpdk_client_rcv(char *rx_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr);

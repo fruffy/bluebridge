@@ -55,7 +55,7 @@ int send_udp_raw_batched(pkt_rqst *pkts, uint32_t *sub_ids, int num_addrs) {
 #ifdef DEFAULT
     cooked_batched_send(pkts, num_addrs, sub_ids);
 #else
-    dpdk_send(pkt);
+    dpdk_batched_send(pkts, num_addrs, sub_ids);
 #endif
     sendLat += getns() - start;
     send_calls++;
@@ -75,7 +75,7 @@ int rcv_udp6_raw(uint8_t *rx_buf, struct sockaddr_in6 *target_ip, ip6_memaddr *r
 #ifdef DEFAULT
     numbytes = simple_epoll_rcv(rx_buf, target_ip, remote_addr);
 #else
-    numbytes = dpdk_client_rcv(rx_buf, msg_size, target_ip, remote_addr);
+    numbytes = dpdk_client_rcv(rx_buf, target_ip, remote_addr);
 #endif
     rcv_lat += getns() - start;
     rcv_calls++;
@@ -127,11 +127,15 @@ void launch_server_loop(struct config *bb_conf) {
 }
 
 void close_sockets(int server) {
+#ifdef DEFAULT
+
     close_tx_socket();
     if (server)
         close_rx_socket_server();
     else
         close_rx_socket_client();
+#endif
+
 }
 
 void set_net_thread_ids(int t_id) {

@@ -208,11 +208,11 @@ int get_num_hosts();
  * @param sockaddr_in6 [description]
  * @param hosts [description]
  * @param payload [description]
- * @param remoteAddrs [description]
+ * @param remote_addrs [description]
  * @param needed [description]
  * @return [description]
  */
-int write_raid_mem(struct sockaddr_in6 *target_ip, int hosts, uint8_t (*payload)[MAX_HOSTS][BLOCK_SIZE], ip6_memaddr **remoteAddrs, int needed);
+int write_raid_mem(struct sockaddr_in6 *target_ip, int hosts, uint8_t (*payload)[MAX_HOSTS][BLOCK_SIZE], ip6_memaddr **remote_addrs, int needed);
 /**
  * @brief Raid read operation DEPRECATED
  * @details [long description]
@@ -220,10 +220,10 @@ int write_raid_mem(struct sockaddr_in6 *target_ip, int hosts, uint8_t (*payload)
  * @param sockaddr_in6 [description]
  * @param hosts [description]
  * @param bufs [description]
- * @param remoteAddrs [description]
+ * @param remote_addrs [description]
  * @param needed [description]
  * @return [description]
  */
-int read_raid_mem(struct sockaddr_in6 *target_ip, int hosts, uint8_t (*bufs)[MAX_HOSTS][BLOCK_SIZE], ip6_memaddr **remoteAddrs, int needed);
+int read_raid_mem(struct sockaddr_in6 *target_ip, int hosts, uint8_t (*bufs)[MAX_HOSTS][BLOCK_SIZE], ip6_memaddr **remote_addrs, int needed);
 
 #endif

@@ -32,8 +32,10 @@ MAKE_ROOT:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 srcExt = c
 srcDir = $(MAKE_ROOT)/apps
 libDir = $(MAKE_ROOT)/lib
+rawDir = $(libDir)/raw_backend
 sources := $(shell find "$(libDir)" -name '*.$(srcExt)')
-
+filter = *$(rawDir)*
+#sources := $(shell find "$(libDir)" -name '*.$(srcExt)' ! -path "*raw_backend*" )
 
 RTE_SDK=$(MAKE_ROOT)/../includes/dpdk
 ifeq ($(RTE_SDK),)

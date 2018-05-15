@@ -7,8 +7,6 @@ LDFLAGS+= -L../ -lbluebridge
 # add the raw socket flag to differentiate from other builds
 CFLAGS += -DDEFAULT
 
-sources := $(shell find "." -name '*.$(srcExt)')
-
 all: $(apps)
 
 $(apps):

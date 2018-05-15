@@ -6,7 +6,6 @@ struct p_skeleton {
     struct udphdr udp_hdr;
 }ether_frame ;
 
-
 struct p_skeleton *gen_dpdk_packet_info(struct config *configstruct) {
     memset(&ether_frame, 0, sizeof(struct p_skeleton));
     /* *** Ethernet header *** */
@@ -60,7 +59,8 @@ struct rte_mbuf *dpdk_assemble(pkt_rqst pkt) {
     rte_memcpy(udp_hdr, &ether_frame.udp_hdr,UDP_HDRLEN);
 
     //Set destination IP
-    ip_hdr->ip6_dst = *pkt.dst_addr;
+    rte_memcpy(&ip_hdr->ip6_dst, &pkt.dst_addr, IPV6_SIZE);
+
     // Payload length (16 bits): UDP header + UDP data
     ip_hdr->ip6_plen = htons(UDP_HDRLEN + pkt.datalen);
     // UDP header
@@ -89,6 +89,14 @@ int dpdk_send(pkt_rqst pkt) {
     return EXIT_SUCCESS;
 }
 
+int dpdk_batched_send(pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids) {
+    //Assemble the packet
+    struct rte_mbuf *frame = dpdk_assemble(*pkts);
+    // Commit the dpdk packet
+    send_packet(0, frame);
+    //rte_pktmbuf_free(frame);
+    return EXIT_SUCCESS;
+}
 
 static int bb_parse_portmask(const char *portmask)
 {
