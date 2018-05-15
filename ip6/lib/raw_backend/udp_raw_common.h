@@ -26,7 +26,6 @@ extern int cooked_send(pkt_rqst pkt);
 extern int cooked_batched_send(pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids);
 
 extern int simple_epoll_rcv(char *rcv_buf, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr);
-extern int epoll_server_rcv(char *receiveBuffer, int msgBlockSize, struct sockaddr_in6 *targetIP, ip6_memaddr *remoteAddr);
 void write_packets(int num_packets);
 extern void init_tx_socket(struct config *configstruct);
 extern void init_simple_rx_socket(struct config *cfg);

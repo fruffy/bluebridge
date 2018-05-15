@@ -67,14 +67,15 @@ typedef struct pkt_rqst {
 
 // A list of blueBridge commands
 // These are inserted into ip6_memaddr.cmd
-#define ALLOC_CMD       01
-#define WRITE_CMD       02
-#define READ_CMD        03
-#define FREE_CMD        04
-#define ALLOC_BULK_CMD  05
-#define WRITE_BULK_CMD  06
-#define READ_BULK_CMD   07
-#define CMD_SIZE        02
+#define ALLOC_CMD       1
+#define WRITE_CMD       2
+#define READ_CMD        3
+#define FREE_CMD        4
+#define ALLOC_BULK_CMD  5
+#define WRITE_BULK_CMD  6
+#define READ_BULK_CMD   7
+#define TRIM_CMD        8
+#define CMD_SIZE        2
 
 // Offset of data from start of frame
 #define PKT_OFFSET      (TPACKET_ALIGN(sizeof(struct tpacket_hdr)) + \

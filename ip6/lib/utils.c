@@ -38,8 +38,8 @@ int getLine(char *prmpt, char *buff, size_t sz) {
 /*
  * Gets random byte array with size num_bytes
  */
-unsigned char *gen_rdm_bytestream(size_t num_bytes, int seed) {
-    unsigned char *stream = (unsigned char *) malloc(num_bytes);
+uint8_t *gen_rdm_bytestream(size_t num_bytes, int seed) {
+    uint8_t *stream = malloc(num_bytes);
     size_t i;
     srand(seed);
     for (i = 0; i < num_bytes; i++) {

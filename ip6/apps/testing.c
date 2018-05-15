@@ -79,7 +79,7 @@ uint64_t *alloc_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64
                 length = iterations - offset;
             else 
                 length = split;
-            struct in6_addr *ipv6Pointer = gen_ip6_target(i);
+            struct in6_addr *ipv6Pointer = get_ip6_target(i);
             memcpy(&(target_ip->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
             ip6_memaddr *temp = allocate_bulk_rmem(target_ip, length);
             memcpy(&r_addr[offset], temp, length *sizeof(ip6_memaddr));
@@ -90,7 +90,7 @@ uint64_t *alloc_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64
         for (int i = 0; i < iterations; i++) {
            // Generate a random IPv6 address out of a set of available hosts
             //memcpy(&(target_ip->sin6_addr), gen_rdm_IPv6Target(), sizeof(struct in6_addr));
-            memcpy(&(target_ip->sin6_addr), gen_ip6_target(i % my_conf.num_hosts ), sizeof(struct in6_addr));
+            memcpy(&(target_ip->sin6_addr), get_ip6_target(i % my_conf.num_hosts), sizeof(struct in6_addr));
             uint64_t start = getns(); 
             r_addr[i] = allocate_rmem(target_ip);
             latency[i] = getns() - start; 
@@ -99,40 +99,26 @@ uint64_t *alloc_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64
     return latency;
 }
 
-uint64_t *write_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_t iterations, const char *text) {
+uint64_t *write_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_t iterations, uint8_t *payload) {
     uint64_t *latency = calloc(iterations, sizeof(uint64_t));
     if (BATCHED_MODE) {
-        char *payload = malloc(BLOCK_SIZE * iterations);
-        printf("Creating data...\n");
-        for (uint64_t i = 0; i < iterations; i++) {
-            unsigned char *id_block = gen_rdm_bytestream(BLOCK_SIZE, i);
-            print_debug("Creating payload");
-            print_debug("Iteration %lu Data:\t", i);
-            //print_n_bytes(id_block, 50);
-            print_debug("Writing %lu to offset %lu\n", i, i *BLOCK_SIZE);
-            memcpy(&payload[BLOCK_SIZE *i], id_block, BLOCK_SIZE);
-            free(id_block);
-        }
         printf("Transmitting...\n");
         uint64_t wStart = getns();
-        write_bulk_rmem(target_ip, r_addr, iterations, payload, BLOCK_SIZE * iterations);
+        write_bulk_rmem(target_ip, r_addr, iterations, (char*) payload, BLOCK_SIZE * iterations);
         latency[0] = getns() - wStart;
-        free(payload);
     } else {
         for (uint64_t i = 0; i < iterations; i++) {
             ip6_memaddr remote_mem = r_addr[i];
             print_debug("Creating payload");
-            char payload[BLOCK_SIZE];
-            snprintf(payload, 50, "%s %lu", text, i);
             uint64_t wStart = getns();
-            write_rmem(target_ip, &remote_mem, payload, BLOCK_SIZE);
+            write_rmem(target_ip, &remote_mem, (char *) &payload[i* BLOCK_SIZE], BLOCK_SIZE);
             latency[i] = getns() - wStart;
         }
     }
     return latency;
 }
 
-uint64_t *read_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_t iterations, const char *text) {
+uint64_t *read_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_t iterations, uint8_t *expected) {
     uint64_t *latency = calloc(iterations, sizeof(uint64_t));
     if (BATCHED_MODE) {
         char *test = malloc(BLOCK_SIZE * iterations);
@@ -142,10 +128,7 @@ uint64_t *read_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_
         latency[0] = getns() - rStart;
         printf("Comparing...\n");
         for (uint64_t i = 0; i < iterations; i++) {
-            unsigned char *expected = gen_rdm_bytestream(BLOCK_SIZE, i);
-            print_debug("Iteration %lu Expected:\t", i);
-            //print_n_bytes(expected, 50);
-            if (memcmp(&test[i*BLOCK_SIZE], expected, BLOCK_SIZE) < 0) {
+            if (memcmp(&test[i*BLOCK_SIZE], &expected[i*BLOCK_SIZE], BLOCK_SIZE) != 0) {
                 printf(KRED"ERROR: WRONG RESULT AT ITERATION %lu\n"RESET, i);
                 printf("Expected\t");
                 print_n_bytes(expected, BLOCK_SIZE);
@@ -153,9 +136,8 @@ uint64_t *read_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_
                 print_n_bytes(test, BLOCK_SIZE);
                 exit(1);
             }
-            free(expected);
         }
-        printf("Everything okay!\n");
+        printf(KGRN"Everything okay!\n"RESET);
         free(test);
     } else {
         char test[BLOCK_SIZE];
@@ -164,10 +146,8 @@ uint64_t *read_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_
             uint64_t rStart = getns();
             read_rmem(target_ip, &remote_mem, test, BLOCK_SIZE);
             latency[i] = getns() - rStart;
-            char expected[BLOCK_SIZE];
-            snprintf(expected, 50, "%s %lu", text, i);
             print_debug("Results of memory store: %.50s", test);
-            if (strncmp(test, expected, 50) < 0) {
+            if (memcmp(test, (char *) &expected[i*BLOCK_SIZE], BLOCK_SIZE) != 0) {
                 perror(KRED"ERROR: WRONG RESULT"RESET);
                 printf("Expected %s Got %s\n", expected, test );
                 exit(1);
@@ -198,6 +178,68 @@ uint64_t *free_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_
     return latency;
 }
 
+void launch_tests(struct sockaddr_in6 *target_ip, struct config my_conf, uint64_t num_iterations, uint16_t thread_id){
+    printf("Thread %d Allocating pointers\n", thread_id);
+    ip6_memaddr *r_addr = malloc(sizeof(ip6_memaddr) * num_iterations);
+    if(!r_addr) 
+        perror("Allocation too large");
+    printf("Generating random test data of size %lu byte...\n", BLOCK_SIZE * num_iterations);
+    uint8_t *payload1 = gen_rdm_bytestream(BLOCK_SIZE * num_iterations, 1);
+    // ALLOC TEST
+    printf("Thread %d Starting allocation test...\n", thread_id);
+    uint64_t *alloc_latency = alloc_test(target_ip, r_addr, num_iterations, my_conf);
+    // WRITE TEST
+    printf("Thread %d Starting write test...\n", thread_id);
+    uint64_t *write_latency1 = write_test(target_ip, r_addr, num_iterations, payload1);
+    // READ TEST
+    printf("Thread %d Starting read test...\n", thread_id);
+    uint64_t *read_latency1 = read_test(target_ip, r_addr, num_iterations, payload1);
+    free(payload1);
+    printf("Generating new random test data of size %lu byte...\n", BLOCK_SIZE * num_iterations);
+    uint8_t *payload2 = gen_rdm_bytestream(BLOCK_SIZE * num_iterations, 2);
+    // WRITE TEST 2
+    printf("Thread %d Starting second write test...\n", thread_id);
+    uint64_t *write_latency2 = write_test(target_ip, r_addr, num_iterations, payload2);
+    // READ TEST 2
+    printf("Thread %d Starting second read test...\n", thread_id);
+    uint64_t *read_latency2 = read_test(target_ip, r_addr, num_iterations, payload2);
+    // FREE TEST
+    printf("Thread %d Starting free test...\n", thread_id);
+    uint64_t *free_latency = free_test(target_ip, r_addr, num_iterations, my_conf);
+    free(payload2);
+
+    int samples;
+    if (BATCHED_MODE)
+        samples = 1;
+    else
+        samples = NUM_ITERS;
+    int MAX_FNAME = 256;
+    char fname[MAX_FNAME];
+    printSendLat();
+    snprintf(fname, MAX_FNAME, "alloc_t%d", thread_id);
+    save_time(fname, alloc_latency, samples);
+    memset(fname, 0, MAX_FNAME);
+    snprintf(fname, MAX_FNAME, "read1_t%d", thread_id);
+    save_time(fname, read_latency1, samples);
+    memset(fname, 0, MAX_FNAME);
+    snprintf(fname, MAX_FNAME, "write1_t%d", thread_id);
+    save_time(fname, write_latency1, samples);
+    snprintf(fname, MAX_FNAME, "read2_t%d", thread_id);
+    save_time(fname, read_latency1, samples);
+    memset(fname, 0, MAX_FNAME);
+    snprintf(fname, MAX_FNAME, "write2_t%d", thread_id);
+    save_time(fname, write_latency1, samples);
+    snprintf(fname, MAX_FNAME, "free_t%d", thread_id);
+    save_time(fname, free_latency, samples);
+    memset(fname, 0, MAX_FNAME);
+    free(alloc_latency);
+    free(write_latency1);
+    free(read_latency1);
+    free(write_latency2);
+    free(read_latency2);
+    free(free_latency);
+}
+
 typedef struct _thread_data_t {
     int tid;
     struct sockaddr_in6 *target_ip;
@@ -217,52 +259,11 @@ void *testing_loop(void *arg) {
     // CPU_SET(assigned, &cpuset);
     // pthread_setaffinity_np(my_thread, sizeof(cpu_set_t), &cpuset);
     // printf("Assigned Thread %d to core %d\n", data->tid, assigned );
-
     // Initialize BlueBridge
     struct config my_conf = get_bb_config();
     struct sockaddr_in6 *target_ip = init_net_thread(data->tid, &my_conf, 0);
-    ip6_memaddr *r_addr = malloc(sizeof(ip6_memaddr) * data->length);
-    // if(!r_addr) 
-    //     perror("Allocation too large"); 
-    // ALLOC TEST
-    printf("Thread %d Starting allocation test...\n", data->tid);
-    uint64_t *alloc_latency = alloc_test(target_ip, r_addr, data->length, my_conf);
-    // WRITE TEST
-    printf("Thread %d Starting write test...\n", data->tid);
-    uint64_t *write_latency1 = write_test(target_ip, r_addr, data->length, "Hello World! How are you?");
-    // READ TEST
-    printf("Thread %d Starting read test...\n", data->tid);
-    uint64_t *read_latency1 = read_test(target_ip, r_addr, data->length, "Hello World! How are you?");
-    // WRITE TEST 2
-    printf("Thread %d Starting second write test...\n", data->tid);
-    uint64_t *write_latency2 = write_test(target_ip, r_addr, data->length, "Bye WORLD! I am done?");
-    // READ TEST 2
-    printf("Thread %d Starting second read test...\n", data->tid);
-    uint64_t *read_latency2 = read_test(target_ip, r_addr, data->length, "Bye WORLD! I am done?");
-    // FREE TEST
-    printf("Thread %d Starting free test...\n", data->tid);
-    uint64_t *free_latency = free_test(target_ip, r_addr, data->length, my_conf);
+    launch_tests(target_ip, my_conf, data->tid, data->length);
 
-    printSendLat();
-    int MAX_FNAME = 256;
-    char fname[MAX_FNAME];
-    snprintf(fname, MAX_FNAME, "alloc_t%d", data->tid);
-    save_time(fname, alloc_latency, data->length);
-    memset(fname, 0, MAX_FNAME);
-    snprintf(fname, MAX_FNAME, "read_t%d", data->tid);
-    save_time(fname, read_latency1, data->length);
-    memset(fname, 0, MAX_FNAME);
-    snprintf(fname, MAX_FNAME, "write_t%d", data->tid);
-    save_time(fname, write_latency1, data->length);
-    snprintf(fname, MAX_FNAME, "free_t%d", data->tid);
-    save_time(fname, free_latency, data->length);
-    memset(fname, 0, MAX_FNAME);
-    free(alloc_latency);
-    free(write_latency1);
-    free(read_latency1);
-    free(write_latency2);
-    free(read_latency2);
-    free(free_latency);
     close_sockets();
     return NULL;
 }
@@ -305,52 +306,11 @@ void basic_op_threads(struct sockaddr_in6 *target_ip) {
     }
 }
 
-void basicOperations(struct sockaddr_in6 *target_ip) {
+void basic_ops(struct sockaddr_in6 *target_ip) {
 
     // Initialize BlueBridge
     struct config my_conf = get_bb_config();
-
-    // Allocate the address space we will use
-    ip6_memaddr *r_addr = malloc(sizeof(ip6_memaddr) * NUM_ITERS);
-    if(!r_addr)
-        perror("Allocation too large");
-
-    //ip6_memaddr_block temp1 = allocate_uniform_rmem(target_ip, NUM_ITERS);
-    // ALLOC TEST
-    printf("Starting allocation test...\n");
-    uint64_t *alloc_latency = alloc_test(target_ip, r_addr, NUM_ITERS, my_conf);
-    // WRITE TEST
-    printf("Starting write test...\n");
-    uint64_t *write_latency1 = write_test(target_ip, r_addr, NUM_ITERS, "Hello World! How are you?");
-    // READ TEST
-    printf("Starting read test...\n");
-    uint64_t *read_latency1 = read_test(target_ip, r_addr, NUM_ITERS, "Hello World! How are you?");
-    // WRITE TEST 2
-    printf("Starting second write test...\n");
-    uint64_t *write_latency2 = write_test(target_ip, r_addr, NUM_ITERS, "Bye WORLD! I am done?");
-    // READ TEST 2
-    printf("Starting second read test...\n");
-    uint64_t * read_latency2 = read_test(target_ip, r_addr, NUM_ITERS, "Bye WORLD! I am done?");
-    //FREE TEST BULK
-    printf("Freeing...\n");
-    uint64_t * free_latency = free_test(target_ip, r_addr, NUM_ITERS, my_conf);
-    int samples;
-    if (BATCHED_MODE)
-        samples = 1;
-    else
-        samples = NUM_ITERS;
-    save_time("alloc_t0", alloc_latency, samples);
-    save_time("write_t0", write_latency1, samples);
-    save_time("read_t0", read_latency1, samples);
-    save_time("write2_t0", write_latency2, samples);
-    save_time("read2_t0", read_latency2, samples);
-    save_time("free_t0", free_latency, samples);
-    free(alloc_latency);
-    free(write_latency1);
-    free(read_latency1);
-    free(write_latency2);
-    free(read_latency2);
-    free(free_latency);
+    launch_tests(target_ip, my_conf, NUM_ITERS, 0);
 }
 
 
@@ -395,7 +355,7 @@ int main(int argc, char *argv[]) {
     if (NUM_THREADS > 1)
         basic_op_threads(temp);
     else
-        basicOperations(temp);
+        basic_ops(temp);
     double elapsed = getns() - start;
     printf(KGRN "Finished\n"RESET);
     printf("Total Time: "KRED"%.2f"RESET" us "KRED"%.2f"RESET" ms "KRED"%.2f"RESET" seconds\n",

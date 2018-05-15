@@ -30,7 +30,7 @@
 
 #include "../lib/buse/buse.h"
 
-static int xmpl_debug = 1;
+static int xmpl_debug = 0;
 
 struct rmem {
     ip6_memaddr *memList;
@@ -40,7 +40,7 @@ struct rmem {
 } r;
 
 static int xmp_read(void *buf, u_int32_t len, u_int64_t offset, void *userdata) {
-    //if (*(int *)userdata) fprintf(stderr, "R - %lu, %u\n", offset, len);
+    if (*(int *)userdata) fprintf(stderr, "R - %lu, %u\n", offset, len);
     (void) userdata;
     u_int64_t page_offset = offset/BLOCK_SIZE;
     read_bulk_rmem(r.target_ip, &r.memList[page_offset], len/BLOCK_SIZE, (char *) buf, len);
@@ -48,7 +48,7 @@ static int xmp_read(void *buf, u_int32_t len, u_int64_t offset, void *userdata) 
 }
 
 static int xmp_write(const void *buf, u_int32_t len, u_int64_t offset, void *userdata) {
-    //if (*(int *)userdata) fprintf(stderr, "W - %lu, %u\n", offset, len);
+    if (*(int *)userdata) fprintf(stderr, "W - %lu, %u\n", offset, len);
     (void) userdata;
     u_int64_t page_offset = offset/BLOCK_SIZE;
     write_bulk_rmem(r.target_ip, &r.memList[page_offset], len/BLOCK_SIZE, (char *) buf, len);
@@ -70,6 +70,8 @@ static int xmp_flush(void *userdata){
 static int xmp_trim(u_int64_t from, u_int32_t len, void *userdata){
     (void)(userdata);
     fprintf(stderr, "T - %lu, %u\n", from, len);
+    u_int64_t page_offset = from/BLOCK_SIZE;
+    //trim_rmem(r.target_ip, &r.memList[page_offset], len);
     return 0;
 }
 
@@ -80,7 +82,7 @@ static struct buse_operations aop = {
       .disc = xmp_disc,
       .flush = xmp_flush,
       .trim = xmp_trim,
-      .size = (u_int64_t) 42 * 1024 * 1024 * 1024
+      .size = (u_int64_t) 4 * 1024 * 1024 * 1024
       //.size_blocks =  (u_int64_t) 4 * 1024 * 1024 * 1024 / BLOCK_SIZE,
       //.size_blocks =  (u_int64_t) 23 * 1024 * 1024 * 1024 / BLOCK_SIZE,
       //.blksize = BLOCK_SIZE
@@ -100,8 +102,10 @@ int main(int argc, char *argv[]) {
     //struct config myConf = set_bb_config("tmp/config/distMem.cnf", 0);
     r.target_ip = init_sockets(&myConf, 0);
     set_host_list(myConf.hosts, myConf.num_hosts);
-    r.nblocks = aop.size_blocks;
-    printf("Allocating %lu MB of memory, %lu blocks\n", (aop.size_blocks * aop.blksize / (1024*1024)), r.nblocks);
+    //r.nblocks = aop.size_blocks;
+    r.nblocks = aop.size/BLOCK_SIZE;
+    // printf("Allocating %lu MB of memory, %lu blocks\n", (aop.size_blocks * aop.blksize / (1024*1024)), r.nblocks);
+    printf("Allocating %lu MB of memory, %lu blocks\n", (aop.size / (1024*1024)), r.nblocks);
     r.memList = malloc(sizeof(ip6_memaddr) * r.nblocks);
     uint64_t split = r.nblocks/myConf.num_hosts;
     uint64_t length;
@@ -111,7 +115,7 @@ int main(int argc, char *argv[]) {
             length = r.nblocks - offset;
         else
             length = split;
-        struct in6_addr *ipv6Pointer = gen_ip6_target(i);
+        struct in6_addr *ipv6Pointer = get_ip6_target(i);
         memcpy(&(r.target_ip->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
         ip6_memaddr *temp = allocate_bulk_rmem(r.target_ip, length);
         memcpy(&r.memList[offset],temp,length *sizeof(ip6_memaddr) );

@@ -56,7 +56,7 @@ int read_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr) {
     //       We only care about the first 16 bits
     uint16_t length = (uint16_t) r_addr->args;
     // Send the data directly from the converted memory pointer
-    send_udp_raw((void *) *&r_addr->paddr, length, (ip6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port);
+    send_udp_raw((void *) r_addr->paddr, length, (ip6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port);
     return EXIT_SUCCESS;
 }
 
@@ -67,16 +67,16 @@ int read_mem_ptr(char *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *
     returnID->cmd = r_addr->cmd;
     uint16_t length = (uint16_t) r_addr->args;
     memcpy(&returnID->paddr, rcv_buffer, POINTER_SIZE);
-    send_udp_raw((void *) *&r_addr->paddr, length, (ip6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port);
+    send_udp_raw((void *) r_addr->paddr, length, (ip6_memaddr *) &target_ip->sin6_addr, target_ip->sin6_port);
     // TODO change to be meaningful, i.e., error message
     return EXIT_SUCCESS;
 }
 
 int write_mem(char *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint16_t size) {
 #ifdef SOCK_RAW
-    memcpy((void *) *(&r_addr->paddr), rcv_buffer, size); 
+    memcpy((void *) r_addr->paddr, rcv_buffer, size); 
 #else
-    rte_memcpy((void *) *(&r_addr->paddr), rcv_buffer, size);
+    rte_memcpy((void *) r_addr->paddr, rcv_buffer, size);
 #endif
     //__sync_synchronize();
     ip6_memaddr *returnID = (ip6_memaddr *) (&target_ip->sin6_addr);
@@ -90,7 +90,7 @@ int write_mem(char *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_a
 int write_mem_bulk(char *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint16_t size) {
     // Copy the first POINTER_SIZE bytes of receive buffer into the target
 #ifdef SOCK_RAW
-    memcpy((void *) *(&r_addr->paddr), rcv_buffer, size); 
+    memcpy((void *) r_addr->paddr, rcv_buffer, size); 
 #else
     rte_memcpy((void *) *(&r_addr->paddr), rcv_buffer, size);
 #endif
@@ -105,7 +105,16 @@ int write_mem_bulk(char *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr
 }
 
 int free_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr) {
-    free((void *) *&r_addr->paddr);
+    free((void *) r_addr->paddr);
+    ip6_memaddr *returnID = (ip6_memaddr *)&target_ip->sin6_addr;
+    returnID->cmd = r_addr->cmd;
+    returnID->paddr = r_addr->paddr;
+    send_udp_raw(NULL, 0, (ip6_memaddr *)&target_ip->sin6_addr, target_ip->sin6_port);
+    return EXIT_SUCCESS;
+}
+
+int trim_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_t size) {
+    memset((void *) r_addr->paddr, 0, size);
     ip6_memaddr *returnID = (ip6_memaddr *)&target_ip->sin6_addr;
     returnID->cmd = r_addr->cmd;
     returnID->paddr = r_addr->paddr;
@@ -115,10 +124,7 @@ int free_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr) {
 
 void process_request(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr, char *rcv_buffer, uint16_t size) {
     // Switch on the client command
-    if (remote_addr->cmd == ALLOC_CMD) {
-        print_debug("******ALLOCATE******");
-        allocate_mem(target_ip);
-    } else if (remote_addr->cmd == WRITE_CMD) {
+    if (remote_addr->cmd == WRITE_CMD) {
         print_debug("******WRITE DATA: ");
         if (DEBUG) print_n_bytes((char *) remote_addr, IPV6_SIZE);
         write_mem(rcv_buffer, target_ip, remote_addr, size);
@@ -138,11 +144,19 @@ void process_request(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr, c
         print_debug("******FREE DATA: ");
         if (DEBUG) print_n_bytes((char *) remote_addr, IPV6_SIZE);
         free_mem(target_ip, remote_addr);
+    } else if (remote_addr->cmd == ALLOC_CMD) {
+        print_debug("******ALLOCATE******");
+        allocate_mem(target_ip);
     } else if (remote_addr->cmd == ALLOC_BULK_CMD) {
         print_debug("******ALLOCATE BULK DATA: ");
         if (DEBUG) print_n_bytes((char *) remote_addr,IPV6_SIZE);
         uint64_t *alloc_size = (uint64_t *) rcv_buffer;
         allocate_mem_bulk(target_ip, *alloc_size);
+    } else if (remote_addr->cmd == TRIM_CMD) {
+        print_debug("******TRIM DATA: ");
+        if (DEBUG) print_n_bytes((char *) remote_addr, IPV6_SIZE);
+        uint64_t *trim_size = (uint64_t *) rcv_buffer;
+        trim_mem(target_ip, remote_addr, *trim_size);
     } else {
         printf("Cannot match command %d!\n",remote_addr->cmd);
     }

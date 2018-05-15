@@ -20,7 +20,7 @@ extern ssize_t pwrite (int __fd, const void *__buf, size_t __nbytes, __off_t __o
 
 
 
-static __thread struct sockaddr_in6 *targetIP;
+static __thread struct sockaddr_in6 *target_ip;
 
 struct config myConf;
 void configure_rmem(char *filename) {
@@ -29,21 +29,14 @@ void configure_rmem(char *filename) {
 }
 
 void rmem_init_sockets() {
-    targetIP = init_sockets(&myConf, 0);
+    target_ip = init_sockets(&myConf, 0);
 }
 
 void rmem_init_thread_sockets(int t_id) {
-    targetIP = init_net_thread(t_id, &myConf, 0);
+    target_ip = init_net_thread(t_id, &myConf, 0);
 }
 
 void fill_rmem(struct rmem *r) {
-/*    ip6_memaddr *memList = malloc(sizeof(struct in6_addr) * r->nblocks);
-    for (int i = 0; i<r->nblocks; i++){
-        // Generate a random IPv6 address out of a set of available hosts
-        struct in6_addr *ipv6Pointer = gen_rdm_IPv6Target();
-        memcpy(&(r->targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-        memList[i] = allocate_rmem(r->targetIP);
-    }*/
     ip6_memaddr *memList = malloc(sizeof(ip6_memaddr) * r->nblocks);
     uint64_t split = r->nblocks/myConf.num_hosts;
     uint64_t length;
@@ -53,9 +46,9 @@ void fill_rmem(struct rmem *r) {
             length = r->nblocks - offset;
         else 
             length = split;
-        struct in6_addr *ipv6Pointer = gen_ip6_target(i);
-        memcpy(&(targetIP->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
-        ip6_memaddr *temp = allocate_bulk_rmem(targetIP, length);
+        struct in6_addr *ipv6Pointer = get_ip6_target(i);
+        memcpy(&(target_ip->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+        ip6_memaddr *temp = allocate_bulk_rmem(target_ip, length);
         memcpy(&memList[offset],temp,length *sizeof(ip6_memaddr) );
         free(temp);
     }
@@ -80,7 +73,7 @@ void rmem_write(struct rmem *r, uint64_t block, char *data ) {
         abort();
     }
     // Get pointer to page data in (simulated) physical memory
-    write_rmem(targetIP, &r->memList[block], data, BLOCK_SIZE);
+    write_rmem(target_ip, &r->memList[block], data, BLOCK_SIZE);
 }
 
 void rmem_read( struct rmem *r, uint64_t block, char *data ) {
@@ -90,7 +83,7 @@ void rmem_read( struct rmem *r, uint64_t block, char *data ) {
     }
     // Get pointer to page data in (simulated) physical memory
 
-     read_rmem(targetIP, &r->memList[block], data, r->block_size);
+     read_rmem(target_ip, &r->memList[block], data, r->block_size);
 }
 
 uint64_t rmem_blocks(struct rmem *r) {
@@ -99,14 +92,14 @@ uint64_t rmem_blocks(struct rmem *r) {
 
 void rmem_deallocate(struct rmem *r) {
 /*    for (int i = 0; i<r->nblocks; i++){
-        free_rmem(r->targetIP, &r->memList[i]);
+        free_rmem(r->target_ip, &r->memList[i]);
     }*/
-    //free_rmem(r->targetIP, &r->memList[0]);
-    //targetIP = init_net_thread(0, &myConf, 0);
+    //free_rmem(r->target_ip, &r->memList[0]);
+    //target_ip = init_net_thread(0, &myConf, 0);
     uint64_t split = r->nblocks/myConf.num_hosts;
     for (int i = 0; i < myConf.num_hosts; i++) {
         uint64_t offset = split * i;
-        free_rmem(targetIP, &r->memList[offset]);
+        free_rmem(target_ip, &r->memList[offset]);
     }
     //close_sockets();
     free(r);

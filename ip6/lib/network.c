@@ -75,24 +75,6 @@ int rcv_udp6_raw(char *rx_buf, struct sockaddr_in6 *target_ip, ip6_memaddr *remo
 #ifdef DEFAULT
     numbytes = simple_epoll_rcv(rx_buf, target_ip, remote_addr);
 #else
-    numbytes = dpdk_server_rcv(rx_buf, msg_size, target_ip, remote_addr);
-#endif
-    rcv_lat += getns() - start;
-    rcv_calls++;
-    return numbytes;
-}
-
-/*
- * Receives message on socket
- * RAW version, we craft our own packet.
- */
-// TODO: Error handling
-int rcv_udp6_raw_id(char *rx_buf, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
-    uint64_t start = getns();
-    int numbytes;
-#ifdef DEFAULT
-    numbytes = simple_epoll_rcv(rx_buf, target_ip, remote_addr);
-#else
     numbytes = dpdk_client_rcv(rx_buf, msg_size, target_ip, remote_addr);
 #endif
     rcv_lat += getns() - start;
@@ -118,10 +100,8 @@ void rcv_udp6_raw_bulk(int num_packets) {
 
 struct sockaddr_in6 *init_sockets(struct config *bb_conf, int server) {
 #ifdef DEFAULT
-    if (server)
-        init_rx_socket_server(bb_conf);
-    else
-        init_simple_rx_socket(bb_conf);
+    (void) server;
+    init_simple_rx_socket(bb_conf);
     init_tx_socket(bb_conf);
 #else
     if (server)
@@ -137,7 +117,8 @@ struct sockaddr_in6 *init_sockets(struct config *bb_conf, int server) {
 void launch_server_loop(struct config *bb_conf) {
     (void) bb_conf; // Placeholder
 #ifdef DEFAULT
-    init_sockets(bb_conf, 1);
+    init_tx_socket(bb_conf);
+    init_rx_socket_server(bb_conf);
     enter_raw_server_loop(bb_conf->src_port);
 #else
     init_server_dpdk(bb_conf);
