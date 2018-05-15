@@ -30,7 +30,7 @@ Write exactly BLOCK_SIZE bytes to a given block on the virtual disk.
 and "data" is a pointer to the data to write.
 */
 
-void rmem_write( struct rmem *r, uint64_t block, char *data );
+void rmem_write(struct rmem *r, uint64_t block, uint8_t *data);
 
 /*
 Read exactly BLOCK_SIZE bytes from a given block on the virtual disk.
@@ -38,7 +38,7 @@ Read exactly BLOCK_SIZE bytes from a given block on the virtual disk.
 and "data" is a pointer to where the data will be placed.
 */
 
-void rmem_read( struct rmem *r, uint64_t block, char *data );
+void rmem_read(struct rmem *r, uint64_t block, uint8_t *data);
 
 /*
 Return the number of blocks in the virtual disk.

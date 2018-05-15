@@ -26,7 +26,7 @@ int allocate_mem(struct sockaddr_in6 *target_ip) {
 }
 
 // TODO Error handling in case of allocation failure
-int allocate_mem_bulk( struct sockaddr_in6 *target_ip, uint64_t size) {
+int allocate_mem_bulk(struct sockaddr_in6 *target_ip, uint64_t size) {
     // If we get a zero value, just allocate one pointer
     if (!size)
         size = 1;
@@ -61,7 +61,7 @@ int read_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr) {
 }
 
 // TODO error handling, avoid segmentation faults
-int read_mem_ptr(char *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr) {
+int read_mem_ptr(uint8_t *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr) {
     // Set the source address of the client packet as our destination ID
     ip6_memaddr *returnID = (ip6_memaddr *) (&target_ip->sin6_addr);
     returnID->cmd = r_addr->cmd;
@@ -72,7 +72,7 @@ int read_mem_ptr(char *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *
     return EXIT_SUCCESS;
 }
 
-int write_mem(char *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint16_t size) {
+int write_mem(uint8_t *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint16_t size) {
 #ifdef SOCK_RAW
     memcpy((void *) r_addr->paddr, rcv_buffer, size); 
 #else
@@ -87,7 +87,7 @@ int write_mem(char *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_a
     return EXIT_SUCCESS;
 }
 
-int write_mem_bulk(char *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint16_t size) {
+int write_mem_bulk(uint8_t *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint16_t size) {
     // Copy the first POINTER_SIZE bytes of receive buffer into the target
 #ifdef SOCK_RAW
     memcpy((void *) r_addr->paddr, rcv_buffer, size); 
@@ -98,7 +98,7 @@ int write_mem_bulk(char *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr
         ip6_memaddr *returnID = (ip6_memaddr *) (&target_ip->sin6_addr);
         returnID->cmd = r_addr->cmd;
         returnID->paddr = r_addr->paddr;
-        send_udp_raw("", 0, (ip6_memaddr *)&target_ip->sin6_addr, target_ip->sin6_port);
+        send_udp_raw(NULL, 0, (ip6_memaddr *)&target_ip->sin6_addr, target_ip->sin6_port);
     }
     // TODO change to be meaningful, i.e., error message
     return EXIT_SUCCESS;
@@ -122,7 +122,7 @@ int trim_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_t size)
     return EXIT_SUCCESS;
 }
 
-void process_request(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr, char *rcv_buffer, uint16_t size) {
+void process_request(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr, uint8_t *rcv_buffer, uint16_t size) {
     // Switch on the client command
     if (remote_addr->cmd == WRITE_CMD) {
         print_debug("******WRITE DATA: ");

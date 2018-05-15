@@ -45,7 +45,7 @@ struct rrmem *rrmem;
 
 static void internal_fault_handler(int signum, siginfo_t *info, void *context) {
     (void) signum;
-    char *addr = info->si_addr;
+    uint8_t *addr = info->si_addr;
     (void) context;
     struct page_table *pt = the_page_table;
     if(pt) {
@@ -60,7 +60,7 @@ static void internal_fault_handler(int signum, siginfo_t *info, void *context) {
     abort();
 }
 
-void readData(uint64_t page, char *data) {
+void readData(uint64_t page, uint8_t *data) {
     if (pagingSystem == MEM_PAGING)
         mem_read(mem, page, data);
     else if (pagingSystem == RMEM_PAGING)
@@ -72,7 +72,7 @@ void readData(uint64_t page, char *data) {
     pageReads++;
 }
 
-void writeData(uint64_t page, char *data) {
+void writeData(uint64_t page, uint8_t *data) {
     if (pagingSystem == MEM_PAGING)
         mem_write(mem, page, data);
     else if (pagingSystem == RMEM_PAGING)
@@ -263,7 +263,7 @@ void RAND_page_fault_handler( struct page_table *pt, uint64_t page ) {
         page_table_set_entry(pt, page, frame, PROT_READ|PROT_WRITE);
 }
 
-void FFIFO_page_fault_handler( struct page_table *pt, uint64_t page ) {
+void FFIFO_page_fault_handler(struct page_table *pt, uint64_t page) {
     uint64_t frame;
     int bits;
 
@@ -648,11 +648,11 @@ uint64_t page_table_get_npages(struct page_table *pt) {
     return pt->npages;
 }
 
-char * page_table_get_virtmem(struct page_table *pt) {
+uint8_t * page_table_get_virtmem(struct page_table *pt) {
     return pt->virtmem;
 }
 
-char *page_table_get_physmem(struct page_table *pt) {
+uint8_t *page_table_get_physmem(struct page_table *pt) {
     return pt->physmem;
 }
 

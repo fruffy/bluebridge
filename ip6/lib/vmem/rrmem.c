@@ -74,9 +74,9 @@ struct rrmem *rrmem_allocate(int nblocks) {
     return r;
 }
 
-char wbufs [MAX_HOSTS][BLOCK_SIZE];
+uint8_t wbufs [MAX_HOSTS][BLOCK_SIZE];
 ip6_memaddr *wremoteAddrs[MAX_HOSTS];
-void rrmem_write(struct rrmem *r, int block, char *data ) {
+void rrmem_write(struct rrmem *r, int block, uint8_t *data) {
     for (int i = 0; i<MAX_HOSTS;i++){
         memset(wbufs[i],0,BLOCK_SIZE);
     }
@@ -127,7 +127,7 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
             base = 0;
             //ip6_memaddr **remoteAddrs = malloc(sizeof(ip6_memaddr*) * get_num_hosts());
             //calculate parity
-            parity45(data,r->block_size,get_num_hosts()-1,(char *)&wbufs[get_num_hosts()-1]);
+            parity45(data,r->block_size,get_num_hosts()-1,(uint8_t *)&wbufs[get_num_hosts()-1]);
             for (int i = 0; i<get_num_hosts()-1; i++) {
                 if (r->block_size % (get_num_hosts() -1) <= i) {
                     alloc = r->block_size / (get_num_hosts() -1);
@@ -154,7 +154,7 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
             //ip6_memaddr **remoteAddrs = malloc(sizeof(ip6_memaddr*) * get_num_hosts());
             //calculate parity
              
-            parity45(data,r->block_size,get_num_hosts()-1,(char *)&wbufs[block % get_num_hosts()]);
+            parity45(data,r->block_size,get_num_hosts()-1,(uint8_t *)&wbufs[block % get_num_hosts()]);
             for (int i = 0; i<get_num_hosts(); i++) {
                 //printf("looping %d\n",i);
                 if (i == block % get_num_hosts()) {
@@ -192,9 +192,9 @@ void rrmem_write(struct rrmem *r, int block, char *data ) {
     }
 }
 
-char rbufs [MAX_HOSTS][BLOCK_SIZE];
+uint8_t rbufs [MAX_HOSTS][BLOCK_SIZE];
 ip6_memaddr *rremoteAddrs[MAX_HOSTS];
-void rrmem_read( struct rrmem *r, int block, char *data ) {
+void rrmem_read( struct rrmem *r, int block, uint8_t *data ) {
     for (int i = 0; i<MAX_HOSTS;i++){
         memset(rbufs[i],0,BLOCK_SIZE);
     }
@@ -341,7 +341,7 @@ void rrmem_read( struct rrmem *r, int block, char *data ) {
 
 
 //stripes are assumed to be ordered
-void repairStripeFromParity45(char (*repair)[BLOCK_SIZE], char (*stripes)[MAX_HOSTS][BLOCK_SIZE], char (*parity)[BLOCK_SIZE], int missing, int numStripes, int size) {
+void repairStripeFromParity45(uint8_t (*repair)[BLOCK_SIZE], uint8_t (*stripes)[MAX_HOSTS][BLOCK_SIZE], uint8_t (*parity)[BLOCK_SIZE], int missing, int numStripes, int size) {
     int alloc = size / numStripes;
     for (int i=0; i< alloc; i++) {
         char repairbyte = 0;
@@ -370,7 +370,7 @@ void repairStripeFromParity45(char (*repair)[BLOCK_SIZE], char (*stripes)[MAX_HO
 }
 
 
-void parity45(char *data, int size, int stripes, char *parity) {
+void parity45(uint8_t *data, int size, int stripes, uint8_t *parity) {
     //clock_t start = clock(), diff;
     //Malloc the correct ammount of space for the parity
     int alloc = size / stripes;
@@ -419,7 +419,7 @@ void parity45(char *data, int size, int stripes, char *parity) {
 }
 
 //Here stripes are assumed to be in order from biggest to smallest
-int checkParity45(char (*stripes)[MAX_HOSTS][BLOCK_SIZE], int numStripes, char (*parity)[BLOCK_SIZE], int size) {
+int checkParity45(uint8_t (*stripes)[MAX_HOSTS][BLOCK_SIZE], int numStripes, uint8_t (*parity)[BLOCK_SIZE], int size) {
     int alloc = size / numStripes;
     for (int i=0; i< alloc; i++) {
         char paritybyte = 0;

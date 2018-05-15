@@ -22,7 +22,7 @@ Write exactly BLOCK_SIZE bytes to a given block on the virtual disk.
 and "data" is a pointer to the data to write.
 */
 
-void disk_write( struct disk *d, uint64_t block, const char *data );
+void disk_write( struct disk *d, uint64_t block, const uint8_t *data );
 
 /*
 Read exactly BLOCK_SIZE bytes from a given block on the virtual disk.
@@ -30,7 +30,7 @@ Read exactly BLOCK_SIZE bytes from a given block on the virtual disk.
 and "data" is a pointer to where the data will be placed.
 */
 
-void disk_read( struct disk *d, uint64_t block, char *data );
+void disk_read( struct disk *d, uint64_t block, uint8_t *data );
 
 /*
 Return the number of blocks in the virtual disk.

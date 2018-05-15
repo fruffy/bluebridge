@@ -46,7 +46,7 @@ struct disk *disk_open( const char *diskname, uint64_t nblocks ) {
 	return d;
 }
 
-void disk_write( struct disk *d, uint64_t block, const char *data ) {
+void disk_write( struct disk *d, uint64_t block, const uint8_t *data ) {
 	if(block>=d->nblocks) {
 		fprintf(stderr,"disk_write: invalid block #%lu\n",block);
 		abort();
@@ -59,7 +59,7 @@ void disk_write( struct disk *d, uint64_t block, const char *data ) {
 	}
 }
 
-void disk_read( struct disk *d, uint64_t block, char *data ) {
+void disk_read( struct disk *d, uint64_t block, uint8_t *data ) {
 	if(block>=d->nblocks) {
 		fprintf(stderr,"disk_read: invalid block #%lu\n",block);
 		abort();

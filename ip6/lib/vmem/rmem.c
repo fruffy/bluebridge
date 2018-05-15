@@ -67,7 +67,7 @@ struct rmem *rmem_allocate(int nblocks) {
     return r;
 }
 
-void rmem_write(struct rmem *r, uint64_t block, char *data ) {
+void rmem_write(struct rmem *r, uint64_t block, uint8_t *data ) {
     if(block>=r->nblocks) {
         fprintf(stderr,"disk_write: invalid block #%lu\n",block);
         abort();
@@ -76,7 +76,7 @@ void rmem_write(struct rmem *r, uint64_t block, char *data ) {
     write_rmem(target_ip, &r->memList[block], data, BLOCK_SIZE);
 }
 
-void rmem_read( struct rmem *r, uint64_t block, char *data ) {
+void rmem_read( struct rmem *r, uint64_t block, uint8_t *data ) {
     if(block>=r->nblocks) {
         fprintf(stderr,"disk_read: invalid block #%lu\n",block);
         abort();

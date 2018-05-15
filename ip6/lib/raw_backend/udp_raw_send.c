@@ -19,9 +19,9 @@
 uint16_t checksum (uint16_t *, int);
 uint16_t udp6_checksum (struct ip6_hdr *, struct udphdr *, uint8_t *, int);
 
-static __thread unsigned char ether_frame[IP_MAXPACKET];
+static __thread uint8_t ether_frame[IP_MAXPACKET];
 static __thread int sd_send;
-static __thread char *ring_tx;
+static __thread uint8_t *ring_tx;
 static __thread int ring_offset = 0;
 static __thread int thread_id_tx;
 
@@ -169,14 +169,14 @@ void init_tx_socket(struct config *cfg) {
 //
 //  @param pkt is a packet from the network layer up (e.g., IP)
 //  @return 0 on success, -1 on failure
-int send_mmap(unsigned const char *pkt, int pktlen) {
+int send_mmap(const uint8_t *pkt, int pktlen) {
     // fetch a frame
     // like in the PACKET_RX_RING case, we define frames to be a page long,
     // including their header. This explains the use of getpagesize().
-    struct tpacket_hdr *header = (struct tpacket_hdr * )((char *) ring_tx + (ring_offset * C_FRAMESIZE));
+    struct tpacket_hdr *header = (struct tpacket_hdr * )((uint8_t *) ring_tx + (ring_offset * C_FRAMESIZE));
     //assert((((unsigned long) header) & (FRAMESIZE - 1)) == 0);
     // fill data
-    char *off = ((char *) header) + (TPACKET_HDRLEN - sizeof(struct sockaddr_ll));
+    uint8_t *off = ((uint8_t *) header) + (TPACKET_HDRLEN - sizeof(struct sockaddr_ll));
     memcpy(off, pkt, pktlen);
     // fill header
     header->tp_len = pktlen;
@@ -199,8 +199,8 @@ int flush_buffer() {
 }
 
 int prepare_packet(pkt_rqst pkt) {
-    struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((char *)ether_frame + ETH_HDRLEN);
-    struct udphdr *udp_hdr = (struct udphdr *)((char *)ether_frame + ETH_HDRLEN + IP6_HDRLEN);
+    struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((uint8_t *)ether_frame + ETH_HDRLEN);
+    struct udphdr *udp_hdr = (struct udphdr *)((uint8_t *)ether_frame + ETH_HDRLEN + IP6_HDRLEN);
     //Set destination IP
     memcpy(&ip_hdr->ip6_dst, &pkt.dst_addr, IPV6_SIZE);
     // Payload length (16 bits): UDP header + UDP data

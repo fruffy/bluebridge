@@ -24,7 +24,7 @@ Write exactly BLOCK_SIZE bytes to a given block on the virtual disk.
 and "data" is a pointer to the data to write.
 */
 
-void rrmem_write( struct rrmem *r, int block, char *data );
+void rrmem_write(struct rrmem *r, int block, uint8_t *data);
 
 /*
 Read exactly BLOCK_SIZE bytes from a given block on the virtual disk.
@@ -32,7 +32,7 @@ Read exactly BLOCK_SIZE bytes from a given block on the virtual disk.
 and "data" is a pointer to where the data will be placed.
 */
 
-void rrmem_read( struct rrmem *r, int block, char *data );
+void rrmem_read(struct rrmem *r, int block, uint8_t *data);
 
 /*
 Return the number of blocks in the virtual disk.
@@ -46,8 +46,8 @@ Close the virtual disk.
 
 void rrmem_deallocate( struct rrmem *r );
 
-void parity45(char *data, int size, int stripes, char *parity);
-void repairStripeFromParity45(char (*repair)[BLOCK_SIZE], char (*stripes)[MAX_HOSTS][BLOCK_SIZE], char (*parity)[BLOCK_SIZE], int missing, int numStripes, int size);
-int checkParity45(char (*stripes)[MAX_HOSTS][BLOCK_SIZE], int numStripes, char (*parity)[BLOCK_SIZE], int size);
+void parity45(uint8_t *data, int size, int stripes, uint8_t *parity);
+void repairStripeFromParity45(uint8_t (*repair)[BLOCK_SIZE], uint8_t (*stripes)[MAX_HOSTS][BLOCK_SIZE], uint8_t (*parity)[BLOCK_SIZE], int missing, int numStripes, int size);
+int checkParity45(uint8_t (*stripes)[MAX_HOSTS][BLOCK_SIZE], int numStripes, uint8_t (*parity)[BLOCK_SIZE], int size);
 
 #endif

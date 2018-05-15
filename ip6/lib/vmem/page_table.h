@@ -18,9 +18,9 @@ struct page_table;
 typedef void (*page_fault_handler_t) ( struct page_table *pt, uint64_t page );
 struct page_table {
     int fd;
-    char *virtmem;
+    uint8_t *virtmem;
     uint64_t npages;
-    char *physmem;
+    uint8_t *physmem;
     uint64_t nframes;
     uint64_t *page_mapping;
     int *page_bits;
@@ -66,11 +66,11 @@ void page_table_get_entry( struct page_table *pt, uint64_t page, uint64_t *frame
 
 /* Return a pointer to the start of the virtual memory associated with a page table. */
 
-char * page_table_get_virtmem( struct page_table *pt );
+uint8_t *page_table_get_virtmem( struct page_table *pt );
 
 /* Return a pointer to the start of the physical memory associated with a page table. */
 
-char * page_table_get_physmem( struct page_table *pt );
+uint8_t *page_table_get_physmem( struct page_table *pt );
 
 /* Return the total number of frames in the physical memory. */
 

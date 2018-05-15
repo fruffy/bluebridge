@@ -51,7 +51,7 @@ typedef struct ip6_memaddr_block {
 typedef struct pkt_rqst {
     ip6_memaddr dst_addr; // The destination of the packet
     int dst_port;         // Port we want to send to
-    char *data;           // Pointer to the data we want to send
+    uint8_t *data;           // Pointer to the data we want to send
     int datalen;          // Size of the data we want to send
 }pkt_rqst;
 

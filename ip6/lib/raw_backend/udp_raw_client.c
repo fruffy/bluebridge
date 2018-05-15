@@ -65,10 +65,10 @@ void write_packets(int num_packets) {
                 next_packet(&ring_rx_g);
                 continue;
             }
-            struct ethhdr *eth_hdr = (struct ethhdr *)((char *) tpacket_hdr + tpacket_hdr->tp_mac);
-            struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((char *)eth_hdr + ETH_HDRLEN);
-            struct udphdr *udp_hdr = (struct udphdr *)((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
-            char *payload = ((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
+            struct ethhdr *eth_hdr = (struct ethhdr *)((uint8_t *) tpacket_hdr + tpacket_hdr->tp_mac);
+            struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((uint8_t *)eth_hdr + ETH_HDRLEN);
+            struct udphdr *udp_hdr = (struct udphdr *)((uint8_t *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
+            uint8_t *payload = ((uint8_t *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
             ip6_memaddr *inAddress =  (ip6_memaddr *) &ip_hdr->ip6_dst;
             uint16_t msg_size = ntohs(udp_hdr->len) - UDP_HDRLEN;
             memcpy((void *) (inAddress->paddr), payload, msg_size);
@@ -79,7 +79,7 @@ void write_packets(int num_packets) {
     }
 }
 
-int simple_epoll_rcv(char *rcv_buf, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
+int simple_epoll_rcv(uint8_t *rcv_buf, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
     struct epoll_event events[1024];
     while (1) {
         int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, 0);
@@ -105,10 +105,10 @@ int simple_epoll_rcv(char *rcv_buf, struct sockaddr_in6 *target_ip, ip6_memaddr 
                     next_packet(&ring_rx_g);
                     continue;
                 }
-                struct ethhdr *eth_hdr = (struct ethhdr *)((char *) tpacket_hdr + tpacket_hdr->tp_mac);
-                struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((char *)eth_hdr + ETH_HDRLEN);
-                struct udphdr *udp_hdr = (struct udphdr *)((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
-                char *payload = ((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
+                struct ethhdr *eth_hdr = (struct ethhdr *)((uint8_t *) tpacket_hdr + tpacket_hdr->tp_mac);
+                struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((uint8_t *)eth_hdr + ETH_HDRLEN);
+                struct udphdr *udp_hdr = (struct udphdr *)((uint8_t *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
+                uint8_t *payload = ((uint8_t *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
                 // This should be debug code...
                 // printf("Thread %d Message from ", thread_id), print_ip_addr(&ip_hdr->ip6_src);
                 // printf("_%d to ", ntohs(udp_hdr->source)), print_ip_addr(&ip_hdr->ip6_dst), printf("_%d\n", ntohs(udp_hdr->dest));

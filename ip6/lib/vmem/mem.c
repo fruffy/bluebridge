@@ -43,7 +43,7 @@ struct mem *mem_allocate(int nblocks) {
     return r;
 }
 
-void mem_write(struct mem *r, int block, char *data) {
+void mem_write(struct mem *r, int block, uint8_t *data) {
     if(block<0 || block>=r->nblocks) {
         fprintf(stderr,"disk_write: invalid block #%d\n",block);
         abort();
@@ -52,7 +52,7 @@ void mem_write(struct mem *r, int block, char *data) {
     memcpy(r->memList[block], data, r->block_size);
 }
 
-void mem_read(struct mem *r, int block, char *data) {
+void mem_read(struct mem *r, int block, uint8_t *data) {
     if(block<0 || block>=r->nblocks) {
         fprintf(stderr,"disk_read: invalid block #%d\n",block);
         abort();

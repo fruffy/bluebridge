@@ -37,10 +37,10 @@ void init_rx_socket_server(struct config *cfg) {
 }
 
 void handle_packet(struct tpacket_hdr *tpacket_hdr, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
-    struct eth_hdr *eth_hdr = (struct eth_hdr *)((char *) tpacket_hdr + tpacket_hdr->tp_mac);
-    struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((char *)eth_hdr + ETH_HDRLEN);
-    struct udphdr *udp_hdr = (struct udphdr *)((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
-    char *payload = ((char *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
+    struct eth_hdr *eth_hdr = (struct eth_hdr *)((uint8_t *) tpacket_hdr + tpacket_hdr->tp_mac);
+    struct ip6_hdr *ip_hdr = (struct ip6_hdr *)((uint8_t *)eth_hdr + ETH_HDRLEN);
+    struct udphdr *udp_hdr = (struct udphdr *)((uint8_t *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN);
+    uint8_t *payload = ((uint8_t *)eth_hdr + ETH_HDRLEN + IP6_HDRLEN + UDP_HDRLEN);
     // This should be debug code...
     // printf("Thread %d Message from ", thread_id), print_ip_addr(&ip_hdr->ip6_src);
     // printf("_%d to ", ntohs(udp_hdr->source)), print_ip_addr(&ip_hdr->ip6_dst), printf("_%d\n", ntohs(udp_hdr->dest));
