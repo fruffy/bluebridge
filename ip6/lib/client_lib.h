@@ -2,7 +2,7 @@
 #define PROJECT_CLIENT
 
 #define MAX_HOSTS  5
-#define BATCH_SIZE 100 // 100 is a nice and round number for our batch size...
+#define BATCH_SIZE 40 // 100 is a nice and round number for our batch size...
 
 #include "network.h"
 #include "types.h"
