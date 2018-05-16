@@ -53,11 +53,7 @@ static const uint8_t DST_MAC[6] = { 0xa0, 0x36, 0x9f, 0x45, 0xd8, 0x75 };
 #define TX_HTHRESH 0  /**< Default values of TX host threshold reg. */
 #define TX_WTHRESH 0  /**< Default values of TX write-back threshold reg. */
 
-#ifndef THROTTLE_TX
-#define MAX_PKT_BURST    32
-#else
-#define MAX_PKT_BURST    1
-#endif
+#define MAX_PKT_BURST    100
 #define BURST_TX_DRAIN_US 5 /* TX drain every ~100us */
 
 /*
@@ -102,7 +98,7 @@ static const struct rte_eth_conf port_conf = {
         .header_split   = 0, /**< Header Split disabled */
         .hw_ip_checksum = 0, /**< IP checksum offload disabled */
         .hw_vlan_filter = 0, /**< VLAN filtering disabled */
-        .jumbo_frame    = 0, /**< Jumbo Frame Support enabled */
+        .jumbo_frame    = 0, /**< Jumbo Frame Support disabled */
         .hw_strip_crc   = 0, /**< CRC stripped by hardware */
     },
     .rx_adv_conf = {
@@ -127,6 +123,7 @@ extern void enter_dpdk_server_loop(uint16_t server_port);
 extern void init_client_dpdk(struct config *configstruct);
 extern void init_server_dpdk(struct config *configstruct);
 extern int dpdk_send(pkt_rqst pkt);
-extern int dpdk_batched_send(pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids);
-extern int dpdk_server_rcv(char *rx_buffer, int msg_size, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr);
-extern int dpdk_client_rcv(char *rx_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr);
+extern void write_dpdk_packets(int num_packets);
+extern void dpdk_batched_send(pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids);
+extern int dpdk_server_rcv(uint8_t *rx_buffer, int msg_size, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr);
+extern int dpdk_client_rcv(uint8_t *rx_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr);

@@ -226,9 +226,6 @@ int prepare_packet(pkt_rqst pkt) {
     // Place the packet in the ring buffer
     // print_debug("Send mmap\n");
     send_mmap(ether_frame, frame_length);
-    // Flush the buffer
-    // print_debug("Flushing buffer\n");
-    flush_buffer();
     return EXIT_SUCCESS;
 }
 

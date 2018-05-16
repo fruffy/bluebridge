@@ -30,7 +30,7 @@ struct p_skeleton *gen_dpdk_packet_info(struct config *configstruct) {
 }
 
 static int send_packet(uint8_t portid, struct rte_mbuf *m) {
-    rte_eth_tx_buffer(0,0,tx_buffer[0], m);
+    rte_eth_tx_buffer(0, 0, tx_buffer[0], m);
     int sent = rte_eth_tx_buffer_flush(0,0,tx_buffer[0]);
     return sent;
 }
@@ -43,10 +43,8 @@ struct rte_mbuf *dpdk_assemble(pkt_rqst pkt) {
     struct udphdr *udp_hdr;
 
     struct rte_mbuf *frame = rte_pktmbuf_alloc(bb_pktmbuf_pool);
-    if (frame == NULL) {
-        perror("Fatal Error could not allocate packet.");
-        exit(1);
-    }
+    if (frame == NULL)
+        perror("Fatal Error could not allocate packet."),exit(1);
 
     char *pkt_end = rte_pktmbuf_mtod(frame, char *);
     HEADER_PTR(ether_hdr, struct ethhdr, pkt_end);
@@ -80,6 +78,8 @@ struct rte_mbuf *dpdk_assemble(pkt_rqst pkt) {
     return frame;
 }
 
+
+
 int dpdk_send(pkt_rqst pkt) {
     //Assemble the packet
     struct rte_mbuf *frame = dpdk_assemble(pkt);
@@ -89,13 +89,15 @@ int dpdk_send(pkt_rqst pkt) {
     return EXIT_SUCCESS;
 }
 
-int dpdk_batched_send(pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids) {
-    //Assemble the packet
-    struct rte_mbuf *frame = dpdk_assemble(*pkts);
-    // Commit the dpdk packet
-    send_packet(0, frame);
-    //rte_pktmbuf_free(frame);
-    return EXIT_SUCCESS;
+/* Enqueue packets for TX and prepare them to be sent */
+void dpdk_batched_send(pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids) {
+    struct mbuf_table *m_table;
+   for (int i = 0; i < num_pkts; i++) {
+        pkts[i].dst_addr.args = pkts[i].dst_addr.args | sub_ids[pkts[i].dst_addr.subid]<<16; 
+        struct rte_mbuf *frame = dpdk_assemble(pkts[i]);
+        rte_eth_tx_buffer(0, 0, tx_buffer[0], frame);
+    }
+    int sent = rte_eth_tx_buffer_flush(0,0,tx_buffer[0]);
 }
 
 static int bb_parse_portmask(const char *portmask)
@@ -122,7 +124,6 @@ bb_parse_args(int argc, char **argvopt) {
     }
     return EXIT_SUCCESS;
 }
-
 
 /* Check the link status of all ports in up to 9s, and print them finally */
 static void check_all_ports_link_status(uint8_t port_num, uint32_t port_mask) {

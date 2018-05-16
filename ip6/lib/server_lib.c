@@ -8,9 +8,14 @@
 #include "network.h"
 #include "config.h"
 
+#ifndef DEFAULT
+#include <rte_ethdev.h>       // main DPDK library
+#include <rte_malloc.h>       // rte_zmalloc_socket()
+#endif
+
 // TODO Error handling in case of allocation failure
 int allocate_mem(struct sockaddr_in6 *target_ip) {
-#ifdef SOCK_RAW
+#ifdef DEFAULT
     void *allocated = calloc(1 ,BLOCK_SIZE);
 #else
     void *allocated = rte_calloc(NULL, 1 ,BLOCK_SIZE, 64);
@@ -30,7 +35,7 @@ int allocate_mem_bulk(struct sockaddr_in6 *target_ip, uint64_t size) {
     // If we get a zero value, just allocate one pointer
     if (!size)
         size = 1;
-    #ifdef SOCK_RAW
+    #ifdef DEFAULT
         void *allocated = calloc(size, BLOCK_SIZE);
     #else
         void *allocated = rte_calloc(NULL, size, BLOCK_SIZE, 64);
@@ -73,7 +78,7 @@ int read_mem_ptr(uint8_t *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memadd
 }
 
 int write_mem(uint8_t *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint16_t size) {
-#ifdef SOCK_RAW
+#ifdef DEFAULT
     memcpy((void *) r_addr->paddr, rcv_buffer, size); 
 #else
     rte_memcpy((void *) r_addr->paddr, rcv_buffer, size);
@@ -89,7 +94,7 @@ int write_mem(uint8_t *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *
 
 int write_mem_bulk(uint8_t *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint16_t size) {
     // Copy the first POINTER_SIZE bytes of receive buffer into the target
-#ifdef SOCK_RAW
+#ifdef DEFAULT
     memcpy((void *) r_addr->paddr, rcv_buffer, size); 
 #else
     rte_memcpy((void *) *(&r_addr->paddr), rcv_buffer, size);
@@ -105,7 +110,11 @@ int write_mem_bulk(uint8_t *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_mema
 }
 
 int free_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr) {
+#ifdef DEFAULT
     free((void *) r_addr->paddr);
+#else
+    rte_free((void *) r_addr->paddr);
+#endif
     ip6_memaddr *returnID = (ip6_memaddr *)&target_ip->sin6_addr;
     returnID->cmd = r_addr->cmd;
     returnID->paddr = r_addr->paddr;

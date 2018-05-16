@@ -92,6 +92,7 @@ void rcv_udp6_raw_bulk(int num_packets) {
 #ifdef DEFAULT
     write_packets(num_packets);
 #else
+    write_dpdk_packets(num_packets);
 #endif
     rcv_lat += getns() - start;
     rcv_calls++;

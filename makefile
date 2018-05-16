@@ -37,6 +37,7 @@ lib:
 libdpdk: 
 	@echo "Running the libdpdk build in $(MAKE_ROOT)"
 	@$(MAKE) -C $(MSG_DIR) -f libdpdk.mk clean
+	@rm -rf libbluebridgedpdk.a
 	@$(MAKE) -C $(MSG_DIR) -f libdpdk.mk O=./
 	@$(MAKE) -C $(MSG_DIR) -f libdpdk.mk clean
 

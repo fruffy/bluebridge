@@ -13,6 +13,7 @@
 #include <pthread.h>
 #include <sys/stat.h>
 
+
 static int NUM_THREADS = 1;
 static int BATCHED_MODE = 0;
 static uint64_t NUM_ITERS;
@@ -43,7 +44,7 @@ void create_dir(const char *name) {
     }
 }
 
-void save_time(const char *type, uint64_t* latency, uint64_t length){
+void save_time(const char *type, uint64_t* latency, uint64_t entries, uint64_t num_iterations){
     int MAX_FNAME = 256;
     char fname[MAX_FNAME];
     snprintf(fname, MAX_FNAME, "results/testing/t%d_iter%lu", NUM_THREADS, NUM_ITERS);
@@ -57,14 +58,18 @@ void save_time(const char *type, uint64_t* latency, uint64_t length){
     }
     fprintf(file, "latency (ns)\n");
     uint64_t i;
-    for (i = 0; i < length; i++) {
+    for (i = 0; i < entries; i++) {
         fprintf(file, "%llu\n", (unsigned long long) latency[i]);
     }
     fclose(file);
     uint64_t total = 0;
-    for (i = 0; i < length; i++)
+    for (i = 0; i < entries; i++)
         total += (unsigned long long) latency[i];
-    printf("Average %s latency: "KRED"%lu us\n"RESET, type, total / (length*1000));
+    printf("Average %s latency: "KRED"%lu us\n"RESET, type, total / (num_iterations*1000));
+    double megabit = (double) 8 * NUM_ITERS * BLOCK_SIZE / (1000*1000);
+    double seconds = (double) total / (1000 * 1000 * 1000);
+    printf("Average %s throughput: "KRED"%f mbps\n"RESET, type, megabit / seconds);
+
 }
 
 uint64_t *alloc_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_t iterations, struct config my_conf) {
@@ -183,7 +188,7 @@ void launch_tests(struct sockaddr_in6 *target_ip, struct config my_conf, uint64_
     ip6_memaddr *r_addr = malloc(sizeof(ip6_memaddr) * num_iterations);
     if(!r_addr) 
         perror("Allocation too large");
-    printf("Generating random test data of size %lu byte...\n", BLOCK_SIZE * num_iterations);
+    printf("Thread %d Generating random test data of size %f megabyte...\n", thread_id, (double) BLOCK_SIZE * num_iterations / (1000*1000));
     uint8_t *payload1 = gen_rdm_bytestream(BLOCK_SIZE * num_iterations, 1);
     // ALLOC TEST
     printf("Thread %d Starting allocation test...\n", thread_id);
@@ -195,7 +200,7 @@ void launch_tests(struct sockaddr_in6 *target_ip, struct config my_conf, uint64_
     printf("Thread %d Starting read test...\n", thread_id);
     uint64_t *read_latency1 = read_test(target_ip, r_addr, num_iterations, payload1);
     free(payload1);
-    printf("Generating new random test data of size %lu byte...\n", BLOCK_SIZE * num_iterations);
+    printf("Thread %d Generating new random test data of size %f megabyte...\n", thread_id, (double) BLOCK_SIZE * num_iterations / (1000*1000));
     uint8_t *payload2 = gen_rdm_bytestream(BLOCK_SIZE * num_iterations, 2);
     // WRITE TEST 2
     printf("Thread %d Starting second write test...\n", thread_id);
@@ -212,25 +217,25 @@ void launch_tests(struct sockaddr_in6 *target_ip, struct config my_conf, uint64_
     if (BATCHED_MODE)
         samples = 1;
     else
-        samples = NUM_ITERS;
+        samples = num_iterations;
     int MAX_FNAME = 256;
     char fname[MAX_FNAME];
     printSendLat();
     snprintf(fname, MAX_FNAME, "alloc_t%d", thread_id);
-    save_time(fname, alloc_latency, samples);
+    save_time(fname, alloc_latency, samples, num_iterations);
     memset(fname, 0, MAX_FNAME);
     snprintf(fname, MAX_FNAME, "read1_t%d", thread_id);
-    save_time(fname, read_latency1, samples);
+    save_time(fname, read_latency1, samples, num_iterations);
     memset(fname, 0, MAX_FNAME);
     snprintf(fname, MAX_FNAME, "write1_t%d", thread_id);
-    save_time(fname, write_latency1, samples);
+    save_time(fname, write_latency1, samples, num_iterations);
     snprintf(fname, MAX_FNAME, "read2_t%d", thread_id);
-    save_time(fname, read_latency1, samples);
+    save_time(fname, read_latency1, samples, num_iterations);
     memset(fname, 0, MAX_FNAME);
     snprintf(fname, MAX_FNAME, "write2_t%d", thread_id);
-    save_time(fname, write_latency1, samples);
+    save_time(fname, write_latency1, samples, num_iterations);
     snprintf(fname, MAX_FNAME, "free_t%d", thread_id);
-    save_time(fname, free_latency, samples);
+    save_time(fname, free_latency, samples, num_iterations);
     memset(fname, 0, MAX_FNAME);
     free(alloc_latency);
     free(write_latency1);
@@ -262,8 +267,7 @@ void *testing_loop(void *arg) {
     // Initialize BlueBridge
     struct config my_conf = get_bb_config();
     struct sockaddr_in6 *target_ip = init_net_thread(data->tid, &my_conf, 0);
-    launch_tests(target_ip, my_conf, data->tid, data->length);
-
+    launch_tests(target_ip, my_conf, data->length, data->tid);
     close_sockets();
     return NULL;
 }

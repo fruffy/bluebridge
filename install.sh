@@ -23,7 +23,7 @@ if [[ $response =~ ^(yes|y) ]]; then
     make thrift-all
 fi
 
-sudo chown -R $USER:$USER .
+sudo chown -R $USER:$USER ~
 
 echo "All done! You are good to go!"
 
