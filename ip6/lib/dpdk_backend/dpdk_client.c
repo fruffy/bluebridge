@@ -2,7 +2,7 @@
 
 uint16_t src_client_port = 0;
 
-//This function is hacky bullshit, needs a lot of improvement.
+// This function is hacky bullshit, needs a lot of improvement.
 struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
 int dpdk_client_rcv(uint8_t *rcv_buf, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
     while (1) {
