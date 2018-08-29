@@ -22,6 +22,7 @@ struct rx_ring {
     uint64_t tpacket_i;
 };
 
+
 extern int cooked_send(pkt_rqst pkt);
 extern int cooked_batched_send(pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids);
 
@@ -46,5 +47,10 @@ extern void next_packet(struct rx_ring *ring_p);
 extern struct tpacket_hdr *get_packet(struct rx_ring *ring_p);
 extern void close_epoll(int epoll_fd, struct rx_ring ring_rx);
 extern void close_poll(struct rx_ring ring_rx);
+
+#define RCV(rcv_buf, target_ip, remote_addr) simple_epoll_rcv(rcv_buf, target_ip, remote_addr)
+#define SEND(pkt) cooked_send(pkt)
+#define RCV_BULK(num_packets) write_packets(num_packets)
+#define SEND_BATCHED(pkts, num_addrs, sub_ids) cooked_batched_send(pkts, num_addrs, sub_ids)
 
 #endif

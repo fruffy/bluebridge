@@ -7,9 +7,11 @@
 #include <pthread.h>          // close()
 #include "network.h"
 #include "utils.h"
-#include "raw_backend/udp_raw_common.h"
 #ifndef DEFAULT
 #include "dpdk_backend/dpdk_common.h"
+#else
+#include "raw_backend/udp_raw_common.h"
+
 #endif
 
 static __thread uint64_t sendLat = 0;
@@ -33,14 +35,9 @@ int send_udp_raw(uint8_t *tx_buf, int msg_size, ip6_memaddr *remote_addr, int ds
         .data = tx_buf,
         .datalen = msg_size
     };
-#ifdef DEFAULT
-    cooked_send(pkt);
-#else
-    dpdk_send(pkt);
-#endif
+    SEND(pkt);
     sendLat += getns() - start;
     send_calls++;
-    //memset(tx_buf, 0, msg_size);
     return EXIT_SUCCESS;
 }
 
@@ -52,14 +49,9 @@ int send_udp_raw(uint8_t *tx_buf, int msg_size, ip6_memaddr *remote_addr, int ds
 // TODO: Error handling
 int send_udp_raw_batched(pkt_rqst *pkts, uint32_t *sub_ids, int num_addrs) {
     uint64_t start = getns();
-#ifdef DEFAULT
-    cooked_batched_send(pkts, num_addrs, sub_ids);
-#else
-    dpdk_batched_send(pkts, num_addrs, sub_ids);
-#endif
+    SEND_BATCHED(pkts, num_addrs, sub_ids);
     sendLat += getns() - start;
     send_calls++;
-    //memset(tx_buf, 0, msg_size);
     return EXIT_SUCCESS;
 }
 
@@ -71,12 +63,7 @@ int send_udp_raw_batched(pkt_rqst *pkts, uint32_t *sub_ids, int num_addrs) {
 // TODO: Error handling
 int rcv_udp6_raw(uint8_t *rx_buf, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr) {
     uint64_t start = getns();
-    int numbytes;
-#ifdef DEFAULT
-    numbytes = simple_epoll_rcv(rx_buf, target_ip, remote_addr);
-#else
-    numbytes = dpdk_client_rcv(rx_buf, target_ip, remote_addr);
-#endif
+    int numbytes = RCV(rx_buf, target_ip, remote_addr);
     rcv_lat += getns() - start;
     rcv_calls++;
     return numbytes;
@@ -89,11 +76,7 @@ int rcv_udp6_raw(uint8_t *rx_buf, struct sockaddr_in6 *target_ip, ip6_memaddr *r
 // TODO: Error handling
 void rcv_udp6_raw_bulk(int num_packets) {
     uint64_t start = getns();
-#ifdef DEFAULT
-    write_packets(num_packets);
-#else
-    write_dpdk_packets(num_packets);
-#endif
+    RCV_BULK(num_packets);
     rcv_lat += getns() - start;
     rcv_calls++;
 }
@@ -140,9 +123,11 @@ void close_sockets(int server) {
 }
 
 void set_net_thread_ids(int t_id) {
+#ifdef DEFAULT
     set_thread_id_tx(t_id);
     set_thread_id_rx_client(t_id);
     set_thread_id_rx_server(t_id);
+#endif
 }
 
 struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf, int isServer) {

@@ -127,3 +127,8 @@ extern void write_dpdk_packets(int num_packets);
 extern void dpdk_batched_send(pkt_rqst *pkts, int num_pkts, uint32_t *sub_ids);
 extern int dpdk_server_rcv(uint8_t *rx_buffer, int msg_size, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr);
 extern int dpdk_client_rcv(uint8_t *rx_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr);
+
+#define RCV(rcv_buf, target_ip, remote_addr) dpdk_client_rcv(rcv_buf, target_ip, remote_addr)
+#define SEND(pkt) dpdk_send(pkt)
+#define RCV_BULK(num_packets) write_dpdk_packets(num_packets)
+#define SEND_BATCHED(pkts, num_addrs, sub_ids) dpdk_batched_send(pkts, num_addrs, sub_ids)
