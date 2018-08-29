@@ -444,7 +444,7 @@ int config_dpdk() {
     //if (rte_eal_pci_probe() < 0)
     //    rte_exit(EXIT_FAILURE, "Cannot probe PCI\n");
 
-    nb_ports = rte_eth_dev_count();
+    nb_ports = rte_eth_dev_count_avail();
     if (nb_ports == 0)
         rte_exit(EXIT_FAILURE, "No Ethernet ports - bye\n");
 
