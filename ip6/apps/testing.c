@@ -18,21 +18,6 @@ static int NUM_THREADS = 1;
 static int BATCHED_MODE = 0;
 static uint64_t NUM_ITERS;
 
-/////////////////////////////////// TO DOs ////////////////////////////////////
-//  1. Check correctness of pointer on server side, it should never segfault.
-//      (Ignore illegal operations)
-//      -> Maintain list of allocated points
-//      -> Should be very efficient
-//      -> Judy array insert and delete or hashtable?
-//  2. Implement userfaultd on the client side
-//  3. We have nasty memory leaks that are extremely low level ()
-//  4. Implement IP subnet state awareness
-//      (server allocates memory address related to its assignment)
-//  5. Remove unneeded code and print statements
-//      Move all buffers to stack instead of heap.
-//      Check memory leaks
-///////////////////////////////////////////////////////////////////////////////
-
 void create_dir(const char *name) {
     struct stat st = {0};
     if (stat(name, &st) == -1) {
@@ -78,27 +63,27 @@ uint64_t *alloc_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64
         uint64_t split = iterations/my_conf.num_hosts;
         int length;
         for (int i = 0; i < my_conf.num_hosts; i++) {
-            uint64_t start = getns(); 
+            uint64_t start = getns();
             uint64_t offset = split * i;
             if (i == my_conf.num_hosts - 1)
                 length = iterations - offset;
-            else 
+            else
                 length = split;
             struct in6_addr *ipv6Pointer = get_ip6_target(i);
             memcpy(&(target_ip->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
             ip6_memaddr *temp = allocate_bulk_rmem(target_ip, length);
             memcpy(&r_addr[offset], temp, length *sizeof(ip6_memaddr));
             free(temp);
-            latency[i] = getns() - start; 
+            latency[i] = getns() - start;
         }
     } else {
         for (int i = 0; i < iterations; i++) {
            // Generate a random IPv6 address out of a set of available hosts
             //memcpy(&(target_ip->sin6_addr), gen_rdm_IPv6Target(), sizeof(struct in6_addr));
             memcpy(&(target_ip->sin6_addr), get_ip6_target(i % my_conf.num_hosts), sizeof(struct in6_addr));
-            uint64_t start = getns(); 
+            uint64_t start = getns();
             r_addr[i] = allocate_rmem(target_ip);
-            latency[i] = getns() - start; 
+            latency[i] = getns() - start;
         }
     }
     return latency;
@@ -186,7 +171,7 @@ uint64_t *free_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_
 void launch_tests(struct sockaddr_in6 *target_ip, struct config my_conf, uint64_t num_iterations, uint16_t thread_id){
     printf("Thread %d Allocating pointers\n", thread_id);
     ip6_memaddr *r_addr = malloc(sizeof(ip6_memaddr) * num_iterations);
-    if(!r_addr) 
+    if(!r_addr)
         perror("Allocation too large");
     printf("Thread %d Generating random test data of size %f megabyte...\n", thread_id, (double) BLOCK_SIZE * num_iterations / (1000*1000));
     uint8_t *payload1 = gen_rdm_bytestream(BLOCK_SIZE * num_iterations, 1);
@@ -248,7 +233,7 @@ void launch_tests(struct sockaddr_in6 *target_ip, struct config my_conf, uint64_
 typedef struct _thread_data_t {
     int tid;
     struct sockaddr_in6 *target_ip;
-    ip6_memaddr *r_addr; 
+    ip6_memaddr *r_addr;
     uint64_t length;
 } thread_data_t;
 
@@ -317,7 +302,6 @@ void basic_ops(struct sockaddr_in6 *target_ip) {
     launch_tests(target_ip, my_conf, NUM_ITERS, 0);
 }
 
-
 /*
  * Main workhorse method. Parses arguments, setups connections
  * Allows user to issue commands on the command line.
@@ -325,37 +309,37 @@ void basic_ops(struct sockaddr_in6 *target_ip) {
 int main(int argc, char *argv[]) {
     // Example Call:
     //./applications/bin/testing -c ./tmp/config/distMem.cnf -t 4 -i 10000
-    int c; 
+    int c;
     struct config my_conf;
-    while ((c = getopt (argc, argv, "c:i:t:b")) != -1) { 
-    switch (c) 
-      { 
+    while ((c = getopt (argc, argv, "c:i:t:b")) != -1) {
+    switch (c)
+      {
       case 'c':
         my_conf = set_bb_config(optarg, 0);
         break;
       case 'i':
         NUM_ITERS = atoi(optarg);
         break;
-      case 't': 
-        NUM_THREADS = atoi(optarg); 
+      case 't':
+        NUM_THREADS = atoi(optarg);
         break;
-      case 'b': 
-        BATCHED_MODE = 1; 
+      case 'b':
+        BATCHED_MODE = 1;
         break;
-      case '?': 
+      case '?':
           fprintf (stderr, "Unknown option `-%c'.\n", optopt);
           printf("usage: -c config -t num_threads -i NUM_ITERS>\n");
-        return 1; 
-      default: 
-        abort (); 
-      } 
-    } 
+        return 1;
+      default:
+        abort ();
+      }
+    }
     printf("Running test with %d threads and %lu iterations.\n", NUM_THREADS, NUM_ITERS );
     struct sockaddr_in6 *temp = init_sockets(&my_conf, 0);
     set_host_list(my_conf.hosts, my_conf.num_hosts);
 
     struct timeval st, et;
-    uint64_t start = getns(); 
+    uint64_t start = getns();
     if (NUM_THREADS > 1)
         basic_op_threads(temp);
     else
@@ -369,4 +353,3 @@ int main(int argc, char *argv[]) {
     //close_sockets();
     return EXIT_SUCCESS;
 }
-

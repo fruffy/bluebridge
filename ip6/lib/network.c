@@ -55,7 +55,6 @@ int send_udp_raw_batched(pkt_rqst *pkts, uint32_t *sub_ids, int num_addrs) {
     return EXIT_SUCCESS;
 }
 
-
 /*
  * Receives message on socket
  * RAW version, we craft our own packet.
@@ -80,7 +79,6 @@ void rcv_udp6_raw_bulk(int num_packets) {
     rcv_lat += getns() - start;
     rcv_calls++;
 }
-
 
 struct sockaddr_in6 *init_sockets(struct config *bb_conf, int server) {
 #ifdef DEFAULT
@@ -112,7 +110,6 @@ void launch_server_loop(struct config *bb_conf) {
 
 void close_sockets(int server) {
 #ifdef DEFAULT
-
     close_tx_socket();
     if (server)
         close_rx_socket_server();

@@ -16,4 +16,5 @@ void close_sockets();
 struct sockaddr_in6 *init_net_thread(int t_id, struct config *bb_conf, int isServer);
 void printSendLat();
 void launch_server_loop(struct config *bb_conf);
+
 #endif
