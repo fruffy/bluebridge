@@ -4,7 +4,7 @@ APP_DIR        := $(MSG_DIR)/apps
 THRIFT_APP_DIR := $(APP_DIR)/thrift
 THRIFT_DIR     := includes/thrift
 
-CC = gcc 
+CC = gcc
 CFLAGS += -c -Wextra -Wall -Wshadow -Wpointer-arith -Wcast-qual
 CFLAGS += -std=gnu11 -pedantic
 # performance flags
@@ -17,7 +17,7 @@ apps := testing server event_server bb_disk rmem_test
 
 # Cannot do "@find $(MAKE_ROOT)/ip6/ -path -name '*.o*' -delete"
 # it deletes the object files in the thrift .libs which requires
-# a complete rebuild of thrift to repopulate. 
+# a complete rebuild of thrift to repopulate.
 
 export apps CC CFLAGS LDFLAGS
 all: lib
@@ -29,12 +29,12 @@ classic:
 	@$(MAKE) -C $(MSG_DIR) -f classic.mk clean
 	@$(MAKE) -C $(MSG_DIR) -f classic.mk all
 
-lib: 
+lib:
 	@echo "Running lib build in $(MAKE_ROOT)"
 	@$(MAKE) -C $(MSG_DIR) -f lib.mk clean
 	@$(MAKE) -C $(MSG_DIR) -f lib.mk all
 
-libdpdk: 
+libdpdk:
 	@echo "Running the libdpdk build in $(MAKE_ROOT)"
 	@$(MAKE) -C $(MSG_DIR) -f libdpdk.mk clean
 	@rm -rf libbluebridgedpdk.a

@@ -57,7 +57,7 @@ int read_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr) {
     returnID->cmd = r_addr->cmd;
     returnID->paddr = r_addr->paddr;
     // Get the length we want to read from the client arguments
-    // Note: args is uint32_t but the max IP packet size is uint16_t 
+    // Note: args is uint32_t but the max IP packet size is uint16_t
     //       We only care about the first 16 bits
     uint16_t length = (uint16_t) r_addr->args;
     // Send the data directly from the converted memory pointer
@@ -79,7 +79,7 @@ int read_mem_ptr(uint8_t *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memadd
 
 int write_mem(uint8_t *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint16_t size) {
 #ifdef DEFAULT
-    memcpy((void *) r_addr->paddr, rcv_buffer, size); 
+    memcpy((void *) r_addr->paddr, rcv_buffer, size);
 #else
     rte_memcpy((void *) r_addr->paddr, rcv_buffer, size);
 #endif
@@ -95,7 +95,7 @@ int write_mem(uint8_t *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *
 int write_mem_bulk(uint8_t *rcv_buffer, struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint16_t size) {
     // Copy the first POINTER_SIZE bytes of receive buffer into the target
 #ifdef DEFAULT
-    memcpy((void *) r_addr->paddr, rcv_buffer, size); 
+    memcpy((void *) r_addr->paddr, rcv_buffer, size);
 #else
     rte_memcpy((void *) *(&r_addr->paddr), rcv_buffer, size);
 #endif

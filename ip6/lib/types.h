@@ -3,12 +3,12 @@
 #include <stdint.h> // uint16_t, uint32_t, uint64_t
 /**
  * This files contains definitions and types which are used everywhere in the code.
- * It should generally be included when working with the BlueBridge library. For now it is 
+ * It should generally be included when working with the BlueBridge library. For now it is
  * exported by server_lib and client_lib by default.
  */
 
 
-// Get used to dealing with this structure a lot... 
+// Get used to dealing with this structure a lot...
 /*          struct sockaddr_in6 {
                sa_family_t     sin6_family;   AF_INET6
                in_port_t       sin6_port;     port number
@@ -34,7 +34,7 @@ typedef struct ip6_memaddr {
  * @brief ip6_memaddr_block
  * @details A block version of ip6_memaddr. The ip6_memaddrs in this struct
  * points to a larger allocated block on the server machine. The length specifies
- * the number of BLOCK_SIZE pointers which can be read from this key. * 
+ * the number of BLOCK_SIZE pointers which can be read from this key. *
  */
 typedef struct ip6_memaddr_block {
   struct ip6_memaddr memaddr; // Starting address
@@ -45,8 +45,8 @@ typedef struct ip6_memaddr_block {
  * @brief pkt_rqst
  * @details A useful little type which defines the packet request that is usually sent
  * out in BlueBridge. pkt_rqst contains all the necessary information to generate a BlueBridge
- * client request. 
- * 
+ * client request.
+ *
  */
 typedef struct pkt_rqst {
     ip6_memaddr dst_addr; // The destination of the packet
@@ -61,7 +61,7 @@ typedef struct pkt_rqst {
 #define IP6_HDRLEN 40   // IPv6 header length
 #define UDP_HDRLEN 8    // UDP header length, excludes data
 #define IPV6_SIZE 16    // Length of an IPV6 Address
-#define BLOCK_SIZE 4096 // Our current default transport size
+#define BLOCK_SIZE 8000 // Our current default transport size
 #define POINTER_SIZE sizeof(void*)
 
 
