@@ -131,8 +131,3 @@ BENCHMARK(BM_ReadRecordBatch)
 }  // namespace arrow
 using namespace arrow;
 BENCHMARK_MAIN();
-
-// sudo apt install libgtest-dev
-// sudo apt install libbenchmark-dev
-// https://stackoverflow.com/questions/28869319/cannot-find-lgtest-when-setting-up-google-test
-// gcc arrow_ipc_bench.cc -I../../../includes/arrow/cpp/src/ ../../../includes/arrow/cpp/debug/debug/libarrow.a -lstdc++ -lm -lgtest -lpthread -lbenchmark
