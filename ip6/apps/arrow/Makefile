@@ -14,14 +14,24 @@ LIBS += $(BB_LIB) -lstdc++ -lm -lgtest -lpthread -lbenchmark
 CFLAGS =
 
 ARR_IPC_BENCH = arrow_ipc_bench
+ARR_MEM_TEST  = arrow_mem_test
+ARR_MEM_BENCH = arrow_mem_bench
 
-all: $(ARR_IPC_BENCH)
+all: $(ARR_IPC_BENCH) $(ARR_MEM_BENCH) $(ARR_MEM_TEST)
 
 
 $(ARR_IPC_BENCH):
-	@echo "Building $(ARR_SERVER)"
+	@echo "Building $@"
 	@$(CC) -o $@ $@.cc $(CFLAGS) $(LIBS)
+
+$(ARR_MEM_TEST):
+	@echo "Building $@"
+	@$(CC) -o $@ $@.cc $(CFLAGS) $(LIBS)
+
+$(ARR_MEM_BENCH):
+	@echo "Building $@"
+	@$(CC) -o $@ $@.cc $(CFLAGS) $(LIBS)
+
 clean:
 	@echo "Cleaning..."
-	@$(RM) -r $(GLIB_DIR)
-	@$(RM) ddc_$(ARR_SERVER) tcp_$(ARR_SERVER) $(MEM_SERVER) $(DDC_CLIENT) $(TCP_CLIENT)
+	@$(RM)  $(ARR_IPC_BENCH) $(ARR_MEM_TEST) $(ARR_MEM_BENCH)
