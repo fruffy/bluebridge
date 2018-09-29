@@ -67,9 +67,9 @@ thrift-clean:
 	@$(MAKE) -C $(THRIFT_APP_DIR) clean
 	@$(MAKE) -C $(THRIFT_DIR) clean
 
-arrow:
+arrow: lib
 	@echo "Creating the arrow build in $(MAKE_ROOT)"
-	cd $(ARROW_DIR); cmake -DARROW_BUILD_BENCHMARKS=ON ..
+	cd $(ARROW_DIR); cmake -DARROW_BUILD_BENCHMARKS=ON -DARROW_BLUEBRIDGE=ON ..
 	@$(MAKE) -C $(ARROW_DIR)
 
 arrow-apps: lib

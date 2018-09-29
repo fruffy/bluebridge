@@ -61,7 +61,7 @@ typedef struct pkt_rqst {
 #define IP6_HDRLEN 40   // IPv6 header length
 #define UDP_HDRLEN 8    // UDP header length, excludes data
 #define IPV6_SIZE 16    // Length of an IPV6 Address
-#define BLOCK_SIZE 8000 // Our current default transport size
+#define BLOCK_SIZE 8 // Our current default transport size
 #define POINTER_SIZE sizeof(void*)
 
 

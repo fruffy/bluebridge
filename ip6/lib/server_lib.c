@@ -36,9 +36,9 @@ int allocate_mem_bulk(struct sockaddr_in6 *target_ip, uint64_t size) {
     if (!size)
         size = 1;
     #ifdef DEFAULT
-        void *allocated = calloc(size, BLOCK_SIZE);
+        void *allocated = calloc(1, size);
     #else
-        void *allocated = rte_calloc(NULL, size, BLOCK_SIZE, 64);
+        void *allocated = rte_calloc(NULL, 1, size, 64);
     #endif
     // Set the source address of the packet as our destination ID
     ip6_memaddr *returnID = (ip6_memaddr *)&target_ip->sin6_addr;
