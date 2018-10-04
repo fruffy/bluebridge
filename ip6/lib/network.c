@@ -28,7 +28,7 @@ static __thread uint64_t rcv_calls = 0;
 // TODO: Evaluate what variables and structures are actually needed here
 // TODO: Error handling
 int send_udp_raw(uint8_t *tx_buf, int msg_size, ip6_memaddr *remote_addr, int dst_port) {
-    uint64_t start = getns(); 
+    uint64_t start = getns();
     pkt_rqst pkt = {
         .dst_addr = *remote_addr,
         .dst_port = dst_port,
@@ -88,7 +88,7 @@ struct sockaddr_in6 *init_sockets(struct config *bb_conf, int server) {
 #else
     if (server)
         init_server_dpdk(bb_conf);
-    else 
+    else
         init_client_dpdk(bb_conf);
 #endif
     struct sockaddr_in6 *temp = malloc(sizeof(struct sockaddr_in6));

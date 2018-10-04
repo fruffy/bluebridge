@@ -69,8 +69,7 @@ uint64_t *alloc_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64
                 length = iterations - offset;
             else
                 length = split;
-            struct in6_addr *ipv6Pointer = get_ip6_target(i);
-            memcpy(&(target_ip->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+            target_ip->sin6_addr = get_ip6_target(i);
             ip6_memaddr *temp = allocate_bulk_rmem(target_ip, length);
             memcpy(&r_addr[offset], temp, length *sizeof(ip6_memaddr));
             free(temp);
@@ -80,7 +79,7 @@ uint64_t *alloc_test(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64
         for (int i = 0; i < iterations; i++) {
            // Generate a random IPv6 address out of a set of available hosts
             //memcpy(&(target_ip->sin6_addr), gen_rdm_IPv6Target(), sizeof(struct in6_addr));
-            memcpy(&(target_ip->sin6_addr), get_ip6_target(i % my_conf.num_hosts), sizeof(struct in6_addr));
+            target_ip->sin6_addr = get_ip6_target(i % my_conf.num_hosts);
             uint64_t start = getns();
             r_addr[i] = allocate_rmem(target_ip);
             latency[i] = getns() - start;

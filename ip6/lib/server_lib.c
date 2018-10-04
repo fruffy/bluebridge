@@ -8,6 +8,7 @@
 #include "network.h"
 #include "config.h"
 
+
 #ifndef DEFAULT
 #include <rte_ethdev.h>       // main DPDK library
 #include <rte_malloc.h>       // rte_zmalloc_socket()
@@ -130,6 +131,7 @@ int trim_mem(struct sockaddr_in6 *target_ip, ip6_memaddr *r_addr, uint64_t size)
     send_udp_raw(NULL, 0, (ip6_memaddr *)&target_ip->sin6_addr, target_ip->sin6_port);
     return EXIT_SUCCESS;
 }
+
 
 void process_request(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addr, uint8_t *rcv_buffer, uint16_t size) {
     // Switch on the client command

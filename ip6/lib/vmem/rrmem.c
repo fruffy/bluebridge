@@ -49,8 +49,7 @@ void fill_rrmem(struct rrmem *r) {
 
     for (int i = 0; i<get_num_hosts(); i++) {
         ip6_memaddr *memList = malloc(sizeof(ip6_memaddr) *r->nblocks );
-        struct in6_addr *ipv6Pointer = get_ip6_target(i);
-        memcpy(&(r->target_ip->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+        r->target_ip->sin6_addr = get_ip6_target(i);
         ip6_memaddr *temp = allocate_bulk_rmem(r->target_ip, r->nblocks);
         memcpy(memList,temp,r->nblocks *sizeof(ip6_memaddr) );
         free(temp);
@@ -153,7 +152,7 @@ void rrmem_write(struct rrmem *r, int block, uint8_t *data) {
             base = 0;
             //ip6_memaddr **remote_addrs = malloc(sizeof(ip6_memaddr*) * get_num_hosts());
             //calculate parity
-             
+
             parity45(data,r->block_size,get_num_hosts()-1,(uint8_t *)&wbufs[block % get_num_hosts()]);
             for (int i = 0; i<get_num_hosts(); i++) {
                 //printf("looping %d\n",i);
@@ -232,7 +231,7 @@ void rrmem_read( struct rrmem *r, int block, uint8_t *data ) {
                 memcpy(&(data[base]),&rbufs[i],alloc);
                 base += alloc;
             }
-            
+
             //printf("PAGE:\n%s\n",data);
 
             break;
@@ -280,7 +279,7 @@ void rrmem_read( struct rrmem *r, int block, uint8_t *data ) {
             break;
         case 5:
             assert(get_num_hosts() >= 2 && get_num_hosts() <= MAX_HOSTS);
-            
+
             for (int i = 0; i<get_num_hosts() ; i++) {
                 //remoteReads[i] = malloc(sizeof(char) * r->block_size);
                 rremote_addrs[i] = &r->rsmem[i].memList[block];
@@ -325,11 +324,11 @@ void rrmem_read( struct rrmem *r, int block, uint8_t *data ) {
                 memcpy(&(data[base]),&rbufs[i],alloc);
                 base += alloc;
             }
-            
+
             printf("PAGE:\n%s\n",data);
 
             break;
-        
+
         default:
             printf("Raid %d not implemented FATAL read request\n",r->raid);
             break;
@@ -366,7 +365,7 @@ void repairStripeFromParity45(uint8_t (*repair)[BLOCK_SIZE], uint8_t (*stripes)[
         (*repair)[alloc] = repairbyte ^ (*parity)[alloc];
     }
     return;
-    
+
 }
 
 
@@ -440,7 +439,7 @@ int checkParity45(uint8_t (*stripes)[MAX_HOSTS][BLOCK_SIZE], int numStripes, uin
         }
     }
     //This is only called if the page size does not evenly divide
-    //across strips, it checks the parody of 
+    //across strips, it checks the parody of
     //printf("final parody check\n");
     if ( size % numStripes > 0) {
         char paritybyte = 0;

@@ -69,62 +69,18 @@ if [[ $DPDK ]]; then
     fi
     cd ..
 else
+    sudo apt install python-pip
     git submodule update --init mininet
+    sudo mininet/util/install.sh -nfv
     git submodule update --init p4
-    # git submodule update --init nanomsg
-    # git submodule update --init thrift
+    sudo -H pip install ipaddr
     ##### Optional Installs
     (cd p4 && ./install_deps.sh)
-    sudo -H pip install ipaddr
-    # sudo apt-get install -y \
-    # automake \
-    # cmake \
-    # libjudy-dev \
-    # libgmp-dev \
-    # libpcap-dev \
-    # libboost-dev \
-    # libboost-test-dev \
-    # libboost-program-options-dev \
-    # libboost-system-dev \
-    # libboost-filesystem-dev \
-    # libboost-thread-dev \
-    # libevent-dev \
-    # libtool \
-    # flex \
-    # bison \
-    # pkg-config \
-    # g++ \
-    # libssl-dev \
-    # mktemp \
-    # libffi-dev \
-    # python-dev \
-    # python-pip \
-    # wget
-    # Thrift Folder:
-    # echo "Installing Thrift"
-    # chmod 775 p4/travis/install-thrift.sh
-    # (cd p4/travis && sudo ./install-thrift.sh)
-    # cd thrift
-    # ./bootstrap.sh
-    # ./configure --with-cpp=yes --with-c_glib=no --with-java=no --with-ruby=no --with-erlang=no --with-go=no --with-nodejs=no
-    # make
-    # make install
-    # cd ..
-    # NanoMsg Folder:
-    # echo "Installing NanoMsg"
-    # chmod 775 p4/travis/install-nanomsg.sh
-    # (cd p4/travis && sudo ./install-nanomsg.sh)
-    # cd nanomsg
-    # mkdir build
-    # cd build
-    # cmake ..
-    # cmake --build .
-    # ctest .
-    # cmake --build . --target install
-    # ldconfig
-    # cd ../..
-    # Building the P4 Library:
-    # cd ..
+    echo "Installing P4"
+    (cd p4/ && ./autogen.sh)
+    (cd p4/ && ./configure --with-pdfixed)
+    (cd p4/ && make)
+    (cd p4/ && sudo make install)
     echo "Installing P4"
     (cd p4/ && ./autogen.sh)
     (cd p4/ && ./configure --with-pdfixed)

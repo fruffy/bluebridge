@@ -19,3 +19,6 @@
 [submodule "includes/p4c"]
 	path = includes/p4c
 	url = https://github.com/p4lang/p4c
+[submodule "includes/arrow"]
+	url = https://github.com/fruffy/arrow
+	path = includes/arrow

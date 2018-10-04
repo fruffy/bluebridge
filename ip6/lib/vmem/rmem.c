@@ -44,10 +44,9 @@ void fill_rmem(struct rmem *r) {
         uint64_t offset = split * i;
         if (i == myConf.num_hosts-1)
             length = r->nblocks - offset;
-        else 
+        else
             length = split;
-        struct in6_addr *ipv6Pointer = get_ip6_target(i);
-        memcpy(&(target_ip->sin6_addr), ipv6Pointer, sizeof(*ipv6Pointer));
+        target_ip->sin6_addr = get_ip6_target(i);
         ip6_memaddr *temp = allocate_bulk_rmem(target_ip, length);
         memcpy(&memList[offset],temp,length *sizeof(ip6_memaddr) );
         free(temp);

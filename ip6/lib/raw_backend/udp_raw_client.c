@@ -83,11 +83,6 @@ int simple_epoll_rcv(uint8_t *rcv_buf, struct sockaddr_in6 *target_ip, ip6_memad
     struct epoll_event events[1024];
     while (1) {
         int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, 0);
-        //int num_events = epoll_wait(epoll_fd_g, events, sizeof events / sizeof *events, -1);
-        /*if (num_events == 0 && !server) {
-            //printf("TIMEOUT!\n");
-            return -1;
-        }*/
         for (int i = 0; i < num_events; i++)  {
             struct epoll_event *event = &events[i];
             if (event->events & EPOLLIN) {

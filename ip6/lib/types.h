@@ -39,6 +39,7 @@ typedef struct ip6_memaddr {
 typedef struct ip6_memaddr_block {
   struct ip6_memaddr memaddr; // Starting address
   uint64_t length;            // BLOCK_SIZE * length defines the size of the pointer range
+  uint64_t offset;            // start at the memaddr offset of the block
 }ip6_memaddr_block;
 
 /**
@@ -61,7 +62,7 @@ typedef struct pkt_rqst {
 #define IP6_HDRLEN 40   // IPv6 header length
 #define UDP_HDRLEN 8    // UDP header length, excludes data
 #define IPV6_SIZE 16    // Length of an IPV6 Address
-#define BLOCK_SIZE 8 // Our current default transport size
+#define BLOCK_SIZE 1 // Our current default transport size
 #define POINTER_SIZE sizeof(void*)
 
 

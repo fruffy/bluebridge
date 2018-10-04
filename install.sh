@@ -37,8 +37,9 @@ if [[ $response =~ ^(yes|y) ]]; then
     cd cpp
     mkdir debug
     cd debug
-    cmake -DARROW_BUILD_BENCHMARKS=ON ..
+    cmake -DARROW_BUILD_BENCHMARKS=ON -DARROW_BLUEBRIDGE=ON ..
     make unittest
+    cd ../..
 fi
 
 sudo chown -R $USER:$USER ~

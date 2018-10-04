@@ -15,7 +15,7 @@
 // Kinda bad way to handle this, the only purpose is
 // to acquire an IP target
 // TODO: Fix
-struct in6_addr *hostList;
+static struct in6_addr *hostList;
 //
 static int nhosts;
 // This should be a hashmap (ideally using uthash.h)
@@ -26,15 +26,15 @@ static int nhosts;
 // TODO: Fix this bloated pos
 static __thread uint32_t sub_ids[USHRT_MAX];
 
-struct in6_addr *gen_rdm_ip6_target() {
+struct in6_addr gen_rdm_ip6_target() {
     // Pick a random host
-    uint8_t rndHost = rand()% nhosts;
-    return &hostList[rndHost];
+    uint8_t rndHost = rand() % nhosts;
+    return hostList[rndHost];
 }
 
-struct in6_addr *get_ip6_target(uint8_t index) {
+struct in6_addr get_ip6_target(uint8_t index) {
     // Pick the host id at index
-    return &hostList[index];
+    return hostList[index];
 }
 
 // A getter function yay
@@ -107,6 +107,7 @@ ip6_memaddr_block allocate_uniform_rmem(struct sockaddr_in6 *target_ip, uint64_t
     memcpy(&retAddr.memaddr, &target_ip->sin6_addr, IPV6_SIZE);
     rcv_udp6_raw(NULL, target_ip, &retAddr.memaddr);
     retAddr.memaddr.subid = ((ip6_memaddr *)&target_ip->sin6_addr)->subid;
+    retAddr.offset = 0;
     return retAddr;
 }
 
@@ -154,7 +155,7 @@ void batch_read(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addrs, uint8
 
 int read_bulk_rmem(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addrs, uint64_t num_addrs, uint8_t *rx_buf, uint64_t size) {
     // Data fits into a single request, do not need that overloaded bulk operation
-    if (size < BLOCK_SIZE) {
+    if (size <= BLOCK_SIZE) {
         read_rmem(target_ip, remote_addrs, rx_buf, size);
     } else {
         uint64_t num_chunks = size / BLOCK_SIZE; // Amount of chunks we need to send
@@ -181,11 +182,11 @@ int read_uniform_rmem(struct sockaddr_in6 *target_ip, ip6_memaddr_block remote_b
     // Generate a list of ptrs from a single given address
     // Not sure about this method...
     ip6_memaddr tmp_addrs[remote_block.length];
-    for (uint64_t i = 0; i < remote_block.length; i++) {
+    for (uint64_t i = remote_block.offset; i < remote_block.length; i++) {
         tmp_addrs[i] = remote_block.memaddr;
-        tmp_addrs[i].paddr = remote_block.memaddr.paddr +i*BLOCK_SIZE;
+        tmp_addrs[i].paddr = remote_block.memaddr.paddr + i * BLOCK_SIZE;
     }
-    read_bulk_rmem(target_ip, tmp_addrs, remote_block.length, rx_buf, size);
+    read_bulk_rmem(target_ip, &tmp_addrs[remote_block.offset], remote_block.length - remote_block.offset, rx_buf, size);
     return EXIT_SUCCESS;
 }
 
@@ -231,7 +232,7 @@ void batch_write(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addrs, uint
 // TODO: Implement meaningful return types and error messages
 // Nearly identical to read_rmem
 int write_bulk_rmem(struct sockaddr_in6 *target_ip, ip6_memaddr *remote_addrs, uint64_t num_addrs, uint8_t *payload, uint64_t size) {
-    if (size < BLOCK_SIZE) {
+    if (size <= BLOCK_SIZE) {
         write_rmem(target_ip, remote_addrs, payload, size);
     } else {
         uint64_t num_chunks = size / BLOCK_SIZE;
@@ -255,11 +256,11 @@ int write_uniform_rmem(struct sockaddr_in6 *target_ip, ip6_memaddr_block remote_
     // Generate a list of ptrs from a single given address
     // Not sure about this method...
     ip6_memaddr tmp_addrs[remote_block.length];
-    for (uint64_t i = 0; i < remote_block.length; i++) {
+    for (uint64_t i = remote_block.offset; i < remote_block.length; i++) {
         tmp_addrs[i] = remote_block.memaddr;
-        tmp_addrs[i].paddr = remote_block.memaddr.paddr + i * BLOCK_SIZE;
+        tmp_addrs[i].paddr = remote_block.memaddr.paddr +i*BLOCK_SIZE;
     }
-    write_bulk_rmem(target_ip, tmp_addrs, remote_block.length, payload, size);
+    write_bulk_rmem(target_ip, &tmp_addrs[remote_block.offset], remote_block.length - remote_block.offset, payload, size);
     return EXIT_SUCCESS;
 }
 
